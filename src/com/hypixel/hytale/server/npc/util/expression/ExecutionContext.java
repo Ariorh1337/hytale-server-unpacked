@@ -390,7 +390,7 @@ public class ExecutionContext {
          double[] array = new double[size];
 
          for (int i = 0; i < size; i++) {
-            array[i] = context.getNumber(size - i);
+            array[i] = context.getNumber(size - 1 - i);
          }
 
          context.popPush(array, size);
@@ -403,7 +403,7 @@ public class ExecutionContext {
          String[] array = new String[size];
 
          for (int i = 0; i < size; i++) {
-            array[i] = context.getString(size - i);
+            array[i] = context.getString(size - 1 - i);
          }
 
          context.popPush(array, size);
@@ -416,7 +416,7 @@ public class ExecutionContext {
          boolean[] array = new boolean[size];
 
          for (int i = 0; i < size; i++) {
-            array[i] = context.getBoolean(size - i);
+            array[i] = context.getBoolean(size - 1 - i);
          }
 
          context.popPush(array, size);

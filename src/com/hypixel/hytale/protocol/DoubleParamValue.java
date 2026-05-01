@@ -1,8 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -40,11 +42,41 @@ public class DoubleParamValue extends ParamValue {
       return 8;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 8L;
+   }
+
+   public static double getValue(MemorySegment mem) {
+      return getValue(mem, 0);
+   }
+
+   public static double getValue(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_DOUBLE, offset + 0);
+   }
+
+   public static DoubleParamValue toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static DoubleParamValue toObject(MemorySegment mem, int offset) {
+      if (offset + 8 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("DoubleParamValue", offset + 8, (int)mem.byteSize());
+      } else {
+         return new DoubleParamValue(mem.get(PacketIO.PROTO_DOUBLE, offset + 0));
+      }
+   }
+
    @Override
    public int serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       buf.writeDoubleLE(this.value);
       return buf.writerIndex() - startPos;
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_DOUBLE, offset + 0, this.value);
+      return 8;
    }
 
    @Override

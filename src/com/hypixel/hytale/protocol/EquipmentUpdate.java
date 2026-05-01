@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -195,6 +196,147 @@ public class EquipmentUpdate extends ComponentUpdate {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 13L;
+   }
+
+   @Nullable
+   public static String[] getArmorIds(MemorySegment mem) {
+      return getArmorIds(mem, 0);
+   }
+
+   @Nullable
+   public static String[] getArmorIds(MemorySegment mem, int offset) {
+      if (!hasArmorIds(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 1, 13, "ArmorIds");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("ArmorIds", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("ArmorIds", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ArmorIds", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      String[] data = new String[len];
+
+      for (int i = 0; i < len; i++) {
+         long sp = VarInt.getWithLength(mem, off);
+         int n = (int)sp + (int)(sp >>> 32);
+         data[i] = PacketIO.readVarString("ArmorIds", mem, off, 16384000, PacketIO.UTF8);
+         off += n;
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static String getRightHandItemId(MemorySegment mem) {
+      return getRightHandItemId(mem, 0);
+   }
+
+   @Nullable
+   public static String getRightHandItemId(MemorySegment mem, int offset) {
+      return hasRightHandItemId(mem, offset)
+         ? PacketIO.readVarString("RightHandItemId", mem, offset + getValidatedOffset(mem, offset, 5, 13, "RightHandItemId"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getLeftHandItemId(MemorySegment mem) {
+      return getLeftHandItemId(mem, 0);
+   }
+
+   @Nullable
+   public static String getLeftHandItemId(MemorySegment mem, int offset) {
+      return hasLeftHandItemId(mem, offset)
+         ? PacketIO.readVarString("LeftHandItemId", mem, offset + getValidatedOffset(mem, offset, 9, 13, "LeftHandItemId"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static boolean hasArmorIds(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasRightHandItemId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasLeftHandItemId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static EquipmentUpdate toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static EquipmentUpdate toObject(MemorySegment mem, int offset) {
+      if (offset + 13 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("EquipmentUpdate", offset + 13, (int)mem.byteSize());
+      }
+
+      String[] armorIds = null;
+      if (hasArmorIds(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 1, 13, "ArmorIds");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("ArmorIds", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("ArmorIds", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("ArmorIds", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         armorIds = new String[len];
+
+         for (int i = 0; i < len; i++) {
+            long sp = VarInt.getWithLength(mem, off);
+            int n = (int)sp + (int)(sp >>> 32);
+            armorIds[i] = PacketIO.readVarString("ArmorIds", mem, off, 16384000, PacketIO.UTF8);
+            off += n;
+         }
+      }
+
+      return new EquipmentUpdate(
+         armorIds,
+         hasRightHandItemId(mem, offset)
+            ? PacketIO.readVarString("RightHandItemId", mem, offset + getValidatedOffset(mem, offset, 5, 13, "RightHandItemId"), 4096000, PacketIO.UTF8)
+            : null,
+         hasLeftHandItemId(mem, offset)
+            ? PacketIO.readVarString("LeftHandItemId", mem, offset + getValidatedOffset(mem, offset, 9, 13, "LeftHandItemId"), 4096000, PacketIO.UTF8)
+            : null
+      );
+   }
+
    @Override
    public int serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -249,6 +391,58 @@ public class EquipmentUpdate extends ComponentUpdate {
       }
 
       return buf.writerIndex() - startPos;
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.armorIds != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.rightHandItemId != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.leftHandItemId != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 13;
+      if (this.armorIds != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 1, varOffset - offset - 13);
+         if (this.armorIds.length > 4096000) {
+            throw ProtocolException.arrayTooLong("ArmorIds", this.armorIds.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.armorIds.length);
+         int armorIdsValueOffset = 0;
+
+         for (int i = 0; i < this.armorIds.length; i++) {
+            armorIdsValueOffset += PacketIO.writeVarString(mem, varOffset + armorIdsValueOffset, this.armorIds[i], 16384000);
+         }
+
+         varOffset += armorIdsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 1, -1);
+      }
+
+      if (this.rightHandItemId != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 5, varOffset - offset - 13);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.rightHandItemId, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 5, -1);
+      }
+
+      if (this.leftHandItemId != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 9, varOffset - offset - 13);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.leftHandItemId, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 9, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

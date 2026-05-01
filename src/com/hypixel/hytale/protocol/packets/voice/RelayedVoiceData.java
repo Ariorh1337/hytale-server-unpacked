@@ -9,6 +9,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.UUID;
@@ -126,6 +127,131 @@ public class RelayedVoiceData implements Packet, ToClientPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 52L;
+   }
+
+   public static UUID getSpeakerId(MemorySegment mem) {
+      return getSpeakerId(mem, 0);
+   }
+
+   public static UUID getSpeakerId(MemorySegment mem, int offset) {
+      return PacketIO.readUUID(mem, offset + 1);
+   }
+
+   public static int getEntityId(MemorySegment mem) {
+      return getEntityId(mem, 0);
+   }
+
+   public static int getEntityId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 17);
+   }
+
+   public static short getSequenceNumber(MemorySegment mem) {
+      return getSequenceNumber(mem, 0);
+   }
+
+   public static short getSequenceNumber(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_SHORT, offset + 21);
+   }
+
+   public static int getTimestamp(MemorySegment mem) {
+      return getTimestamp(mem, 0);
+   }
+
+   public static int getTimestamp(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 23);
+   }
+
+   @Nullable
+   public static Position getSpeakerPosition(MemorySegment mem) {
+      return getSpeakerPosition(mem, 0);
+   }
+
+   @Nullable
+   public static Position getSpeakerPosition(MemorySegment mem, int offset) {
+      return hasSpeakerPosition(mem, offset) ? Position.toObject(mem, offset + 27) : null;
+   }
+
+   public static boolean getSpeakerIsUnderwater(MemorySegment mem) {
+      return getSpeakerIsUnderwater(mem, 0);
+   }
+
+   public static boolean getSpeakerIsUnderwater(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 51);
+   }
+
+   public static byte[] getOpusData(MemorySegment mem) {
+      return getOpusData(mem, 0);
+   }
+
+   public static byte[] getOpusData(MemorySegment mem, int offset) {
+      int off = offset + 52;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("OpusData", len);
+      }
+
+      if (len > 512) {
+         throw ProtocolException.arrayTooLong("OpusData", len, 512);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 1L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("OpusData", off + lenOffset + len * 1, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      byte[] data = new byte[len];
+      MemorySegment.copy(mem, PacketIO.PROTO_BYTE, off, data, 0, len);
+      return data;
+   }
+
+   public static boolean hasSpeakerPosition(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static RelayedVoiceData toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static RelayedVoiceData toObject(MemorySegment mem, int offset) {
+      if (offset + 52 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("RelayedVoiceData", offset + 52, (int)mem.byteSize());
+      }
+
+      int off = offset + 52;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("OpusData", len);
+      }
+
+      if (len > 512) {
+         throw ProtocolException.arrayTooLong("OpusData", len, 512);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 1L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("OpusData", off + lenOffset + len * 1, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      byte[] opusData = new byte[len];
+      MemorySegment.copy(mem, PacketIO.PROTO_BYTE, off, opusData, 0, len);
+      return new RelayedVoiceData(
+         PacketIO.readUUID(mem, offset + 1),
+         mem.get(PacketIO.PROTO_INT, offset + 17),
+         mem.get(PacketIO.PROTO_SHORT, offset + 21),
+         mem.get(PacketIO.PROTO_INT, offset + 23),
+         hasSpeakerPosition(mem, offset) ? Position.toObject(mem, offset + 27) : null,
+         mem.get(PacketIO.PROTO_BOOL, offset + 51),
+         opusData
+      );
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -154,6 +280,36 @@ public class RelayedVoiceData implements Packet, ToClientPacket {
       for (byte item : this.opusData) {
          buf.writeByte(item);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.speakerPosition != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      PacketIO.writeUUID(mem, offset + 1, this.speakerId);
+      mem.set(PacketIO.PROTO_INT, offset + 17, this.entityId);
+      mem.set(PacketIO.PROTO_SHORT, offset + 21, this.sequenceNumber);
+      mem.set(PacketIO.PROTO_INT, offset + 23, this.timestamp);
+      if (this.speakerPosition != null) {
+         this.speakerPosition.serialize(mem, offset + 27);
+      } else {
+         mem.asSlice(offset + 27, 24L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_BOOL, offset + 51, this.speakerIsUnderwater);
+      int varOffset = offset + 52;
+      if (this.opusData.length > 512) {
+         throw ProtocolException.arrayTooLong("OpusData", this.opusData.length, 512);
+      }
+
+      varOffset += VarInt.set(mem, varOffset, this.opusData.length);
+      MemorySegment.copy(this.opusData, 0, mem, PacketIO.PROTO_BYTE, varOffset, this.opusData.length);
+      varOffset += this.opusData.length * 1;
+      return varOffset - offset;
    }
 
    @Override

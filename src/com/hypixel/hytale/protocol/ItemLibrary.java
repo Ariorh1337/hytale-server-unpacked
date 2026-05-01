@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -188,6 +189,219 @@ public class ItemLibrary {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 9L;
+   }
+
+   @Nullable
+   public static ItemBase[] getItems(MemorySegment mem) {
+      return getItems(mem, 0);
+   }
+
+   @Nullable
+   public static ItemBase[] getItems(MemorySegment mem, int offset) {
+      if (!hasItems(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 1, 9, "Items");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Items", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Items", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Items", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      ItemBase[] data = new ItemBase[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = ItemBase.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static Map<Integer, String>[] getBlockMap(MemorySegment mem) {
+      return getBlockMap(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Integer, String>[] getBlockMap(MemorySegment mem, int offset) {
+      if (!hasBlockMap(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 5, 9, "BlockMap");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("BlockMap", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("BlockMap", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BlockMap", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      Map<Integer, String>[] data = new Map[len];
+
+      for (int i = 0; i < len; i++) {
+         long mapPacked = VarInt.getWithLength(mem, off);
+         int mapLen = (int)mapPacked;
+         if (mapLen < 0) {
+            throw ProtocolException.negativeLength("BlockMap", mapLen);
+         }
+
+         if (mapLen > 64) {
+            throw ProtocolException.dictionaryTooLarge("BlockMap", mapLen, 64);
+         }
+
+         HashMap<Integer, String> map = new HashMap<>(mapLen);
+         off += (int)(mapPacked >>> 32);
+
+         for (int j = 0; j < mapLen; j++) {
+            int key = mem.get(PacketIO.PROTO_INT, off);
+            off += 4;
+            long valuePacked = VarInt.getWithLength(mem, off);
+            int nvalue = (int)valuePacked + (int)(valuePacked >>> 32);
+            String value = PacketIO.readVarString("value", mem, off, 16384000, PacketIO.UTF8);
+            off += nvalue;
+            if (map.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("BlockMap", key);
+            }
+         }
+
+         data[i] = map;
+      }
+
+      return data;
+   }
+
+   public static boolean hasItems(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasBlockMap(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static ItemLibrary toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ItemLibrary toObject(MemorySegment mem, int offset) {
+      if (offset + 9 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ItemLibrary", offset + 9, (int)mem.byteSize());
+      }
+
+      ItemBase[] items = null;
+      if (hasItems(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 1, 9, "Items");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Items", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Items", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Items", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         items = new ItemBase[len];
+
+         for (int i = 0; i < len; i++) {
+            items[i] = ItemBase.toObject(mem, off);
+            off += items[i].computeSize();
+         }
+      }
+
+      Map<Integer, String>[] blockMap = null;
+      if (hasBlockMap(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 5, 9, "BlockMap");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("BlockMap", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("BlockMap", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("BlockMap", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         blockMap = new Map[len];
+
+         for (int i = 0; i < len; i++) {
+            long mapPacked = VarInt.getWithLength(mem, off);
+            int mapLen = (int)mapPacked;
+            if (mapLen < 0) {
+               throw ProtocolException.negativeLength("BlockMap", mapLen);
+            }
+
+            if (mapLen > 64) {
+               throw ProtocolException.dictionaryTooLarge("BlockMap", mapLen, 64);
+            }
+
+            HashMap<Integer, String> map = new HashMap<>(mapLen);
+            off += (int)(mapPacked >>> 32);
+
+            for (int j = 0; j < mapLen; j++) {
+               int key = mem.get(PacketIO.PROTO_INT, off);
+               off += 4;
+               long valuePacked = VarInt.getWithLength(mem, off);
+               int nvalue = (int)valuePacked + (int)(valuePacked >>> 32);
+               String value = PacketIO.readVarString("value", mem, off, 16384000, PacketIO.UTF8);
+               off += nvalue;
+               if (map.put(key, value) != null) {
+                  throw ProtocolException.duplicateKey("BlockMap", key);
+               }
+            }
+
+            blockMap[i] = map;
+         }
+      }
+
+      return new ItemLibrary(items, blockMap);
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -239,6 +453,60 @@ public class ItemLibrary {
       } else {
          buf.setIntLE(blockMapOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.items != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.blockMap != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 9;
+      if (this.items != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 1, varOffset - offset - 9);
+         if (this.items.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Items", this.items.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.items.length);
+         int itemsValueOffset = 0;
+
+         for (int i = 0; i < this.items.length; i++) {
+            itemsValueOffset += this.items[i].serialize(mem, varOffset + itemsValueOffset);
+         }
+
+         varOffset += itemsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 1, -1);
+      }
+
+      if (this.blockMap != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 5, varOffset - offset - 9);
+         if (this.blockMap.length > 4096000) {
+            throw ProtocolException.arrayTooLong("BlockMap", this.blockMap.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.blockMap.length);
+
+         for (int i = 0; i < this.blockMap.length; i++) {
+            varOffset += VarInt.set(mem, varOffset, this.blockMap[i].size());
+
+            for (Entry<Integer, String> e : this.blockMap[i].entrySet()) {
+               mem.set(PacketIO.PROTO_INT, varOffset, e.getKey());
+               varOffset += 4;
+               varOffset += PacketIO.writeVarString(mem, varOffset, e.getValue(), 16384000);
+            }
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 5, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

@@ -3,7 +3,6 @@ package com.hypixel.hytale.server.core.modules.entity.system;
 import com.hypixel.hytale.component.ArchetypeChunk;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.ResourceType;
-import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.AndQuery;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.spatial.SpatialResource;
@@ -29,11 +28,6 @@ public class ItemSpatialSystem extends SpatialSystem<EntityStore> {
    @Override
    public Query<EntityStore> getQuery() {
       return QUERY;
-   }
-
-   @Override
-   public void tick(float dt, int systemIndex, @Nonnull Store<EntityStore> store) {
-      super.tick(dt, systemIndex, store);
    }
 
    @Nonnull

@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -292,6 +293,304 @@ public class CraftingRecipe {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 30L;
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem) {
+      return getId(mem, 0);
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem, int offset) {
+      return hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 10, 30, "Id"), 4096000, PacketIO.UTF8) : null;
+   }
+
+   @Nullable
+   public static MaterialQuantity[] getInputs(MemorySegment mem) {
+      return getInputs(mem, 0);
+   }
+
+   @Nullable
+   public static MaterialQuantity[] getInputs(MemorySegment mem, int offset) {
+      if (!hasInputs(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 14, 30, "Inputs");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Inputs", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Inputs", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Inputs", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      MaterialQuantity[] data = new MaterialQuantity[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = MaterialQuantity.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static MaterialQuantity[] getOutputs(MemorySegment mem) {
+      return getOutputs(mem, 0);
+   }
+
+   @Nullable
+   public static MaterialQuantity[] getOutputs(MemorySegment mem, int offset) {
+      if (!hasOutputs(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 18, 30, "Outputs");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Outputs", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Outputs", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Outputs", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      MaterialQuantity[] data = new MaterialQuantity[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = MaterialQuantity.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static MaterialQuantity getPrimaryOutput(MemorySegment mem) {
+      return getPrimaryOutput(mem, 0);
+   }
+
+   @Nullable
+   public static MaterialQuantity getPrimaryOutput(MemorySegment mem, int offset) {
+      return hasPrimaryOutput(mem, offset) ? MaterialQuantity.toObject(mem, offset + getValidatedOffset(mem, offset, 22, 30, "PrimaryOutput")) : null;
+   }
+
+   @Nullable
+   public static BenchRequirement[] getBenchRequirement(MemorySegment mem) {
+      return getBenchRequirement(mem, 0);
+   }
+
+   @Nullable
+   public static BenchRequirement[] getBenchRequirement(MemorySegment mem, int offset) {
+      if (!hasBenchRequirement(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 26, 30, "BenchRequirement");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("BenchRequirement", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("BenchRequirement", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BenchRequirement", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      BenchRequirement[] data = new BenchRequirement[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = BenchRequirement.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   public static boolean getKnowledgeRequired(MemorySegment mem) {
+      return getKnowledgeRequired(mem, 0);
+   }
+
+   public static boolean getKnowledgeRequired(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 1);
+   }
+
+   public static float getTimeSeconds(MemorySegment mem) {
+      return getTimeSeconds(mem, 0);
+   }
+
+   public static float getTimeSeconds(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 2);
+   }
+
+   public static int getRequiredMemoriesLevel(MemorySegment mem) {
+      return getRequiredMemoriesLevel(mem, 0);
+   }
+
+   public static int getRequiredMemoriesLevel(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 6);
+   }
+
+   public static boolean hasId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasInputs(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasOutputs(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasPrimaryOutput(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasBenchRequirement(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 16) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static CraftingRecipe toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static CraftingRecipe toObject(MemorySegment mem, int offset) {
+      if (offset + 30 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("CraftingRecipe", offset + 30, (int)mem.byteSize());
+      }
+
+      MaterialQuantity[] inputs = null;
+      if (hasInputs(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 14, 30, "Inputs");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Inputs", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Inputs", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Inputs", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         inputs = new MaterialQuantity[len];
+
+         for (int i = 0; i < len; i++) {
+            inputs[i] = MaterialQuantity.toObject(mem, off);
+            off += inputs[i].computeSize();
+         }
+      }
+
+      MaterialQuantity[] outputs = null;
+      if (hasOutputs(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 18, 30, "Outputs");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Outputs", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Outputs", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Outputs", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         outputs = new MaterialQuantity[len];
+
+         for (int i = 0; i < len; i++) {
+            outputs[i] = MaterialQuantity.toObject(mem, off);
+            off += outputs[i].computeSize();
+         }
+      }
+
+      BenchRequirement[] benchRequirement = null;
+      if (hasBenchRequirement(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 26, 30, "BenchRequirement");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("BenchRequirement", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("BenchRequirement", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("BenchRequirement", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         benchRequirement = new BenchRequirement[len];
+
+         for (int i = 0; i < len; i++) {
+            benchRequirement[i] = BenchRequirement.toObject(mem, off);
+            off += benchRequirement[i].computeSize();
+         }
+      }
+
+      return new CraftingRecipe(
+         hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 10, 30, "Id"), 4096000, PacketIO.UTF8) : null,
+         inputs,
+         outputs,
+         hasPrimaryOutput(mem, offset) ? MaterialQuantity.toObject(mem, offset + getValidatedOffset(mem, offset, 22, 30, "PrimaryOutput")) : null,
+         benchRequirement,
+         mem.get(PacketIO.PROTO_BOOL, offset + 1),
+         mem.get(PacketIO.PROTO_FLOAT, offset + 2),
+         mem.get(PacketIO.PROTO_INT, offset + 6)
+      );
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -388,6 +687,104 @@ public class CraftingRecipe {
       } else {
          buf.setIntLE(benchRequirementOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.id != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.inputs != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.outputs != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.primaryOutput != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.benchRequirement != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BOOL, offset + 1, this.knowledgeRequired);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 2, this.timeSeconds);
+      mem.set(PacketIO.PROTO_INT, offset + 6, this.requiredMemoriesLevel);
+      int varOffset = offset + 30;
+      if (this.id != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 10, varOffset - offset - 30);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.id, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 10, -1);
+      }
+
+      if (this.inputs != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 14, varOffset - offset - 30);
+         if (this.inputs.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Inputs", this.inputs.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.inputs.length);
+         int inputsValueOffset = 0;
+
+         for (int i = 0; i < this.inputs.length; i++) {
+            inputsValueOffset += this.inputs[i].serialize(mem, varOffset + inputsValueOffset);
+         }
+
+         varOffset += inputsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 14, -1);
+      }
+
+      if (this.outputs != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 18, varOffset - offset - 30);
+         if (this.outputs.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Outputs", this.outputs.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.outputs.length);
+         int outputsValueOffset = 0;
+
+         for (int i = 0; i < this.outputs.length; i++) {
+            outputsValueOffset += this.outputs[i].serialize(mem, varOffset + outputsValueOffset);
+         }
+
+         varOffset += outputsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 18, -1);
+      }
+
+      if (this.primaryOutput != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 22, varOffset - offset - 30);
+         varOffset += this.primaryOutput.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 22, -1);
+      }
+
+      if (this.benchRequirement != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 26, varOffset - offset - 30);
+         if (this.benchRequirement.length > 4096000) {
+            throw ProtocolException.arrayTooLong("BenchRequirement", this.benchRequirement.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.benchRequirement.length);
+         int benchRequirementValueOffset = 0;
+
+         for (int i = 0; i < this.benchRequirement.length; i++) {
+            benchRequirementValueOffset += this.benchRequirement[i].serialize(mem, varOffset + benchRequirementValueOffset);
+         }
+
+         varOffset += benchRequirementValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 26, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

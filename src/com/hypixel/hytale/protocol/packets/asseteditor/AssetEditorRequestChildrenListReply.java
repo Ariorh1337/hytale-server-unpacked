@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -153,6 +154,122 @@ public class AssetEditorRequestChildrenListReply implements Packet, ToClientPack
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 9L;
+   }
+
+   @Nullable
+   public static AssetPath getPath(MemorySegment mem) {
+      return getPath(mem, 0);
+   }
+
+   @Nullable
+   public static AssetPath getPath(MemorySegment mem, int offset) {
+      return hasPath(mem, offset) ? AssetPath.toObject(mem, offset + getValidatedOffset(mem, offset, 1, 9, "Path")) : null;
+   }
+
+   @Nullable
+   public static String[] getChildrenIds(MemorySegment mem) {
+      return getChildrenIds(mem, 0);
+   }
+
+   @Nullable
+   public static String[] getChildrenIds(MemorySegment mem, int offset) {
+      if (!hasChildrenIds(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 5, 9, "ChildrenIds");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("ChildrenIds", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("ChildrenIds", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ChildrenIds", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      String[] data = new String[len];
+
+      for (int i = 0; i < len; i++) {
+         long sp = VarInt.getWithLength(mem, off);
+         int n = (int)sp + (int)(sp >>> 32);
+         data[i] = PacketIO.readVarString("ChildrenIds", mem, off, 16384000, PacketIO.UTF8);
+         off += n;
+      }
+
+      return data;
+   }
+
+   public static boolean hasPath(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasChildrenIds(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static AssetEditorRequestChildrenListReply toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AssetEditorRequestChildrenListReply toObject(MemorySegment mem, int offset) {
+      if (offset + 9 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AssetEditorRequestChildrenListReply", offset + 9, (int)mem.byteSize());
+      }
+
+      String[] childrenIds = null;
+      if (hasChildrenIds(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 5, 9, "ChildrenIds");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("ChildrenIds", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("ChildrenIds", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("ChildrenIds", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         childrenIds = new String[len];
+
+         for (int i = 0; i < len; i++) {
+            long sp = VarInt.getWithLength(mem, off);
+            int n = (int)sp + (int)(sp >>> 32);
+            childrenIds[i] = PacketIO.readVarString("ChildrenIds", mem, off, 16384000, PacketIO.UTF8);
+            off += n;
+         }
+      }
+
+      return new AssetEditorRequestChildrenListReply(
+         hasPath(mem, offset) ? AssetPath.toObject(mem, offset + getValidatedOffset(mem, offset, 1, 9, "Path")) : null, childrenIds
+      );
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -192,6 +309,47 @@ public class AssetEditorRequestChildrenListReply implements Packet, ToClientPack
       } else {
          buf.setIntLE(childrenIdsOffsetSlot, -1);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.path != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.childrenIds != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 9;
+      if (this.path != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 1, varOffset - offset - 9);
+         varOffset += this.path.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 1, -1);
+      }
+
+      if (this.childrenIds != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 5, varOffset - offset - 9);
+         if (this.childrenIds.length > 4096000) {
+            throw ProtocolException.arrayTooLong("ChildrenIds", this.childrenIds.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.childrenIds.length);
+         int childrenIdsValueOffset = 0;
+
+         for (int i = 0; i < this.childrenIds.length; i++) {
+            childrenIdsValueOffset += PacketIO.writeVarString(mem, varOffset + childrenIdsValueOffset, this.childrenIds[i], 16384000);
+         }
+
+         varOffset += childrenIdsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 5, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

@@ -7,6 +7,7 @@ import com.hypixel.hytale.protocol.HostAddress;
 import com.hypixel.hytale.protocol.PlayerSkin;
 import com.hypixel.hytale.protocol.ToServerPacket;
 import com.hypixel.hytale.protocol.io.ChannelConnection;
+import com.hypixel.hytale.protocol.io.ConnectionHandler;
 import com.hypixel.hytale.protocol.packets.auth.ConnectAccept;
 import com.hypixel.hytale.protocol.packets.connection.ClientDisconnect;
 import com.hypixel.hytale.protocol.packets.connection.ClientType;
@@ -52,7 +53,7 @@ public class InitialPacketHandler extends PacketHandler {
    }
 
    @Override
-   public void registered0(PacketHandler oldHandler) {
+   public void registered0(ConnectionHandler oldHandler) {
       HytaleServerConfig.TimeoutProfile timeouts = HytaleServer.get().getConfig().getConnectionTimeouts();
       this.initStage("initial", timeouts.getInitial(), () -> !this.registered);
       this.getChannel().logConnectionTimings("Registered", Level.FINE);
@@ -92,9 +93,9 @@ public class InitialPacketHandler extends PacketHandler {
          this.receivedConnect = true;
          this.clearTimeout();
          this.getChannel().logConnectionTimings("Connect", Level.FINE);
-         if (packet.protocolCrc != -1022205618) {
+         if (packet.protocolCrc != 315434396) {
             int clientBuild = packet.protocolBuildNumber;
-            int serverBuild = 77;
+            int serverBuild = 84;
             QuicApplicationErrorCode errorCode = clientBuild < serverBuild ? QuicApplicationErrorCode.ClientOutdated : QuicApplicationErrorCode.ServerOutdated;
             String serverVersion = ManifestUtil.getImplementationVersion();
             this.getChannel().closeApplicationConnection(errorCode, serverVersion != null ? serverVersion : "unknown");

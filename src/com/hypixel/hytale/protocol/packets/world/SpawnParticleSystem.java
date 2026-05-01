@@ -11,6 +11,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -117,6 +118,96 @@ public class SpawnParticleSystem implements Packet, ToClientPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 44L;
+   }
+
+   @Nullable
+   public static String getParticleSystemId(MemorySegment mem) {
+      return getParticleSystemId(mem, 0);
+   }
+
+   @Nullable
+   public static String getParticleSystemId(MemorySegment mem, int offset) {
+      return hasParticleSystemId(mem, offset) ? PacketIO.readVarString("ParticleSystemId", mem, offset + 44, 4096000, PacketIO.UTF8) : null;
+   }
+
+   @Nullable
+   public static Position getPosition(MemorySegment mem) {
+      return getPosition(mem, 0);
+   }
+
+   @Nullable
+   public static Position getPosition(MemorySegment mem, int offset) {
+      return hasPosition(mem, offset) ? Position.toObject(mem, offset + 1) : null;
+   }
+
+   @Nullable
+   public static Direction getRotation(MemorySegment mem) {
+      return getRotation(mem, 0);
+   }
+
+   @Nullable
+   public static Direction getRotation(MemorySegment mem, int offset) {
+      return hasRotation(mem, offset) ? Direction.toObject(mem, offset + 25) : null;
+   }
+
+   public static float getScale(MemorySegment mem) {
+      return getScale(mem, 0);
+   }
+
+   public static float getScale(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 37);
+   }
+
+   @Nullable
+   public static Color getColor(MemorySegment mem) {
+      return getColor(mem, 0);
+   }
+
+   @Nullable
+   public static Color getColor(MemorySegment mem, int offset) {
+      return hasColor(mem, offset) ? Color.toObject(mem, offset + 41) : null;
+   }
+
+   public static boolean hasPosition(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasRotation(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasColor(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasParticleSystemId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   public static SpawnParticleSystem toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static SpawnParticleSystem toObject(MemorySegment mem, int offset) {
+      if (offset + 44 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("SpawnParticleSystem", offset + 44, (int)mem.byteSize());
+      } else {
+         return new SpawnParticleSystem(
+            hasParticleSystemId(mem, offset) ? PacketIO.readVarString("ParticleSystemId", mem, offset + 44, 4096000, PacketIO.UTF8) : null,
+            hasPosition(mem, offset) ? Position.toObject(mem, offset + 1) : null,
+            hasRotation(mem, offset) ? Direction.toObject(mem, offset + 25) : null,
+            mem.get(PacketIO.PROTO_FLOAT, offset + 37),
+            hasColor(mem, offset) ? Color.toObject(mem, offset + 41) : null
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -159,6 +250,53 @@ public class SpawnParticleSystem implements Packet, ToClientPacket {
       if (this.particleSystemId != null) {
          PacketIO.writeVarString(buf, this.particleSystemId, 4096000);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.position != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.rotation != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.color != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.particleSystemId != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      if (this.position != null) {
+         this.position.serialize(mem, offset + 1);
+      } else {
+         mem.asSlice(offset + 1, 24L).fill((byte)0);
+      }
+
+      if (this.rotation != null) {
+         this.rotation.serialize(mem, offset + 25);
+      } else {
+         mem.asSlice(offset + 25, 12L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_FLOAT, offset + 37, this.scale);
+      if (this.color != null) {
+         this.color.serialize(mem, offset + 41);
+      } else {
+         mem.asSlice(offset + 41, 3L).fill((byte)0);
+      }
+
+      int varOffset = offset + 44;
+      if (this.particleSystemId != null) {
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.particleSystemId, 4096000);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

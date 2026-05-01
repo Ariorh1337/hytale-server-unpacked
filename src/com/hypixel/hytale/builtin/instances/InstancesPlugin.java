@@ -506,15 +506,15 @@ public class InstancesPlugin extends JavaPlugin {
    }
 
    private static void onPlayerReady(@Nonnull PlayerReadyEvent event) {
-      Player player = event.getPlayer();
-      World world = player.getWorld();
+      Player playerComponent = event.getPlayer();
+      World world = playerComponent.getWorld();
       if (world != null) {
          WorldConfig worldConfig = world.getWorldConfig();
          InstanceWorldConfig instanceWorldConfig = InstanceWorldConfig.get(worldConfig);
          if (instanceWorldConfig != null) {
             InstanceDiscoveryConfig discoveryConfig = instanceWorldConfig.getDiscovery();
             if (discoveryConfig != null) {
-               PlayerConfigData playerConfigData = player.getPlayerConfigData();
+               PlayerConfigData playerConfigData = playerComponent.getPlayerConfigData();
                UUID instanceUuid = worldConfig.getUuid();
                if (discoveryConfig.alwaysDisplay() || !playerConfigData.getDiscoveredInstances().contains(instanceUuid)) {
                   Set<UUID> discoveredInstances = new HashSet<>(playerConfigData.getDiscoveredInstances());

@@ -1,9 +1,11 @@
 package com.hypixel.hytale.protocol.packets.buildertools;
 
 import com.hypixel.hytale.protocol.Rotation;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -42,8 +44,37 @@ public class BuilderToolRotationArg {
       return 1;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 1L;
+   }
+
+   public static Rotation getDefault(MemorySegment mem) {
+      return getDefault(mem, 0);
+   }
+
+   public static Rotation getDefault(MemorySegment mem, int offset) {
+      return Rotation.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 0));
+   }
+
+   public static BuilderToolRotationArg toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static BuilderToolRotationArg toObject(MemorySegment mem, int offset) {
+      if (offset + 1 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BuilderToolRotationArg", offset + 1, (int)mem.byteSize());
+      } else {
+         return new BuilderToolRotationArg(Rotation.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 0)));
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeByte(this.defaultValue.getValue());
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, (byte)this.defaultValue.getValue());
+      return 1;
    }
 
    public int computeSize() {

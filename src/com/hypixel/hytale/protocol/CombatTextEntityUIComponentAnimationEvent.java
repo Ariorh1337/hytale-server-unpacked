@@ -4,6 +4,7 @@ import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import org.joml.Vector2fc;
@@ -81,6 +82,95 @@ public class CombatTextEntityUIComponentAnimationEvent {
       return 33;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 33L;
+   }
+
+   public static CombatTextEntityUIAnimationEventType getType(MemorySegment mem) {
+      return getType(mem, 0);
+   }
+
+   public static CombatTextEntityUIAnimationEventType getType(MemorySegment mem, int offset) {
+      return CombatTextEntityUIAnimationEventType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 0));
+   }
+
+   public static float getStartAt(MemorySegment mem) {
+      return getStartAt(mem, 0);
+   }
+
+   public static float getStartAt(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 1);
+   }
+
+   public static float getEndAt(MemorySegment mem) {
+      return getEndAt(mem, 0);
+   }
+
+   public static float getEndAt(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 5);
+   }
+
+   public static float getStartScale(MemorySegment mem) {
+      return getStartScale(mem, 0);
+   }
+
+   public static float getStartScale(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 9);
+   }
+
+   public static float getEndScale(MemorySegment mem) {
+      return getEndScale(mem, 0);
+   }
+
+   public static float getEndScale(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 13);
+   }
+
+   public static Vector2fc getPositionOffset(MemorySegment mem) {
+      return getPositionOffset(mem, 0);
+   }
+
+   public static Vector2fc getPositionOffset(MemorySegment mem, int offset) {
+      return PacketIO.readVector2f(mem, offset + 17);
+   }
+
+   public static float getStartOpacity(MemorySegment mem) {
+      return getStartOpacity(mem, 0);
+   }
+
+   public static float getStartOpacity(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 25);
+   }
+
+   public static float getEndOpacity(MemorySegment mem) {
+      return getEndOpacity(mem, 0);
+   }
+
+   public static float getEndOpacity(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 29);
+   }
+
+   public static CombatTextEntityUIComponentAnimationEvent toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static CombatTextEntityUIComponentAnimationEvent toObject(MemorySegment mem, int offset) {
+      if (offset + 33 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("CombatTextEntityUIComponentAnimationEvent", offset + 33, (int)mem.byteSize());
+      } else {
+         return new CombatTextEntityUIComponentAnimationEvent(
+            CombatTextEntityUIAnimationEventType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 0)),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 1),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 5),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 9),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 13),
+            PacketIO.readVector2f(mem, offset + 17),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 25),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 29)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeByte(this.type.getValue());
       buf.writeFloatLE(this.startAt);
@@ -90,6 +180,18 @@ public class CombatTextEntityUIComponentAnimationEvent {
       PacketIO.writeVector2f(buf, this.positionOffset);
       buf.writeFloatLE(this.startOpacity);
       buf.writeFloatLE(this.endOpacity);
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, (byte)this.type.getValue());
+      mem.set(PacketIO.PROTO_FLOAT, offset + 1, this.startAt);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 5, this.endAt);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 9, this.startScale);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 13, this.endScale);
+      PacketIO.writeVector2f(mem, offset + 17, this.positionOffset);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 25, this.startOpacity);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 29, this.endOpacity);
+      return 33;
    }
 
    public int computeSize() {

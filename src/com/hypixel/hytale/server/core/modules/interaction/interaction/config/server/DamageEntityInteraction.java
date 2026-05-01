@@ -21,6 +21,7 @@ import com.hypixel.hytale.server.core.asset.type.entityeffect.config.EntityEffec
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.entity.EntitySnapshot;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
+import com.hypixel.hytale.server.core.entity.InteractionManager;
 import com.hypixel.hytale.server.core.entity.ItemUtils;
 import com.hypixel.hytale.server.core.entity.effect.EffectControllerComponent;
 import com.hypixel.hytale.server.core.entity.knockback.KnockbackComponent;
@@ -41,6 +42,8 @@ import com.hypixel.hytale.server.core.modules.entitystats.modifier.StaticModifie
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.data.Collector;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.data.CollectorTag;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.data.StringTag;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.SelectInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.combat.DamageCalculator;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.combat.DamageClass;
@@ -151,6 +154,9 @@ public class DamageEntityInteraction extends Interaction {
    private static final int ANGLED_LABEL_OFFSET = 3;
    public static final int ARMOR_RESISTANCE_FLAT_MODIFIER = 0;
    public static final int ARMOR_RESISTANCE_MULTIPLIER_MODIFIER = 1;
+   private static final StringTag TAG_NEXT = StringTag.of("Next");
+   private static final StringTag TAG_FAILED = StringTag.of("Failed");
+   private static final StringTag TAG_BLOCKED = StringTag.of("Blocked");
    private static final MetaKey<DamageCalculatorSystems.Sequence> SEQUENTIAL_HITS = META_REGISTRY.registerMetaObject(
       i -> new DamageCalculatorSystems.Sequence()
    );
@@ -297,8 +303,55 @@ public class DamageEntityInteraction extends Interaction {
       builder.resolveLabel(endLabel);
    }
 
+   @Nullable
+   public DamageCalculator getDamageCalculator() {
+      return this.damageCalculator;
+   }
+
+   @Nullable
+   public DamageEntityInteraction.AngledDamage[] getAngledDamage() {
+      return this.angledDamage;
+   }
+
+   @Nonnull
+   public Map<String, DamageEntityInteraction.TargetedDamage> getTargetedDamage() {
+      return this.targetedDamage;
+   }
+
    @Override
    public boolean walk(@Nonnull Collector collector, @Nonnull InteractionContext context) {
+      if (this.next != null && InteractionManager.walkInteraction(collector, context, TAG_NEXT, this.next)) {
+         return true;
+      }
+
+      if (this.failed != null && InteractionManager.walkInteraction(collector, context, TAG_FAILED, this.failed)) {
+         return true;
+      }
+
+      if (this.blocked != null && InteractionManager.walkInteraction(collector, context, TAG_BLOCKED, this.blocked)) {
+         return true;
+      }
+
+      if (this.angledDamage != null) {
+         for (int i = 0; i < this.angledDamage.length; i++) {
+            DamageEntityInteraction.AngledDamage angled = this.angledDamage[i];
+            String nextId = angled.next != null ? angled.next : this.next;
+            if (nextId != null && InteractionManager.walkInteraction(collector, context, DamageEntityInteraction.AngledDamageTag.of(i), nextId)) {
+               return true;
+            }
+         }
+      }
+
+      if (!this.targetedDamage.isEmpty()) {
+         for (Entry<String, DamageEntityInteraction.TargetedDamage> entry : this.targetedDamage.entrySet()) {
+            DamageEntityInteraction.TargetedDamage targeted = entry.getValue();
+            String nextId = targeted.next != null ? targeted.next : this.next;
+            if (nextId != null && InteractionManager.walkInteraction(collector, context, DamageEntityInteraction.TargetedDamageTag.of(entry.getKey()), nextId)) {
+               return true;
+            }
+         }
+      }
+
       return false;
    }
 
@@ -572,6 +625,43 @@ public class DamageEntityInteraction extends Interaction {
       }
    }
 
+   public static final class AngledDamageTag implements CollectorTag {
+      private final int index;
+
+      private AngledDamageTag(int index) {
+         this.index = index;
+      }
+
+      public int getIndex() {
+         return this.index;
+      }
+
+      @Override
+      public boolean equals(@Nullable Object o) {
+         if (this == o) {
+            return true;
+         } else {
+            return o != null && this.getClass() == o.getClass() ? this.index == ((DamageEntityInteraction.AngledDamageTag)o).index : false;
+         }
+      }
+
+      @Override
+      public int hashCode() {
+         return this.index;
+      }
+
+      @Nonnull
+      @Override
+      public String toString() {
+         return "AngledDamageTag{index=" + this.index + "}";
+      }
+
+      @Nonnull
+      public static DamageEntityInteraction.AngledDamageTag of(int index) {
+         return new DamageEntityInteraction.AngledDamageTag(index);
+      }
+   }
+
    public static class EntityStatOnHit implements NetworkSerializable<com.hypixel.hytale.protocol.EntityStatOnHit> {
       public static final BuilderCodec<DamageEntityInteraction.EntityStatOnHit> CODEC = BuilderCodec.builder(
             DamageEntityInteraction.EntityStatOnHit.class, DamageEntityInteraction.EntityStatOnHit::new
@@ -706,6 +796,11 @@ public class DamageEntityInteraction extends Interaction {
       @Nullable
       protected String next;
 
+      @Nullable
+      public DamageCalculator getDamageCalculator() {
+         return this.damageCalculator;
+      }
+
       @Nonnull
       public com.hypixel.hytale.protocol.TargetedDamage toTargetedDamagePacket() {
          return new com.hypixel.hytale.protocol.TargetedDamage(this.index, this.damageEffects.toPacket(), Interaction.getInteractionIdOrUnknown(this.next));
@@ -723,6 +818,44 @@ public class DamageEntityInteraction extends Interaction {
             + ", next='"
             + this.next
             + "'}";
+      }
+   }
+
+   public static final class TargetedDamageTag implements CollectorTag {
+      private final String key;
+
+      private TargetedDamageTag(@Nonnull String key) {
+         this.key = key;
+      }
+
+      @Nonnull
+      public String getKey() {
+         return this.key;
+      }
+
+      @Override
+      public boolean equals(@Nullable Object o) {
+         if (this == o) {
+            return true;
+         } else {
+            return o != null && this.getClass() == o.getClass() ? this.key.equals(((DamageEntityInteraction.TargetedDamageTag)o).key) : false;
+         }
+      }
+
+      @Override
+      public int hashCode() {
+         return this.key.hashCode();
+      }
+
+      @Nonnull
+      @Override
+      public String toString() {
+         return "TargetedDamageTag{key='" + this.key + "'}";
+      }
+
+      @Nonnull
+      public static DamageEntityInteraction.TargetedDamageTag of(@Nonnull String key) {
+         return new DamageEntityInteraction.TargetedDamageTag(key);
       }
    }
 }

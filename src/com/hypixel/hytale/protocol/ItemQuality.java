@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -370,6 +371,219 @@ public class ItemQuality {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 35L;
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem) {
+      return getId(mem, 0);
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem, int offset) {
+      return hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 7, 35, "Id"), 4096000, PacketIO.UTF8) : null;
+   }
+
+   @Nullable
+   public static String getItemTooltipTexture(MemorySegment mem) {
+      return getItemTooltipTexture(mem, 0);
+   }
+
+   @Nullable
+   public static String getItemTooltipTexture(MemorySegment mem, int offset) {
+      return hasItemTooltipTexture(mem, offset)
+         ? PacketIO.readVarString("ItemTooltipTexture", mem, offset + getValidatedOffset(mem, offset, 11, 35, "ItemTooltipTexture"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getItemTooltipArrowTexture(MemorySegment mem) {
+      return getItemTooltipArrowTexture(mem, 0);
+   }
+
+   @Nullable
+   public static String getItemTooltipArrowTexture(MemorySegment mem, int offset) {
+      return hasItemTooltipArrowTexture(mem, offset)
+         ? PacketIO.readVarString(
+            "ItemTooltipArrowTexture", mem, offset + getValidatedOffset(mem, offset, 15, 35, "ItemTooltipArrowTexture"), 4096000, PacketIO.UTF8
+         )
+         : null;
+   }
+
+   @Nullable
+   public static String getSlotTexture(MemorySegment mem) {
+      return getSlotTexture(mem, 0);
+   }
+
+   @Nullable
+   public static String getSlotTexture(MemorySegment mem, int offset) {
+      return hasSlotTexture(mem, offset)
+         ? PacketIO.readVarString("SlotTexture", mem, offset + getValidatedOffset(mem, offset, 19, 35, "SlotTexture"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getBlockSlotTexture(MemorySegment mem) {
+      return getBlockSlotTexture(mem, 0);
+   }
+
+   @Nullable
+   public static String getBlockSlotTexture(MemorySegment mem, int offset) {
+      return hasBlockSlotTexture(mem, offset)
+         ? PacketIO.readVarString("BlockSlotTexture", mem, offset + getValidatedOffset(mem, offset, 23, 35, "BlockSlotTexture"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getSpecialSlotTexture(MemorySegment mem) {
+      return getSpecialSlotTexture(mem, 0);
+   }
+
+   @Nullable
+   public static String getSpecialSlotTexture(MemorySegment mem, int offset) {
+      return hasSpecialSlotTexture(mem, offset)
+         ? PacketIO.readVarString("SpecialSlotTexture", mem, offset + getValidatedOffset(mem, offset, 27, 35, "SpecialSlotTexture"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static Color getTextColor(MemorySegment mem) {
+      return getTextColor(mem, 0);
+   }
+
+   @Nullable
+   public static Color getTextColor(MemorySegment mem, int offset) {
+      return hasTextColor(mem, offset) ? Color.toObject(mem, offset + 1) : null;
+   }
+
+   @Nullable
+   public static String getLocalizationKey(MemorySegment mem) {
+      return getLocalizationKey(mem, 0);
+   }
+
+   @Nullable
+   public static String getLocalizationKey(MemorySegment mem, int offset) {
+      return hasLocalizationKey(mem, offset)
+         ? PacketIO.readVarString("LocalizationKey", mem, offset + getValidatedOffset(mem, offset, 31, 35, "LocalizationKey"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static boolean getVisibleQualityLabel(MemorySegment mem) {
+      return getVisibleQualityLabel(mem, 0);
+   }
+
+   public static boolean getVisibleQualityLabel(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 4);
+   }
+
+   public static boolean getRenderSpecialSlot(MemorySegment mem) {
+      return getRenderSpecialSlot(mem, 0);
+   }
+
+   public static boolean getRenderSpecialSlot(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 5);
+   }
+
+   public static boolean getHideFromSearch(MemorySegment mem) {
+      return getHideFromSearch(mem, 0);
+   }
+
+   public static boolean getHideFromSearch(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 6);
+   }
+
+   public static boolean hasTextColor(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasItemTooltipTexture(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasItemTooltipArrowTexture(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasSlotTexture(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 16) != 0;
+   }
+
+   public static boolean hasBlockSlotTexture(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 32) != 0;
+   }
+
+   public static boolean hasSpecialSlotTexture(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 64) != 0;
+   }
+
+   public static boolean hasLocalizationKey(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 128) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static ItemQuality toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ItemQuality toObject(MemorySegment mem, int offset) {
+      if (offset + 35 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ItemQuality", offset + 35, (int)mem.byteSize());
+      } else {
+         return new ItemQuality(
+            hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 7, 35, "Id"), 4096000, PacketIO.UTF8) : null,
+            hasItemTooltipTexture(mem, offset)
+               ? PacketIO.readVarString(
+                  "ItemTooltipTexture", mem, offset + getValidatedOffset(mem, offset, 11, 35, "ItemTooltipTexture"), 4096000, PacketIO.UTF8
+               )
+               : null,
+            hasItemTooltipArrowTexture(mem, offset)
+               ? PacketIO.readVarString(
+                  "ItemTooltipArrowTexture", mem, offset + getValidatedOffset(mem, offset, 15, 35, "ItemTooltipArrowTexture"), 4096000, PacketIO.UTF8
+               )
+               : null,
+            hasSlotTexture(mem, offset)
+               ? PacketIO.readVarString("SlotTexture", mem, offset + getValidatedOffset(mem, offset, 19, 35, "SlotTexture"), 4096000, PacketIO.UTF8)
+               : null,
+            hasBlockSlotTexture(mem, offset)
+               ? PacketIO.readVarString("BlockSlotTexture", mem, offset + getValidatedOffset(mem, offset, 23, 35, "BlockSlotTexture"), 4096000, PacketIO.UTF8)
+               : null,
+            hasSpecialSlotTexture(mem, offset)
+               ? PacketIO.readVarString(
+                  "SpecialSlotTexture", mem, offset + getValidatedOffset(mem, offset, 27, 35, "SpecialSlotTexture"), 4096000, PacketIO.UTF8
+               )
+               : null,
+            hasTextColor(mem, offset) ? Color.toObject(mem, offset + 1) : null,
+            hasLocalizationKey(mem, offset)
+               ? PacketIO.readVarString("LocalizationKey", mem, offset + getValidatedOffset(mem, offset, 31, 35, "LocalizationKey"), 4096000, PacketIO.UTF8)
+               : null,
+            mem.get(PacketIO.PROTO_BOOL, offset + 4),
+            mem.get(PacketIO.PROTO_BOOL, offset + 5),
+            mem.get(PacketIO.PROTO_BOOL, offset + 6)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -478,6 +692,103 @@ public class ItemQuality {
       } else {
          buf.setIntLE(localizationKeyOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.textColor != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.id != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.itemTooltipTexture != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.itemTooltipArrowTexture != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.slotTexture != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.blockSlotTexture != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
+      if (this.specialSlotTexture != null) {
+         nullBits = (byte)(nullBits | 64);
+      }
+
+      if (this.localizationKey != null) {
+         nullBits = (byte)(nullBits | 128);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      if (this.textColor != null) {
+         this.textColor.serialize(mem, offset + 1);
+      } else {
+         mem.asSlice(offset + 1, 3L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_BOOL, offset + 4, this.visibleQualityLabel);
+      mem.set(PacketIO.PROTO_BOOL, offset + 5, this.renderSpecialSlot);
+      mem.set(PacketIO.PROTO_BOOL, offset + 6, this.hideFromSearch);
+      int varOffset = offset + 35;
+      if (this.id != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 7, varOffset - offset - 35);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.id, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 7, -1);
+      }
+
+      if (this.itemTooltipTexture != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 11, varOffset - offset - 35);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.itemTooltipTexture, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 11, -1);
+      }
+
+      if (this.itemTooltipArrowTexture != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 15, varOffset - offset - 35);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.itemTooltipArrowTexture, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 15, -1);
+      }
+
+      if (this.slotTexture != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 19, varOffset - offset - 35);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.slotTexture, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 19, -1);
+      }
+
+      if (this.blockSlotTexture != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 23, varOffset - offset - 35);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.blockSlotTexture, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 23, -1);
+      }
+
+      if (this.specialSlotTexture != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 27, varOffset - offset - 35);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.specialSlotTexture, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 27, -1);
+      }
+
+      if (this.localizationKey != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 31, varOffset - offset - 35);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.localizationKey, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 31, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -135,6 +136,86 @@ public class CustomUIEventBinding {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 11L;
+   }
+
+   public static CustomUIEventBindingType getType(MemorySegment mem) {
+      return getType(mem, 0);
+   }
+
+   public static CustomUIEventBindingType getType(MemorySegment mem, int offset) {
+      return CustomUIEventBindingType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1));
+   }
+
+   @Nullable
+   public static String getSelector(MemorySegment mem) {
+      return getSelector(mem, 0);
+   }
+
+   @Nullable
+   public static String getSelector(MemorySegment mem, int offset) {
+      return hasSelector(mem, offset)
+         ? PacketIO.readVarString("Selector", mem, offset + getValidatedOffset(mem, offset, 3, 11, "Selector"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getData(MemorySegment mem) {
+      return getData(mem, 0);
+   }
+
+   @Nullable
+   public static String getData(MemorySegment mem, int offset) {
+      return hasData(mem, offset) ? PacketIO.readVarString("Data", mem, offset + getValidatedOffset(mem, offset, 7, 11, "Data"), 4096000, PacketIO.UTF8) : null;
+   }
+
+   public static boolean getLocksInterface(MemorySegment mem) {
+      return getLocksInterface(mem, 0);
+   }
+
+   public static boolean getLocksInterface(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 2);
+   }
+
+   public static boolean hasSelector(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasData(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static CustomUIEventBinding toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static CustomUIEventBinding toObject(MemorySegment mem, int offset) {
+      if (offset + 11 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("CustomUIEventBinding", offset + 11, (int)mem.byteSize());
+      } else {
+         return new CustomUIEventBinding(
+            CustomUIEventBindingType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1)),
+            hasSelector(mem, offset)
+               ? PacketIO.readVarString("Selector", mem, offset + getValidatedOffset(mem, offset, 3, 11, "Selector"), 4096000, PacketIO.UTF8)
+               : null,
+            hasData(mem, offset) ? PacketIO.readVarString("Data", mem, offset + getValidatedOffset(mem, offset, 7, 11, "Data"), 4096000, PacketIO.UTF8) : null,
+            mem.get(PacketIO.PROTO_BOOL, offset + 2)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -167,6 +248,37 @@ public class CustomUIEventBinding {
       } else {
          buf.setIntLE(dataOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.selector != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.data != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.type.getValue());
+      mem.set(PacketIO.PROTO_BOOL, offset + 2, this.locksInterface);
+      int varOffset = offset + 11;
+      if (this.selector != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 3, varOffset - offset - 11);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.selector, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 3, -1);
+      }
+
+      if (this.data != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 7, varOffset - offset - 11);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.data, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 7, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

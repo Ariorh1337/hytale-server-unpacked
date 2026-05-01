@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -156,6 +157,130 @@ public class CustomHud implements Packet, ToClientPacket {
       }
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 14L;
+   }
+
+   public static String getHudId(MemorySegment mem) {
+      return getHudId(mem, 0);
+   }
+
+   public static String getHudId(MemorySegment mem, int offset) {
+      return PacketIO.readVarString("HudId", mem, offset + getValidatedOffset(mem, offset, 6, 14, "HudId"), 4096000, PacketIO.UTF8);
+   }
+
+   public static int getZOrder(MemorySegment mem) {
+      return getZOrder(mem, 0);
+   }
+
+   public static int getZOrder(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   public static boolean getClear(MemorySegment mem) {
+      return getClear(mem, 0);
+   }
+
+   public static boolean getClear(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 5);
+   }
+
+   @Nullable
+   public static CustomUICommand[] getCommands(MemorySegment mem) {
+      return getCommands(mem, 0);
+   }
+
+   @Nullable
+   public static CustomUICommand[] getCommands(MemorySegment mem, int offset) {
+      if (!hasCommands(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 10, 14, "Commands");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Commands", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Commands", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Commands", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      CustomUICommand[] data = new CustomUICommand[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = CustomUICommand.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   public static boolean hasCommands(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static CustomHud toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static CustomHud toObject(MemorySegment mem, int offset) {
+      if (offset + 14 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("CustomHud", offset + 14, (int)mem.byteSize());
+      }
+
+      CustomUICommand[] commands = null;
+      if (hasCommands(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 10, 14, "Commands");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Commands", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Commands", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Commands", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         commands = new CustomUICommand[len];
+
+         for (int i = 0; i < len; i++) {
+            commands[i] = CustomUICommand.toObject(mem, off);
+            off += commands[i].computeSize();
+         }
+      }
+
+      return new CustomHud(
+         PacketIO.readVarString("HudId", mem, offset + getValidatedOffset(mem, offset, 6, 14, "HudId"), 4096000, PacketIO.UTF8),
+         mem.get(PacketIO.PROTO_INT, offset + 1),
+         mem.get(PacketIO.PROTO_BOOL, offset + 5),
+         commands
+      );
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -188,6 +313,40 @@ public class CustomHud implements Packet, ToClientPacket {
       } else {
          buf.setIntLE(commandsOffsetSlot, -1);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.commands != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.zOrder);
+      mem.set(PacketIO.PROTO_BOOL, offset + 5, this.clear);
+      int varOffset = offset + 14;
+      mem.set(PacketIO.PROTO_INT, offset + 6, varOffset - offset - 14);
+      varOffset += PacketIO.writeVarString(mem, varOffset, this.hudId, 4096000);
+      if (this.commands != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 10, varOffset - offset - 14);
+         if (this.commands.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Commands", this.commands.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.commands.length);
+         int commandsValueOffset = 0;
+
+         for (int i = 0; i < this.commands.length; i++) {
+            commandsValueOffset += this.commands[i].serialize(mem, varOffset + commandsValueOffset);
+         }
+
+         varOffset += commandsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 10, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

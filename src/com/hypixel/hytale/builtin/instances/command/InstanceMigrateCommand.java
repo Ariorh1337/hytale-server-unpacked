@@ -33,7 +33,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.component.ChunkSavi
 import com.hypixel.hytale.sneakythrow.SneakyThrow;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.longs.LongIterator;
-import it.unimi.dsi.fastutil.longs.LongSet;
+import it.unimi.dsi.fastutil.longs.LongList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.nio.file.Path;
 import java.util.BitSet;
@@ -108,7 +108,7 @@ public class InstanceMigrateCommand extends AbstractAsyncCommand {
             world.lockSaving();
             return data.waitForSavingChunks();
          }, world).thenCompose(val -> (CompletionStage<Void>)val).thenComposeAsync(SneakyThrow.sneakyFunction(_void -> {
-            LongSet chunks = loader.getIndexes();
+            LongList chunks = loader.getIndexes();
             ObjectArrayList<CompletableFuture<Void>> futures = new ObjectArrayList<>(chunks.size());
             LongIterator iterator = chunks.iterator();
 

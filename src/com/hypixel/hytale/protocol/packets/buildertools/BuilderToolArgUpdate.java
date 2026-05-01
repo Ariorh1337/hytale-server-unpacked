@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -153,6 +154,95 @@ public class BuilderToolArgUpdate implements Packet, ToServerPacket {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 21L;
+   }
+
+   public static int getToken(MemorySegment mem) {
+      return getToken(mem, 0);
+   }
+
+   public static int getToken(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   public static int getSection(MemorySegment mem) {
+      return getSection(mem, 0);
+   }
+
+   public static int getSection(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 5);
+   }
+
+   public static int getSlot(MemorySegment mem) {
+      return getSlot(mem, 0);
+   }
+
+   public static int getSlot(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 9);
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem) {
+      return getId(mem, 0);
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem, int offset) {
+      return hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 13, 21, "Id"), 4096000, PacketIO.UTF8) : null;
+   }
+
+   @Nullable
+   public static String getValue(MemorySegment mem) {
+      return getValue(mem, 0);
+   }
+
+   @Nullable
+   public static String getValue(MemorySegment mem, int offset) {
+      return hasValue(mem, offset)
+         ? PacketIO.readVarString("Value", mem, offset + getValidatedOffset(mem, offset, 17, 21, "Value"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static boolean hasId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasValue(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static BuilderToolArgUpdate toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static BuilderToolArgUpdate toObject(MemorySegment mem, int offset) {
+      if (offset + 21 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BuilderToolArgUpdate", offset + 21, (int)mem.byteSize());
+      } else {
+         return new BuilderToolArgUpdate(
+            mem.get(PacketIO.PROTO_INT, offset + 1),
+            mem.get(PacketIO.PROTO_INT, offset + 5),
+            mem.get(PacketIO.PROTO_INT, offset + 9),
+            hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 13, 21, "Id"), 4096000, PacketIO.UTF8) : null,
+            hasValue(mem, offset)
+               ? PacketIO.readVarString("Value", mem, offset + getValidatedOffset(mem, offset, 17, 21, "Value"), 4096000, PacketIO.UTF8)
+               : null
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -187,6 +277,39 @@ public class BuilderToolArgUpdate implements Packet, ToServerPacket {
       } else {
          buf.setIntLE(valueOffsetSlot, -1);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.id != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.value != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.token);
+      mem.set(PacketIO.PROTO_INT, offset + 5, this.section);
+      mem.set(PacketIO.PROTO_INT, offset + 9, this.slot);
+      int varOffset = offset + 21;
+      if (this.id != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 13, varOffset - offset - 21);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.id, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 13, -1);
+      }
+
+      if (this.value != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 17, varOffset - offset - 21);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.value, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 17, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

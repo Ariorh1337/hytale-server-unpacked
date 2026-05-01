@@ -9,6 +9,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -136,6 +137,108 @@ public class UpdateTranslations implements Packet, ToClientPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 2L;
+   }
+
+   public static UpdateType getType(MemorySegment mem) {
+      return getType(mem, 0);
+   }
+
+   public static UpdateType getType(MemorySegment mem, int offset) {
+      return UpdateType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1));
+   }
+
+   @Nullable
+   public static Map<String, String> getTranslations(MemorySegment mem) {
+      return getTranslations(mem, 0);
+   }
+
+   @Nullable
+   public static Map<String, String> getTranslations(MemorySegment mem, int offset) {
+      if (!hasTranslations(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + 2;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Translations", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("Translations", len, 4096000);
+      }
+
+      Map<String, String> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         long keyPacked = VarInt.getWithLength(mem, off);
+         int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+         String key = PacketIO.readVarString("key", mem, off, 16384000, PacketIO.UTF8);
+         off += nkey;
+         long valuePacked = VarInt.getWithLength(mem, off);
+         int nvalue = (int)valuePacked + (int)(valuePacked >>> 32);
+         String value = PacketIO.readVarString("value", mem, off, 16384000, PacketIO.UTF8);
+         off += nvalue;
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("Translations", key);
+         }
+      }
+
+      return data;
+   }
+
+   public static boolean hasTranslations(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static UpdateTranslations toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UpdateTranslations toObject(MemorySegment mem, int offset) {
+      if (offset + 2 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("UpdateTranslations", offset + 2, (int)mem.byteSize());
+      }
+
+      Map<String, String> translations = null;
+      if (hasTranslations(mem, offset)) {
+         int off = offset + 2;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Translations", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Translations", len, 4096000);
+         }
+
+         translations = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            long keyPacked = VarInt.getWithLength(mem, off);
+            int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+            String key = PacketIO.readVarString("key", mem, off, 16384000, PacketIO.UTF8);
+            off += nkey;
+            long valuePacked = VarInt.getWithLength(mem, off);
+            int nvalue = (int)valuePacked + (int)(valuePacked >>> 32);
+            String value = PacketIO.readVarString("value", mem, off, 16384000, PacketIO.UTF8);
+            off += nvalue;
+            if (translations.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("Translations", key);
+            }
+         }
+      }
+
+      return new UpdateTranslations(UpdateType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1)), translations);
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -157,6 +260,32 @@ public class UpdateTranslations implements Packet, ToClientPacket {
             PacketIO.writeVarString(buf, e.getValue(), 4096000);
          }
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.translations != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.type.getValue());
+      int varOffset = offset + 2;
+      if (this.translations != null) {
+         if (this.translations.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Translations", this.translations.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.translations.size());
+
+         for (Entry<String, String> e : this.translations.entrySet()) {
+            varOffset += PacketIO.writeVarString(mem, varOffset, e.getKey(), 16384000);
+            varOffset += PacketIO.writeVarString(mem, varOffset, e.getValue(), 16384000);
+         }
+      }
+
+      return varOffset - offset;
    }
 
    @Override

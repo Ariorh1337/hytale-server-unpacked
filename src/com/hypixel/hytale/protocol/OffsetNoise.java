@@ -1,9 +1,11 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -200,6 +202,235 @@ public class OffsetNoise {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 13L;
+   }
+
+   @Nullable
+   public static NoiseConfig[] getX(MemorySegment mem) {
+      return getX(mem, 0);
+   }
+
+   @Nullable
+   public static NoiseConfig[] getX(MemorySegment mem, int offset) {
+      if (!hasX(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 1, 13, "X");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("X", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("X", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 23L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("X", off + lenOffset + len * 23, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      NoiseConfig[] data = new NoiseConfig[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = NoiseConfig.toObject(mem, off + i * 23);
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static NoiseConfig[] getY(MemorySegment mem) {
+      return getY(mem, 0);
+   }
+
+   @Nullable
+   public static NoiseConfig[] getY(MemorySegment mem, int offset) {
+      if (!hasY(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 5, 13, "Y");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Y", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Y", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 23L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Y", off + lenOffset + len * 23, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      NoiseConfig[] data = new NoiseConfig[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = NoiseConfig.toObject(mem, off + i * 23);
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static NoiseConfig[] getZ(MemorySegment mem) {
+      return getZ(mem, 0);
+   }
+
+   @Nullable
+   public static NoiseConfig[] getZ(MemorySegment mem, int offset) {
+      if (!hasZ(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 9, 13, "Z");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Z", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Z", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 23L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Z", off + lenOffset + len * 23, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      NoiseConfig[] data = new NoiseConfig[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = NoiseConfig.toObject(mem, off + i * 23);
+      }
+
+      return data;
+   }
+
+   public static boolean hasX(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasY(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasZ(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static OffsetNoise toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static OffsetNoise toObject(MemorySegment mem, int offset) {
+      if (offset + 13 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("OffsetNoise", offset + 13, (int)mem.byteSize());
+      }
+
+      NoiseConfig[] x = null;
+      if (hasX(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 1, 13, "X");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("X", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("X", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 23L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("X", off + lenOffset + len * 23, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         x = new NoiseConfig[len];
+
+         for (int i = 0; i < len; i++) {
+            x[i] = NoiseConfig.toObject(mem, off + i * 23);
+         }
+      }
+
+      NoiseConfig[] y = null;
+      if (hasY(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 5, 13, "Y");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Y", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Y", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 23L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Y", off + lenOffset + len * 23, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         y = new NoiseConfig[len];
+
+         for (int i = 0; i < len; i++) {
+            y[i] = NoiseConfig.toObject(mem, off + i * 23);
+         }
+      }
+
+      NoiseConfig[] z = null;
+      if (hasZ(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 9, 13, "Z");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Z", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Z", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 23L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Z", off + lenOffset + len * 23, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         z = new NoiseConfig[len];
+
+         for (int i = 0; i < len; i++) {
+            z[i] = NoiseConfig.toObject(mem, off + i * 23);
+         }
+      }
+
+      return new OffsetNoise(x, y, z);
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -267,6 +498,79 @@ public class OffsetNoise {
       } else {
          buf.setIntLE(zOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.x != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.y != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.z != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 13;
+      if (this.x != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 1, varOffset - offset - 13);
+         if (this.x.length > 4096000) {
+            throw ProtocolException.arrayTooLong("X", this.x.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.x.length);
+         int xValueOffset = 0;
+
+         for (int i = 0; i < this.x.length; i++) {
+            xValueOffset += this.x[i].serialize(mem, varOffset + xValueOffset);
+         }
+
+         varOffset += xValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 1, -1);
+      }
+
+      if (this.y != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 5, varOffset - offset - 13);
+         if (this.y.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Y", this.y.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.y.length);
+         int yValueOffset = 0;
+
+         for (int i = 0; i < this.y.length; i++) {
+            yValueOffset += this.y[i].serialize(mem, varOffset + yValueOffset);
+         }
+
+         varOffset += yValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 5, -1);
+      }
+
+      if (this.z != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 9, varOffset - offset - 13);
+         if (this.z.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Z", this.z.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.z.length);
+         int zValueOffset = 0;
+
+         for (int i = 0; i < this.z.length; i++) {
+            zValueOffset += this.z[i].serialize(mem, varOffset + zValueOffset);
+         }
+
+         varOffset += zValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 9, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

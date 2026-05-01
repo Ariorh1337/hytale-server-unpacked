@@ -9,6 +9,7 @@ import com.hypixel.hytale.protocol.Asset;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.ToServerPacket;
 import com.hypixel.hytale.protocol.io.ChannelConnection;
+import com.hypixel.hytale.protocol.io.ConnectionHandler;
 import com.hypixel.hytale.protocol.packets.auth.ClientReferral;
 import com.hypixel.hytale.protocol.packets.connection.ClientDisconnect;
 import com.hypixel.hytale.protocol.packets.connection.DisconnectType;
@@ -30,7 +31,6 @@ import com.hypixel.hytale.server.core.asset.common.events.SendCommonAssetsEvent;
 import com.hypixel.hytale.server.core.auth.PlayerAuthentication;
 import com.hypixel.hytale.server.core.event.events.player.PlayerSetupConnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerSetupDisconnectEvent;
-import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.io.ProtocolVersion;
 import com.hypixel.hytale.server.core.modules.i18n.I18nModule;
 import com.hypixel.hytale.server.core.modules.singleplayer.SingleplayerModule;
@@ -62,7 +62,7 @@ public class SetupPacketHandler extends GenericConnectionPacketHandler {
    }
 
    @Override
-   public void registered0(@Nonnull PacketHandler oldHandler) {
+   public void registered0(@Nonnull ConnectionHandler oldHandler) {
       HytaleServerConfig.TimeoutProfile timeouts = HytaleServer.get().getConfig().getConnectionTimeouts();
       this.enterStage("setup:world-settings", timeouts.getSetupWorldSettings(), () -> this.assets != null);
       if (this.auth.getReferralSource() != null) {

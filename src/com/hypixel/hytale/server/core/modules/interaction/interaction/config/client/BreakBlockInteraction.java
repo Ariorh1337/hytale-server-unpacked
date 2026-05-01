@@ -129,6 +129,8 @@ public class BreakBlockInteraction extends SimpleBlockInteraction {
                }
 
                switch (playerComponent.getGameMode()) {
+                  case null:
+                     throw new UnsupportedOperationException("GameMode is not supported");
                   case Adventure:
                      BlockHarvestUtils.performBlockDamage(
                         ref, targetBlock, heldItemStack, null, this.toolId, this.matchTool, 1.0F, 0, chunkReference, commandBuffer, chunkStoreStore
@@ -137,9 +139,8 @@ public class BreakBlockInteraction extends SimpleBlockInteraction {
                   case Creative:
                      BlockHarvestUtils.performBlockBreak(ref, heldItemStack, targetBlock, chunkReference, commandBuffer, chunkStoreStore);
                      break;
-                  case null:
                   default:
-                     throw new UnsupportedOperationException("GameMode is not supported");
+                     throw new MatchException(null, null);
                }
             }
          }

@@ -4,9 +4,11 @@ import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -14,10 +16,10 @@ public class BuilderToolOnUseInteraction implements Packet, ToServerPacket {
    public static final int PACKET_ID = 413;
    public static final boolean IS_COMPRESSED = false;
    public static final int NULLABLE_BIT_FIELD_SIZE = 0;
-   public static final int FIXED_BLOCK_SIZE = 61;
+   public static final int FIXED_BLOCK_SIZE = 60;
    public static final int VARIABLE_FIELD_COUNT = 0;
-   public static final int VARIABLE_BLOCK_START = 61;
-   public static final int MAX_SIZE = 61;
+   public static final int VARIABLE_BLOCK_START = 60;
+   public static final int MAX_SIZE = 60;
    @Nonnull
    public InteractionType type = InteractionType.Primary;
    public int x;
@@ -29,7 +31,6 @@ public class BuilderToolOnUseInteraction implements Packet, ToServerPacket {
    public boolean isAltPlaySculptBrushModDown;
    public boolean isHoldDownInteraction;
    public boolean isDoServerRaytraceForPosition;
-   public boolean isShowEditNotifications;
    public int maxLengthToolIgnoreHistory;
    public float raycastOriginX;
    public float raycastOriginY;
@@ -63,7 +64,6 @@ public class BuilderToolOnUseInteraction implements Packet, ToServerPacket {
       boolean isAltPlaySculptBrushModDown,
       boolean isHoldDownInteraction,
       boolean isDoServerRaytraceForPosition,
-      boolean isShowEditNotifications,
       int maxLengthToolIgnoreHistory,
       float raycastOriginX,
       float raycastOriginY,
@@ -83,7 +83,6 @@ public class BuilderToolOnUseInteraction implements Packet, ToServerPacket {
       this.isAltPlaySculptBrushModDown = isAltPlaySculptBrushModDown;
       this.isHoldDownInteraction = isHoldDownInteraction;
       this.isDoServerRaytraceForPosition = isDoServerRaytraceForPosition;
-      this.isShowEditNotifications = isShowEditNotifications;
       this.maxLengthToolIgnoreHistory = maxLengthToolIgnoreHistory;
       this.raycastOriginX = raycastOriginX;
       this.raycastOriginY = raycastOriginY;
@@ -105,7 +104,6 @@ public class BuilderToolOnUseInteraction implements Packet, ToServerPacket {
       this.isAltPlaySculptBrushModDown = other.isAltPlaySculptBrushModDown;
       this.isHoldDownInteraction = other.isHoldDownInteraction;
       this.isDoServerRaytraceForPosition = other.isDoServerRaytraceForPosition;
-      this.isShowEditNotifications = other.isShowEditNotifications;
       this.maxLengthToolIgnoreHistory = other.maxLengthToolIgnoreHistory;
       this.raycastOriginX = other.raycastOriginX;
       this.raycastOriginY = other.raycastOriginY;
@@ -118,8 +116,8 @@ public class BuilderToolOnUseInteraction implements Packet, ToServerPacket {
 
    @Nonnull
    public static BuilderToolOnUseInteraction deserialize(@Nonnull ByteBuf buf, int offset) {
-      if (buf.readableBytes() - offset < 61) {
-         throw ProtocolException.bufferTooSmall("BuilderToolOnUseInteraction", 61, buf.readableBytes() - offset);
+      if (buf.readableBytes() - offset < 60) {
+         throw ProtocolException.bufferTooSmall("BuilderToolOnUseInteraction", 60, buf.readableBytes() - offset);
       }
 
       BuilderToolOnUseInteraction obj = new BuilderToolOnUseInteraction();
@@ -133,20 +131,198 @@ public class BuilderToolOnUseInteraction implements Packet, ToServerPacket {
       obj.isAltPlaySculptBrushModDown = buf.getByte(offset + 25) != 0;
       obj.isHoldDownInteraction = buf.getByte(offset + 26) != 0;
       obj.isDoServerRaytraceForPosition = buf.getByte(offset + 27) != 0;
-      obj.isShowEditNotifications = buf.getByte(offset + 28) != 0;
-      obj.maxLengthToolIgnoreHistory = buf.getIntLE(offset + 29);
-      obj.raycastOriginX = buf.getFloatLE(offset + 33);
-      obj.raycastOriginY = buf.getFloatLE(offset + 37);
-      obj.raycastOriginZ = buf.getFloatLE(offset + 41);
-      obj.raycastDirectionX = buf.getFloatLE(offset + 45);
-      obj.raycastDirectionY = buf.getFloatLE(offset + 49);
-      obj.raycastDirectionZ = buf.getFloatLE(offset + 53);
-      obj.undoGroupSize = buf.getIntLE(offset + 57);
+      obj.maxLengthToolIgnoreHistory = buf.getIntLE(offset + 28);
+      obj.raycastOriginX = buf.getFloatLE(offset + 32);
+      obj.raycastOriginY = buf.getFloatLE(offset + 36);
+      obj.raycastOriginZ = buf.getFloatLE(offset + 40);
+      obj.raycastDirectionX = buf.getFloatLE(offset + 44);
+      obj.raycastDirectionY = buf.getFloatLE(offset + 48);
+      obj.raycastDirectionZ = buf.getFloatLE(offset + 52);
+      obj.undoGroupSize = buf.getIntLE(offset + 56);
       return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
-      return 61;
+      return 60;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 60L;
+   }
+
+   public static InteractionType getType(MemorySegment mem) {
+      return getType(mem, 0);
+   }
+
+   public static InteractionType getType(MemorySegment mem, int offset) {
+      return InteractionType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 0));
+   }
+
+   public static int getX(MemorySegment mem) {
+      return getX(mem, 0);
+   }
+
+   public static int getX(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   public static int getY(MemorySegment mem) {
+      return getY(mem, 0);
+   }
+
+   public static int getY(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 5);
+   }
+
+   public static int getZ(MemorySegment mem) {
+      return getZ(mem, 0);
+   }
+
+   public static int getZ(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 9);
+   }
+
+   public static int getOffsetForPaintModeX(MemorySegment mem) {
+      return getOffsetForPaintModeX(mem, 0);
+   }
+
+   public static int getOffsetForPaintModeX(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 13);
+   }
+
+   public static int getOffsetForPaintModeY(MemorySegment mem) {
+      return getOffsetForPaintModeY(mem, 0);
+   }
+
+   public static int getOffsetForPaintModeY(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 17);
+   }
+
+   public static int getOffsetForPaintModeZ(MemorySegment mem) {
+      return getOffsetForPaintModeZ(mem, 0);
+   }
+
+   public static int getOffsetForPaintModeZ(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 21);
+   }
+
+   public static boolean getIsAltPlaySculptBrushModDown(MemorySegment mem) {
+      return getIsAltPlaySculptBrushModDown(mem, 0);
+   }
+
+   public static boolean getIsAltPlaySculptBrushModDown(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 25);
+   }
+
+   public static boolean getIsHoldDownInteraction(MemorySegment mem) {
+      return getIsHoldDownInteraction(mem, 0);
+   }
+
+   public static boolean getIsHoldDownInteraction(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 26);
+   }
+
+   public static boolean getIsDoServerRaytraceForPosition(MemorySegment mem) {
+      return getIsDoServerRaytraceForPosition(mem, 0);
+   }
+
+   public static boolean getIsDoServerRaytraceForPosition(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 27);
+   }
+
+   public static int getMaxLengthToolIgnoreHistory(MemorySegment mem) {
+      return getMaxLengthToolIgnoreHistory(mem, 0);
+   }
+
+   public static int getMaxLengthToolIgnoreHistory(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 28);
+   }
+
+   public static float getRaycastOriginX(MemorySegment mem) {
+      return getRaycastOriginX(mem, 0);
+   }
+
+   public static float getRaycastOriginX(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 32);
+   }
+
+   public static float getRaycastOriginY(MemorySegment mem) {
+      return getRaycastOriginY(mem, 0);
+   }
+
+   public static float getRaycastOriginY(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 36);
+   }
+
+   public static float getRaycastOriginZ(MemorySegment mem) {
+      return getRaycastOriginZ(mem, 0);
+   }
+
+   public static float getRaycastOriginZ(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 40);
+   }
+
+   public static float getRaycastDirectionX(MemorySegment mem) {
+      return getRaycastDirectionX(mem, 0);
+   }
+
+   public static float getRaycastDirectionX(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 44);
+   }
+
+   public static float getRaycastDirectionY(MemorySegment mem) {
+      return getRaycastDirectionY(mem, 0);
+   }
+
+   public static float getRaycastDirectionY(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 48);
+   }
+
+   public static float getRaycastDirectionZ(MemorySegment mem) {
+      return getRaycastDirectionZ(mem, 0);
+   }
+
+   public static float getRaycastDirectionZ(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 52);
+   }
+
+   public static int getUndoGroupSize(MemorySegment mem) {
+      return getUndoGroupSize(mem, 0);
+   }
+
+   public static int getUndoGroupSize(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 56);
+   }
+
+   public static BuilderToolOnUseInteraction toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static BuilderToolOnUseInteraction toObject(MemorySegment mem, int offset) {
+      if (offset + 60 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BuilderToolOnUseInteraction", offset + 60, (int)mem.byteSize());
+      } else {
+         return new BuilderToolOnUseInteraction(
+            InteractionType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 0)),
+            mem.get(PacketIO.PROTO_INT, offset + 1),
+            mem.get(PacketIO.PROTO_INT, offset + 5),
+            mem.get(PacketIO.PROTO_INT, offset + 9),
+            mem.get(PacketIO.PROTO_INT, offset + 13),
+            mem.get(PacketIO.PROTO_INT, offset + 17),
+            mem.get(PacketIO.PROTO_INT, offset + 21),
+            mem.get(PacketIO.PROTO_BOOL, offset + 25),
+            mem.get(PacketIO.PROTO_BOOL, offset + 26),
+            mem.get(PacketIO.PROTO_BOOL, offset + 27),
+            mem.get(PacketIO.PROTO_INT, offset + 28),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 32),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 36),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 40),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 44),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 48),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 52),
+            mem.get(PacketIO.PROTO_INT, offset + 56)
+         );
+      }
    }
 
    @Override
@@ -161,7 +337,6 @@ public class BuilderToolOnUseInteraction implements Packet, ToServerPacket {
       buf.writeByte(this.isAltPlaySculptBrushModDown ? 1 : 0);
       buf.writeByte(this.isHoldDownInteraction ? 1 : 0);
       buf.writeByte(this.isDoServerRaytraceForPosition ? 1 : 0);
-      buf.writeByte(this.isShowEditNotifications ? 1 : 0);
       buf.writeIntLE(this.maxLengthToolIgnoreHistory);
       buf.writeFloatLE(this.raycastOriginX);
       buf.writeFloatLE(this.raycastOriginY);
@@ -173,13 +348,36 @@ public class BuilderToolOnUseInteraction implements Packet, ToServerPacket {
    }
 
    @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, (byte)this.type.getValue());
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.x);
+      mem.set(PacketIO.PROTO_INT, offset + 5, this.y);
+      mem.set(PacketIO.PROTO_INT, offset + 9, this.z);
+      mem.set(PacketIO.PROTO_INT, offset + 13, this.offsetForPaintModeX);
+      mem.set(PacketIO.PROTO_INT, offset + 17, this.offsetForPaintModeY);
+      mem.set(PacketIO.PROTO_INT, offset + 21, this.offsetForPaintModeZ);
+      mem.set(PacketIO.PROTO_BOOL, offset + 25, this.isAltPlaySculptBrushModDown);
+      mem.set(PacketIO.PROTO_BOOL, offset + 26, this.isHoldDownInteraction);
+      mem.set(PacketIO.PROTO_BOOL, offset + 27, this.isDoServerRaytraceForPosition);
+      mem.set(PacketIO.PROTO_INT, offset + 28, this.maxLengthToolIgnoreHistory);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 32, this.raycastOriginX);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 36, this.raycastOriginY);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 40, this.raycastOriginZ);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 44, this.raycastDirectionX);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 48, this.raycastDirectionY);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 52, this.raycastDirectionZ);
+      mem.set(PacketIO.PROTO_INT, offset + 56, this.undoGroupSize);
+      return 60;
+   }
+
+   @Override
    public int computeSize() {
-      return 61;
+      return 60;
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      if (buffer.readableBytes() - offset < 61) {
-         return ValidationResult.error("Buffer too small: expected at least 61 bytes");
+      if (buffer.readableBytes() - offset < 60) {
+         return ValidationResult.error("Buffer too small: expected at least 60 bytes");
       }
 
       int v = buffer.getByte(offset + 0) & 255;
@@ -198,7 +396,6 @@ public class BuilderToolOnUseInteraction implements Packet, ToServerPacket {
       copy.isAltPlaySculptBrushModDown = this.isAltPlaySculptBrushModDown;
       copy.isHoldDownInteraction = this.isHoldDownInteraction;
       copy.isDoServerRaytraceForPosition = this.isDoServerRaytraceForPosition;
-      copy.isShowEditNotifications = this.isShowEditNotifications;
       copy.maxLengthToolIgnoreHistory = this.maxLengthToolIgnoreHistory;
       copy.raycastOriginX = this.raycastOriginX;
       copy.raycastOriginY = this.raycastOriginY;
@@ -227,7 +424,6 @@ public class BuilderToolOnUseInteraction implements Packet, ToServerPacket {
                && this.isAltPlaySculptBrushModDown == other.isAltPlaySculptBrushModDown
                && this.isHoldDownInteraction == other.isHoldDownInteraction
                && this.isDoServerRaytraceForPosition == other.isDoServerRaytraceForPosition
-               && this.isShowEditNotifications == other.isShowEditNotifications
                && this.maxLengthToolIgnoreHistory == other.maxLengthToolIgnoreHistory
                && this.raycastOriginX == other.raycastOriginX
                && this.raycastOriginY == other.raycastOriginY
@@ -252,7 +448,6 @@ public class BuilderToolOnUseInteraction implements Packet, ToServerPacket {
          this.isAltPlaySculptBrushModDown,
          this.isHoldDownInteraction,
          this.isDoServerRaytraceForPosition,
-         this.isShowEditNotifications,
          this.maxLengthToolIgnoreHistory,
          this.raycastOriginX,
          this.raycastOriginY,

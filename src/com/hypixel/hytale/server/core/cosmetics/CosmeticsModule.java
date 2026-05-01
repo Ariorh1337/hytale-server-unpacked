@@ -294,6 +294,7 @@ public class CosmeticsModule extends JavaPlugin {
                   break;
                case FullyCovering:
                   return this.isValidAttachment(haircuts, haircutId);
+               case Simple:
             }
          }
       }

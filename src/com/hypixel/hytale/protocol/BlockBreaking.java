@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -180,6 +181,119 @@ public class BlockBreaking {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 25L;
+   }
+
+   @Nullable
+   public static String getGatherType(MemorySegment mem) {
+      return getGatherType(mem, 0);
+   }
+
+   @Nullable
+   public static String getGatherType(MemorySegment mem, int offset) {
+      return hasGatherType(mem, offset)
+         ? PacketIO.readVarString("GatherType", mem, offset + getValidatedOffset(mem, offset, 13, 25, "GatherType"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static float getHealth(MemorySegment mem) {
+      return getHealth(mem, 0);
+   }
+
+   public static float getHealth(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 1);
+   }
+
+   public static int getQuantity(MemorySegment mem) {
+      return getQuantity(mem, 0);
+   }
+
+   public static int getQuantity(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 5);
+   }
+
+   public static int getQuality(MemorySegment mem) {
+      return getQuality(mem, 0);
+   }
+
+   public static int getQuality(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 9);
+   }
+
+   @Nullable
+   public static String getItemId(MemorySegment mem) {
+      return getItemId(mem, 0);
+   }
+
+   @Nullable
+   public static String getItemId(MemorySegment mem, int offset) {
+      return hasItemId(mem, offset)
+         ? PacketIO.readVarString("ItemId", mem, offset + getValidatedOffset(mem, offset, 17, 25, "ItemId"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getDropListId(MemorySegment mem) {
+      return getDropListId(mem, 0);
+   }
+
+   @Nullable
+   public static String getDropListId(MemorySegment mem, int offset) {
+      return hasDropListId(mem, offset)
+         ? PacketIO.readVarString("DropListId", mem, offset + getValidatedOffset(mem, offset, 21, 25, "DropListId"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static boolean hasGatherType(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasItemId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasDropListId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static BlockBreaking toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static BlockBreaking toObject(MemorySegment mem, int offset) {
+      if (offset + 25 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BlockBreaking", offset + 25, (int)mem.byteSize());
+      } else {
+         return new BlockBreaking(
+            hasGatherType(mem, offset)
+               ? PacketIO.readVarString("GatherType", mem, offset + getValidatedOffset(mem, offset, 13, 25, "GatherType"), 4096000, PacketIO.UTF8)
+               : null,
+            mem.get(PacketIO.PROTO_FLOAT, offset + 1),
+            mem.get(PacketIO.PROTO_INT, offset + 5),
+            mem.get(PacketIO.PROTO_INT, offset + 9),
+            hasItemId(mem, offset)
+               ? PacketIO.readVarString("ItemId", mem, offset + getValidatedOffset(mem, offset, 17, 25, "ItemId"), 4096000, PacketIO.UTF8)
+               : null,
+            hasDropListId(mem, offset)
+               ? PacketIO.readVarString("DropListId", mem, offset + getValidatedOffset(mem, offset, 21, 25, "DropListId"), 4096000, PacketIO.UTF8)
+               : null
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -226,6 +340,49 @@ public class BlockBreaking {
       } else {
          buf.setIntLE(dropListIdOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.gatherType != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.itemId != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.dropListId != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 1, this.health);
+      mem.set(PacketIO.PROTO_INT, offset + 5, this.quantity);
+      mem.set(PacketIO.PROTO_INT, offset + 9, this.quality);
+      int varOffset = offset + 25;
+      if (this.gatherType != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 13, varOffset - offset - 25);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.gatherType, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 13, -1);
+      }
+
+      if (this.itemId != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 17, varOffset - offset - 25);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.itemId, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 17, -1);
+      }
+
+      if (this.dropListId != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 21, varOffset - offset - 25);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.dropListId, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 21, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

@@ -7,6 +7,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 
@@ -83,6 +84,78 @@ public class UpdateServersideUIPage implements Packet, ToClientPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 0L;
+   }
+
+   public static ServersideUICommand[] getCommands(MemorySegment mem) {
+      return getCommands(mem, 0);
+   }
+
+   public static ServersideUICommand[] getCommands(MemorySegment mem, int offset) {
+      int off = offset + 0;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Commands", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Commands", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Commands", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      ServersideUICommand[] data = new ServersideUICommand[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = ServersideUICommand.toObject(mem, off);
+         off += data[i].computeSizeWithTypeId();
+      }
+
+      return data;
+   }
+
+   public static UpdateServersideUIPage toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UpdateServersideUIPage toObject(MemorySegment mem, int offset) {
+      if (offset + 0 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("UpdateServersideUIPage", offset + 0, (int)mem.byteSize());
+      }
+
+      int off = offset + 0;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Commands", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Commands", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Commands", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      ServersideUICommand[] commands = new ServersideUICommand[len];
+
+      for (int i = 0; i < len; i++) {
+         commands[i] = ServersideUICommand.toObject(mem, off);
+         off += commands[i].computeSizeWithTypeId();
+      }
+
+      return new UpdateServersideUIPage(commands);
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       if (this.commands.length > 4096000) {
@@ -94,6 +167,24 @@ public class UpdateServersideUIPage implements Packet, ToClientPacket {
       for (ServersideUICommand item : this.commands) {
          item.serializeWithTypeId(buf);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      int varOffset = offset + 0;
+      if (this.commands.length > 4096000) {
+         throw ProtocolException.arrayTooLong("Commands", this.commands.length, 4096000);
+      }
+
+      varOffset += VarInt.set(mem, varOffset, this.commands.length);
+      int commandsValueOffset = 0;
+
+      for (int i = 0; i < this.commands.length; i++) {
+         commandsValueOffset += this.commands[i].serializeWithTypeId(mem, varOffset + commandsValueOffset);
+      }
+
+      varOffset += commandsValueOffset;
+      return varOffset - offset;
    }
 
    @Override

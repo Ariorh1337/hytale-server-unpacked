@@ -14,6 +14,7 @@ import com.hypixel.hytale.builtin.triggervolumes.snapshot.TriggerVolumeSnapshot;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.protocol.packets.player.SelectionToolShowTriggerVolumes;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeShapeType;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolCreate;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolCreateResponse;
@@ -141,6 +142,7 @@ public class TriggerVolumeToolPacketHandler implements SubPacketHandler {
       IWorldPacketHandler.registerHandler(this.packetHandler, 500, this::handleSetKeepLoaded, TriggerVolumeToolPacketHandler::hasPermission);
       IWorldPacketHandler.registerHandler(this.packetHandler, 501, this::handleSetCooldown, TriggerVolumeToolPacketHandler::hasPermission);
       IWorldPacketHandler.registerHandler(this.packetHandler, 502, this::handleSetActivationDelay, TriggerVolumeToolPacketHandler::hasPermission);
+      IWorldPacketHandler.registerHandler(this.packetHandler, 503, this::handleSelectionToolShowTriggerVolumes, TriggerVolumeToolPacketHandler::hasPermission);
    }
 
    private void handleEquip(
@@ -604,6 +606,29 @@ public class TriggerVolumeToolPacketHandler implements SubPacketHandler {
             CooldownMode mode = packet.cooldownMode < CooldownMode.values().length ? CooldownMode.values()[packet.cooldownMode] : CooldownMode.PER_ENTITY;
             entry.setCooldownMode(mode);
             manager.notifyViewersAdd(entry);
+         }
+      }
+   }
+
+   private void handleSelectionToolShowTriggerVolumes(
+      @Nonnull SelectionToolShowTriggerVolumes packet,
+      @Nonnull PlayerRef playerRef,
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull World world,
+      @Nonnull Store<EntityStore> store
+   ) {
+      TriggerVolumesPlugin plugin = TriggerVolumesPlugin.get();
+      TriggerVolumeManager manager = store.getResource(plugin.getManagerResourceType());
+      if (manager != null) {
+         UUID uuid = playerRef.getUuid();
+         if (packet.active) {
+            manager.addViewer(uuid, TriggerVolumeManager.ViewSource.SELECTION_TOOL);
+            manager.sendVolumeDisplay(playerRef);
+         } else {
+            manager.removeViewer(uuid, TriggerVolumeManager.ViewSource.SELECTION_TOOL);
+            if (!manager.isViewing(uuid)) {
+               playerRef.getPacketHandler().write(new UpdateTriggerVolumeDisplay());
+            }
          }
       }
    }

@@ -1,9 +1,11 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 
@@ -63,6 +65,68 @@ public class AudioUpdate extends ComponentUpdate {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 0L;
+   }
+
+   public static int[] getSoundEventIds(MemorySegment mem) {
+      return getSoundEventIds(mem, 0);
+   }
+
+   public static int[] getSoundEventIds(MemorySegment mem, int offset) {
+      int off = offset + 0;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("SoundEventIds", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("SoundEventIds", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 4L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("SoundEventIds", off + lenOffset + len * 4, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      int[] data = new int[len];
+      MemorySegment.copy(mem, PacketIO.PROTO_INT, off, data, 0, len);
+      return data;
+   }
+
+   public static AudioUpdate toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AudioUpdate toObject(MemorySegment mem, int offset) {
+      if (offset + 0 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AudioUpdate", offset + 0, (int)mem.byteSize());
+      }
+
+      int off = offset + 0;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("SoundEventIds", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("SoundEventIds", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 4L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("SoundEventIds", off + lenOffset + len * 4, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      int[] soundEventIds = new int[len];
+      MemorySegment.copy(mem, PacketIO.PROTO_INT, off, soundEventIds, 0, len);
+      return new AudioUpdate(soundEventIds);
+   }
+
    @Override
    public int serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -77,6 +141,19 @@ public class AudioUpdate extends ComponentUpdate {
       }
 
       return buf.writerIndex() - startPos;
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      int varOffset = offset + 0;
+      if (this.soundEventIds.length > 4096000) {
+         throw ProtocolException.arrayTooLong("SoundEventIds", this.soundEventIds.length, 4096000);
+      }
+
+      varOffset += VarInt.set(mem, varOffset, this.soundEventIds.length);
+      MemorySegment.copy(this.soundEventIds, 0, mem, PacketIO.PROTO_INT, varOffset, this.soundEventIds.length);
+      varOffset += this.soundEventIds.length * 4;
+      return varOffset - offset;
    }
 
    @Override

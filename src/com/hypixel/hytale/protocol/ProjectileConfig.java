@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -176,6 +177,201 @@ public class ProjectileConfig {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 175L;
+   }
+
+   @Nullable
+   public static PhysicsConfig getPhysicsConfig(MemorySegment mem) {
+      return getPhysicsConfig(mem, 0);
+   }
+
+   @Nullable
+   public static PhysicsConfig getPhysicsConfig(MemorySegment mem, int offset) {
+      return hasPhysicsConfig(mem, offset) ? PhysicsConfig.toObject(mem, offset + 1) : null;
+   }
+
+   @Nullable
+   public static Model getModel(MemorySegment mem) {
+      return getModel(mem, 0);
+   }
+
+   @Nullable
+   public static Model getModel(MemorySegment mem, int offset) {
+      return hasModel(mem, offset) ? Model.toObject(mem, offset + getValidatedOffset(mem, offset, 167, 175, "Model")) : null;
+   }
+
+   public static double getLaunchForce(MemorySegment mem) {
+      return getLaunchForce(mem, 0);
+   }
+
+   public static double getLaunchForce(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_DOUBLE, offset + 123);
+   }
+
+   @Nullable
+   public static Vector3fc getSpawnOffset(MemorySegment mem) {
+      return getSpawnOffset(mem, 0);
+   }
+
+   @Nullable
+   public static Vector3fc getSpawnOffset(MemorySegment mem, int offset) {
+      return hasSpawnOffset(mem, offset) ? PacketIO.readVector3f(mem, offset + 131) : null;
+   }
+
+   @Nullable
+   public static Direction getRotationOffset(MemorySegment mem) {
+      return getRotationOffset(mem, 0);
+   }
+
+   @Nullable
+   public static Direction getRotationOffset(MemorySegment mem, int offset) {
+      return hasRotationOffset(mem, offset) ? Direction.toObject(mem, offset + 143) : null;
+   }
+
+   @Nullable
+   public static Map<InteractionType, Integer> getInteractions(MemorySegment mem) {
+      return getInteractions(mem, 0);
+   }
+
+   @Nullable
+   public static Map<InteractionType, Integer> getInteractions(MemorySegment mem, int offset) {
+      if (!hasInteractions(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 171, 175, "Interactions");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Interactions", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("Interactions", len, 4096000);
+      }
+
+      Map<InteractionType, Integer> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         InteractionType key = InteractionType.fromValue(mem.get(PacketIO.PROTO_BYTE, off));
+         int value = mem.get(PacketIO.PROTO_INT, ++off);
+         off += 4;
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("Interactions", key);
+         }
+      }
+
+      return data;
+   }
+
+   public static int getLaunchLocalSoundEventIndex(MemorySegment mem) {
+      return getLaunchLocalSoundEventIndex(mem, 0);
+   }
+
+   public static int getLaunchLocalSoundEventIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 155);
+   }
+
+   public static int getLaunchWorldSoundEventIndex(MemorySegment mem) {
+      return getLaunchWorldSoundEventIndex(mem, 0);
+   }
+
+   public static int getLaunchWorldSoundEventIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 159);
+   }
+
+   public static int getProjectileSoundEventIndex(MemorySegment mem) {
+      return getProjectileSoundEventIndex(mem, 0);
+   }
+
+   public static int getProjectileSoundEventIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 163);
+   }
+
+   public static boolean hasPhysicsConfig(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasSpawnOffset(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasRotationOffset(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasModel(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasInteractions(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 16) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static ProjectileConfig toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ProjectileConfig toObject(MemorySegment mem, int offset) {
+      if (offset + 175 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ProjectileConfig", offset + 175, (int)mem.byteSize());
+      }
+
+      Map<InteractionType, Integer> interactions = null;
+      if (hasInteractions(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 171, 175, "Interactions");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Interactions", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Interactions", len, 4096000);
+         }
+
+         interactions = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            InteractionType key = InteractionType.fromValue(mem.get(PacketIO.PROTO_BYTE, off));
+            int value = mem.get(PacketIO.PROTO_INT, ++off);
+            off += 4;
+            if (interactions.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("Interactions", key);
+            }
+         }
+      }
+
+      return new ProjectileConfig(
+         hasPhysicsConfig(mem, offset) ? PhysicsConfig.toObject(mem, offset + 1) : null,
+         hasModel(mem, offset) ? Model.toObject(mem, offset + getValidatedOffset(mem, offset, 167, 175, "Model")) : null,
+         mem.get(PacketIO.PROTO_DOUBLE, offset + 123),
+         hasSpawnOffset(mem, offset) ? PacketIO.readVector3f(mem, offset + 131) : null,
+         hasRotationOffset(mem, offset) ? Direction.toObject(mem, offset + 143) : null,
+         interactions,
+         mem.get(PacketIO.PROTO_INT, offset + 155),
+         mem.get(PacketIO.PROTO_INT, offset + 159),
+         mem.get(PacketIO.PROTO_INT, offset + 163)
+      );
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -249,6 +445,79 @@ public class ProjectileConfig {
       } else {
          buf.setIntLE(interactionsOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.physicsConfig != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.spawnOffset != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.rotationOffset != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.model != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.interactions != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      if (this.physicsConfig != null) {
+         this.physicsConfig.serialize(mem, offset + 1);
+      } else {
+         mem.asSlice(offset + 1, 122L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_DOUBLE, offset + 123, this.launchForce);
+      if (this.spawnOffset != null) {
+         PacketIO.writeVector3f(mem, offset + 131, this.spawnOffset);
+      } else {
+         mem.asSlice(offset + 131, 12L).fill((byte)0);
+      }
+
+      if (this.rotationOffset != null) {
+         this.rotationOffset.serialize(mem, offset + 143);
+      } else {
+         mem.asSlice(offset + 143, 12L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_INT, offset + 155, this.launchLocalSoundEventIndex);
+      mem.set(PacketIO.PROTO_INT, offset + 159, this.launchWorldSoundEventIndex);
+      mem.set(PacketIO.PROTO_INT, offset + 163, this.projectileSoundEventIndex);
+      int varOffset = offset + 175;
+      if (this.model != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 167, varOffset - offset - 175);
+         varOffset += this.model.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 167, -1);
+      }
+
+      if (this.interactions != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 171, varOffset - offset - 175);
+         if (this.interactions.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Interactions", this.interactions.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.interactions.size());
+
+         for (Entry<InteractionType, Integer> e : this.interactions.entrySet()) {
+            mem.set(PacketIO.PROTO_BYTE, varOffset, (byte)e.getKey().getValue());
+            mem.set(PacketIO.PROTO_INT, ++varOffset, e.getValue());
+            varOffset += 4;
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 171, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

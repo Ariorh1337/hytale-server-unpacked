@@ -3,9 +3,11 @@ package com.hypixel.hytale.protocol.packets.asseteditor;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -69,6 +71,37 @@ public class AssetEditorSelectAsset implements Packet, ToServerPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 1L;
+   }
+
+   @Nullable
+   public static AssetPath getPath(MemorySegment mem) {
+      return getPath(mem, 0);
+   }
+
+   @Nullable
+   public static AssetPath getPath(MemorySegment mem, int offset) {
+      return hasPath(mem, offset) ? AssetPath.toObject(mem, offset + 1) : null;
+   }
+
+   public static boolean hasPath(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static AssetEditorSelectAsset toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AssetEditorSelectAsset toObject(MemorySegment mem, int offset) {
+      if (offset + 1 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AssetEditorSelectAsset", offset + 1, (int)mem.byteSize());
+      } else {
+         return new AssetEditorSelectAsset(hasPath(mem, offset) ? AssetPath.toObject(mem, offset + 1) : null);
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -80,6 +113,22 @@ public class AssetEditorSelectAsset implements Packet, ToServerPacket {
       if (this.path != null) {
          this.path.serialize(buf);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.path != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 1;
+      if (this.path != null) {
+         varOffset += this.path.serialize(mem, varOffset);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

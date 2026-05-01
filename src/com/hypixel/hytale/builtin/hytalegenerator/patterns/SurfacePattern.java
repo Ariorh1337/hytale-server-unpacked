@@ -114,6 +114,9 @@ public class SurfacePattern extends Pattern {
 
    private void applyFacing(@Nonnull Vector3i pos, @Nonnull SurfacePattern.Facing facing) {
       switch (facing) {
+         case U:
+         default:
+            break;
          case D:
             this.toD(pos);
             break;

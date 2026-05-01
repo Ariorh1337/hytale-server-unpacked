@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -158,6 +159,66 @@ public class ExecuteServersidePageCommand implements Packet, ToServerPacket {
       }
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 13L;
+   }
+
+   public static String getPageId(MemorySegment mem) {
+      return getPageId(mem, 0);
+   }
+
+   public static String getPageId(MemorySegment mem, int offset) {
+      return PacketIO.readVarString("PageId", mem, offset + getValidatedOffset(mem, offset, 1, 13, "PageId"), 4096000, PacketIO.UTF8);
+   }
+
+   public static String getCommandId(MemorySegment mem) {
+      return getCommandId(mem, 0);
+   }
+
+   public static String getCommandId(MemorySegment mem, int offset) {
+      return PacketIO.readVarString("CommandId", mem, offset + getValidatedOffset(mem, offset, 5, 13, "CommandId"), 4096000, PacketIO.UTF8);
+   }
+
+   @Nullable
+   public static UIDataValue getParam(MemorySegment mem) {
+      return getParam(mem, 0);
+   }
+
+   @Nullable
+   public static UIDataValue getParam(MemorySegment mem, int offset) {
+      return hasParam(mem, offset) ? UIDataValue.toObject(mem, offset + getValidatedOffset(mem, offset, 9, 13, "Param")) : null;
+   }
+
+   public static boolean hasParam(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static ExecuteServersidePageCommand toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ExecuteServersidePageCommand toObject(MemorySegment mem, int offset) {
+      if (offset + 13 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ExecuteServersidePageCommand", offset + 13, (int)mem.byteSize());
+      } else {
+         return new ExecuteServersidePageCommand(
+            PacketIO.readVarString("PageId", mem, offset + getValidatedOffset(mem, offset, 1, 13, "PageId"), 4096000, PacketIO.UTF8),
+            PacketIO.readVarString("CommandId", mem, offset + getValidatedOffset(mem, offset, 5, 13, "CommandId"), 4096000, PacketIO.UTF8),
+            hasParam(mem, offset) ? UIDataValue.toObject(mem, offset + getValidatedOffset(mem, offset, 9, 13, "Param")) : null
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -184,6 +245,29 @@ public class ExecuteServersidePageCommand implements Packet, ToServerPacket {
       } else {
          buf.setIntLE(paramOffsetSlot, -1);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.param != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 13;
+      mem.set(PacketIO.PROTO_INT, offset + 1, varOffset - offset - 13);
+      varOffset += PacketIO.writeVarString(mem, varOffset, this.pageId, 4096000);
+      mem.set(PacketIO.PROTO_INT, offset + 5, varOffset - offset - 13);
+      varOffset += PacketIO.writeVarString(mem, varOffset, this.commandId, 4096000);
+      if (this.param != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 9, varOffset - offset - 13);
+         varOffset += this.param.serializeWithTypeId(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 9, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

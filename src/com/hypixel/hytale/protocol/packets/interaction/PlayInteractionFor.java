@@ -10,6 +10,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -162,6 +163,122 @@ public class PlayInteractionFor implements Packet, ToClientPacket {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 27L;
+   }
+
+   public static int getEntityId(MemorySegment mem) {
+      return getEntityId(mem, 0);
+   }
+
+   public static int getEntityId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   public static int getChainId(MemorySegment mem) {
+      return getChainId(mem, 0);
+   }
+
+   public static int getChainId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 5);
+   }
+
+   @Nullable
+   public static ForkedChainId getForkedId(MemorySegment mem) {
+      return getForkedId(mem, 0);
+   }
+
+   @Nullable
+   public static ForkedChainId getForkedId(MemorySegment mem, int offset) {
+      return hasForkedId(mem, offset) ? ForkedChainId.toObject(mem, offset + getValidatedOffset(mem, offset, 19, 27, "ForkedId")) : null;
+   }
+
+   public static int getOperationIndex(MemorySegment mem) {
+      return getOperationIndex(mem, 0);
+   }
+
+   public static int getOperationIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 9);
+   }
+
+   public static int getInteractionId(MemorySegment mem) {
+      return getInteractionId(mem, 0);
+   }
+
+   public static int getInteractionId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 13);
+   }
+
+   @Nullable
+   public static String getInteractedItemId(MemorySegment mem) {
+      return getInteractedItemId(mem, 0);
+   }
+
+   @Nullable
+   public static String getInteractedItemId(MemorySegment mem, int offset) {
+      return hasInteractedItemId(mem, offset)
+         ? PacketIO.readVarString("InteractedItemId", mem, offset + getValidatedOffset(mem, offset, 23, 27, "InteractedItemId"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static InteractionType getInteractionType(MemorySegment mem) {
+      return getInteractionType(mem, 0);
+   }
+
+   public static InteractionType getInteractionType(MemorySegment mem, int offset) {
+      return InteractionType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 17));
+   }
+
+   public static boolean getCancel(MemorySegment mem) {
+      return getCancel(mem, 0);
+   }
+
+   public static boolean getCancel(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 18);
+   }
+
+   public static boolean hasForkedId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasInteractedItemId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static PlayInteractionFor toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static PlayInteractionFor toObject(MemorySegment mem, int offset) {
+      if (offset + 27 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("PlayInteractionFor", offset + 27, (int)mem.byteSize());
+      } else {
+         return new PlayInteractionFor(
+            mem.get(PacketIO.PROTO_INT, offset + 1),
+            mem.get(PacketIO.PROTO_INT, offset + 5),
+            hasForkedId(mem, offset) ? ForkedChainId.toObject(mem, offset + getValidatedOffset(mem, offset, 19, 27, "ForkedId")) : null,
+            mem.get(PacketIO.PROTO_INT, offset + 9),
+            mem.get(PacketIO.PROTO_INT, offset + 13),
+            hasInteractedItemId(mem, offset)
+               ? PacketIO.readVarString("InteractedItemId", mem, offset + getValidatedOffset(mem, offset, 23, 27, "InteractedItemId"), 4096000, PacketIO.UTF8)
+               : null,
+            InteractionType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 17)),
+            mem.get(PacketIO.PROTO_BOOL, offset + 18)
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -199,6 +316,42 @@ public class PlayInteractionFor implements Packet, ToClientPacket {
       } else {
          buf.setIntLE(interactedItemIdOffsetSlot, -1);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.forkedId != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.interactedItemId != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.entityId);
+      mem.set(PacketIO.PROTO_INT, offset + 5, this.chainId);
+      mem.set(PacketIO.PROTO_INT, offset + 9, this.operationIndex);
+      mem.set(PacketIO.PROTO_INT, offset + 13, this.interactionId);
+      mem.set(PacketIO.PROTO_BYTE, offset + 17, (byte)this.interactionType.getValue());
+      mem.set(PacketIO.PROTO_BOOL, offset + 18, this.cancel);
+      int varOffset = offset + 27;
+      if (this.forkedId != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 19, varOffset - offset - 27);
+         varOffset += this.forkedId.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 19, -1);
+      }
+
+      if (this.interactedItemId != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 23, varOffset - offset - 27);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.interactedItemId, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 23, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

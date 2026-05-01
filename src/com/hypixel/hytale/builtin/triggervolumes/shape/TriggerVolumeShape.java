@@ -19,6 +19,9 @@ public abstract class TriggerVolumeShape {
 
    public abstract void getWorldAABB(@Nonnull Vector3d var1, @Nonnull Vector3d var2, @Nonnull Vector3d var3);
 
+   @Nonnull
+   public abstract TriggerVolumeShape copy();
+
    static {
       CODEC.register("Box", BoxShape.class, BoxShape.CODEC);
       CODEC.register("Sphere", SphereShape.class, SphereShape.CODEC);

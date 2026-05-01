@@ -10,7 +10,7 @@ import org.joml.Vector3d;
 public class CylinderShape extends TriggerVolumeShape {
    @Nonnull
    public static final BuilderCodec<CylinderShape> CODEC = BuilderCodec.builder(CylinderShape.class, CylinderShape::new, BASE_CODEC)
-      .append(new KeyedCodec<>("Center", Vector3dUtil.AS_ARRAY_CODEC), (s, v) -> s.center = v, s -> s.center)
+      .append(new KeyedCodec<>("Center", Vector3dUtil.CODEC), (s, v) -> s.center = v, s -> s.center)
       .add()
       .append(new KeyedCodec<>("Radius", Codec.DOUBLE), (s, v) -> s.radius = v, s -> s.radius)
       .add()
@@ -66,6 +66,11 @@ public class CylinderShape extends TriggerVolumeShape {
       double cz = origin.z() + this.center.z();
       outMin.set(cx - this.radius, cy, cz - this.radius);
       outMax.set(cx + this.radius, cy + this.height, cz + this.radius);
+   }
+
+   @Nonnull
+   public CylinderShape copy() {
+      return new CylinderShape(new Vector3d(this.center), this.radius, this.height);
    }
 
    @Nonnull

@@ -3,10 +3,12 @@ package com.hypixel.hytale.protocol.packets.world;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -206,6 +208,245 @@ public class SetChunk implements Packet, ToClientPacket {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 25L;
+   }
+
+   public static int getX(MemorySegment mem) {
+      return getX(mem, 0);
+   }
+
+   public static int getX(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   public static int getY(MemorySegment mem) {
+      return getY(mem, 0);
+   }
+
+   public static int getY(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 5);
+   }
+
+   public static int getZ(MemorySegment mem) {
+      return getZ(mem, 0);
+   }
+
+   public static int getZ(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 9);
+   }
+
+   @Nullable
+   public static byte[] getLocalLight(MemorySegment mem) {
+      return getLocalLight(mem, 0);
+   }
+
+   @Nullable
+   public static byte[] getLocalLight(MemorySegment mem, int offset) {
+      if (!hasLocalLight(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 13, 25, "LocalLight");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("LocalLight", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("LocalLight", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 1L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("LocalLight", off + lenOffset + len * 1, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      byte[] data = new byte[len];
+      MemorySegment.copy(mem, PacketIO.PROTO_BYTE, off, data, 0, len);
+      return data;
+   }
+
+   @Nullable
+   public static byte[] getGlobalLight(MemorySegment mem) {
+      return getGlobalLight(mem, 0);
+   }
+
+   @Nullable
+   public static byte[] getGlobalLight(MemorySegment mem, int offset) {
+      if (!hasGlobalLight(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 17, 25, "GlobalLight");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("GlobalLight", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("GlobalLight", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 1L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("GlobalLight", off + lenOffset + len * 1, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      byte[] data = new byte[len];
+      MemorySegment.copy(mem, PacketIO.PROTO_BYTE, off, data, 0, len);
+      return data;
+   }
+
+   @Nullable
+   public static byte[] getData(MemorySegment mem) {
+      return getData(mem, 0);
+   }
+
+   @Nullable
+   public static byte[] getData(MemorySegment mem, int offset) {
+      if (!hasData(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 21, 25, "Data");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Data", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Data", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 1L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Data", off + lenOffset + len * 1, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      byte[] data = new byte[len];
+      MemorySegment.copy(mem, PacketIO.PROTO_BYTE, off, data, 0, len);
+      return data;
+   }
+
+   public static boolean hasLocalLight(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasGlobalLight(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasData(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static SetChunk toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static SetChunk toObject(MemorySegment mem, int offset) {
+      if (offset + 25 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("SetChunk", offset + 25, (int)mem.byteSize());
+      }
+
+      byte[] localLight = null;
+      if (hasLocalLight(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 13, 25, "LocalLight");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("LocalLight", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("LocalLight", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 1L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("LocalLight", off + lenOffset + len * 1, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         localLight = new byte[len];
+         MemorySegment.copy(mem, PacketIO.PROTO_BYTE, off, localLight, 0, len);
+      }
+
+      byte[] globalLight = null;
+      if (hasGlobalLight(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 17, 25, "GlobalLight");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("GlobalLight", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("GlobalLight", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 1L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("GlobalLight", off + lenOffset + len * 1, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         globalLight = new byte[len];
+         MemorySegment.copy(mem, PacketIO.PROTO_BYTE, off, globalLight, 0, len);
+      }
+
+      byte[] data = null;
+      if (hasData(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 21, 25, "Data");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Data", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Data", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 1L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Data", off + lenOffset + len * 1, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         data = new byte[len];
+         MemorySegment.copy(mem, PacketIO.PROTO_BYTE, off, data, 0, len);
+      }
+
+      return new SetChunk(
+         mem.get(PacketIO.PROTO_INT, offset + 1),
+         mem.get(PacketIO.PROTO_INT, offset + 5),
+         mem.get(PacketIO.PROTO_INT, offset + 9),
+         localLight,
+         globalLight,
+         data
+      );
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -277,6 +518,68 @@ public class SetChunk implements Packet, ToClientPacket {
       } else {
          buf.setIntLE(dataOffsetSlot, -1);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.localLight != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.globalLight != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.data != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.x);
+      mem.set(PacketIO.PROTO_INT, offset + 5, this.y);
+      mem.set(PacketIO.PROTO_INT, offset + 9, this.z);
+      int varOffset = offset + 25;
+      if (this.localLight != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 13, varOffset - offset - 25);
+         if (this.localLight.length > 4096000) {
+            throw ProtocolException.arrayTooLong("LocalLight", this.localLight.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.localLight.length);
+         MemorySegment.copy(this.localLight, 0, mem, PacketIO.PROTO_BYTE, varOffset, this.localLight.length);
+         varOffset += this.localLight.length * 1;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 13, -1);
+      }
+
+      if (this.globalLight != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 17, varOffset - offset - 25);
+         if (this.globalLight.length > 4096000) {
+            throw ProtocolException.arrayTooLong("GlobalLight", this.globalLight.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.globalLight.length);
+         MemorySegment.copy(this.globalLight, 0, mem, PacketIO.PROTO_BYTE, varOffset, this.globalLight.length);
+         varOffset += this.globalLight.length * 1;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 17, -1);
+      }
+
+      if (this.data != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 21, varOffset - offset - 25);
+         if (this.data.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Data", this.data.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.data.length);
+         MemorySegment.copy(this.data, 0, mem, PacketIO.PROTO_BYTE, varOffset, this.data.length);
+         varOffset += this.data.length * 1;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 21, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

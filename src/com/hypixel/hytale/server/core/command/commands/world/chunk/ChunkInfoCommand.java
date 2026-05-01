@@ -59,10 +59,7 @@ public class ChunkInfoCommand extends AbstractWorldCommand {
          for (int i = 0; i < 10; i++) {
             BlockSection section = blockChunkComponent.getSectionAtIndex(i);
             msg.insert(Message.translation("server.commands.chunkinfo.section").param("index", i));
-            if (section instanceof BlockSection blockSection) {
-               msg.insert(Message.translation("server.commands.chunkinfo.dataType").param("data", blockSection.getChunkSection().getClass().getSimpleName()));
-            }
-
+            msg.insert(Message.translation("server.commands.chunkinfo.dataType").param("data", section.getChunkSection().getClass().getSimpleName()));
             msg.insert(
                Message.translation("server.commands.chunkinfo.sectionInfo")
                   .param("ticking", section.hasTicking())

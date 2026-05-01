@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -126,6 +127,97 @@ public class UIListDataValue extends UIDataValue {
       }
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 8L;
+   }
+
+   public static String getItemTypeName(MemorySegment mem) {
+      return getItemTypeName(mem, 0);
+   }
+
+   public static String getItemTypeName(MemorySegment mem, int offset) {
+      return PacketIO.readVarString("ItemTypeName", mem, offset + getValidatedOffset(mem, offset, 0, 8, "ItemTypeName"), 4096000, PacketIO.UTF8);
+   }
+
+   public static UIDataValue[] getItems(MemorySegment mem) {
+      return getItems(mem, 0);
+   }
+
+   public static UIDataValue[] getItems(MemorySegment mem, int offset) {
+      int off = offset + getValidatedOffset(mem, offset, 4, 8, "Items");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Items", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Items", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Items", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      UIDataValue[] data = new UIDataValue[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = UIDataValue.toObject(mem, off);
+         off += data[i].computeSizeWithTypeId();
+      }
+
+      return data;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static UIListDataValue toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UIListDataValue toObject(MemorySegment mem, int offset) {
+      if (offset + 8 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("UIListDataValue", offset + 8, (int)mem.byteSize());
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 4, 8, "Items");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Items", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Items", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Items", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      UIDataValue[] items = new UIDataValue[len];
+
+      for (int i = 0; i < len; i++) {
+         items[i] = UIDataValue.toObject(mem, off);
+         off += items[i].computeSizeWithTypeId();
+      }
+
+      return new UIListDataValue(
+         PacketIO.readVarString("ItemTypeName", mem, offset + getValidatedOffset(mem, offset, 0, 8, "ItemTypeName"), 4096000, PacketIO.UTF8), items
+      );
+   }
+
    @Override
    public int serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -148,6 +240,27 @@ public class UIListDataValue extends UIDataValue {
       }
 
       return buf.writerIndex() - startPos;
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      int varOffset = offset + 8;
+      mem.set(PacketIO.PROTO_INT, offset + 0, varOffset - offset - 8);
+      varOffset += PacketIO.writeVarString(mem, varOffset, this.itemTypeName, 4096000);
+      mem.set(PacketIO.PROTO_INT, offset + 4, varOffset - offset - 8);
+      if (this.items.length > 4096000) {
+         throw ProtocolException.arrayTooLong("Items", this.items.length, 4096000);
+      }
+
+      varOffset += VarInt.set(mem, varOffset, this.items.length);
+      int itemsValueOffset = 0;
+
+      for (int i = 0; i < this.items.length; i++) {
+         itemsValueOffset += this.items[i].serializeWithTypeId(mem, varOffset + itemsValueOffset);
+      }
+
+      varOffset += itemsValueOffset;
+      return varOffset - offset;
    }
 
    @Override

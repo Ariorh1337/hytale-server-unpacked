@@ -6,6 +6,7 @@ import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import com.hypixel.hytale.protocol.packets.camera.CameraShakeEffect;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -343,6 +344,375 @@ public class InteractionEffects {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 52L;
+   }
+
+   @Nullable
+   public static ModelParticle[] getParticles(MemorySegment mem) {
+      return getParticles(mem, 0);
+   }
+
+   @Nullable
+   public static ModelParticle[] getParticles(MemorySegment mem, int offset) {
+      if (!hasParticles(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 32, 52, "Particles");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Particles", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Particles", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Particles", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      ModelParticle[] data = new ModelParticle[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = ModelParticle.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static ModelParticle[] getFirstPersonParticles(MemorySegment mem) {
+      return getFirstPersonParticles(mem, 0);
+   }
+
+   @Nullable
+   public static ModelParticle[] getFirstPersonParticles(MemorySegment mem, int offset) {
+      if (!hasFirstPersonParticles(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 36, 52, "FirstPersonParticles");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("FirstPersonParticles", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("FirstPersonParticles", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("FirstPersonParticles", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      ModelParticle[] data = new ModelParticle[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = ModelParticle.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   public static int getWorldSoundEventIndex(MemorySegment mem) {
+      return getWorldSoundEventIndex(mem, 0);
+   }
+
+   public static int getWorldSoundEventIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   public static int getLocalSoundEventIndex(MemorySegment mem) {
+      return getLocalSoundEventIndex(mem, 0);
+   }
+
+   public static int getLocalSoundEventIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 5);
+   }
+
+   @Nullable
+   public static ModelTrail[] getTrails(MemorySegment mem) {
+      return getTrails(mem, 0);
+   }
+
+   @Nullable
+   public static ModelTrail[] getTrails(MemorySegment mem, int offset) {
+      if (!hasTrails(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 40, 52, "Trails");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Trails", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Trails", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Trails", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      ModelTrail[] data = new ModelTrail[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = ModelTrail.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   public static boolean getWaitForAnimationToFinish(MemorySegment mem) {
+      return getWaitForAnimationToFinish(mem, 0);
+   }
+
+   public static boolean getWaitForAnimationToFinish(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 9);
+   }
+
+   @Nullable
+   public static String getItemPlayerAnimationsId(MemorySegment mem) {
+      return getItemPlayerAnimationsId(mem, 0);
+   }
+
+   @Nullable
+   public static String getItemPlayerAnimationsId(MemorySegment mem, int offset) {
+      return hasItemPlayerAnimationsId(mem, offset)
+         ? PacketIO.readVarString(
+            "ItemPlayerAnimationsId", mem, offset + getValidatedOffset(mem, offset, 44, 52, "ItemPlayerAnimationsId"), 4096000, PacketIO.UTF8
+         )
+         : null;
+   }
+
+   @Nullable
+   public static String getItemAnimationId(MemorySegment mem) {
+      return getItemAnimationId(mem, 0);
+   }
+
+   @Nullable
+   public static String getItemAnimationId(MemorySegment mem, int offset) {
+      return hasItemAnimationId(mem, offset)
+         ? PacketIO.readVarString("ItemAnimationId", mem, offset + getValidatedOffset(mem, offset, 48, 52, "ItemAnimationId"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static boolean getClearAnimationOnFinish(MemorySegment mem) {
+      return getClearAnimationOnFinish(mem, 0);
+   }
+
+   public static boolean getClearAnimationOnFinish(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 10);
+   }
+
+   public static boolean getClearSoundEventOnFinish(MemorySegment mem) {
+      return getClearSoundEventOnFinish(mem, 0);
+   }
+
+   public static boolean getClearSoundEventOnFinish(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 11);
+   }
+
+   @Nullable
+   public static CameraShakeEffect getCameraShake(MemorySegment mem) {
+      return getCameraShake(mem, 0);
+   }
+
+   @Nullable
+   public static CameraShakeEffect getCameraShake(MemorySegment mem, int offset) {
+      return hasCameraShake(mem, offset) ? CameraShakeEffect.toObject(mem, offset + 12) : null;
+   }
+
+   @Nullable
+   public static MovementEffects getMovementEffects(MemorySegment mem) {
+      return getMovementEffects(mem, 0);
+   }
+
+   @Nullable
+   public static MovementEffects getMovementEffects(MemorySegment mem, int offset) {
+      return hasMovementEffects(mem, offset) ? MovementEffects.toObject(mem, offset + 21) : null;
+   }
+
+   public static float getStartDelay(MemorySegment mem) {
+      return getStartDelay(mem, 0);
+   }
+
+   public static float getStartDelay(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 28);
+   }
+
+   public static boolean hasCameraShake(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasMovementEffects(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasParticles(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasFirstPersonParticles(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasTrails(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 16) != 0;
+   }
+
+   public static boolean hasItemPlayerAnimationsId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 32) != 0;
+   }
+
+   public static boolean hasItemAnimationId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 64) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static InteractionEffects toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static InteractionEffects toObject(MemorySegment mem, int offset) {
+      if (offset + 52 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("InteractionEffects", offset + 52, (int)mem.byteSize());
+      }
+
+      ModelParticle[] particles = null;
+      if (hasParticles(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 32, 52, "Particles");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Particles", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Particles", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Particles", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         particles = new ModelParticle[len];
+
+         for (int i = 0; i < len; i++) {
+            particles[i] = ModelParticle.toObject(mem, off);
+            off += particles[i].computeSize();
+         }
+      }
+
+      ModelParticle[] firstPersonParticles = null;
+      if (hasFirstPersonParticles(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 36, 52, "FirstPersonParticles");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("FirstPersonParticles", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("FirstPersonParticles", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("FirstPersonParticles", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         firstPersonParticles = new ModelParticle[len];
+
+         for (int i = 0; i < len; i++) {
+            firstPersonParticles[i] = ModelParticle.toObject(mem, off);
+            off += firstPersonParticles[i].computeSize();
+         }
+      }
+
+      ModelTrail[] trails = null;
+      if (hasTrails(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 40, 52, "Trails");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Trails", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Trails", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Trails", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         trails = new ModelTrail[len];
+
+         for (int i = 0; i < len; i++) {
+            trails[i] = ModelTrail.toObject(mem, off);
+            off += trails[i].computeSize();
+         }
+      }
+
+      return new InteractionEffects(
+         particles,
+         firstPersonParticles,
+         mem.get(PacketIO.PROTO_INT, offset + 1),
+         mem.get(PacketIO.PROTO_INT, offset + 5),
+         trails,
+         mem.get(PacketIO.PROTO_BOOL, offset + 9),
+         hasItemPlayerAnimationsId(mem, offset)
+            ? PacketIO.readVarString(
+               "ItemPlayerAnimationsId", mem, offset + getValidatedOffset(mem, offset, 44, 52, "ItemPlayerAnimationsId"), 4096000, PacketIO.UTF8
+            )
+            : null,
+         hasItemAnimationId(mem, offset)
+            ? PacketIO.readVarString("ItemAnimationId", mem, offset + getValidatedOffset(mem, offset, 48, 52, "ItemAnimationId"), 4096000, PacketIO.UTF8)
+            : null,
+         mem.get(PacketIO.PROTO_BOOL, offset + 10),
+         mem.get(PacketIO.PROTO_BOOL, offset + 11),
+         hasCameraShake(mem, offset) ? CameraShakeEffect.toObject(mem, offset + 12) : null,
+         hasMovementEffects(mem, offset) ? MovementEffects.toObject(mem, offset + 21) : null,
+         mem.get(PacketIO.PROTO_FLOAT, offset + 28)
+      );
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -462,6 +832,127 @@ public class InteractionEffects {
       } else {
          buf.setIntLE(itemAnimationIdOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.cameraShake != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.movementEffects != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.particles != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.firstPersonParticles != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.trails != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.itemPlayerAnimationsId != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
+      if (this.itemAnimationId != null) {
+         nullBits = (byte)(nullBits | 64);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.worldSoundEventIndex);
+      mem.set(PacketIO.PROTO_INT, offset + 5, this.localSoundEventIndex);
+      mem.set(PacketIO.PROTO_BOOL, offset + 9, this.waitForAnimationToFinish);
+      mem.set(PacketIO.PROTO_BOOL, offset + 10, this.clearAnimationOnFinish);
+      mem.set(PacketIO.PROTO_BOOL, offset + 11, this.clearSoundEventOnFinish);
+      if (this.cameraShake != null) {
+         this.cameraShake.serialize(mem, offset + 12);
+      } else {
+         mem.asSlice(offset + 12, 9L).fill((byte)0);
+      }
+
+      if (this.movementEffects != null) {
+         this.movementEffects.serialize(mem, offset + 21);
+      } else {
+         mem.asSlice(offset + 21, 7L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_FLOAT, offset + 28, this.startDelay);
+      int varOffset = offset + 52;
+      if (this.particles != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 32, varOffset - offset - 52);
+         if (this.particles.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Particles", this.particles.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.particles.length);
+         int particlesValueOffset = 0;
+
+         for (int i = 0; i < this.particles.length; i++) {
+            particlesValueOffset += this.particles[i].serialize(mem, varOffset + particlesValueOffset);
+         }
+
+         varOffset += particlesValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 32, -1);
+      }
+
+      if (this.firstPersonParticles != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 36, varOffset - offset - 52);
+         if (this.firstPersonParticles.length > 4096000) {
+            throw ProtocolException.arrayTooLong("FirstPersonParticles", this.firstPersonParticles.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.firstPersonParticles.length);
+         int firstPersonParticlesValueOffset = 0;
+
+         for (int i = 0; i < this.firstPersonParticles.length; i++) {
+            firstPersonParticlesValueOffset += this.firstPersonParticles[i].serialize(mem, varOffset + firstPersonParticlesValueOffset);
+         }
+
+         varOffset += firstPersonParticlesValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 36, -1);
+      }
+
+      if (this.trails != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 40, varOffset - offset - 52);
+         if (this.trails.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Trails", this.trails.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.trails.length);
+         int trailsValueOffset = 0;
+
+         for (int i = 0; i < this.trails.length; i++) {
+            trailsValueOffset += this.trails[i].serialize(mem, varOffset + trailsValueOffset);
+         }
+
+         varOffset += trailsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 40, -1);
+      }
+
+      if (this.itemPlayerAnimationsId != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 44, varOffset - offset - 52);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.itemPlayerAnimationsId, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 44, -1);
+      }
+
+      if (this.itemAnimationId != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 48, varOffset - offset - 52);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.itemAnimationId, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 48, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

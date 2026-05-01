@@ -4,6 +4,7 @@ import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -116,6 +117,157 @@ public class ParticleAttractor {
       return 85;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 85L;
+   }
+
+   @Nullable
+   public static Vector3fc getPosition(MemorySegment mem) {
+      return getPosition(mem, 0);
+   }
+
+   @Nullable
+   public static Vector3fc getPosition(MemorySegment mem, int offset) {
+      return hasPosition(mem, offset) ? PacketIO.readVector3f(mem, offset + 1) : null;
+   }
+
+   @Nullable
+   public static Vector3fc getRadialAxis(MemorySegment mem) {
+      return getRadialAxis(mem, 0);
+   }
+
+   @Nullable
+   public static Vector3fc getRadialAxis(MemorySegment mem, int offset) {
+      return hasRadialAxis(mem, offset) ? PacketIO.readVector3f(mem, offset + 13) : null;
+   }
+
+   public static float getTrailPositionMultiplier(MemorySegment mem) {
+      return getTrailPositionMultiplier(mem, 0);
+   }
+
+   public static float getTrailPositionMultiplier(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 25);
+   }
+
+   public static float getRadius(MemorySegment mem) {
+      return getRadius(mem, 0);
+   }
+
+   public static float getRadius(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 29);
+   }
+
+   public static float getRadialAcceleration(MemorySegment mem) {
+      return getRadialAcceleration(mem, 0);
+   }
+
+   public static float getRadialAcceleration(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 33);
+   }
+
+   public static float getRadialTangentAcceleration(MemorySegment mem) {
+      return getRadialTangentAcceleration(mem, 0);
+   }
+
+   public static float getRadialTangentAcceleration(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 37);
+   }
+
+   @Nullable
+   public static Vector3fc getLinearAcceleration(MemorySegment mem) {
+      return getLinearAcceleration(mem, 0);
+   }
+
+   @Nullable
+   public static Vector3fc getLinearAcceleration(MemorySegment mem, int offset) {
+      return hasLinearAcceleration(mem, offset) ? PacketIO.readVector3f(mem, offset + 41) : null;
+   }
+
+   public static float getRadialImpulse(MemorySegment mem) {
+      return getRadialImpulse(mem, 0);
+   }
+
+   public static float getRadialImpulse(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 53);
+   }
+
+   public static float getRadialTangentImpulse(MemorySegment mem) {
+      return getRadialTangentImpulse(mem, 0);
+   }
+
+   public static float getRadialTangentImpulse(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 57);
+   }
+
+   @Nullable
+   public static Vector3fc getLinearImpulse(MemorySegment mem) {
+      return getLinearImpulse(mem, 0);
+   }
+
+   @Nullable
+   public static Vector3fc getLinearImpulse(MemorySegment mem, int offset) {
+      return hasLinearImpulse(mem, offset) ? PacketIO.readVector3f(mem, offset + 61) : null;
+   }
+
+   @Nullable
+   public static Vector3fc getDampingMultiplier(MemorySegment mem) {
+      return getDampingMultiplier(mem, 0);
+   }
+
+   @Nullable
+   public static Vector3fc getDampingMultiplier(MemorySegment mem, int offset) {
+      return hasDampingMultiplier(mem, offset) ? PacketIO.readVector3f(mem, offset + 73) : null;
+   }
+
+   public static boolean hasPosition(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasRadialAxis(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasLinearAcceleration(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasLinearImpulse(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasDampingMultiplier(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 16) != 0;
+   }
+
+   public static ParticleAttractor toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ParticleAttractor toObject(MemorySegment mem, int offset) {
+      if (offset + 85 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ParticleAttractor", offset + 85, (int)mem.byteSize());
+      } else {
+         return new ParticleAttractor(
+            hasPosition(mem, offset) ? PacketIO.readVector3f(mem, offset + 1) : null,
+            hasRadialAxis(mem, offset) ? PacketIO.readVector3f(mem, offset + 13) : null,
+            mem.get(PacketIO.PROTO_FLOAT, offset + 25),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 29),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 33),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 37),
+            hasLinearAcceleration(mem, offset) ? PacketIO.readVector3f(mem, offset + 41) : null,
+            mem.get(PacketIO.PROTO_FLOAT, offset + 53),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 57),
+            hasLinearImpulse(mem, offset) ? PacketIO.readVector3f(mem, offset + 61) : null,
+            hasDampingMultiplier(mem, offset) ? PacketIO.readVector3f(mem, offset + 73) : null
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
       if (this.position != null) {
@@ -174,6 +326,68 @@ public class ParticleAttractor {
       } else {
          buf.writeZero(12);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.position != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.radialAxis != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.linearAcceleration != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.linearImpulse != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.dampingMultiplier != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      if (this.position != null) {
+         PacketIO.writeVector3f(mem, offset + 1, this.position);
+      } else {
+         mem.asSlice(offset + 1, 12L).fill((byte)0);
+      }
+
+      if (this.radialAxis != null) {
+         PacketIO.writeVector3f(mem, offset + 13, this.radialAxis);
+      } else {
+         mem.asSlice(offset + 13, 12L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_FLOAT, offset + 25, this.trailPositionMultiplier);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 29, this.radius);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 33, this.radialAcceleration);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 37, this.radialTangentAcceleration);
+      if (this.linearAcceleration != null) {
+         PacketIO.writeVector3f(mem, offset + 41, this.linearAcceleration);
+      } else {
+         mem.asSlice(offset + 41, 12L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_FLOAT, offset + 53, this.radialImpulse);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 57, this.radialTangentImpulse);
+      if (this.linearImpulse != null) {
+         PacketIO.writeVector3f(mem, offset + 61, this.linearImpulse);
+      } else {
+         mem.asSlice(offset + 61, 12L).fill((byte)0);
+      }
+
+      if (this.dampingMultiplier != null) {
+         PacketIO.writeVector3f(mem, offset + 73, this.dampingMultiplier);
+      } else {
+         mem.asSlice(offset + 73, 12L).fill((byte)0);
+      }
+
+      return 85;
    }
 
    public int computeSize() {

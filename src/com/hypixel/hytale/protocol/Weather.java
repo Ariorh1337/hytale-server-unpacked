@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -1346,6 +1347,1551 @@ public class Weather {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 126L;
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem) {
+      return getId(mem, 0);
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem, int offset) {
+      return hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 30, 126, "Id"), 4096000, PacketIO.UTF8) : null;
+   }
+
+   @Nullable
+   public static int[] getTagIndexes(MemorySegment mem) {
+      return getTagIndexes(mem, 0);
+   }
+
+   @Nullable
+   public static int[] getTagIndexes(MemorySegment mem, int offset) {
+      if (!hasTagIndexes(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 34, 126, "TagIndexes");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("TagIndexes", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("TagIndexes", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 4L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("TagIndexes", off + lenOffset + len * 4, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      int[] data = new int[len];
+      MemorySegment.copy(mem, PacketIO.PROTO_INT, off, data, 0, len);
+      return data;
+   }
+
+   @Nullable
+   public static String getStars(MemorySegment mem) {
+      return getStars(mem, 0);
+   }
+
+   @Nullable
+   public static String getStars(MemorySegment mem, int offset) {
+      return hasStars(mem, offset)
+         ? PacketIO.readVarString("Stars", mem, offset + getValidatedOffset(mem, offset, 38, 126, "Stars"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static Map<Integer, String> getMoons(MemorySegment mem) {
+      return getMoons(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Integer, String> getMoons(MemorySegment mem, int offset) {
+      if (!hasMoons(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 42, 126, "Moons");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Moons", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("Moons", len, 4096000);
+      }
+
+      Map<Integer, String> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         int key = mem.get(PacketIO.PROTO_INT, off);
+         off += 4;
+         long valuePacked = VarInt.getWithLength(mem, off);
+         int nvalue = (int)valuePacked + (int)(valuePacked >>> 32);
+         String value = PacketIO.readVarString("value", mem, off, 16384000, PacketIO.UTF8);
+         off += nvalue;
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("Moons", key);
+         }
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static Cloud[] getClouds(MemorySegment mem) {
+      return getClouds(mem, 0);
+   }
+
+   @Nullable
+   public static Cloud[] getClouds(MemorySegment mem, int offset) {
+      if (!hasClouds(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 46, 126, "Clouds");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Clouds", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Clouds", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Clouds", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      Cloud[] data = new Cloud[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = Cloud.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static Map<Float, Float> getSunlightDampingMultiplier(MemorySegment mem) {
+      return getSunlightDampingMultiplier(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Float, Float> getSunlightDampingMultiplier(MemorySegment mem, int offset) {
+      if (!hasSunlightDampingMultiplier(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 50, 126, "SunlightDampingMultiplier");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("SunlightDampingMultiplier", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("SunlightDampingMultiplier", len, 4096000);
+      }
+
+      Map<Float, Float> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         float key = mem.get(PacketIO.PROTO_FLOAT, off);
+         off += 4;
+         float value = mem.get(PacketIO.PROTO_FLOAT, off);
+         off += 4;
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("SunlightDampingMultiplier", key);
+         }
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static Map<Float, Color> getSunlightColors(MemorySegment mem) {
+      return getSunlightColors(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Float, Color> getSunlightColors(MemorySegment mem, int offset) {
+      if (!hasSunlightColors(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 54, 126, "SunlightColors");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("SunlightColors", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("SunlightColors", len, 4096000);
+      }
+
+      Map<Float, Color> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         float key = mem.get(PacketIO.PROTO_FLOAT, off);
+         off += 4;
+         Color value = Color.toObject(mem, off);
+         off += value.computeSize();
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("SunlightColors", key);
+         }
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static Map<Float, ColorAlpha> getSkyTopColors(MemorySegment mem) {
+      return getSkyTopColors(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Float, ColorAlpha> getSkyTopColors(MemorySegment mem, int offset) {
+      if (!hasSkyTopColors(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 58, 126, "SkyTopColors");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("SkyTopColors", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("SkyTopColors", len, 4096000);
+      }
+
+      Map<Float, ColorAlpha> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         float key = mem.get(PacketIO.PROTO_FLOAT, off);
+         off += 4;
+         ColorAlpha value = ColorAlpha.toObject(mem, off);
+         off += value.computeSize();
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("SkyTopColors", key);
+         }
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static Map<Float, ColorAlpha> getSkyBottomColors(MemorySegment mem) {
+      return getSkyBottomColors(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Float, ColorAlpha> getSkyBottomColors(MemorySegment mem, int offset) {
+      if (!hasSkyBottomColors(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 62, 126, "SkyBottomColors");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("SkyBottomColors", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("SkyBottomColors", len, 4096000);
+      }
+
+      Map<Float, ColorAlpha> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         float key = mem.get(PacketIO.PROTO_FLOAT, off);
+         off += 4;
+         ColorAlpha value = ColorAlpha.toObject(mem, off);
+         off += value.computeSize();
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("SkyBottomColors", key);
+         }
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static Map<Float, ColorAlpha> getSkySunsetColors(MemorySegment mem) {
+      return getSkySunsetColors(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Float, ColorAlpha> getSkySunsetColors(MemorySegment mem, int offset) {
+      if (!hasSkySunsetColors(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 66, 126, "SkySunsetColors");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("SkySunsetColors", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("SkySunsetColors", len, 4096000);
+      }
+
+      Map<Float, ColorAlpha> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         float key = mem.get(PacketIO.PROTO_FLOAT, off);
+         off += 4;
+         ColorAlpha value = ColorAlpha.toObject(mem, off);
+         off += value.computeSize();
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("SkySunsetColors", key);
+         }
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static Map<Float, Color> getSunColors(MemorySegment mem) {
+      return getSunColors(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Float, Color> getSunColors(MemorySegment mem, int offset) {
+      if (!hasSunColors(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 70, 126, "SunColors");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("SunColors", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("SunColors", len, 4096000);
+      }
+
+      Map<Float, Color> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         float key = mem.get(PacketIO.PROTO_FLOAT, off);
+         off += 4;
+         Color value = Color.toObject(mem, off);
+         off += value.computeSize();
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("SunColors", key);
+         }
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static Map<Float, Float> getSunScales(MemorySegment mem) {
+      return getSunScales(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Float, Float> getSunScales(MemorySegment mem, int offset) {
+      if (!hasSunScales(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 74, 126, "SunScales");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("SunScales", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("SunScales", len, 4096000);
+      }
+
+      Map<Float, Float> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         float key = mem.get(PacketIO.PROTO_FLOAT, off);
+         off += 4;
+         float value = mem.get(PacketIO.PROTO_FLOAT, off);
+         off += 4;
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("SunScales", key);
+         }
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static Map<Float, ColorAlpha> getSunGlowColors(MemorySegment mem) {
+      return getSunGlowColors(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Float, ColorAlpha> getSunGlowColors(MemorySegment mem, int offset) {
+      if (!hasSunGlowColors(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 78, 126, "SunGlowColors");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("SunGlowColors", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("SunGlowColors", len, 4096000);
+      }
+
+      Map<Float, ColorAlpha> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         float key = mem.get(PacketIO.PROTO_FLOAT, off);
+         off += 4;
+         ColorAlpha value = ColorAlpha.toObject(mem, off);
+         off += value.computeSize();
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("SunGlowColors", key);
+         }
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static Map<Float, ColorAlpha> getMoonColors(MemorySegment mem) {
+      return getMoonColors(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Float, ColorAlpha> getMoonColors(MemorySegment mem, int offset) {
+      if (!hasMoonColors(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 82, 126, "MoonColors");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("MoonColors", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("MoonColors", len, 4096000);
+      }
+
+      Map<Float, ColorAlpha> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         float key = mem.get(PacketIO.PROTO_FLOAT, off);
+         off += 4;
+         ColorAlpha value = ColorAlpha.toObject(mem, off);
+         off += value.computeSize();
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("MoonColors", key);
+         }
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static Map<Float, Float> getMoonScales(MemorySegment mem) {
+      return getMoonScales(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Float, Float> getMoonScales(MemorySegment mem, int offset) {
+      if (!hasMoonScales(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 86, 126, "MoonScales");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("MoonScales", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("MoonScales", len, 4096000);
+      }
+
+      Map<Float, Float> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         float key = mem.get(PacketIO.PROTO_FLOAT, off);
+         off += 4;
+         float value = mem.get(PacketIO.PROTO_FLOAT, off);
+         off += 4;
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("MoonScales", key);
+         }
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static Map<Float, ColorAlpha> getMoonGlowColors(MemorySegment mem) {
+      return getMoonGlowColors(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Float, ColorAlpha> getMoonGlowColors(MemorySegment mem, int offset) {
+      if (!hasMoonGlowColors(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 90, 126, "MoonGlowColors");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("MoonGlowColors", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("MoonGlowColors", len, 4096000);
+      }
+
+      Map<Float, ColorAlpha> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         float key = mem.get(PacketIO.PROTO_FLOAT, off);
+         off += 4;
+         ColorAlpha value = ColorAlpha.toObject(mem, off);
+         off += value.computeSize();
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("MoonGlowColors", key);
+         }
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static Map<Float, Color> getFogColors(MemorySegment mem) {
+      return getFogColors(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Float, Color> getFogColors(MemorySegment mem, int offset) {
+      if (!hasFogColors(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 94, 126, "FogColors");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("FogColors", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("FogColors", len, 4096000);
+      }
+
+      Map<Float, Color> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         float key = mem.get(PacketIO.PROTO_FLOAT, off);
+         off += 4;
+         Color value = Color.toObject(mem, off);
+         off += value.computeSize();
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("FogColors", key);
+         }
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static Map<Float, Float> getFogHeightFalloffs(MemorySegment mem) {
+      return getFogHeightFalloffs(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Float, Float> getFogHeightFalloffs(MemorySegment mem, int offset) {
+      if (!hasFogHeightFalloffs(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 98, 126, "FogHeightFalloffs");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("FogHeightFalloffs", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("FogHeightFalloffs", len, 4096000);
+      }
+
+      Map<Float, Float> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         float key = mem.get(PacketIO.PROTO_FLOAT, off);
+         off += 4;
+         float value = mem.get(PacketIO.PROTO_FLOAT, off);
+         off += 4;
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("FogHeightFalloffs", key);
+         }
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static Map<Float, Float> getFogDensities(MemorySegment mem) {
+      return getFogDensities(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Float, Float> getFogDensities(MemorySegment mem, int offset) {
+      if (!hasFogDensities(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 102, 126, "FogDensities");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("FogDensities", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("FogDensities", len, 4096000);
+      }
+
+      Map<Float, Float> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         float key = mem.get(PacketIO.PROTO_FLOAT, off);
+         off += 4;
+         float value = mem.get(PacketIO.PROTO_FLOAT, off);
+         off += 4;
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("FogDensities", key);
+         }
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static String getScreenEffect(MemorySegment mem) {
+      return getScreenEffect(mem, 0);
+   }
+
+   @Nullable
+   public static String getScreenEffect(MemorySegment mem, int offset) {
+      return hasScreenEffect(mem, offset)
+         ? PacketIO.readVarString("ScreenEffect", mem, offset + getValidatedOffset(mem, offset, 106, 126, "ScreenEffect"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static Map<Float, ColorAlpha> getScreenEffectColors(MemorySegment mem) {
+      return getScreenEffectColors(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Float, ColorAlpha> getScreenEffectColors(MemorySegment mem, int offset) {
+      if (!hasScreenEffectColors(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 110, 126, "ScreenEffectColors");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("ScreenEffectColors", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("ScreenEffectColors", len, 4096000);
+      }
+
+      Map<Float, ColorAlpha> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         float key = mem.get(PacketIO.PROTO_FLOAT, off);
+         off += 4;
+         ColorAlpha value = ColorAlpha.toObject(mem, off);
+         off += value.computeSize();
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("ScreenEffectColors", key);
+         }
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static Map<Float, Color> getColorFilters(MemorySegment mem) {
+      return getColorFilters(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Float, Color> getColorFilters(MemorySegment mem, int offset) {
+      if (!hasColorFilters(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 114, 126, "ColorFilters");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("ColorFilters", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("ColorFilters", len, 4096000);
+      }
+
+      Map<Float, Color> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         float key = mem.get(PacketIO.PROTO_FLOAT, off);
+         off += 4;
+         Color value = Color.toObject(mem, off);
+         off += value.computeSize();
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("ColorFilters", key);
+         }
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static Map<Float, Color> getWaterTints(MemorySegment mem) {
+      return getWaterTints(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Float, Color> getWaterTints(MemorySegment mem, int offset) {
+      if (!hasWaterTints(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 118, 126, "WaterTints");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("WaterTints", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("WaterTints", len, 4096000);
+      }
+
+      Map<Float, Color> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         float key = mem.get(PacketIO.PROTO_FLOAT, off);
+         off += 4;
+         Color value = Color.toObject(mem, off);
+         off += value.computeSize();
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("WaterTints", key);
+         }
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static WeatherParticle getParticle(MemorySegment mem) {
+      return getParticle(mem, 0);
+   }
+
+   @Nullable
+   public static WeatherParticle getParticle(MemorySegment mem, int offset) {
+      return hasParticle(mem, offset) ? WeatherParticle.toObject(mem, offset + getValidatedOffset(mem, offset, 122, 126, "Particle")) : null;
+   }
+
+   @Nullable
+   public static NearFar getFog(MemorySegment mem) {
+      return getFog(mem, 0);
+   }
+
+   @Nullable
+   public static NearFar getFog(MemorySegment mem, int offset) {
+      return hasFog(mem, offset) ? NearFar.toObject(mem, offset + 4) : null;
+   }
+
+   @Nullable
+   public static FogOptions getFogOptions(MemorySegment mem) {
+      return getFogOptions(mem, 0);
+   }
+
+   @Nullable
+   public static FogOptions getFogOptions(MemorySegment mem, int offset) {
+      return hasFogOptions(mem, offset) ? FogOptions.toObject(mem, offset + 12) : null;
+   }
+
+   public static boolean hasFog(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasFogOptions(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasTagIndexes(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasStars(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 16) != 0;
+   }
+
+   public static boolean hasMoons(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 32) != 0;
+   }
+
+   public static boolean hasClouds(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 64) != 0;
+   }
+
+   public static boolean hasSunlightDampingMultiplier(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 128) != 0;
+   }
+
+   public static boolean hasSunlightColors(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasSkyTopColors(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasSkyBottomColors(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasSkySunsetColors(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasSunColors(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 16) != 0;
+   }
+
+   public static boolean hasSunScales(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 32) != 0;
+   }
+
+   public static boolean hasSunGlowColors(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 64) != 0;
+   }
+
+   public static boolean hasMoonColors(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 128) != 0;
+   }
+
+   public static boolean hasMoonScales(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 2);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasMoonGlowColors(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 2);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasFogColors(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 2);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasFogHeightFalloffs(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 2);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasFogDensities(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 2);
+      return (b & 16) != 0;
+   }
+
+   public static boolean hasScreenEffect(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 2);
+      return (b & 32) != 0;
+   }
+
+   public static boolean hasScreenEffectColors(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 2);
+      return (b & 64) != 0;
+   }
+
+   public static boolean hasColorFilters(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 2);
+      return (b & 128) != 0;
+   }
+
+   public static boolean hasWaterTints(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 3);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasParticle(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 3);
+      return (b & 2) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static Weather toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static Weather toObject(MemorySegment mem, int offset) {
+      if (offset + 126 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Weather", offset + 126, (int)mem.byteSize());
+      }
+
+      int[] tagIndexes = null;
+      if (hasTagIndexes(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 34, 126, "TagIndexes");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("TagIndexes", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("TagIndexes", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 4L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("TagIndexes", off + lenOffset + len * 4, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         tagIndexes = new int[len];
+         MemorySegment.copy(mem, PacketIO.PROTO_INT, off, tagIndexes, 0, len);
+      }
+
+      Map<Integer, String> moons = null;
+      if (hasMoons(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 42, 126, "Moons");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Moons", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Moons", len, 4096000);
+         }
+
+         moons = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            int key = mem.get(PacketIO.PROTO_INT, off);
+            off += 4;
+            long valuePacked = VarInt.getWithLength(mem, off);
+            int nvalue = (int)valuePacked + (int)(valuePacked >>> 32);
+            String value = PacketIO.readVarString("value", mem, off, 16384000, PacketIO.UTF8);
+            off += nvalue;
+            if (moons.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("Moons", key);
+            }
+         }
+      }
+
+      Cloud[] clouds = null;
+      if (hasClouds(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 46, 126, "Clouds");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Clouds", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Clouds", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Clouds", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         clouds = new Cloud[len];
+
+         for (int i = 0; i < len; i++) {
+            clouds[i] = Cloud.toObject(mem, off);
+            off += clouds[i].computeSize();
+         }
+      }
+
+      Map<Float, Float> sunlightDampingMultiplier = null;
+      if (hasSunlightDampingMultiplier(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 50, 126, "SunlightDampingMultiplier");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("SunlightDampingMultiplier", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("SunlightDampingMultiplier", len, 4096000);
+         }
+
+         sunlightDampingMultiplier = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            float key = mem.get(PacketIO.PROTO_FLOAT, off);
+            off += 4;
+            float value = mem.get(PacketIO.PROTO_FLOAT, off);
+            off += 4;
+            if (sunlightDampingMultiplier.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("SunlightDampingMultiplier", key);
+            }
+         }
+      }
+
+      Map<Float, Color> sunlightColors = null;
+      if (hasSunlightColors(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 54, 126, "SunlightColors");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("SunlightColors", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("SunlightColors", len, 4096000);
+         }
+
+         sunlightColors = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            float key = mem.get(PacketIO.PROTO_FLOAT, off);
+            off += 4;
+            Color value = Color.toObject(mem, off);
+            off += value.computeSize();
+            if (sunlightColors.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("SunlightColors", key);
+            }
+         }
+      }
+
+      Map<Float, ColorAlpha> skyTopColors = null;
+      if (hasSkyTopColors(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 58, 126, "SkyTopColors");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("SkyTopColors", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("SkyTopColors", len, 4096000);
+         }
+
+         skyTopColors = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            float key = mem.get(PacketIO.PROTO_FLOAT, off);
+            off += 4;
+            ColorAlpha value = ColorAlpha.toObject(mem, off);
+            off += value.computeSize();
+            if (skyTopColors.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("SkyTopColors", key);
+            }
+         }
+      }
+
+      Map<Float, ColorAlpha> skyBottomColors = null;
+      if (hasSkyBottomColors(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 62, 126, "SkyBottomColors");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("SkyBottomColors", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("SkyBottomColors", len, 4096000);
+         }
+
+         skyBottomColors = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            float key = mem.get(PacketIO.PROTO_FLOAT, off);
+            off += 4;
+            ColorAlpha value = ColorAlpha.toObject(mem, off);
+            off += value.computeSize();
+            if (skyBottomColors.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("SkyBottomColors", key);
+            }
+         }
+      }
+
+      Map<Float, ColorAlpha> skySunsetColors = null;
+      if (hasSkySunsetColors(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 66, 126, "SkySunsetColors");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("SkySunsetColors", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("SkySunsetColors", len, 4096000);
+         }
+
+         skySunsetColors = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            float key = mem.get(PacketIO.PROTO_FLOAT, off);
+            off += 4;
+            ColorAlpha value = ColorAlpha.toObject(mem, off);
+            off += value.computeSize();
+            if (skySunsetColors.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("SkySunsetColors", key);
+            }
+         }
+      }
+
+      Map<Float, Color> sunColors = null;
+      if (hasSunColors(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 70, 126, "SunColors");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("SunColors", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("SunColors", len, 4096000);
+         }
+
+         sunColors = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            float key = mem.get(PacketIO.PROTO_FLOAT, off);
+            off += 4;
+            Color value = Color.toObject(mem, off);
+            off += value.computeSize();
+            if (sunColors.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("SunColors", key);
+            }
+         }
+      }
+
+      Map<Float, Float> sunScales = null;
+      if (hasSunScales(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 74, 126, "SunScales");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("SunScales", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("SunScales", len, 4096000);
+         }
+
+         sunScales = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            float key = mem.get(PacketIO.PROTO_FLOAT, off);
+            off += 4;
+            float value = mem.get(PacketIO.PROTO_FLOAT, off);
+            off += 4;
+            if (sunScales.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("SunScales", key);
+            }
+         }
+      }
+
+      Map<Float, ColorAlpha> sunGlowColors = null;
+      if (hasSunGlowColors(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 78, 126, "SunGlowColors");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("SunGlowColors", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("SunGlowColors", len, 4096000);
+         }
+
+         sunGlowColors = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            float key = mem.get(PacketIO.PROTO_FLOAT, off);
+            off += 4;
+            ColorAlpha value = ColorAlpha.toObject(mem, off);
+            off += value.computeSize();
+            if (sunGlowColors.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("SunGlowColors", key);
+            }
+         }
+      }
+
+      Map<Float, ColorAlpha> moonColors = null;
+      if (hasMoonColors(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 82, 126, "MoonColors");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("MoonColors", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("MoonColors", len, 4096000);
+         }
+
+         moonColors = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            float key = mem.get(PacketIO.PROTO_FLOAT, off);
+            off += 4;
+            ColorAlpha value = ColorAlpha.toObject(mem, off);
+            off += value.computeSize();
+            if (moonColors.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("MoonColors", key);
+            }
+         }
+      }
+
+      Map<Float, Float> moonScales = null;
+      if (hasMoonScales(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 86, 126, "MoonScales");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("MoonScales", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("MoonScales", len, 4096000);
+         }
+
+         moonScales = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            float key = mem.get(PacketIO.PROTO_FLOAT, off);
+            off += 4;
+            float value = mem.get(PacketIO.PROTO_FLOAT, off);
+            off += 4;
+            if (moonScales.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("MoonScales", key);
+            }
+         }
+      }
+
+      Map<Float, ColorAlpha> moonGlowColors = null;
+      if (hasMoonGlowColors(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 90, 126, "MoonGlowColors");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("MoonGlowColors", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("MoonGlowColors", len, 4096000);
+         }
+
+         moonGlowColors = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            float key = mem.get(PacketIO.PROTO_FLOAT, off);
+            off += 4;
+            ColorAlpha value = ColorAlpha.toObject(mem, off);
+            off += value.computeSize();
+            if (moonGlowColors.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("MoonGlowColors", key);
+            }
+         }
+      }
+
+      Map<Float, Color> fogColors = null;
+      if (hasFogColors(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 94, 126, "FogColors");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("FogColors", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("FogColors", len, 4096000);
+         }
+
+         fogColors = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            float key = mem.get(PacketIO.PROTO_FLOAT, off);
+            off += 4;
+            Color value = Color.toObject(mem, off);
+            off += value.computeSize();
+            if (fogColors.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("FogColors", key);
+            }
+         }
+      }
+
+      Map<Float, Float> fogHeightFalloffs = null;
+      if (hasFogHeightFalloffs(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 98, 126, "FogHeightFalloffs");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("FogHeightFalloffs", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("FogHeightFalloffs", len, 4096000);
+         }
+
+         fogHeightFalloffs = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            float key = mem.get(PacketIO.PROTO_FLOAT, off);
+            off += 4;
+            float value = mem.get(PacketIO.PROTO_FLOAT, off);
+            off += 4;
+            if (fogHeightFalloffs.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("FogHeightFalloffs", key);
+            }
+         }
+      }
+
+      Map<Float, Float> fogDensities = null;
+      if (hasFogDensities(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 102, 126, "FogDensities");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("FogDensities", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("FogDensities", len, 4096000);
+         }
+
+         fogDensities = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            float key = mem.get(PacketIO.PROTO_FLOAT, off);
+            off += 4;
+            float value = mem.get(PacketIO.PROTO_FLOAT, off);
+            off += 4;
+            if (fogDensities.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("FogDensities", key);
+            }
+         }
+      }
+
+      Map<Float, ColorAlpha> screenEffectColors = null;
+      if (hasScreenEffectColors(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 110, 126, "ScreenEffectColors");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("ScreenEffectColors", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("ScreenEffectColors", len, 4096000);
+         }
+
+         screenEffectColors = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            float key = mem.get(PacketIO.PROTO_FLOAT, off);
+            off += 4;
+            ColorAlpha value = ColorAlpha.toObject(mem, off);
+            off += value.computeSize();
+            if (screenEffectColors.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("ScreenEffectColors", key);
+            }
+         }
+      }
+
+      Map<Float, Color> colorFilters = null;
+      if (hasColorFilters(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 114, 126, "ColorFilters");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("ColorFilters", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("ColorFilters", len, 4096000);
+         }
+
+         colorFilters = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            float key = mem.get(PacketIO.PROTO_FLOAT, off);
+            off += 4;
+            Color value = Color.toObject(mem, off);
+            off += value.computeSize();
+            if (colorFilters.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("ColorFilters", key);
+            }
+         }
+      }
+
+      Map<Float, Color> waterTints = null;
+      if (hasWaterTints(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 118, 126, "WaterTints");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("WaterTints", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("WaterTints", len, 4096000);
+         }
+
+         waterTints = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            float key = mem.get(PacketIO.PROTO_FLOAT, off);
+            off += 4;
+            Color value = Color.toObject(mem, off);
+            off += value.computeSize();
+            if (waterTints.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("WaterTints", key);
+            }
+         }
+      }
+
+      return new Weather(
+         hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 30, 126, "Id"), 4096000, PacketIO.UTF8) : null,
+         tagIndexes,
+         hasStars(mem, offset)
+            ? PacketIO.readVarString("Stars", mem, offset + getValidatedOffset(mem, offset, 38, 126, "Stars"), 4096000, PacketIO.UTF8)
+            : null,
+         moons,
+         clouds,
+         sunlightDampingMultiplier,
+         sunlightColors,
+         skyTopColors,
+         skyBottomColors,
+         skySunsetColors,
+         sunColors,
+         sunScales,
+         sunGlowColors,
+         moonColors,
+         moonScales,
+         moonGlowColors,
+         fogColors,
+         fogHeightFalloffs,
+         fogDensities,
+         hasScreenEffect(mem, offset)
+            ? PacketIO.readVarString("ScreenEffect", mem, offset + getValidatedOffset(mem, offset, 106, 126, "ScreenEffect"), 4096000, PacketIO.UTF8)
+            : null,
+         screenEffectColors,
+         colorFilters,
+         waterTints,
+         hasParticle(mem, offset) ? WeatherParticle.toObject(mem, offset + getValidatedOffset(mem, offset, 122, 126, "Particle")) : null,
+         hasFog(mem, offset) ? NearFar.toObject(mem, offset + 4) : null,
+         hasFogOptions(mem, offset) ? FogOptions.toObject(mem, offset + 12) : null
+      );
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte[] nullBits = new byte[4];
@@ -1860,6 +3406,505 @@ public class Weather {
       } else {
          buf.setIntLE(particleOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.fog != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.fogOptions != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.id != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.tagIndexes != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.stars != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.moons != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
+      if (this.clouds != null) {
+         nullBits = (byte)(nullBits | 64);
+      }
+
+      if (this.sunlightDampingMultiplier != null) {
+         nullBits = (byte)(nullBits | 128);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      nullBits = 0;
+      if (this.sunlightColors != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.skyTopColors != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.skyBottomColors != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.skySunsetColors != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.sunColors != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.sunScales != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
+      if (this.sunGlowColors != null) {
+         nullBits = (byte)(nullBits | 64);
+      }
+
+      if (this.moonColors != null) {
+         nullBits = (byte)(nullBits | 128);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, nullBits);
+      nullBits = 0;
+      if (this.moonScales != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.moonGlowColors != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.fogColors != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.fogHeightFalloffs != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.fogDensities != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.screenEffect != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
+      if (this.screenEffectColors != null) {
+         nullBits = (byte)(nullBits | 64);
+      }
+
+      if (this.colorFilters != null) {
+         nullBits = (byte)(nullBits | 128);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 2, nullBits);
+      nullBits = 0;
+      if (this.waterTints != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.particle != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 3, nullBits);
+      if (this.fog != null) {
+         this.fog.serialize(mem, offset + 4);
+      } else {
+         mem.asSlice(offset + 4, 8L).fill((byte)0);
+      }
+
+      if (this.fogOptions != null) {
+         this.fogOptions.serialize(mem, offset + 12);
+      } else {
+         mem.asSlice(offset + 12, 18L).fill((byte)0);
+      }
+
+      int varOffset = offset + 126;
+      if (this.id != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 30, varOffset - offset - 126);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.id, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 30, -1);
+      }
+
+      if (this.tagIndexes != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 34, varOffset - offset - 126);
+         if (this.tagIndexes.length > 4096000) {
+            throw ProtocolException.arrayTooLong("TagIndexes", this.tagIndexes.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.tagIndexes.length);
+         MemorySegment.copy(this.tagIndexes, 0, mem, PacketIO.PROTO_INT, varOffset, this.tagIndexes.length);
+         varOffset += this.tagIndexes.length * 4;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 34, -1);
+      }
+
+      if (this.stars != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 38, varOffset - offset - 126);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.stars, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 38, -1);
+      }
+
+      if (this.moons != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 42, varOffset - offset - 126);
+         if (this.moons.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Moons", this.moons.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.moons.size());
+
+         for (Entry<Integer, String> e : this.moons.entrySet()) {
+            mem.set(PacketIO.PROTO_INT, varOffset, e.getKey());
+            varOffset += 4;
+            varOffset += PacketIO.writeVarString(mem, varOffset, e.getValue(), 16384000);
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 42, -1);
+      }
+
+      if (this.clouds != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 46, varOffset - offset - 126);
+         if (this.clouds.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Clouds", this.clouds.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.clouds.length);
+         int cloudsValueOffset = 0;
+
+         for (int i = 0; i < this.clouds.length; i++) {
+            cloudsValueOffset += this.clouds[i].serialize(mem, varOffset + cloudsValueOffset);
+         }
+
+         varOffset += cloudsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 46, -1);
+      }
+
+      if (this.sunlightDampingMultiplier != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 50, varOffset - offset - 126);
+         if (this.sunlightDampingMultiplier.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("SunlightDampingMultiplier", this.sunlightDampingMultiplier.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.sunlightDampingMultiplier.size());
+
+         for (Entry<Float, Float> e : this.sunlightDampingMultiplier.entrySet()) {
+            mem.set(PacketIO.PROTO_FLOAT, varOffset, e.getKey());
+            varOffset += 4;
+            mem.set(PacketIO.PROTO_FLOAT, varOffset, e.getValue());
+            varOffset += 4;
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 50, -1);
+      }
+
+      if (this.sunlightColors != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 54, varOffset - offset - 126);
+         if (this.sunlightColors.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("SunlightColors", this.sunlightColors.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.sunlightColors.size());
+
+         for (Entry<Float, Color> e : this.sunlightColors.entrySet()) {
+            mem.set(PacketIO.PROTO_FLOAT, varOffset, e.getKey());
+            varOffset += 4;
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 54, -1);
+      }
+
+      if (this.skyTopColors != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 58, varOffset - offset - 126);
+         if (this.skyTopColors.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("SkyTopColors", this.skyTopColors.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.skyTopColors.size());
+
+         for (Entry<Float, ColorAlpha> e : this.skyTopColors.entrySet()) {
+            mem.set(PacketIO.PROTO_FLOAT, varOffset, e.getKey());
+            varOffset += 4;
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 58, -1);
+      }
+
+      if (this.skyBottomColors != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 62, varOffset - offset - 126);
+         if (this.skyBottomColors.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("SkyBottomColors", this.skyBottomColors.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.skyBottomColors.size());
+
+         for (Entry<Float, ColorAlpha> e : this.skyBottomColors.entrySet()) {
+            mem.set(PacketIO.PROTO_FLOAT, varOffset, e.getKey());
+            varOffset += 4;
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 62, -1);
+      }
+
+      if (this.skySunsetColors != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 66, varOffset - offset - 126);
+         if (this.skySunsetColors.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("SkySunsetColors", this.skySunsetColors.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.skySunsetColors.size());
+
+         for (Entry<Float, ColorAlpha> e : this.skySunsetColors.entrySet()) {
+            mem.set(PacketIO.PROTO_FLOAT, varOffset, e.getKey());
+            varOffset += 4;
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 66, -1);
+      }
+
+      if (this.sunColors != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 70, varOffset - offset - 126);
+         if (this.sunColors.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("SunColors", this.sunColors.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.sunColors.size());
+
+         for (Entry<Float, Color> e : this.sunColors.entrySet()) {
+            mem.set(PacketIO.PROTO_FLOAT, varOffset, e.getKey());
+            varOffset += 4;
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 70, -1);
+      }
+
+      if (this.sunScales != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 74, varOffset - offset - 126);
+         if (this.sunScales.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("SunScales", this.sunScales.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.sunScales.size());
+
+         for (Entry<Float, Float> e : this.sunScales.entrySet()) {
+            mem.set(PacketIO.PROTO_FLOAT, varOffset, e.getKey());
+            varOffset += 4;
+            mem.set(PacketIO.PROTO_FLOAT, varOffset, e.getValue());
+            varOffset += 4;
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 74, -1);
+      }
+
+      if (this.sunGlowColors != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 78, varOffset - offset - 126);
+         if (this.sunGlowColors.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("SunGlowColors", this.sunGlowColors.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.sunGlowColors.size());
+
+         for (Entry<Float, ColorAlpha> e : this.sunGlowColors.entrySet()) {
+            mem.set(PacketIO.PROTO_FLOAT, varOffset, e.getKey());
+            varOffset += 4;
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 78, -1);
+      }
+
+      if (this.moonColors != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 82, varOffset - offset - 126);
+         if (this.moonColors.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("MoonColors", this.moonColors.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.moonColors.size());
+
+         for (Entry<Float, ColorAlpha> e : this.moonColors.entrySet()) {
+            mem.set(PacketIO.PROTO_FLOAT, varOffset, e.getKey());
+            varOffset += 4;
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 82, -1);
+      }
+
+      if (this.moonScales != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 86, varOffset - offset - 126);
+         if (this.moonScales.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("MoonScales", this.moonScales.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.moonScales.size());
+
+         for (Entry<Float, Float> e : this.moonScales.entrySet()) {
+            mem.set(PacketIO.PROTO_FLOAT, varOffset, e.getKey());
+            varOffset += 4;
+            mem.set(PacketIO.PROTO_FLOAT, varOffset, e.getValue());
+            varOffset += 4;
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 86, -1);
+      }
+
+      if (this.moonGlowColors != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 90, varOffset - offset - 126);
+         if (this.moonGlowColors.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("MoonGlowColors", this.moonGlowColors.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.moonGlowColors.size());
+
+         for (Entry<Float, ColorAlpha> e : this.moonGlowColors.entrySet()) {
+            mem.set(PacketIO.PROTO_FLOAT, varOffset, e.getKey());
+            varOffset += 4;
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 90, -1);
+      }
+
+      if (this.fogColors != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 94, varOffset - offset - 126);
+         if (this.fogColors.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("FogColors", this.fogColors.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.fogColors.size());
+
+         for (Entry<Float, Color> e : this.fogColors.entrySet()) {
+            mem.set(PacketIO.PROTO_FLOAT, varOffset, e.getKey());
+            varOffset += 4;
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 94, -1);
+      }
+
+      if (this.fogHeightFalloffs != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 98, varOffset - offset - 126);
+         if (this.fogHeightFalloffs.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("FogHeightFalloffs", this.fogHeightFalloffs.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.fogHeightFalloffs.size());
+
+         for (Entry<Float, Float> e : this.fogHeightFalloffs.entrySet()) {
+            mem.set(PacketIO.PROTO_FLOAT, varOffset, e.getKey());
+            varOffset += 4;
+            mem.set(PacketIO.PROTO_FLOAT, varOffset, e.getValue());
+            varOffset += 4;
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 98, -1);
+      }
+
+      if (this.fogDensities != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 102, varOffset - offset - 126);
+         if (this.fogDensities.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("FogDensities", this.fogDensities.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.fogDensities.size());
+
+         for (Entry<Float, Float> e : this.fogDensities.entrySet()) {
+            mem.set(PacketIO.PROTO_FLOAT, varOffset, e.getKey());
+            varOffset += 4;
+            mem.set(PacketIO.PROTO_FLOAT, varOffset, e.getValue());
+            varOffset += 4;
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 102, -1);
+      }
+
+      if (this.screenEffect != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 106, varOffset - offset - 126);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.screenEffect, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 106, -1);
+      }
+
+      if (this.screenEffectColors != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 110, varOffset - offset - 126);
+         if (this.screenEffectColors.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("ScreenEffectColors", this.screenEffectColors.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.screenEffectColors.size());
+
+         for (Entry<Float, ColorAlpha> e : this.screenEffectColors.entrySet()) {
+            mem.set(PacketIO.PROTO_FLOAT, varOffset, e.getKey());
+            varOffset += 4;
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 110, -1);
+      }
+
+      if (this.colorFilters != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 114, varOffset - offset - 126);
+         if (this.colorFilters.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("ColorFilters", this.colorFilters.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.colorFilters.size());
+
+         for (Entry<Float, Color> e : this.colorFilters.entrySet()) {
+            mem.set(PacketIO.PROTO_FLOAT, varOffset, e.getKey());
+            varOffset += 4;
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 114, -1);
+      }
+
+      if (this.waterTints != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 118, varOffset - offset - 126);
+         if (this.waterTints.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("WaterTints", this.waterTints.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.waterTints.size());
+
+         for (Entry<Float, Color> e : this.waterTints.entrySet()) {
+            mem.set(PacketIO.PROTO_FLOAT, varOffset, e.getKey());
+            varOffset += 4;
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 118, -1);
+      }
+
+      if (this.particle != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 122, varOffset - offset - 126);
+         varOffset += this.particle.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 122, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

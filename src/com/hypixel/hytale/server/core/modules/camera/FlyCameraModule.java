@@ -34,7 +34,7 @@ public class FlyCameraModule extends JavaPlugin {
    }
 
    private void handlePlayerPermissionsRemoved(@Nonnull PlayerPermissionChangeEvent.PermissionsRemoved event) {
-      if (PermissionsModule.hasPermission(event.getRemovedPermissions(), HytalePermissions.FLY_CAM) == Boolean.TRUE) {
+      if (Boolean.TRUE.equals(PermissionsModule.hasPermission(event.getRemovedPermissions(), HytalePermissions.FLY_CAM))) {
          this.checkAndEnforceFlyCameraPermission(event.getPlayerUuid());
       }
    }
@@ -44,7 +44,7 @@ public class FlyCameraModule extends JavaPlugin {
    }
 
    private void handleGroupPermissionsRemoved(@Nonnull GroupPermissionChangeEvent.Removed event) {
-      if (PermissionsModule.hasPermission(event.getRemovedPermissions(), HytalePermissions.FLY_CAM) == Boolean.TRUE) {
+      if (Boolean.TRUE.equals(PermissionsModule.hasPermission(event.getRemovedPermissions(), HytalePermissions.FLY_CAM))) {
          String groupName = event.getGroupName();
          PermissionsModule permissionsModule = PermissionsModule.get();
 

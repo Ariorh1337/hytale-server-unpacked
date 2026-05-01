@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -404,6 +405,413 @@ public class ChainingInteraction extends Interaction {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 47L;
+   }
+
+   public static WaitForDataFrom getWaitForDataFrom(MemorySegment mem) {
+      return getWaitForDataFrom(mem, 0);
+   }
+
+   public static WaitForDataFrom getWaitForDataFrom(MemorySegment mem, int offset) {
+      return WaitForDataFrom.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1));
+   }
+
+   @Nullable
+   public static InteractionEffects getEffects(MemorySegment mem) {
+      return getEffects(mem, 0);
+   }
+
+   @Nullable
+   public static InteractionEffects getEffects(MemorySegment mem, int offset) {
+      return hasEffects(mem, offset) ? InteractionEffects.toObject(mem, offset + getValidatedOffset(mem, offset, 15, 47, "Effects")) : null;
+   }
+
+   public static float getHorizontalSpeedMultiplier(MemorySegment mem) {
+      return getHorizontalSpeedMultiplier(mem, 0);
+   }
+
+   public static float getHorizontalSpeedMultiplier(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 2);
+   }
+
+   public static float getRunTime(MemorySegment mem) {
+      return getRunTime(mem, 0);
+   }
+
+   public static float getRunTime(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 6);
+   }
+
+   public static boolean getCancelOnItemChange(MemorySegment mem) {
+      return getCancelOnItemChange(mem, 0);
+   }
+
+   public static boolean getCancelOnItemChange(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 10);
+   }
+
+   @Nullable
+   public static Map<GameMode, InteractionSettings> getSettings(MemorySegment mem) {
+      return getSettings(mem, 0);
+   }
+
+   @Nullable
+   public static Map<GameMode, InteractionSettings> getSettings(MemorySegment mem, int offset) {
+      if (!hasSettings(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 19, 47, "Settings");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Settings", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("Settings", len, 4096000);
+      }
+
+      Map<GameMode, InteractionSettings> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         GameMode key = GameMode.fromValue(mem.get(PacketIO.PROTO_BYTE, off));
+         InteractionSettings value = InteractionSettings.toObject(mem, ++off);
+         off += value.computeSize();
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("Settings", key);
+         }
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static InteractionRules getRules(MemorySegment mem) {
+      return getRules(mem, 0);
+   }
+
+   @Nullable
+   public static InteractionRules getRules(MemorySegment mem, int offset) {
+      return hasRules(mem, offset) ? InteractionRules.toObject(mem, offset + getValidatedOffset(mem, offset, 23, 47, "Rules")) : null;
+   }
+
+   @Nullable
+   public static int[] getTags(MemorySegment mem) {
+      return getTags(mem, 0);
+   }
+
+   @Nullable
+   public static int[] getTags(MemorySegment mem, int offset) {
+      if (!hasTags(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 27, 47, "Tags");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Tags", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Tags", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 4L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Tags", off + lenOffset + len * 4, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      int[] data = new int[len];
+      MemorySegment.copy(mem, PacketIO.PROTO_INT, off, data, 0, len);
+      return data;
+   }
+
+   @Nullable
+   public static InteractionCameraSettings getCamera(MemorySegment mem) {
+      return getCamera(mem, 0);
+   }
+
+   @Nullable
+   public static InteractionCameraSettings getCamera(MemorySegment mem, int offset) {
+      return hasCamera(mem, offset) ? InteractionCameraSettings.toObject(mem, offset + getValidatedOffset(mem, offset, 31, 47, "Camera")) : null;
+   }
+
+   @Nullable
+   public static String getChainId(MemorySegment mem) {
+      return getChainId(mem, 0);
+   }
+
+   @Nullable
+   public static String getChainId(MemorySegment mem, int offset) {
+      return hasChainId(mem, offset)
+         ? PacketIO.readVarString("ChainId", mem, offset + getValidatedOffset(mem, offset, 35, 47, "ChainId"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static float getChainingAllowance(MemorySegment mem) {
+      return getChainingAllowance(mem, 0);
+   }
+
+   public static float getChainingAllowance(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 11);
+   }
+
+   @Nullable
+   public static int[] getChainingNext(MemorySegment mem) {
+      return getChainingNext(mem, 0);
+   }
+
+   @Nullable
+   public static int[] getChainingNext(MemorySegment mem, int offset) {
+      if (!hasChainingNext(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 39, 47, "ChainingNext");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("ChainingNext", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("ChainingNext", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 4L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ChainingNext", off + lenOffset + len * 4, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      int[] data = new int[len];
+      MemorySegment.copy(mem, PacketIO.PROTO_INT, off, data, 0, len);
+      return data;
+   }
+
+   @Nullable
+   public static Map<String, Integer> getFlags(MemorySegment mem) {
+      return getFlags(mem, 0);
+   }
+
+   @Nullable
+   public static Map<String, Integer> getFlags(MemorySegment mem, int offset) {
+      if (!hasFlags(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 43, 47, "Flags");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Flags", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("Flags", len, 4096000);
+      }
+
+      Map<String, Integer> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         long keyPacked = VarInt.getWithLength(mem, off);
+         int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+         String key = PacketIO.readVarString("key", mem, off, 16384000, PacketIO.UTF8);
+         off += nkey;
+         int value = mem.get(PacketIO.PROTO_INT, off);
+         off += 4;
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("Flags", key);
+         }
+      }
+
+      return data;
+   }
+
+   public static boolean hasEffects(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasSettings(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasRules(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasTags(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasCamera(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 16) != 0;
+   }
+
+   public static boolean hasChainId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 32) != 0;
+   }
+
+   public static boolean hasChainingNext(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 64) != 0;
+   }
+
+   public static boolean hasFlags(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 128) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static ChainingInteraction toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ChainingInteraction toObject(MemorySegment mem, int offset) {
+      if (offset + 47 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ChainingInteraction", offset + 47, (int)mem.byteSize());
+      }
+
+      Map<GameMode, InteractionSettings> settings = null;
+      if (hasSettings(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 19, 47, "Settings");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Settings", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Settings", len, 4096000);
+         }
+
+         settings = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            GameMode key = GameMode.fromValue(mem.get(PacketIO.PROTO_BYTE, off));
+            InteractionSettings value = InteractionSettings.toObject(mem, ++off);
+            off += value.computeSize();
+            if (settings.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("Settings", key);
+            }
+         }
+      }
+
+      int[] tags = null;
+      if (hasTags(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 27, 47, "Tags");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Tags", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Tags", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 4L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Tags", off + lenOffset + len * 4, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         tags = new int[len];
+         MemorySegment.copy(mem, PacketIO.PROTO_INT, off, tags, 0, len);
+      }
+
+      int[] chainingNext = null;
+      if (hasChainingNext(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 39, 47, "ChainingNext");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("ChainingNext", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("ChainingNext", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 4L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("ChainingNext", off + lenOffset + len * 4, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         chainingNext = new int[len];
+         MemorySegment.copy(mem, PacketIO.PROTO_INT, off, chainingNext, 0, len);
+      }
+
+      Map<String, Integer> flags = null;
+      if (hasFlags(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 43, 47, "Flags");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Flags", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Flags", len, 4096000);
+         }
+
+         flags = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            long keyPacked = VarInt.getWithLength(mem, off);
+            int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+            String key = PacketIO.readVarString("key", mem, off, 16384000, PacketIO.UTF8);
+            off += nkey;
+            int value = mem.get(PacketIO.PROTO_INT, off);
+            off += 4;
+            if (flags.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("Flags", key);
+            }
+         }
+      }
+
+      return new ChainingInteraction(
+         WaitForDataFrom.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1)),
+         hasEffects(mem, offset) ? InteractionEffects.toObject(mem, offset + getValidatedOffset(mem, offset, 15, 47, "Effects")) : null,
+         mem.get(PacketIO.PROTO_FLOAT, offset + 2),
+         mem.get(PacketIO.PROTO_FLOAT, offset + 6),
+         mem.get(PacketIO.PROTO_BOOL, offset + 10),
+         settings,
+         hasRules(mem, offset) ? InteractionRules.toObject(mem, offset + getValidatedOffset(mem, offset, 23, 47, "Rules")) : null,
+         tags,
+         hasCamera(mem, offset) ? InteractionCameraSettings.toObject(mem, offset + getValidatedOffset(mem, offset, 31, 47, "Camera")) : null,
+         hasChainId(mem, offset)
+            ? PacketIO.readVarString("ChainId", mem, offset + getValidatedOffset(mem, offset, 35, 47, "ChainId"), 4096000, PacketIO.UTF8)
+            : null,
+         mem.get(PacketIO.PROTO_FLOAT, offset + 11),
+         chainingNext,
+         flags
+      );
+   }
+
    @Override
    public int serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -554,6 +962,138 @@ public class ChainingInteraction extends Interaction {
       }
 
       return buf.writerIndex() - startPos;
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.effects != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.settings != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.rules != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.tags != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.camera != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.chainId != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
+      if (this.chainingNext != null) {
+         nullBits = (byte)(nullBits | 64);
+      }
+
+      if (this.flags != null) {
+         nullBits = (byte)(nullBits | 128);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.waitForDataFrom.getValue());
+      mem.set(PacketIO.PROTO_FLOAT, offset + 2, this.horizontalSpeedMultiplier);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 6, this.runTime);
+      mem.set(PacketIO.PROTO_BOOL, offset + 10, this.cancelOnItemChange);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 11, this.chainingAllowance);
+      int varOffset = offset + 47;
+      if (this.effects != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 15, varOffset - offset - 47);
+         varOffset += this.effects.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 15, -1);
+      }
+
+      if (this.settings != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 19, varOffset - offset - 47);
+         if (this.settings.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Settings", this.settings.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.settings.size());
+
+         for (Entry<GameMode, InteractionSettings> e : this.settings.entrySet()) {
+            mem.set(PacketIO.PROTO_BYTE, varOffset, (byte)e.getKey().getValue());
+            varOffset = ++varOffset + e.getValue().serialize(mem, varOffset);
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 19, -1);
+      }
+
+      if (this.rules != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 23, varOffset - offset - 47);
+         varOffset += this.rules.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 23, -1);
+      }
+
+      if (this.tags != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 27, varOffset - offset - 47);
+         if (this.tags.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Tags", this.tags.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.tags.length);
+         MemorySegment.copy(this.tags, 0, mem, PacketIO.PROTO_INT, varOffset, this.tags.length);
+         varOffset += this.tags.length * 4;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 27, -1);
+      }
+
+      if (this.camera != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 31, varOffset - offset - 47);
+         varOffset += this.camera.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 31, -1);
+      }
+
+      if (this.chainId != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 35, varOffset - offset - 47);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.chainId, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 35, -1);
+      }
+
+      if (this.chainingNext != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 39, varOffset - offset - 47);
+         if (this.chainingNext.length > 4096000) {
+            throw ProtocolException.arrayTooLong("ChainingNext", this.chainingNext.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.chainingNext.length);
+         MemorySegment.copy(this.chainingNext, 0, mem, PacketIO.PROTO_INT, varOffset, this.chainingNext.length);
+         varOffset += this.chainingNext.length * 4;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 39, -1);
+      }
+
+      if (this.flags != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 43, varOffset - offset - 47);
+         if (this.flags.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Flags", this.flags.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.flags.size());
+
+         for (Entry<String, Integer> e : this.flags.entrySet()) {
+            varOffset += PacketIO.writeVarString(mem, varOffset, e.getKey(), 16384000);
+            mem.set(PacketIO.PROTO_INT, varOffset, e.getValue());
+            varOffset += 4;
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 43, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

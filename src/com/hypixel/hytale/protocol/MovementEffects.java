@@ -1,8 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -72,6 +74,86 @@ public class MovementEffects {
       return 7;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 7L;
+   }
+
+   public static boolean getDisableForward(MemorySegment mem) {
+      return getDisableForward(mem, 0);
+   }
+
+   public static boolean getDisableForward(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 0);
+   }
+
+   public static boolean getDisableBackward(MemorySegment mem) {
+      return getDisableBackward(mem, 0);
+   }
+
+   public static boolean getDisableBackward(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 1);
+   }
+
+   public static boolean getDisableLeft(MemorySegment mem) {
+      return getDisableLeft(mem, 0);
+   }
+
+   public static boolean getDisableLeft(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 2);
+   }
+
+   public static boolean getDisableRight(MemorySegment mem) {
+      return getDisableRight(mem, 0);
+   }
+
+   public static boolean getDisableRight(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 3);
+   }
+
+   public static boolean getDisableSprint(MemorySegment mem) {
+      return getDisableSprint(mem, 0);
+   }
+
+   public static boolean getDisableSprint(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 4);
+   }
+
+   public static boolean getDisableJump(MemorySegment mem) {
+      return getDisableJump(mem, 0);
+   }
+
+   public static boolean getDisableJump(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 5);
+   }
+
+   public static boolean getDisableCrouch(MemorySegment mem) {
+      return getDisableCrouch(mem, 0);
+   }
+
+   public static boolean getDisableCrouch(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 6);
+   }
+
+   public static MovementEffects toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static MovementEffects toObject(MemorySegment mem, int offset) {
+      if (offset + 7 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("MovementEffects", offset + 7, (int)mem.byteSize());
+      } else {
+         return new MovementEffects(
+            mem.get(PacketIO.PROTO_BOOL, offset + 0),
+            mem.get(PacketIO.PROTO_BOOL, offset + 1),
+            mem.get(PacketIO.PROTO_BOOL, offset + 2),
+            mem.get(PacketIO.PROTO_BOOL, offset + 3),
+            mem.get(PacketIO.PROTO_BOOL, offset + 4),
+            mem.get(PacketIO.PROTO_BOOL, offset + 5),
+            mem.get(PacketIO.PROTO_BOOL, offset + 6)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeByte(this.disableForward ? 1 : 0);
       buf.writeByte(this.disableBackward ? 1 : 0);
@@ -80,6 +162,17 @@ public class MovementEffects {
       buf.writeByte(this.disableSprint ? 1 : 0);
       buf.writeByte(this.disableJump ? 1 : 0);
       buf.writeByte(this.disableCrouch ? 1 : 0);
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_BOOL, offset + 0, this.disableForward);
+      mem.set(PacketIO.PROTO_BOOL, offset + 1, this.disableBackward);
+      mem.set(PacketIO.PROTO_BOOL, offset + 2, this.disableLeft);
+      mem.set(PacketIO.PROTO_BOOL, offset + 3, this.disableRight);
+      mem.set(PacketIO.PROTO_BOOL, offset + 4, this.disableSprint);
+      mem.set(PacketIO.PROTO_BOOL, offset + 5, this.disableJump);
+      mem.set(PacketIO.PROTO_BOOL, offset + 6, this.disableCrouch);
+      return 7;
    }
 
    public int computeSize() {

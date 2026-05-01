@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -903,6 +904,396 @@ public class PlayerSkin {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 83L;
+   }
+
+   @Nullable
+   public static String getBodyCharacteristic(MemorySegment mem) {
+      return getBodyCharacteristic(mem, 0);
+   }
+
+   @Nullable
+   public static String getBodyCharacteristic(MemorySegment mem, int offset) {
+      return hasBodyCharacteristic(mem, offset)
+         ? PacketIO.readValidatedAsciiString("BodyCharacteristic", mem, offset + getValidatedOffset(mem, offset, 3, 83, "BodyCharacteristic"), 96)
+         : null;
+   }
+
+   @Nullable
+   public static String getUnderwear(MemorySegment mem) {
+      return getUnderwear(mem, 0);
+   }
+
+   @Nullable
+   public static String getUnderwear(MemorySegment mem, int offset) {
+      return hasUnderwear(mem, offset)
+         ? PacketIO.readValidatedAsciiString("Underwear", mem, offset + getValidatedOffset(mem, offset, 7, 83, "Underwear"), 96)
+         : null;
+   }
+
+   @Nullable
+   public static String getFace(MemorySegment mem) {
+      return getFace(mem, 0);
+   }
+
+   @Nullable
+   public static String getFace(MemorySegment mem, int offset) {
+      return hasFace(mem, offset) ? PacketIO.readValidatedAsciiString("Face", mem, offset + getValidatedOffset(mem, offset, 11, 83, "Face"), 96) : null;
+   }
+
+   @Nullable
+   public static String getEyes(MemorySegment mem) {
+      return getEyes(mem, 0);
+   }
+
+   @Nullable
+   public static String getEyes(MemorySegment mem, int offset) {
+      return hasEyes(mem, offset) ? PacketIO.readValidatedAsciiString("Eyes", mem, offset + getValidatedOffset(mem, offset, 15, 83, "Eyes"), 96) : null;
+   }
+
+   @Nullable
+   public static String getEars(MemorySegment mem) {
+      return getEars(mem, 0);
+   }
+
+   @Nullable
+   public static String getEars(MemorySegment mem, int offset) {
+      return hasEars(mem, offset) ? PacketIO.readValidatedAsciiString("Ears", mem, offset + getValidatedOffset(mem, offset, 19, 83, "Ears"), 96) : null;
+   }
+
+   @Nullable
+   public static String getMouth(MemorySegment mem) {
+      return getMouth(mem, 0);
+   }
+
+   @Nullable
+   public static String getMouth(MemorySegment mem, int offset) {
+      return hasMouth(mem, offset) ? PacketIO.readValidatedAsciiString("Mouth", mem, offset + getValidatedOffset(mem, offset, 23, 83, "Mouth"), 96) : null;
+   }
+
+   @Nullable
+   public static String getFacialHair(MemorySegment mem) {
+      return getFacialHair(mem, 0);
+   }
+
+   @Nullable
+   public static String getFacialHair(MemorySegment mem, int offset) {
+      return hasFacialHair(mem, offset)
+         ? PacketIO.readValidatedAsciiString("FacialHair", mem, offset + getValidatedOffset(mem, offset, 27, 83, "FacialHair"), 96)
+         : null;
+   }
+
+   @Nullable
+   public static String getHaircut(MemorySegment mem) {
+      return getHaircut(mem, 0);
+   }
+
+   @Nullable
+   public static String getHaircut(MemorySegment mem, int offset) {
+      return hasHaircut(mem, offset)
+         ? PacketIO.readValidatedAsciiString("Haircut", mem, offset + getValidatedOffset(mem, offset, 31, 83, "Haircut"), 96)
+         : null;
+   }
+
+   @Nullable
+   public static String getEyebrows(MemorySegment mem) {
+      return getEyebrows(mem, 0);
+   }
+
+   @Nullable
+   public static String getEyebrows(MemorySegment mem, int offset) {
+      return hasEyebrows(mem, offset)
+         ? PacketIO.readValidatedAsciiString("Eyebrows", mem, offset + getValidatedOffset(mem, offset, 35, 83, "Eyebrows"), 96)
+         : null;
+   }
+
+   @Nullable
+   public static String getPants(MemorySegment mem) {
+      return getPants(mem, 0);
+   }
+
+   @Nullable
+   public static String getPants(MemorySegment mem, int offset) {
+      return hasPants(mem, offset) ? PacketIO.readValidatedAsciiString("Pants", mem, offset + getValidatedOffset(mem, offset, 39, 83, "Pants"), 96) : null;
+   }
+
+   @Nullable
+   public static String getOverpants(MemorySegment mem) {
+      return getOverpants(mem, 0);
+   }
+
+   @Nullable
+   public static String getOverpants(MemorySegment mem, int offset) {
+      return hasOverpants(mem, offset)
+         ? PacketIO.readValidatedAsciiString("Overpants", mem, offset + getValidatedOffset(mem, offset, 43, 83, "Overpants"), 96)
+         : null;
+   }
+
+   @Nullable
+   public static String getUndertop(MemorySegment mem) {
+      return getUndertop(mem, 0);
+   }
+
+   @Nullable
+   public static String getUndertop(MemorySegment mem, int offset) {
+      return hasUndertop(mem, offset)
+         ? PacketIO.readValidatedAsciiString("Undertop", mem, offset + getValidatedOffset(mem, offset, 47, 83, "Undertop"), 96)
+         : null;
+   }
+
+   @Nullable
+   public static String getOvertop(MemorySegment mem) {
+      return getOvertop(mem, 0);
+   }
+
+   @Nullable
+   public static String getOvertop(MemorySegment mem, int offset) {
+      return hasOvertop(mem, offset)
+         ? PacketIO.readValidatedAsciiString("Overtop", mem, offset + getValidatedOffset(mem, offset, 51, 83, "Overtop"), 96)
+         : null;
+   }
+
+   @Nullable
+   public static String getShoes(MemorySegment mem) {
+      return getShoes(mem, 0);
+   }
+
+   @Nullable
+   public static String getShoes(MemorySegment mem, int offset) {
+      return hasShoes(mem, offset) ? PacketIO.readValidatedAsciiString("Shoes", mem, offset + getValidatedOffset(mem, offset, 55, 83, "Shoes"), 96) : null;
+   }
+
+   @Nullable
+   public static String getHeadAccessory(MemorySegment mem) {
+      return getHeadAccessory(mem, 0);
+   }
+
+   @Nullable
+   public static String getHeadAccessory(MemorySegment mem, int offset) {
+      return hasHeadAccessory(mem, offset)
+         ? PacketIO.readValidatedAsciiString("HeadAccessory", mem, offset + getValidatedOffset(mem, offset, 59, 83, "HeadAccessory"), 96)
+         : null;
+   }
+
+   @Nullable
+   public static String getFaceAccessory(MemorySegment mem) {
+      return getFaceAccessory(mem, 0);
+   }
+
+   @Nullable
+   public static String getFaceAccessory(MemorySegment mem, int offset) {
+      return hasFaceAccessory(mem, offset)
+         ? PacketIO.readValidatedAsciiString("FaceAccessory", mem, offset + getValidatedOffset(mem, offset, 63, 83, "FaceAccessory"), 96)
+         : null;
+   }
+
+   @Nullable
+   public static String getEarAccessory(MemorySegment mem) {
+      return getEarAccessory(mem, 0);
+   }
+
+   @Nullable
+   public static String getEarAccessory(MemorySegment mem, int offset) {
+      return hasEarAccessory(mem, offset)
+         ? PacketIO.readValidatedAsciiString("EarAccessory", mem, offset + getValidatedOffset(mem, offset, 67, 83, "EarAccessory"), 96)
+         : null;
+   }
+
+   @Nullable
+   public static String getSkinFeature(MemorySegment mem) {
+      return getSkinFeature(mem, 0);
+   }
+
+   @Nullable
+   public static String getSkinFeature(MemorySegment mem, int offset) {
+      return hasSkinFeature(mem, offset)
+         ? PacketIO.readValidatedAsciiString("SkinFeature", mem, offset + getValidatedOffset(mem, offset, 71, 83, "SkinFeature"), 96)
+         : null;
+   }
+
+   @Nullable
+   public static String getGloves(MemorySegment mem) {
+      return getGloves(mem, 0);
+   }
+
+   @Nullable
+   public static String getGloves(MemorySegment mem, int offset) {
+      return hasGloves(mem, offset) ? PacketIO.readValidatedAsciiString("Gloves", mem, offset + getValidatedOffset(mem, offset, 75, 83, "Gloves"), 96) : null;
+   }
+
+   @Nullable
+   public static String getCape(MemorySegment mem) {
+      return getCape(mem, 0);
+   }
+
+   @Nullable
+   public static String getCape(MemorySegment mem, int offset) {
+      return hasCape(mem, offset) ? PacketIO.readValidatedAsciiString("Cape", mem, offset + getValidatedOffset(mem, offset, 79, 83, "Cape"), 96) : null;
+   }
+
+   public static boolean hasBodyCharacteristic(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasUnderwear(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasFace(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasEyes(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasEars(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 16) != 0;
+   }
+
+   public static boolean hasMouth(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 32) != 0;
+   }
+
+   public static boolean hasFacialHair(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 64) != 0;
+   }
+
+   public static boolean hasHaircut(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 128) != 0;
+   }
+
+   public static boolean hasEyebrows(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasPants(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasOverpants(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasUndertop(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasOvertop(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 16) != 0;
+   }
+
+   public static boolean hasShoes(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 32) != 0;
+   }
+
+   public static boolean hasHeadAccessory(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 64) != 0;
+   }
+
+   public static boolean hasFaceAccessory(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 128) != 0;
+   }
+
+   public static boolean hasEarAccessory(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 2);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasSkinFeature(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 2);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasGloves(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 2);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasCape(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 2);
+      return (b & 8) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static PlayerSkin toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static PlayerSkin toObject(MemorySegment mem, int offset) {
+      if (offset + 83 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("PlayerSkin", offset + 83, (int)mem.byteSize());
+      } else {
+         return new PlayerSkin(
+            hasBodyCharacteristic(mem, offset)
+               ? PacketIO.readValidatedAsciiString("BodyCharacteristic", mem, offset + getValidatedOffset(mem, offset, 3, 83, "BodyCharacteristic"), 96)
+               : null,
+            hasUnderwear(mem, offset)
+               ? PacketIO.readValidatedAsciiString("Underwear", mem, offset + getValidatedOffset(mem, offset, 7, 83, "Underwear"), 96)
+               : null,
+            hasFace(mem, offset) ? PacketIO.readValidatedAsciiString("Face", mem, offset + getValidatedOffset(mem, offset, 11, 83, "Face"), 96) : null,
+            hasEyes(mem, offset) ? PacketIO.readValidatedAsciiString("Eyes", mem, offset + getValidatedOffset(mem, offset, 15, 83, "Eyes"), 96) : null,
+            hasEars(mem, offset) ? PacketIO.readValidatedAsciiString("Ears", mem, offset + getValidatedOffset(mem, offset, 19, 83, "Ears"), 96) : null,
+            hasMouth(mem, offset) ? PacketIO.readValidatedAsciiString("Mouth", mem, offset + getValidatedOffset(mem, offset, 23, 83, "Mouth"), 96) : null,
+            hasFacialHair(mem, offset)
+               ? PacketIO.readValidatedAsciiString("FacialHair", mem, offset + getValidatedOffset(mem, offset, 27, 83, "FacialHair"), 96)
+               : null,
+            hasHaircut(mem, offset) ? PacketIO.readValidatedAsciiString("Haircut", mem, offset + getValidatedOffset(mem, offset, 31, 83, "Haircut"), 96) : null,
+            hasEyebrows(mem, offset)
+               ? PacketIO.readValidatedAsciiString("Eyebrows", mem, offset + getValidatedOffset(mem, offset, 35, 83, "Eyebrows"), 96)
+               : null,
+            hasPants(mem, offset) ? PacketIO.readValidatedAsciiString("Pants", mem, offset + getValidatedOffset(mem, offset, 39, 83, "Pants"), 96) : null,
+            hasOverpants(mem, offset)
+               ? PacketIO.readValidatedAsciiString("Overpants", mem, offset + getValidatedOffset(mem, offset, 43, 83, "Overpants"), 96)
+               : null,
+            hasUndertop(mem, offset)
+               ? PacketIO.readValidatedAsciiString("Undertop", mem, offset + getValidatedOffset(mem, offset, 47, 83, "Undertop"), 96)
+               : null,
+            hasOvertop(mem, offset) ? PacketIO.readValidatedAsciiString("Overtop", mem, offset + getValidatedOffset(mem, offset, 51, 83, "Overtop"), 96) : null,
+            hasShoes(mem, offset) ? PacketIO.readValidatedAsciiString("Shoes", mem, offset + getValidatedOffset(mem, offset, 55, 83, "Shoes"), 96) : null,
+            hasHeadAccessory(mem, offset)
+               ? PacketIO.readValidatedAsciiString("HeadAccessory", mem, offset + getValidatedOffset(mem, offset, 59, 83, "HeadAccessory"), 96)
+               : null,
+            hasFaceAccessory(mem, offset)
+               ? PacketIO.readValidatedAsciiString("FaceAccessory", mem, offset + getValidatedOffset(mem, offset, 63, 83, "FaceAccessory"), 96)
+               : null,
+            hasEarAccessory(mem, offset)
+               ? PacketIO.readValidatedAsciiString("EarAccessory", mem, offset + getValidatedOffset(mem, offset, 67, 83, "EarAccessory"), 96)
+               : null,
+            hasSkinFeature(mem, offset)
+               ? PacketIO.readValidatedAsciiString("SkinFeature", mem, offset + getValidatedOffset(mem, offset, 71, 83, "SkinFeature"), 96)
+               : null,
+            hasGloves(mem, offset) ? PacketIO.readValidatedAsciiString("Gloves", mem, offset + getValidatedOffset(mem, offset, 75, 83, "Gloves"), 96) : null,
+            hasCape(mem, offset) ? PacketIO.readValidatedAsciiString("Cape", mem, offset + getValidatedOffset(mem, offset, 79, 83, "Cape"), 96) : null
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte[] nullBits = new byte[3];
@@ -1167,6 +1558,237 @@ public class PlayerSkin {
       } else {
          buf.setIntLE(capeOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.bodyCharacteristic != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.underwear != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.face != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.eyes != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.ears != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.mouth != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
+      if (this.facialHair != null) {
+         nullBits = (byte)(nullBits | 64);
+      }
+
+      if (this.haircut != null) {
+         nullBits = (byte)(nullBits | 128);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      nullBits = 0;
+      if (this.eyebrows != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.pants != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.overpants != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.undertop != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.overtop != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.shoes != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
+      if (this.headAccessory != null) {
+         nullBits = (byte)(nullBits | 64);
+      }
+
+      if (this.faceAccessory != null) {
+         nullBits = (byte)(nullBits | 128);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, nullBits);
+      nullBits = 0;
+      if (this.earAccessory != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.skinFeature != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.gloves != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.cape != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 2, nullBits);
+      int varOffset = offset + 83;
+      if (this.bodyCharacteristic != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 3, varOffset - offset - 83);
+         varOffset += PacketIO.writeVarAsciiString(mem, varOffset, this.bodyCharacteristic, 96);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 3, -1);
+      }
+
+      if (this.underwear != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 7, varOffset - offset - 83);
+         varOffset += PacketIO.writeVarAsciiString(mem, varOffset, this.underwear, 96);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 7, -1);
+      }
+
+      if (this.face != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 11, varOffset - offset - 83);
+         varOffset += PacketIO.writeVarAsciiString(mem, varOffset, this.face, 96);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 11, -1);
+      }
+
+      if (this.eyes != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 15, varOffset - offset - 83);
+         varOffset += PacketIO.writeVarAsciiString(mem, varOffset, this.eyes, 96);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 15, -1);
+      }
+
+      if (this.ears != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 19, varOffset - offset - 83);
+         varOffset += PacketIO.writeVarAsciiString(mem, varOffset, this.ears, 96);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 19, -1);
+      }
+
+      if (this.mouth != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 23, varOffset - offset - 83);
+         varOffset += PacketIO.writeVarAsciiString(mem, varOffset, this.mouth, 96);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 23, -1);
+      }
+
+      if (this.facialHair != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 27, varOffset - offset - 83);
+         varOffset += PacketIO.writeVarAsciiString(mem, varOffset, this.facialHair, 96);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 27, -1);
+      }
+
+      if (this.haircut != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 31, varOffset - offset - 83);
+         varOffset += PacketIO.writeVarAsciiString(mem, varOffset, this.haircut, 96);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 31, -1);
+      }
+
+      if (this.eyebrows != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 35, varOffset - offset - 83);
+         varOffset += PacketIO.writeVarAsciiString(mem, varOffset, this.eyebrows, 96);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 35, -1);
+      }
+
+      if (this.pants != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 39, varOffset - offset - 83);
+         varOffset += PacketIO.writeVarAsciiString(mem, varOffset, this.pants, 96);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 39, -1);
+      }
+
+      if (this.overpants != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 43, varOffset - offset - 83);
+         varOffset += PacketIO.writeVarAsciiString(mem, varOffset, this.overpants, 96);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 43, -1);
+      }
+
+      if (this.undertop != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 47, varOffset - offset - 83);
+         varOffset += PacketIO.writeVarAsciiString(mem, varOffset, this.undertop, 96);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 47, -1);
+      }
+
+      if (this.overtop != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 51, varOffset - offset - 83);
+         varOffset += PacketIO.writeVarAsciiString(mem, varOffset, this.overtop, 96);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 51, -1);
+      }
+
+      if (this.shoes != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 55, varOffset - offset - 83);
+         varOffset += PacketIO.writeVarAsciiString(mem, varOffset, this.shoes, 96);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 55, -1);
+      }
+
+      if (this.headAccessory != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 59, varOffset - offset - 83);
+         varOffset += PacketIO.writeVarAsciiString(mem, varOffset, this.headAccessory, 96);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 59, -1);
+      }
+
+      if (this.faceAccessory != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 63, varOffset - offset - 83);
+         varOffset += PacketIO.writeVarAsciiString(mem, varOffset, this.faceAccessory, 96);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 63, -1);
+      }
+
+      if (this.earAccessory != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 67, varOffset - offset - 83);
+         varOffset += PacketIO.writeVarAsciiString(mem, varOffset, this.earAccessory, 96);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 67, -1);
+      }
+
+      if (this.skinFeature != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 71, varOffset - offset - 83);
+         varOffset += PacketIO.writeVarAsciiString(mem, varOffset, this.skinFeature, 96);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 71, -1);
+      }
+
+      if (this.gloves != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 75, varOffset - offset - 83);
+         varOffset += PacketIO.writeVarAsciiString(mem, varOffset, this.gloves, 96);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 75, -1);
+      }
+
+      if (this.cape != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 79, varOffset - offset - 83);
+         varOffset += PacketIO.writeVarAsciiString(mem, varOffset, this.cape, 96);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 79, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

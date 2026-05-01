@@ -2,6 +2,8 @@ package com.hypixel.hytale.server.core.io.stream;
 
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.io.ChannelConnection;
+import com.hypixel.hytale.protocol.io.ConnectionHandler;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.packets.stream.StreamOpen;
 import com.hypixel.hytale.protocol.packets.stream.StreamOpenResponse;
@@ -9,7 +11,6 @@ import com.hypixel.hytale.protocol.packets.stream.StreamType;
 import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.io.netty.NettyUtil;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.quic.QuicStreamChannel;
@@ -47,10 +48,11 @@ public class PendingStreamHandler extends ChannelInboundHandlerAdapter {
                LOGGER.at(Level.INFO).log("Unsupported stream type %s from %s", type.name(), this.packetHandler.getIdentifier());
                ctx.writeAndFlush(new StreamOpenResponse(type, false, "Stream type not supported")).addListener(future -> ctx.close());
             } else {
-               if (this.packetHandler.getChannel(type) instanceof NettyUtil.NettyChannelConnection(Channel ch)) {
+               ChannelConnection existingChannel = this.packetHandler.getChannel(type);
+               if (existingChannel instanceof NettyUtil.NettyChannelConnection(Channel ch)) {
                   LOGGER.at(Level.INFO)
                      .log("Replacing stale %s stream for %s (old channel active=%s)", type.name(), this.packetHandler.getIdentifier(), ch.isActive());
-                  this.packetHandler.setChannel(type, null);
+                  this.packetHandler.compareAndSetChannel(type, existingChannel, null);
                   ch.close();
                }
 
@@ -58,15 +60,15 @@ public class PendingStreamHandler extends ChannelInboundHandlerAdapter {
                   LOGGER.at(Level.WARNING).log("Maximum auxiliary streams exceeded for %s requesting %s", this.packetHandler.getIdentifier(), type.name());
                   ctx.writeAndFlush(new StreamOpenResponse(type, false, "Maximum auxiliary streams exceeded")).addListener(future -> ctx.close());
                } else {
-                  ChannelHandler handler = this.streamManager.createHandler(type, this.packetHandler);
+                  NettyUtil.NettyChannelConnection channelConnection = new NettyUtil.NettyChannelConnection(ctx.channel());
+                  ConnectionHandler handler = this.streamManager.createHandler(type, this.packetHandler, channelConnection);
                   if (handler == null) {
                      LOGGER.at(Level.SEVERE).log("Failed to create handler for stream type %s from %s", type.name(), this.packetHandler.getIdentifier());
                      ctx.writeAndFlush(new StreamOpenResponse(type, false, "Internal error")).addListener(future -> ctx.close());
                   } else {
                      LOGGER.at(Level.INFO).log("Opening %s stream for %s", type.name(), this.packetHandler.getIdentifier());
-                     ctx.pipeline().replace(this, type.name() + "Handler", handler);
+                     ctx.pipeline().replace(this, type.name() + "Handler", new StreamConnectionHandlerAdapter(handler));
                      ctx.pipeline().remove("aux_read_timeout");
-                     this.packetHandler.setChannel(type, new NettyUtil.NettyChannelConnection(ctx.channel()));
                      if (ctx.channel() instanceof QuicStreamChannel quicStreamChannel) {
                         quicStreamChannel.updatePriority(this.streamManager.getStreamPriority(type));
                      }

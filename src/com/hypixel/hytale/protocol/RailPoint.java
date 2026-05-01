@@ -4,6 +4,7 @@ import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import org.joml.Vector3fc;
@@ -48,9 +49,47 @@ public class RailPoint {
       return 24;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 24L;
+   }
+
+   public static Vector3fc getPoint(MemorySegment mem) {
+      return getPoint(mem, 0);
+   }
+
+   public static Vector3fc getPoint(MemorySegment mem, int offset) {
+      return PacketIO.readVector3f(mem, offset + 0);
+   }
+
+   public static Vector3fc getNormal(MemorySegment mem) {
+      return getNormal(mem, 0);
+   }
+
+   public static Vector3fc getNormal(MemorySegment mem, int offset) {
+      return PacketIO.readVector3f(mem, offset + 12);
+   }
+
+   public static RailPoint toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static RailPoint toObject(MemorySegment mem, int offset) {
+      if (offset + 24 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("RailPoint", offset + 24, (int)mem.byteSize());
+      } else {
+         return new RailPoint(PacketIO.readVector3f(mem, offset + 0), PacketIO.readVector3f(mem, offset + 12));
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       PacketIO.writeVector3f(buf, this.point);
       PacketIO.writeVector3f(buf, this.normal);
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      PacketIO.writeVector3f(mem, offset + 0, this.point);
+      PacketIO.writeVector3f(mem, offset + 12, this.normal);
+      return 24;
    }
 
    public int computeSize() {

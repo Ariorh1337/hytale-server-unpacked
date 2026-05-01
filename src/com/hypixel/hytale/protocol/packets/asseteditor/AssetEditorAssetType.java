@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -226,6 +227,120 @@ public class AssetEditorAssetType {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 19L;
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem) {
+      return getId(mem, 0);
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem, int offset) {
+      return hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 3, 19, "Id"), 4096000, PacketIO.UTF8) : null;
+   }
+
+   @Nullable
+   public static String getIcon(MemorySegment mem) {
+      return getIcon(mem, 0);
+   }
+
+   @Nullable
+   public static String getIcon(MemorySegment mem, int offset) {
+      return hasIcon(mem, offset) ? PacketIO.readVarString("Icon", mem, offset + getValidatedOffset(mem, offset, 7, 19, "Icon"), 4096000, PacketIO.UTF8) : null;
+   }
+
+   public static boolean getIsColoredIcon(MemorySegment mem) {
+      return getIsColoredIcon(mem, 0);
+   }
+
+   public static boolean getIsColoredIcon(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 1);
+   }
+
+   @Nullable
+   public static String getPath(MemorySegment mem) {
+      return getPath(mem, 0);
+   }
+
+   @Nullable
+   public static String getPath(MemorySegment mem, int offset) {
+      return hasPath(mem, offset)
+         ? PacketIO.readVarString("Path", mem, offset + getValidatedOffset(mem, offset, 11, 19, "Path"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getFileExtension(MemorySegment mem) {
+      return getFileExtension(mem, 0);
+   }
+
+   @Nullable
+   public static String getFileExtension(MemorySegment mem, int offset) {
+      return hasFileExtension(mem, offset)
+         ? PacketIO.readVarString("FileExtension", mem, offset + getValidatedOffset(mem, offset, 15, 19, "FileExtension"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static AssetEditorEditorType getEditorType(MemorySegment mem) {
+      return getEditorType(mem, 0);
+   }
+
+   public static AssetEditorEditorType getEditorType(MemorySegment mem, int offset) {
+      return AssetEditorEditorType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 2));
+   }
+
+   public static boolean hasId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasIcon(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasPath(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasFileExtension(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static AssetEditorAssetType toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AssetEditorAssetType toObject(MemorySegment mem, int offset) {
+      if (offset + 19 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AssetEditorAssetType", offset + 19, (int)mem.byteSize());
+      } else {
+         return new AssetEditorAssetType(
+            hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 3, 19, "Id"), 4096000, PacketIO.UTF8) : null,
+            hasIcon(mem, offset) ? PacketIO.readVarString("Icon", mem, offset + getValidatedOffset(mem, offset, 7, 19, "Icon"), 4096000, PacketIO.UTF8) : null,
+            mem.get(PacketIO.PROTO_BOOL, offset + 1),
+            hasPath(mem, offset) ? PacketIO.readVarString("Path", mem, offset + getValidatedOffset(mem, offset, 11, 19, "Path"), 4096000, PacketIO.UTF8) : null,
+            hasFileExtension(mem, offset)
+               ? PacketIO.readVarString("FileExtension", mem, offset + getValidatedOffset(mem, offset, 15, 19, "FileExtension"), 4096000, PacketIO.UTF8)
+               : null,
+            AssetEditorEditorType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 2))
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -284,6 +399,59 @@ public class AssetEditorAssetType {
       } else {
          buf.setIntLE(fileExtensionOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.id != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.icon != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.path != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.fileExtension != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BOOL, offset + 1, this.isColoredIcon);
+      mem.set(PacketIO.PROTO_BYTE, offset + 2, (byte)this.editorType.getValue());
+      int varOffset = offset + 19;
+      if (this.id != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 3, varOffset - offset - 19);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.id, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 3, -1);
+      }
+
+      if (this.icon != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 7, varOffset - offset - 19);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.icon, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 7, -1);
+      }
+
+      if (this.path != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 11, varOffset - offset - 19);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.path, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 11, -1);
+      }
+
+      if (this.fileExtension != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 15, varOffset - offset - 19);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.fileExtension, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 15, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

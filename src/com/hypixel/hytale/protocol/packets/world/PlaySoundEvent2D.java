@@ -4,9 +4,11 @@ import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -69,12 +71,74 @@ public class PlaySoundEvent2D implements Packet, ToClientPacket {
       return 13;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 13L;
+   }
+
+   public static int getSoundEventIndex(MemorySegment mem) {
+      return getSoundEventIndex(mem, 0);
+   }
+
+   public static int getSoundEventIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 0);
+   }
+
+   public static SoundCategory getCategory(MemorySegment mem) {
+      return getCategory(mem, 0);
+   }
+
+   public static SoundCategory getCategory(MemorySegment mem, int offset) {
+      return SoundCategory.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 4));
+   }
+
+   public static float getVolumeModifier(MemorySegment mem) {
+      return getVolumeModifier(mem, 0);
+   }
+
+   public static float getVolumeModifier(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 5);
+   }
+
+   public static float getPitchModifier(MemorySegment mem) {
+      return getPitchModifier(mem, 0);
+   }
+
+   public static float getPitchModifier(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 9);
+   }
+
+   public static PlaySoundEvent2D toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static PlaySoundEvent2D toObject(MemorySegment mem, int offset) {
+      if (offset + 13 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("PlaySoundEvent2D", offset + 13, (int)mem.byteSize());
+      } else {
+         return new PlaySoundEvent2D(
+            mem.get(PacketIO.PROTO_INT, offset + 0),
+            SoundCategory.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 4)),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 5),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 9)
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeIntLE(this.soundEventIndex);
       buf.writeByte(this.category.getValue());
       buf.writeFloatLE(this.volumeModifier);
       buf.writeFloatLE(this.pitchModifier);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_INT, offset + 0, this.soundEventIndex);
+      mem.set(PacketIO.PROTO_BYTE, offset + 4, (byte)this.category.getValue());
+      mem.set(PacketIO.PROTO_FLOAT, offset + 5, this.volumeModifier);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 9, this.pitchModifier);
+      return 13;
    }
 
    @Override

@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -67,9 +68,48 @@ public class Asset {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 64L;
+   }
+
+   public static String getHash(MemorySegment mem) {
+      return getHash(mem, 0);
+   }
+
+   public static String getHash(MemorySegment mem, int offset) {
+      return PacketIO.readFixedAsciiString(mem, offset + 0, 64);
+   }
+
+   public static String getName(MemorySegment mem) {
+      return getName(mem, 0);
+   }
+
+   public static String getName(MemorySegment mem, int offset) {
+      return PacketIO.readVarString("Name", mem, offset + 64, 512, PacketIO.UTF8);
+   }
+
+   public static Asset toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static Asset toObject(MemorySegment mem, int offset) {
+      if (offset + 64 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Asset", offset + 64, (int)mem.byteSize());
+      } else {
+         return new Asset(PacketIO.readFixedAsciiString(mem, offset + 0, 64), PacketIO.readVarString("Name", mem, offset + 64, 512, PacketIO.UTF8));
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       PacketIO.writeFixedAsciiString(buf, this.hash, 64);
       PacketIO.writeVarString(buf, this.name, 512);
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      PacketIO.writeFixedAsciiString(mem, offset + 0, this.hash, 64);
+      int varOffset = offset + 64;
+      varOffset += PacketIO.writeVarString(mem, varOffset, this.name, 512);
+      return varOffset - offset;
    }
 
    public int computeSize() {

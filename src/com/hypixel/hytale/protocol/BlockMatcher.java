@@ -1,8 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -63,6 +65,57 @@ public class BlockMatcher {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 3L;
+   }
+
+   @Nullable
+   public static BlockIdMatcher getBlock(MemorySegment mem) {
+      return getBlock(mem, 0);
+   }
+
+   @Nullable
+   public static BlockIdMatcher getBlock(MemorySegment mem, int offset) {
+      return hasBlock(mem, offset) ? BlockIdMatcher.toObject(mem, offset + 3) : null;
+   }
+
+   public static BlockFace getFace(MemorySegment mem) {
+      return getFace(mem, 0);
+   }
+
+   public static BlockFace getFace(MemorySegment mem, int offset) {
+      return BlockFace.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1));
+   }
+
+   public static boolean getStaticFace(MemorySegment mem) {
+      return getStaticFace(mem, 0);
+   }
+
+   public static boolean getStaticFace(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 2);
+   }
+
+   public static boolean hasBlock(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static BlockMatcher toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static BlockMatcher toObject(MemorySegment mem, int offset) {
+      if (offset + 3 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BlockMatcher", offset + 3, (int)mem.byteSize());
+      } else {
+         return new BlockMatcher(
+            hasBlock(mem, offset) ? BlockIdMatcher.toObject(mem, offset + 3) : null,
+            BlockFace.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1)),
+            mem.get(PacketIO.PROTO_BOOL, offset + 2)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
       if (this.block != null) {
@@ -75,6 +128,23 @@ public class BlockMatcher {
       if (this.block != null) {
          this.block.serialize(buf);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.block != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.face.getValue());
+      mem.set(PacketIO.PROTO_BOOL, offset + 2, this.staticFace);
+      int varOffset = offset + 3;
+      if (this.block != null) {
+         varOffset += this.block.serialize(mem, varOffset);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

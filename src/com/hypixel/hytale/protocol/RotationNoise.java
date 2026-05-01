@@ -1,9 +1,11 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -200,6 +202,235 @@ public class RotationNoise {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 13L;
+   }
+
+   @Nullable
+   public static NoiseConfig[] getPitch(MemorySegment mem) {
+      return getPitch(mem, 0);
+   }
+
+   @Nullable
+   public static NoiseConfig[] getPitch(MemorySegment mem, int offset) {
+      if (!hasPitch(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 1, 13, "Pitch");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Pitch", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Pitch", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 23L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Pitch", off + lenOffset + len * 23, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      NoiseConfig[] data = new NoiseConfig[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = NoiseConfig.toObject(mem, off + i * 23);
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static NoiseConfig[] getYaw(MemorySegment mem) {
+      return getYaw(mem, 0);
+   }
+
+   @Nullable
+   public static NoiseConfig[] getYaw(MemorySegment mem, int offset) {
+      if (!hasYaw(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 5, 13, "Yaw");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Yaw", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Yaw", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 23L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Yaw", off + lenOffset + len * 23, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      NoiseConfig[] data = new NoiseConfig[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = NoiseConfig.toObject(mem, off + i * 23);
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static NoiseConfig[] getRoll(MemorySegment mem) {
+      return getRoll(mem, 0);
+   }
+
+   @Nullable
+   public static NoiseConfig[] getRoll(MemorySegment mem, int offset) {
+      if (!hasRoll(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 9, 13, "Roll");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Roll", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Roll", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 23L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Roll", off + lenOffset + len * 23, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      NoiseConfig[] data = new NoiseConfig[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = NoiseConfig.toObject(mem, off + i * 23);
+      }
+
+      return data;
+   }
+
+   public static boolean hasPitch(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasYaw(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasRoll(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static RotationNoise toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static RotationNoise toObject(MemorySegment mem, int offset) {
+      if (offset + 13 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("RotationNoise", offset + 13, (int)mem.byteSize());
+      }
+
+      NoiseConfig[] pitch = null;
+      if (hasPitch(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 1, 13, "Pitch");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Pitch", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Pitch", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 23L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Pitch", off + lenOffset + len * 23, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         pitch = new NoiseConfig[len];
+
+         for (int i = 0; i < len; i++) {
+            pitch[i] = NoiseConfig.toObject(mem, off + i * 23);
+         }
+      }
+
+      NoiseConfig[] yaw = null;
+      if (hasYaw(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 5, 13, "Yaw");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Yaw", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Yaw", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 23L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Yaw", off + lenOffset + len * 23, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         yaw = new NoiseConfig[len];
+
+         for (int i = 0; i < len; i++) {
+            yaw[i] = NoiseConfig.toObject(mem, off + i * 23);
+         }
+      }
+
+      NoiseConfig[] roll = null;
+      if (hasRoll(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 9, 13, "Roll");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Roll", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Roll", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 23L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Roll", off + lenOffset + len * 23, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         roll = new NoiseConfig[len];
+
+         for (int i = 0; i < len; i++) {
+            roll[i] = NoiseConfig.toObject(mem, off + i * 23);
+         }
+      }
+
+      return new RotationNoise(pitch, yaw, roll);
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -267,6 +498,79 @@ public class RotationNoise {
       } else {
          buf.setIntLE(rollOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.pitch != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.yaw != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.roll != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 13;
+      if (this.pitch != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 1, varOffset - offset - 13);
+         if (this.pitch.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Pitch", this.pitch.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.pitch.length);
+         int pitchValueOffset = 0;
+
+         for (int i = 0; i < this.pitch.length; i++) {
+            pitchValueOffset += this.pitch[i].serialize(mem, varOffset + pitchValueOffset);
+         }
+
+         varOffset += pitchValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 1, -1);
+      }
+
+      if (this.yaw != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 5, varOffset - offset - 13);
+         if (this.yaw.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Yaw", this.yaw.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.yaw.length);
+         int yawValueOffset = 0;
+
+         for (int i = 0; i < this.yaw.length; i++) {
+            yawValueOffset += this.yaw[i].serialize(mem, varOffset + yawValueOffset);
+         }
+
+         varOffset += yawValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 5, -1);
+      }
+
+      if (this.roll != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 9, varOffset - offset - 13);
+         if (this.roll.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Roll", this.roll.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.roll.length);
+         int rollValueOffset = 0;
+
+         for (int i = 0; i < this.roll.length; i++) {
+            rollValueOffset += this.roll[i].serialize(mem, varOffset + rollValueOffset);
+         }
+
+         varOffset += rollValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 9, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

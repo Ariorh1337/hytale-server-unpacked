@@ -10,6 +10,7 @@ import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
 import com.hypixel.hytale.server.core.modules.entity.component.DisplayNameComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.PersistentDisplayName;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -49,6 +50,7 @@ public final class PrefabPathHelper {
             store.putComponent(waypointRef, ModelComponent.getComponentType(), new ModelComponent(model));
             String displayName = PatrolPathMarkerEntity.generateDisplayName(worldgenId, waypointEntity);
             Message displayNameMessage = Message.raw(displayName);
+            store.putComponent(waypointRef, PersistentDisplayName.getComponentType(), new PersistentDisplayName(displayNameMessage));
             store.putComponent(waypointRef, DisplayNameComponent.getComponentType(), new DisplayNameComponent(displayNameMessage));
             store.putComponent(waypointRef, Nameplate.getComponentType(), new Nameplate(displayName));
          }

@@ -1,9 +1,11 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -147,6 +149,167 @@ public class InteractionCameraSettings {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 9L;
+   }
+
+   @Nullable
+   public static InteractionCamera[] getFirstPerson(MemorySegment mem) {
+      return getFirstPerson(mem, 0);
+   }
+
+   @Nullable
+   public static InteractionCamera[] getFirstPerson(MemorySegment mem, int offset) {
+      if (!hasFirstPerson(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 1, 9, "FirstPerson");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("FirstPerson", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("FirstPerson", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 29L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("FirstPerson", off + lenOffset + len * 29, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      InteractionCamera[] data = new InteractionCamera[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = InteractionCamera.toObject(mem, off + i * 29);
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static InteractionCamera[] getThirdPerson(MemorySegment mem) {
+      return getThirdPerson(mem, 0);
+   }
+
+   @Nullable
+   public static InteractionCamera[] getThirdPerson(MemorySegment mem, int offset) {
+      if (!hasThirdPerson(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 5, 9, "ThirdPerson");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("ThirdPerson", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("ThirdPerson", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 29L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ThirdPerson", off + lenOffset + len * 29, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      InteractionCamera[] data = new InteractionCamera[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = InteractionCamera.toObject(mem, off + i * 29);
+      }
+
+      return data;
+   }
+
+   public static boolean hasFirstPerson(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasThirdPerson(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static InteractionCameraSettings toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static InteractionCameraSettings toObject(MemorySegment mem, int offset) {
+      if (offset + 9 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("InteractionCameraSettings", offset + 9, (int)mem.byteSize());
+      }
+
+      InteractionCamera[] firstPerson = null;
+      if (hasFirstPerson(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 1, 9, "FirstPerson");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("FirstPerson", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("FirstPerson", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 29L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("FirstPerson", off + lenOffset + len * 29, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         firstPerson = new InteractionCamera[len];
+
+         for (int i = 0; i < len; i++) {
+            firstPerson[i] = InteractionCamera.toObject(mem, off + i * 29);
+         }
+      }
+
+      InteractionCamera[] thirdPerson = null;
+      if (hasThirdPerson(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 5, 9, "ThirdPerson");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("ThirdPerson", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("ThirdPerson", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 29L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("ThirdPerson", off + lenOffset + len * 29, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         thirdPerson = new InteractionCamera[len];
+
+         for (int i = 0; i < len; i++) {
+            thirdPerson[i] = InteractionCamera.toObject(mem, off + i * 29);
+         }
+      }
+
+      return new InteractionCameraSettings(firstPerson, thirdPerson);
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -193,6 +356,57 @@ public class InteractionCameraSettings {
       } else {
          buf.setIntLE(thirdPersonOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.firstPerson != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.thirdPerson != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 9;
+      if (this.firstPerson != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 1, varOffset - offset - 9);
+         if (this.firstPerson.length > 4096000) {
+            throw ProtocolException.arrayTooLong("FirstPerson", this.firstPerson.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.firstPerson.length);
+         int firstPersonValueOffset = 0;
+
+         for (int i = 0; i < this.firstPerson.length; i++) {
+            firstPersonValueOffset += this.firstPerson[i].serialize(mem, varOffset + firstPersonValueOffset);
+         }
+
+         varOffset += firstPersonValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 1, -1);
+      }
+
+      if (this.thirdPerson != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 5, varOffset - offset - 9);
+         if (this.thirdPerson.length > 4096000) {
+            throw ProtocolException.arrayTooLong("ThirdPerson", this.thirdPerson.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.thirdPerson.length);
+         int thirdPersonValueOffset = 0;
+
+         for (int i = 0; i < this.thirdPerson.length; i++) {
+            thirdPersonValueOffset += this.thirdPerson[i].serialize(mem, varOffset + thirdPersonValueOffset);
+         }
+
+         varOffset += thirdPersonValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 5, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

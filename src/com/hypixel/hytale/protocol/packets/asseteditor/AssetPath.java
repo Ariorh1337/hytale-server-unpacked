@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -126,6 +127,64 @@ public class AssetPath {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 9L;
+   }
+
+   @Nullable
+   public static String getPack(MemorySegment mem) {
+      return getPack(mem, 0);
+   }
+
+   @Nullable
+   public static String getPack(MemorySegment mem, int offset) {
+      return hasPack(mem, offset) ? PacketIO.readVarString("Pack", mem, offset + getValidatedOffset(mem, offset, 1, 9, "Pack"), 4096000, PacketIO.UTF8) : null;
+   }
+
+   @Nullable
+   public static String getPath(MemorySegment mem) {
+      return getPath(mem, 0);
+   }
+
+   @Nullable
+   public static String getPath(MemorySegment mem, int offset) {
+      return hasPath(mem, offset) ? PacketIO.readVarString("Path", mem, offset + getValidatedOffset(mem, offset, 5, 9, "Path"), 4096000, PacketIO.UTF8) : null;
+   }
+
+   public static boolean hasPack(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasPath(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static AssetPath toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AssetPath toObject(MemorySegment mem, int offset) {
+      if (offset + 9 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AssetPath", offset + 9, (int)mem.byteSize());
+      } else {
+         return new AssetPath(
+            hasPack(mem, offset) ? PacketIO.readVarString("Pack", mem, offset + getValidatedOffset(mem, offset, 1, 9, "Pack"), 4096000, PacketIO.UTF8) : null,
+            hasPath(mem, offset) ? PacketIO.readVarString("Path", mem, offset + getValidatedOffset(mem, offset, 5, 9, "Path"), 4096000, PacketIO.UTF8) : null
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -156,6 +215,35 @@ public class AssetPath {
       } else {
          buf.setIntLE(pathOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.pack != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.path != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 9;
+      if (this.pack != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 1, varOffset - offset - 9);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.pack, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 1, -1);
+      }
+
+      if (this.path != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 5, varOffset - offset - 9);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.path, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 5, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

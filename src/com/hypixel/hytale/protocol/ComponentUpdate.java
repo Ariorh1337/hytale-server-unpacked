@@ -4,6 +4,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import javax.annotation.Nonnull;
 
 public abstract class ComponentUpdate {
@@ -41,6 +42,45 @@ public abstract class ComponentUpdate {
          case 23 -> NewSpawnUpdate.deserialize(buf, offset + typeIdLen);
          case 24 -> ActiveAnimationsUpdate.deserialize(buf, offset + typeIdLen);
          case 25 -> PropUpdate.deserialize(buf, offset + typeIdLen);
+         default -> throw ProtocolException.unknownPolymorphicType("ComponentUpdate", typeId);
+      };
+   }
+
+   public static ComponentUpdate toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ComponentUpdate toObject(MemorySegment mem, int offset) {
+      int typeId = VarInt.get(mem, offset);
+      int typeIdLen = VarInt.size(typeId);
+
+      return switch (typeId) {
+         case 0 -> NameplateUpdate.toObject(mem, offset + typeIdLen);
+         case 1 -> UIComponentsUpdate.toObject(mem, offset + typeIdLen);
+         case 2 -> CombatTextUpdate.toObject(mem, offset + typeIdLen);
+         case 3 -> ModelUpdate.toObject(mem, offset + typeIdLen);
+         case 4 -> PlayerSkinUpdate.toObject(mem, offset + typeIdLen);
+         case 5 -> ItemUpdate.toObject(mem, offset + typeIdLen);
+         case 6 -> BlockUpdate.toObject(mem, offset + typeIdLen);
+         case 7 -> EquipmentUpdate.toObject(mem, offset + typeIdLen);
+         case 8 -> EntityStatsUpdate.toObject(mem, offset + typeIdLen);
+         case 9 -> TransformUpdate.toObject(mem, offset + typeIdLen);
+         case 10 -> MovementStatesUpdate.toObject(mem, offset + typeIdLen);
+         case 11 -> EntityEffectsUpdate.toObject(mem, offset + typeIdLen);
+         case 12 -> InteractionsUpdate.toObject(mem, offset + typeIdLen);
+         case 13 -> DynamicLightUpdate.toObject(mem, offset + typeIdLen);
+         case 14 -> InteractableUpdate.toObject(mem, offset + typeIdLen);
+         case 15 -> IntangibleUpdate.toObject(mem, offset + typeIdLen);
+         case 16 -> InvulnerableUpdate.toObject(mem, offset + typeIdLen);
+         case 17 -> RespondToHitUpdate.toObject(mem, offset + typeIdLen);
+         case 18 -> HitboxCollisionUpdate.toObject(mem, offset + typeIdLen);
+         case 19 -> RepulsionUpdate.toObject(mem, offset + typeIdLen);
+         case 20 -> PredictionUpdate.toObject(mem, offset + typeIdLen);
+         case 21 -> AudioUpdate.toObject(mem, offset + typeIdLen);
+         case 22 -> MountedUpdate.toObject(mem, offset + typeIdLen);
+         case 23 -> NewSpawnUpdate.toObject(mem, offset + typeIdLen);
+         case 24 -> ActiveAnimationsUpdate.toObject(mem, offset + typeIdLen);
+         case 25 -> PropUpdate.toObject(mem, offset + typeIdLen);
          default -> throw ProtocolException.unknownPolymorphicType("ComponentUpdate", typeId);
       };
    }
@@ -140,6 +180,8 @@ public abstract class ComponentUpdate {
 
    public abstract int serialize(@Nonnull ByteBuf var1);
 
+   public abstract int serialize(@Nonnull MemorySegment var1, int var2);
+
    public abstract int computeSize();
 
    public int serializeWithTypeId(@Nonnull ByteBuf buf) {
@@ -147,6 +189,11 @@ public abstract class ComponentUpdate {
       VarInt.write(buf, this.getTypeId());
       this.serialize(buf);
       return buf.writerIndex() - startPos;
+   }
+
+   public int serializeWithTypeId(@Nonnull MemorySegment mem, int offset) {
+      int len = VarInt.set(mem, offset, this.getTypeId());
+      return len + this.serialize(mem, offset + len);
    }
 
    public int computeSizeWithTypeId() {

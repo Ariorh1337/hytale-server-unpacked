@@ -50,21 +50,23 @@ public class ItemUtils {
          Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
          if (playerComponent != null) {
             Holder<EntityStore> pickupItemHolder = null;
-            ItemStackTransaction transaction = playerComponent.giveItem(itemStack, ref, componentAccessor);
+            ItemStackTransaction transaction = Player.giveItem(itemStack, ref, componentAccessor);
             ItemStack remainder = transaction.getRemainder();
             if (remainder != null && !remainder.isEmpty()) {
                int quantity = itemStack.getQuantity() - remainder.getQuantity();
                if (quantity > 0) {
                   ItemStack itemStackClone = itemStack.withQuantity(quantity);
-                  playerComponent.notifyPickupItem(ref, itemStackClone, null, componentAccessor);
-                  if (origin != null) {
-                     pickupItemHolder = ItemComponent.generatePickedUpItem(itemStackClone, origin, componentAccessor, ref);
+                  if (itemStackClone != null) {
+                     Player.notifyPickupItem(ref, itemStackClone, null, componentAccessor);
+                     if (origin != null) {
+                        pickupItemHolder = ItemComponent.generatePickedUpItem(itemStackClone, origin, componentAccessor, ref);
+                     }
                   }
                }
 
                dropItem(ref, remainder, componentAccessor);
             } else {
-               playerComponent.notifyPickupItem(ref, itemStack, null, componentAccessor);
+               Player.notifyPickupItem(ref, itemStack, null, componentAccessor);
                if (origin != null) {
                   pickupItemHolder = ItemComponent.generatePickedUpItem(itemStack, origin, componentAccessor, ref);
                }

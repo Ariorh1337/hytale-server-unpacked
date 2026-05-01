@@ -1,9 +1,11 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -75,6 +77,90 @@ public class AbilityEffects {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 1L;
+   }
+
+   @Nullable
+   public static InteractionType[] getDisabled(MemorySegment mem) {
+      return getDisabled(mem, 0);
+   }
+
+   @Nullable
+   public static InteractionType[] getDisabled(MemorySegment mem, int offset) {
+      if (!hasDisabled(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + 1;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Disabled", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Disabled", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 1L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Disabled", off + lenOffset + len * 1, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      InteractionType[] data = new InteractionType[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = InteractionType.fromValue(mem.get(PacketIO.PROTO_BYTE, off + i * 1));
+      }
+
+      return data;
+   }
+
+   public static boolean hasDisabled(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static AbilityEffects toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AbilityEffects toObject(MemorySegment mem, int offset) {
+      if (offset + 1 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AbilityEffects", offset + 1, (int)mem.byteSize());
+      }
+
+      InteractionType[] disabled = null;
+      if (hasDisabled(mem, offset)) {
+         int off = offset + 1;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Disabled", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Disabled", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 1L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Disabled", off + lenOffset + len * 1, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         disabled = new InteractionType[len];
+
+         for (int i = 0; i < len; i++) {
+            disabled[i] = InteractionType.fromValue(mem.get(PacketIO.PROTO_BYTE, off + i * 1));
+         }
+      }
+
+      return new AbilityEffects(disabled);
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
       if (this.disabled != null) {
@@ -93,6 +179,31 @@ public class AbilityEffects {
             buf.writeByte(item.getValue());
          }
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.disabled != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 1;
+      if (this.disabled != null) {
+         if (this.disabled.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Disabled", this.disabled.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.disabled.length);
+
+         for (int i = 0; i < this.disabled.length; i++) {
+            mem.set(PacketIO.PROTO_BYTE, varOffset + i * 1, (byte)this.disabled[i].getValue());
+         }
+
+         varOffset += this.disabled.length * 1;
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

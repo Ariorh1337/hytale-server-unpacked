@@ -1,8 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -62,6 +64,77 @@ public class FluidFXMovementSettings {
       return 24;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 24L;
+   }
+
+   public static float getSwimUpSpeed(MemorySegment mem) {
+      return getSwimUpSpeed(mem, 0);
+   }
+
+   public static float getSwimUpSpeed(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 0);
+   }
+
+   public static float getSwimDownSpeed(MemorySegment mem) {
+      return getSwimDownSpeed(mem, 0);
+   }
+
+   public static float getSwimDownSpeed(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 4);
+   }
+
+   public static float getSinkSpeed(MemorySegment mem) {
+      return getSinkSpeed(mem, 0);
+   }
+
+   public static float getSinkSpeed(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 8);
+   }
+
+   public static float getHorizontalSpeedMultiplier(MemorySegment mem) {
+      return getHorizontalSpeedMultiplier(mem, 0);
+   }
+
+   public static float getHorizontalSpeedMultiplier(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 12);
+   }
+
+   public static float getFieldOfViewMultiplier(MemorySegment mem) {
+      return getFieldOfViewMultiplier(mem, 0);
+   }
+
+   public static float getFieldOfViewMultiplier(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 16);
+   }
+
+   public static float getEntryVelocityMultiplier(MemorySegment mem) {
+      return getEntryVelocityMultiplier(mem, 0);
+   }
+
+   public static float getEntryVelocityMultiplier(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 20);
+   }
+
+   public static FluidFXMovementSettings toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static FluidFXMovementSettings toObject(MemorySegment mem, int offset) {
+      if (offset + 24 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("FluidFXMovementSettings", offset + 24, (int)mem.byteSize());
+      } else {
+         return new FluidFXMovementSettings(
+            mem.get(PacketIO.PROTO_FLOAT, offset + 0),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 4),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 8),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 12),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 16),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 20)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeFloatLE(this.swimUpSpeed);
       buf.writeFloatLE(this.swimDownSpeed);
@@ -69,6 +142,16 @@ public class FluidFXMovementSettings {
       buf.writeFloatLE(this.horizontalSpeedMultiplier);
       buf.writeFloatLE(this.fieldOfViewMultiplier);
       buf.writeFloatLE(this.entryVelocityMultiplier);
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_FLOAT, offset + 0, this.swimUpSpeed);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 4, this.swimDownSpeed);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 8, this.sinkSpeed);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 12, this.horizontalSpeedMultiplier);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 16, this.fieldOfViewMultiplier);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 20, this.entryVelocityMultiplier);
+      return 24;
    }
 
    public int computeSize() {

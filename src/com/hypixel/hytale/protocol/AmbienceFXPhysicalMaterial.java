@@ -1,8 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -50,6 +52,45 @@ public class AmbienceFXPhysicalMaterial {
       return 13;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 13L;
+   }
+
+   public static int getPhysicalMaterialIndex(MemorySegment mem) {
+      return getPhysicalMaterialIndex(mem, 0);
+   }
+
+   public static int getPhysicalMaterialIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   @Nullable
+   public static Rangef getPercent(MemorySegment mem) {
+      return getPercent(mem, 0);
+   }
+
+   @Nullable
+   public static Rangef getPercent(MemorySegment mem, int offset) {
+      return hasPercent(mem, offset) ? Rangef.toObject(mem, offset + 5) : null;
+   }
+
+   public static boolean hasPercent(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static AmbienceFXPhysicalMaterial toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AmbienceFXPhysicalMaterial toObject(MemorySegment mem, int offset) {
+      if (offset + 13 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AmbienceFXPhysicalMaterial", offset + 13, (int)mem.byteSize());
+      } else {
+         return new AmbienceFXPhysicalMaterial(mem.get(PacketIO.PROTO_INT, offset + 1), hasPercent(mem, offset) ? Rangef.toObject(mem, offset + 5) : null);
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
       if (this.percent != null) {
@@ -63,6 +104,23 @@ public class AmbienceFXPhysicalMaterial {
       } else {
          buf.writeZero(8);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.percent != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.physicalMaterialIndex);
+      if (this.percent != null) {
+         this.percent.serialize(mem, offset + 5);
+      } else {
+         mem.asSlice(offset + 5, 8L).fill((byte)0);
+      }
+
+      return 13;
    }
 
    public int computeSize() {

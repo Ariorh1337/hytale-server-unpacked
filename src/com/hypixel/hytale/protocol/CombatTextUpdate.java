@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -66,12 +67,52 @@ public class CombatTextUpdate extends ComponentUpdate {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 4L;
+   }
+
+   public static float getHitAngleDeg(MemorySegment mem) {
+      return getHitAngleDeg(mem, 0);
+   }
+
+   public static float getHitAngleDeg(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 0);
+   }
+
+   public static String getText(MemorySegment mem) {
+      return getText(mem, 0);
+   }
+
+   public static String getText(MemorySegment mem, int offset) {
+      return PacketIO.readVarString("Text", mem, offset + 4, 4096000, PacketIO.UTF8);
+   }
+
+   public static CombatTextUpdate toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static CombatTextUpdate toObject(MemorySegment mem, int offset) {
+      if (offset + 4 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("CombatTextUpdate", offset + 4, (int)mem.byteSize());
+      } else {
+         return new CombatTextUpdate(mem.get(PacketIO.PROTO_FLOAT, offset + 0), PacketIO.readVarString("Text", mem, offset + 4, 4096000, PacketIO.UTF8));
+      }
+   }
+
    @Override
    public int serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       buf.writeFloatLE(this.hitAngleDeg);
       PacketIO.writeVarString(buf, this.text, 4096000);
       return buf.writerIndex() - startPos;
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_FLOAT, offset + 0, this.hitAngleDeg);
+      int varOffset = offset + 4;
+      varOffset += PacketIO.writeVarString(mem, varOffset, this.text, 4096000);
+      return varOffset - offset;
    }
 
    @Override

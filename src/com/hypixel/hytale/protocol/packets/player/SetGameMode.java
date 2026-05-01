@@ -4,9 +4,11 @@ import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -57,9 +59,39 @@ public class SetGameMode implements Packet, ToClientPacket {
       return 1;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 1L;
+   }
+
+   public static GameMode getGameMode(MemorySegment mem) {
+      return getGameMode(mem, 0);
+   }
+
+   public static GameMode getGameMode(MemorySegment mem, int offset) {
+      return GameMode.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 0));
+   }
+
+   public static SetGameMode toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static SetGameMode toObject(MemorySegment mem, int offset) {
+      if (offset + 1 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("SetGameMode", offset + 1, (int)mem.byteSize());
+      } else {
+         return new SetGameMode(GameMode.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 0)));
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeByte(this.gameMode.getValue());
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, (byte)this.gameMode.getValue());
+      return 1;
    }
 
    @Override

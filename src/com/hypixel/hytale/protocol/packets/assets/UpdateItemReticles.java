@@ -5,10 +5,12 @@ import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.UpdateType;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -110,6 +112,108 @@ public class UpdateItemReticles implements Packet, ToClientPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 6L;
+   }
+
+   public static UpdateType getType(MemorySegment mem) {
+      return getType(mem, 0);
+   }
+
+   public static UpdateType getType(MemorySegment mem, int offset) {
+      return UpdateType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1));
+   }
+
+   public static int getMaxId(MemorySegment mem) {
+      return getMaxId(mem, 0);
+   }
+
+   public static int getMaxId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 2);
+   }
+
+   @Nullable
+   public static Map<Integer, ItemReticleConfig> getItemReticleConfigs(MemorySegment mem) {
+      return getItemReticleConfigs(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Integer, ItemReticleConfig> getItemReticleConfigs(MemorySegment mem, int offset) {
+      if (!hasItemReticleConfigs(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + 6;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("ItemReticleConfigs", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("ItemReticleConfigs", len, 4096000);
+      }
+
+      Map<Integer, ItemReticleConfig> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         int key = mem.get(PacketIO.PROTO_INT, off);
+         off += 4;
+         ItemReticleConfig value = ItemReticleConfig.toObject(mem, off);
+         off += value.computeSize();
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("ItemReticleConfigs", key);
+         }
+      }
+
+      return data;
+   }
+
+   public static boolean hasItemReticleConfigs(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static UpdateItemReticles toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UpdateItemReticles toObject(MemorySegment mem, int offset) {
+      if (offset + 6 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("UpdateItemReticles", offset + 6, (int)mem.byteSize());
+      }
+
+      Map<Integer, ItemReticleConfig> itemReticleConfigs = null;
+      if (hasItemReticleConfigs(mem, offset)) {
+         int off = offset + 6;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("ItemReticleConfigs", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("ItemReticleConfigs", len, 4096000);
+         }
+
+         itemReticleConfigs = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            int key = mem.get(PacketIO.PROTO_INT, off);
+            off += 4;
+            ItemReticleConfig value = ItemReticleConfig.toObject(mem, off);
+            off += value.computeSize();
+            if (itemReticleConfigs.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("ItemReticleConfigs", key);
+            }
+         }
+      }
+
+      return new UpdateItemReticles(UpdateType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1)), mem.get(PacketIO.PROTO_INT, offset + 2), itemReticleConfigs);
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -132,6 +236,34 @@ public class UpdateItemReticles implements Packet, ToClientPacket {
             e.getValue().serialize(buf);
          }
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.itemReticleConfigs != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.type.getValue());
+      mem.set(PacketIO.PROTO_INT, offset + 2, this.maxId);
+      int varOffset = offset + 6;
+      if (this.itemReticleConfigs != null) {
+         if (this.itemReticleConfigs.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("ItemReticleConfigs", this.itemReticleConfigs.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.itemReticleConfigs.size());
+
+         for (Entry<Integer, ItemReticleConfig> e : this.itemReticleConfigs.entrySet()) {
+            mem.set(PacketIO.PROTO_INT, varOffset, e.getKey());
+            varOffset += 4;
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      }
+
+      return varOffset - offset;
    }
 
    @Override

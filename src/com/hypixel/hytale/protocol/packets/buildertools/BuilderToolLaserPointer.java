@@ -3,9 +3,11 @@ package com.hypixel.hytale.protocol.packets.buildertools;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -87,6 +89,104 @@ public class BuilderToolLaserPointer implements Packet, ToClientPacket {
       return 36;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 36L;
+   }
+
+   public static int getPlayerNetworkId(MemorySegment mem) {
+      return getPlayerNetworkId(mem, 0);
+   }
+
+   public static int getPlayerNetworkId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 0);
+   }
+
+   public static float getStartX(MemorySegment mem) {
+      return getStartX(mem, 0);
+   }
+
+   public static float getStartX(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 4);
+   }
+
+   public static float getStartY(MemorySegment mem) {
+      return getStartY(mem, 0);
+   }
+
+   public static float getStartY(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 8);
+   }
+
+   public static float getStartZ(MemorySegment mem) {
+      return getStartZ(mem, 0);
+   }
+
+   public static float getStartZ(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 12);
+   }
+
+   public static float getEndX(MemorySegment mem) {
+      return getEndX(mem, 0);
+   }
+
+   public static float getEndX(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 16);
+   }
+
+   public static float getEndY(MemorySegment mem) {
+      return getEndY(mem, 0);
+   }
+
+   public static float getEndY(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 20);
+   }
+
+   public static float getEndZ(MemorySegment mem) {
+      return getEndZ(mem, 0);
+   }
+
+   public static float getEndZ(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 24);
+   }
+
+   public static int getColor(MemorySegment mem) {
+      return getColor(mem, 0);
+   }
+
+   public static int getColor(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 28);
+   }
+
+   public static int getDurationMs(MemorySegment mem) {
+      return getDurationMs(mem, 0);
+   }
+
+   public static int getDurationMs(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 32);
+   }
+
+   public static BuilderToolLaserPointer toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static BuilderToolLaserPointer toObject(MemorySegment mem, int offset) {
+      if (offset + 36 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BuilderToolLaserPointer", offset + 36, (int)mem.byteSize());
+      } else {
+         return new BuilderToolLaserPointer(
+            mem.get(PacketIO.PROTO_INT, offset + 0),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 4),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 8),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 12),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 16),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 20),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 24),
+            mem.get(PacketIO.PROTO_INT, offset + 28),
+            mem.get(PacketIO.PROTO_INT, offset + 32)
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeIntLE(this.playerNetworkId);
@@ -98,6 +198,20 @@ public class BuilderToolLaserPointer implements Packet, ToClientPacket {
       buf.writeFloatLE(this.endZ);
       buf.writeIntLE(this.color);
       buf.writeIntLE(this.durationMs);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_INT, offset + 0, this.playerNetworkId);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 4, this.startX);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 8, this.startY);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 12, this.startZ);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 16, this.endX);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 20, this.endY);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 24, this.endZ);
+      mem.set(PacketIO.PROTO_INT, offset + 28, this.color);
+      mem.set(PacketIO.PROTO_INT, offset + 32, this.durationMs);
+      return 36;
    }
 
    @Override

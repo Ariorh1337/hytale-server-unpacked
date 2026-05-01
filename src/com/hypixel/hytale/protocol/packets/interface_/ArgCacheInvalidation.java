@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -110,6 +111,96 @@ public class ArgCacheInvalidation implements Packet, ToClientPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 1L;
+   }
+
+   @Nullable
+   public static String[] getArgTypeIds(MemorySegment mem) {
+      return getArgTypeIds(mem, 0);
+   }
+
+   @Nullable
+   public static String[] getArgTypeIds(MemorySegment mem, int offset) {
+      if (!hasArgTypeIds(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + 1;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("ArgTypeIds", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("ArgTypeIds", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ArgTypeIds", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      String[] data = new String[len];
+
+      for (int i = 0; i < len; i++) {
+         long sp = VarInt.getWithLength(mem, off);
+         int n = (int)sp + (int)(sp >>> 32);
+         data[i] = PacketIO.readVarString("ArgTypeIds", mem, off, 16384000, PacketIO.UTF8);
+         off += n;
+      }
+
+      return data;
+   }
+
+   public static boolean hasArgTypeIds(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static ArgCacheInvalidation toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ArgCacheInvalidation toObject(MemorySegment mem, int offset) {
+      if (offset + 1 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ArgCacheInvalidation", offset + 1, (int)mem.byteSize());
+      }
+
+      String[] argTypeIds = null;
+      if (hasArgTypeIds(mem, offset)) {
+         int off = offset + 1;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("ArgTypeIds", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("ArgTypeIds", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("ArgTypeIds", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         argTypeIds = new String[len];
+
+         for (int i = 0; i < len; i++) {
+            long sp = VarInt.getWithLength(mem, off);
+            int n = (int)sp + (int)(sp >>> 32);
+            argTypeIds[i] = PacketIO.readVarString("ArgTypeIds", mem, off, 16384000, PacketIO.UTF8);
+            off += n;
+         }
+      }
+
+      return new ArgCacheInvalidation(argTypeIds);
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -129,6 +220,33 @@ public class ArgCacheInvalidation implements Packet, ToClientPacket {
             PacketIO.writeVarString(buf, item, 4096000);
          }
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.argTypeIds != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 1;
+      if (this.argTypeIds != null) {
+         if (this.argTypeIds.length > 4096000) {
+            throw ProtocolException.arrayTooLong("ArgTypeIds", this.argTypeIds.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.argTypeIds.length);
+         int argTypeIdsValueOffset = 0;
+
+         for (int i = 0; i < this.argTypeIds.length; i++) {
+            argTypeIdsValueOffset += PacketIO.writeVarString(mem, varOffset + argTypeIdsValueOffset, this.argTypeIds[i], 16384000);
+         }
+
+         varOffset += argTypeIdsValueOffset;
+      }
+
+      return varOffset - offset;
    }
 
    @Override

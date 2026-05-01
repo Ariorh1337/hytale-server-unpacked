@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -143,6 +144,165 @@ public class ReverbEffect {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 54L;
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem) {
+      return getId(mem, 0);
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem, int offset) {
+      return hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + 54, 4096000, PacketIO.UTF8) : null;
+   }
+
+   public static float getDryGain(MemorySegment mem) {
+      return getDryGain(mem, 0);
+   }
+
+   public static float getDryGain(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 1);
+   }
+
+   public static float getModalDensity(MemorySegment mem) {
+      return getModalDensity(mem, 0);
+   }
+
+   public static float getModalDensity(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 5);
+   }
+
+   public static float getDiffusion(MemorySegment mem) {
+      return getDiffusion(mem, 0);
+   }
+
+   public static float getDiffusion(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 9);
+   }
+
+   public static float getGain(MemorySegment mem) {
+      return getGain(mem, 0);
+   }
+
+   public static float getGain(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 13);
+   }
+
+   public static float getHighFrequencyGain(MemorySegment mem) {
+      return getHighFrequencyGain(mem, 0);
+   }
+
+   public static float getHighFrequencyGain(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 17);
+   }
+
+   public static float getDecayTime(MemorySegment mem) {
+      return getDecayTime(mem, 0);
+   }
+
+   public static float getDecayTime(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 21);
+   }
+
+   public static float getHighFrequencyDecayRatio(MemorySegment mem) {
+      return getHighFrequencyDecayRatio(mem, 0);
+   }
+
+   public static float getHighFrequencyDecayRatio(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 25);
+   }
+
+   public static float getReflectionGain(MemorySegment mem) {
+      return getReflectionGain(mem, 0);
+   }
+
+   public static float getReflectionGain(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 29);
+   }
+
+   public static float getReflectionDelay(MemorySegment mem) {
+      return getReflectionDelay(mem, 0);
+   }
+
+   public static float getReflectionDelay(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 33);
+   }
+
+   public static float getLateReverbGain(MemorySegment mem) {
+      return getLateReverbGain(mem, 0);
+   }
+
+   public static float getLateReverbGain(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 37);
+   }
+
+   public static float getLateReverbDelay(MemorySegment mem) {
+      return getLateReverbDelay(mem, 0);
+   }
+
+   public static float getLateReverbDelay(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 41);
+   }
+
+   public static float getRoomRolloffFactor(MemorySegment mem) {
+      return getRoomRolloffFactor(mem, 0);
+   }
+
+   public static float getRoomRolloffFactor(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 45);
+   }
+
+   public static float getAirAbsorptionHighFrequencyGain(MemorySegment mem) {
+      return getAirAbsorptionHighFrequencyGain(mem, 0);
+   }
+
+   public static float getAirAbsorptionHighFrequencyGain(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 49);
+   }
+
+   public static boolean getLimitDecayHighFrequency(MemorySegment mem) {
+      return getLimitDecayHighFrequency(mem, 0);
+   }
+
+   public static boolean getLimitDecayHighFrequency(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 53);
+   }
+
+   public static boolean hasId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static ReverbEffect toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ReverbEffect toObject(MemorySegment mem, int offset) {
+      if (offset + 54 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ReverbEffect", offset + 54, (int)mem.byteSize());
+      } else {
+         return new ReverbEffect(
+            hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + 54, 4096000, PacketIO.UTF8) : null,
+            mem.get(PacketIO.PROTO_FLOAT, offset + 1),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 5),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 9),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 13),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 17),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 21),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 25),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 29),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 33),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 37),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 41),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 45),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 49),
+            mem.get(PacketIO.PROTO_BOOL, offset + 53)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
       if (this.id != null) {
@@ -167,6 +327,35 @@ public class ReverbEffect {
       if (this.id != null) {
          PacketIO.writeVarString(buf, this.id, 4096000);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.id != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 1, this.dryGain);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 5, this.modalDensity);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 9, this.diffusion);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 13, this.gain);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 17, this.highFrequencyGain);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 21, this.decayTime);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 25, this.highFrequencyDecayRatio);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 29, this.reflectionGain);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 33, this.reflectionDelay);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 37, this.lateReverbGain);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 41, this.lateReverbDelay);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 45, this.roomRolloffFactor);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 49, this.airAbsorptionHighFrequencyGain);
+      mem.set(PacketIO.PROTO_BOOL, offset + 53, this.limitDecayHighFrequency);
+      int varOffset = offset + 54;
+      if (this.id != null) {
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.id, 4096000);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

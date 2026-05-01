@@ -1,8 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -93,6 +95,116 @@ public class AmbienceFXSound {
       return 33;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 33L;
+   }
+
+   public static int getSoundEventIndex(MemorySegment mem) {
+      return getSoundEventIndex(mem, 0);
+   }
+
+   public static int getSoundEventIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   public static AmbienceFXSoundPlay3D getPlay3D(MemorySegment mem) {
+      return getPlay3D(mem, 0);
+   }
+
+   public static AmbienceFXSoundPlay3D getPlay3D(MemorySegment mem, int offset) {
+      return AmbienceFXSoundPlay3D.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 5));
+   }
+
+   public static int getBlockSoundSetIndex(MemorySegment mem) {
+      return getBlockSoundSetIndex(mem, 0);
+   }
+
+   public static int getBlockSoundSetIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 6);
+   }
+
+   public static AmbienceFXAltitude getAltitude(MemorySegment mem) {
+      return getAltitude(mem, 0);
+   }
+
+   public static AmbienceFXAltitude getAltitude(MemorySegment mem, int offset) {
+      return AmbienceFXAltitude.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 10));
+   }
+
+   @Nullable
+   public static Rangef getFrequency(MemorySegment mem) {
+      return getFrequency(mem, 0);
+   }
+
+   @Nullable
+   public static Rangef getFrequency(MemorySegment mem, int offset) {
+      return hasFrequency(mem, offset) ? Rangef.toObject(mem, offset + 11) : null;
+   }
+
+   @Nullable
+   public static Range getRadius(MemorySegment mem) {
+      return getRadius(mem, 0);
+   }
+
+   @Nullable
+   public static Range getRadius(MemorySegment mem, int offset) {
+      return hasRadius(mem, offset) ? Range.toObject(mem, offset + 19) : null;
+   }
+
+   public static int getMaxBodiesPerEmitter(MemorySegment mem) {
+      return getMaxBodiesPerEmitter(mem, 0);
+   }
+
+   public static int getMaxBodiesPerEmitter(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 27);
+   }
+
+   @Nullable
+   public static Rangeb getSunlightRange(MemorySegment mem) {
+      return getSunlightRange(mem, 0);
+   }
+
+   @Nullable
+   public static Rangeb getSunlightRange(MemorySegment mem, int offset) {
+      return hasSunlightRange(mem, offset) ? Rangeb.toObject(mem, offset + 31) : null;
+   }
+
+   public static boolean hasFrequency(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasRadius(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasSunlightRange(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static AmbienceFXSound toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AmbienceFXSound toObject(MemorySegment mem, int offset) {
+      if (offset + 33 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AmbienceFXSound", offset + 33, (int)mem.byteSize());
+      } else {
+         return new AmbienceFXSound(
+            mem.get(PacketIO.PROTO_INT, offset + 1),
+            AmbienceFXSoundPlay3D.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 5)),
+            mem.get(PacketIO.PROTO_INT, offset + 6),
+            AmbienceFXAltitude.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 10)),
+            hasFrequency(mem, offset) ? Rangef.toObject(mem, offset + 11) : null,
+            hasRadius(mem, offset) ? Range.toObject(mem, offset + 19) : null,
+            mem.get(PacketIO.PROTO_INT, offset + 27),
+            hasSunlightRange(mem, offset) ? Rangeb.toObject(mem, offset + 31) : null
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
       if (this.frequency != null) {
@@ -130,6 +242,47 @@ public class AmbienceFXSound {
       } else {
          buf.writeZero(2);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.frequency != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.radius != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.sunlightRange != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.soundEventIndex);
+      mem.set(PacketIO.PROTO_BYTE, offset + 5, (byte)this.play3D.getValue());
+      mem.set(PacketIO.PROTO_INT, offset + 6, this.blockSoundSetIndex);
+      mem.set(PacketIO.PROTO_BYTE, offset + 10, (byte)this.altitude.getValue());
+      if (this.frequency != null) {
+         this.frequency.serialize(mem, offset + 11);
+      } else {
+         mem.asSlice(offset + 11, 8L).fill((byte)0);
+      }
+
+      if (this.radius != null) {
+         this.radius.serialize(mem, offset + 19);
+      } else {
+         mem.asSlice(offset + 19, 8L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_INT, offset + 27, this.maxBodiesPerEmitter);
+      if (this.sunlightRange != null) {
+         this.sunlightRange.serialize(mem, offset + 31);
+      } else {
+         mem.asSlice(offset + 31, 2L).fill((byte)0);
+      }
+
+      return 33;
    }
 
    public int computeSize() {

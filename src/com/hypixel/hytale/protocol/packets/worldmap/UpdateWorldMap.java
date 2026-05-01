@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -231,6 +232,245 @@ public class UpdateWorldMap implements Packet, ToClientPacket {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 13L;
+   }
+
+   @Nullable
+   public static MapChunk[] getChunks(MemorySegment mem) {
+      return getChunks(mem, 0);
+   }
+
+   @Nullable
+   public static MapChunk[] getChunks(MemorySegment mem, int offset) {
+      if (!hasChunks(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 1, 13, "Chunks");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Chunks", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Chunks", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Chunks", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      MapChunk[] data = new MapChunk[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = MapChunk.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static MapMarker[] getAddedMarkers(MemorySegment mem) {
+      return getAddedMarkers(mem, 0);
+   }
+
+   @Nullable
+   public static MapMarker[] getAddedMarkers(MemorySegment mem, int offset) {
+      if (!hasAddedMarkers(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 5, 13, "AddedMarkers");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("AddedMarkers", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("AddedMarkers", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AddedMarkers", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      MapMarker[] data = new MapMarker[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = MapMarker.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static String[] getRemovedMarkers(MemorySegment mem) {
+      return getRemovedMarkers(mem, 0);
+   }
+
+   @Nullable
+   public static String[] getRemovedMarkers(MemorySegment mem, int offset) {
+      if (!hasRemovedMarkers(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 9, 13, "RemovedMarkers");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("RemovedMarkers", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("RemovedMarkers", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("RemovedMarkers", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      String[] data = new String[len];
+
+      for (int i = 0; i < len; i++) {
+         long sp = VarInt.getWithLength(mem, off);
+         int n = (int)sp + (int)(sp >>> 32);
+         data[i] = PacketIO.readVarString("RemovedMarkers", mem, off, 16384000, PacketIO.UTF8);
+         off += n;
+      }
+
+      return data;
+   }
+
+   public static boolean hasChunks(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasAddedMarkers(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasRemovedMarkers(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static UpdateWorldMap toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UpdateWorldMap toObject(MemorySegment mem, int offset) {
+      if (offset + 13 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("UpdateWorldMap", offset + 13, (int)mem.byteSize());
+      }
+
+      MapChunk[] chunks = null;
+      if (hasChunks(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 1, 13, "Chunks");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Chunks", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Chunks", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Chunks", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         chunks = new MapChunk[len];
+
+         for (int i = 0; i < len; i++) {
+            chunks[i] = MapChunk.toObject(mem, off);
+            off += chunks[i].computeSize();
+         }
+      }
+
+      MapMarker[] addedMarkers = null;
+      if (hasAddedMarkers(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 5, 13, "AddedMarkers");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("AddedMarkers", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("AddedMarkers", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("AddedMarkers", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         addedMarkers = new MapMarker[len];
+
+         for (int i = 0; i < len; i++) {
+            addedMarkers[i] = MapMarker.toObject(mem, off);
+            off += addedMarkers[i].computeSize();
+         }
+      }
+
+      String[] removedMarkers = null;
+      if (hasRemovedMarkers(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 9, 13, "RemovedMarkers");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("RemovedMarkers", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("RemovedMarkers", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("RemovedMarkers", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         removedMarkers = new String[len];
+
+         for (int i = 0; i < len; i++) {
+            long sp = VarInt.getWithLength(mem, off);
+            int n = (int)sp + (int)(sp >>> 32);
+            removedMarkers[i] = PacketIO.readVarString("RemovedMarkers", mem, off, 16384000, PacketIO.UTF8);
+            off += n;
+         }
+      }
+
+      return new UpdateWorldMap(chunks, addedMarkers, removedMarkers);
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -299,6 +539,80 @@ public class UpdateWorldMap implements Packet, ToClientPacket {
       } else {
          buf.setIntLE(removedMarkersOffsetSlot, -1);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.chunks != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.addedMarkers != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.removedMarkers != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 13;
+      if (this.chunks != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 1, varOffset - offset - 13);
+         if (this.chunks.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Chunks", this.chunks.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.chunks.length);
+         int chunksValueOffset = 0;
+
+         for (int i = 0; i < this.chunks.length; i++) {
+            chunksValueOffset += this.chunks[i].serialize(mem, varOffset + chunksValueOffset);
+         }
+
+         varOffset += chunksValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 1, -1);
+      }
+
+      if (this.addedMarkers != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 5, varOffset - offset - 13);
+         if (this.addedMarkers.length > 4096000) {
+            throw ProtocolException.arrayTooLong("AddedMarkers", this.addedMarkers.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.addedMarkers.length);
+         int addedMarkersValueOffset = 0;
+
+         for (int i = 0; i < this.addedMarkers.length; i++) {
+            addedMarkersValueOffset += this.addedMarkers[i].serialize(mem, varOffset + addedMarkersValueOffset);
+         }
+
+         varOffset += addedMarkersValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 5, -1);
+      }
+
+      if (this.removedMarkers != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 9, varOffset - offset - 13);
+         if (this.removedMarkers.length > 4096000) {
+            throw ProtocolException.arrayTooLong("RemovedMarkers", this.removedMarkers.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.removedMarkers.length);
+         int removedMarkersValueOffset = 0;
+
+         for (int i = 0; i < this.removedMarkers.length; i++) {
+            removedMarkersValueOffset += PacketIO.writeVarString(mem, varOffset + removedMarkersValueOffset, this.removedMarkers[i], 16384000);
+         }
+
+         varOffset += removedMarkersValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 9, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

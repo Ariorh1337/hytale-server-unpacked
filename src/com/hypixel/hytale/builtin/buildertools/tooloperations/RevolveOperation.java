@@ -71,8 +71,8 @@ public class RevolveOperation extends ToolOperation {
          BuilderToolsPlugin.sendFeedback(Message.translation("server.builderTools.noSelectionBounds"), playerRef, NotificationStyle.Warning, componentAccessor);
       } else {
          OverridableChunkAccessor accessor = this.edit.getAccessor();
-         switch ((String)this.args.tool().getOrDefault("aSampling", "neighbor")) {
-            case "reverse":
+         switch ((String)this.args.tool().getOrDefault("aSampling", "structural")) {
+            case "natural":
                this.samplingMode = RevolveOperation.Sampling.Reverse;
                break;
             case "none":

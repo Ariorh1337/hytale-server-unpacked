@@ -215,6 +215,7 @@ import com.hypixel.hytale.server.core.io.ServerManager;
 import com.hypixel.hytale.server.core.modules.block.BlockModule;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.modules.entity.player.PlayerSettings;
 import com.hypixel.hytale.server.core.modules.entity.tracker.EntityTrackerSystems;
 import com.hypixel.hytale.server.core.modules.entity.tracker.NetworkId;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
@@ -458,6 +459,11 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       } else {
          return true;
       }
+   }
+
+   private static boolean shouldShowNotification(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      PlayerSettings settings = componentAccessor.getComponent(ref, PlayerSettings.getComponentType());
+      return settings != null && settings.creativeSettings().showBuilderToolsNotifications();
    }
 
    public static void invalidateWorldMapForSelection(@Nonnull BlockSelection selection, @Nonnull World world) {
@@ -768,10 +774,10 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
    }
 
    private void onPlayerReady(@Nonnull PlayerReadyEvent event) {
-      Ref<EntityStore> playerRef = event.getPlayer().getReference();
-      if (playerRef != null && playerRef.isValid()) {
-         Store<EntityStore> store = playerRef.getStore();
-         UUIDComponent uuidComponent = store.getComponent(playerRef, UUIDComponent.getComponentType());
+      Ref<EntityStore> ref = event.getPlayerRef();
+      if (ref.isValid()) {
+         Store<EntityStore> store = ref.getStore();
+         UUIDComponent uuidComponent = store.getComponent(ref, UUIDComponent.getComponentType());
          if (uuidComponent != null) {
             BuilderToolsPlugin.BuilderState state = this.builderStates.get(uuidComponent.getUuid());
             if (state != null && state.getSelection() != null) {
@@ -874,16 +880,11 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       @Nonnull NotificationStyle notificationStyle,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
-      if (feedback instanceof Player playerComponent) {
-         Ref<EntityStore> ref = playerComponent.getReference();
-         if (ref == null || !ref.isValid()) {
+      if (feedback instanceof PlayerRef playerRefComponent) {
+         if (!shouldShowNotification(playerRefComponent.getReference(), componentAccessor)) {
             return;
          }
 
-         PlayerRef playerRefComponent = componentAccessor.getComponent(ref, PlayerRef.getComponentType());
-         assert playerRefComponent != null;
-         NotificationUtil.sendNotification(playerRefComponent.getPacketHandler(), message, notificationStyle);
-      } else if (feedback instanceof PlayerRef playerRefComponent) {
          NotificationUtil.sendNotification(playerRefComponent.getPacketHandler(), message, notificationStyle);
       } else if (feedback != null) {
          feedback.sendMessage(message);
@@ -891,21 +892,11 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
    }
 
    public static void sendFeedback(@Nonnull String key, int total, CommandSender feedback, ComponentAccessor<EntityStore> componentAccessor) {
-      if (feedback instanceof Player playerComponent) {
-         Ref<EntityStore> ref = playerComponent.getReference();
-         if (ref == null || !ref.isValid()) {
+      if (feedback instanceof PlayerRef playerRefComponent) {
+         if (!shouldShowNotification(playerRefComponent.getReference(), componentAccessor)) {
             return;
          }
 
-         PlayerRef playerRefComponent = componentAccessor.getComponent(ref, PlayerRef.getComponentType());
-         assert playerRefComponent != null;
-         NotificationUtil.sendNotification(
-            playerRefComponent.getPacketHandler(),
-            Message.translation("server.builderTools.blocksEdited").param("key", key),
-            Message.raw(String.valueOf(total)),
-            NotificationStyle.Success
-         );
-      } else if (feedback instanceof PlayerRef playerRefComponent) {
          NotificationUtil.sendNotification(
             playerRefComponent.getPacketHandler(),
             Message.translation("server.builderTools.blocksEdited").param("key", key),
@@ -919,21 +910,11 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
 
    public static void sendFeedback(@Nonnull String key, int total, int num, CommandSender feedback, ComponentAccessor<EntityStore> componentAccessor) {
       if (num % 100000 == 0) {
-         if (feedback instanceof Player playerComponent) {
-            Ref<EntityStore> ref = playerComponent.getReference();
-            if (ref == null || !ref.isValid()) {
+         if (feedback instanceof PlayerRef playerRefComponent) {
+            if (!shouldShowNotification(playerRefComponent.getReference(), componentAccessor)) {
                return;
             }
 
-            PlayerRef playerRefComponent = componentAccessor.getComponent(ref, PlayerRef.getComponentType());
-            assert playerRefComponent != null;
-            NotificationUtil.sendNotification(
-               playerRefComponent.getPacketHandler(),
-               Message.translation("server.builderTools.doneEditing").param("key", key),
-               Message.translation("server.builderTools.blocksChanged").param("total", total),
-               NotificationStyle.Success
-            );
-         } else if (feedback instanceof PlayerRef playerRefComponent) {
             NotificationUtil.sendNotification(
                playerRefComponent.getPacketHandler(),
                Message.translation("server.builderTools.doneEditing").param("key", key),
@@ -1625,7 +1606,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             .getLogger()
             .at(Level.FINE)
             .log("Took: %dns (%dms) to execute edit of %d blocks (%d positions)", diff, TimeUnit.NANOSECONDS.toMillis(diff), size, interpolatedCount);
-         if (size > 0 && protoSettings != null && protoSettings.isShouldShowEditorSettings() && toolOperation.showEditNotification()) {
+         if (size > 0 && protoSettings != null && BuilderToolsPlugin.shouldShowNotification(ref, componentAccessor) && toolOperation.showEditNotification()) {
             this.sendFeedback("Edit", size, componentAccessor);
          }
 
@@ -1657,7 +1638,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             .getLogger()
             .at(Level.FINE)
             .log("Took: %dns (%dms) to execute edit of %d blocks", diff, TimeUnit.NANOSECONDS.toMillis(diff), size);
-         if (size > 0 && prototypePlayerBuilderToolSettings != null && prototypePlayerBuilderToolSettings.isShouldShowEditorSettings()) {
+         if (size > 0 && BuilderToolsPlugin.shouldShowNotification(playerRefComponent.getReference(), componentAccessor)) {
             this.sendFeedback("Edit", size, componentAccessor);
          }
       }
@@ -2623,7 +2604,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          int height = yMax - yMin;
          int depth = zMax - zMin;
          long selectionVolume = (long)(width + 1) * (depth + 1) * (Math.abs(height) + 1);
-         if (selectionVolume > 6600000L) {
+         if (selectionVolume > 6600000L && BuilderToolsPlugin.shouldShowNotification(ref, componentAccessor)) {
             NotificationUtil.sendNotification(
                this.playerRef.getPacketHandler(),
                Message.translation("server.builderTools.copycut.tooLarge"),
@@ -2932,6 +2913,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          @Nonnull BlockChange[] blockChanges,
          @Nullable PrototypePlayerBuilderToolSettings.FluidChange[] fluidChanges,
          @Nullable PrototypePlayerBuilderToolSettings.EntityChange[] entityChanges,
+         @Nullable Holder<ChunkStore>[] blockHolders,
          @Nonnull Quaterniond rotation,
          @Nonnull Vector3i translationOffset,
          @Nonnull Rotation3f rotationOrigin,
@@ -2973,7 +2955,8 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          LongOpenHashSet basePositions = new LongOpenHashSet(blockChanges.length);
          Vector3d mutableVec = new Vector3d();
 
-         for (BlockChange blockChange : blockChanges) {
+         for (int i = 0; i < blockChanges.length; i++) {
+            BlockChange blockChange = blockChanges[i];
             mutableVec.set(
                blockChange.x - rotationOrigin.x + initialPastePoint.x + 0.5,
                blockChange.y - rotationOrigin.y + initialPastePoint.y + 0.5 + yOffsetOutOfGround,
@@ -3002,8 +2985,15 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             if (blockType != null) {
                BlockBoundingBoxes hitbox = BlockBoundingBoxes.getAssetMap().getAsset(blockType.getHitboxTypeIndex());
                if (hitbox != null) {
-                  WorldChunk currentChunk = accessor.getChunk(ChunkUtil.indexChunkFromBlock(rotatedLocation.x, rotatedLocation.z));
-                  Holder<ChunkStore> holder = currentChunk.getBlockComponentHolder(rotatedLocation.x, rotatedLocation.y, rotatedLocation.z);
+                  Holder<ChunkStore> holder;
+                  if (blockHolders != null && i < blockHolders.length && blockHolders[i] != null) {
+                     holder = blockHolders[i].clone();
+                  } else if (blockType.getBlockEntity() != null) {
+                     holder = blockType.getBlockEntity().clone();
+                  } else {
+                     holder = null;
+                  }
+
                   rotatedBlocks.add(new RotatedBlock(rotatedLocation, blockIdToPlace, newRotation, holder, blockType, hitbox));
                   basePositions.add(BlockUtil.pack(rotatedLocation.x, rotatedLocation.y, rotatedLocation.z));
                }
@@ -3052,7 +3042,8 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                   int fy = rotatedLocation.y + y;
                   int fz = rotatedLocation.z + z;
                   if (x == 0 && y == 0 && z == 0 || !basePositions.contains(BlockUtil.pack(fx, fy, fz))) {
-                     after.addBlockAtWorldPos(fx, fy, fz, blockIdToPlace, newRotation, FillerBlockUtil.pack(x, y, z), 0, holder);
+                     boolean isBase = x == 0 && y == 0 && z == 0;
+                     after.addBlockAtWorldPos(fx, fy, fz, blockIdToPlace, newRotation, FillerBlockUtil.pack(x, y, z), 0, isBase ? holder : null);
                   }
                });
             } else {
@@ -4356,7 +4347,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             this.pushHistory(BuilderToolsPlugin.Action.MOVE, snapshots);
             BuilderToolsPlugin.invalidateWorldMapForSelection(cleared, world);
             BuilderToolsPlugin.invalidateWorldMapForSelection(selected, world);
-            this.selection.setSelectionArea(min.add(direction), max.add(direction));
+            this.selection.setSelectionArea(new Vector3i(min).add(direction), new Vector3i(max).add(direction));
             this.syncRawPositions();
             long end = System.nanoTime();
             long diff = end - start;

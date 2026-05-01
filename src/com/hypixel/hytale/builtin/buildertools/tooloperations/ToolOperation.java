@@ -117,7 +117,6 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
          PROTOTYPE_TOOL_SETTINGS.put(uuid, playerBuilderToolSettings);
       }
 
-      playerBuilderToolSettings.setShouldShowEditorSettings(packet.isShowEditNotifications);
       playerBuilderToolSettings.setMaxLengthOfIgnoredPaintOperations(packet.maxLengthToolIgnoreHistory);
       if (!packet.isHoldDownInteraction && (this instanceof PaintOperation || this instanceof SculptOperation)) {
          playerBuilderToolSettings.getIgnoredPaintOperations().clear();
@@ -348,9 +347,7 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
       if (packet.type == InteractionType.Primary) {
          return BlockPattern.EMPTY;
       } else {
-         return (this instanceof PaintOperation || this instanceof PaintOperation) && pattern.equals(BlockPattern.EMPTY)
-            ? BlockPattern.parse("Rock_Stone")
-            : pattern;
+         return this instanceof PaintOperation && pattern.equals(BlockPattern.EMPTY) ? BlockPattern.parse("Rock_Stone") : pattern;
       }
    }
 

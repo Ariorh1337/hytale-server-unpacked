@@ -1,8 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -56,12 +58,83 @@ public class SoundEventLayerRandomSettings {
       return 20;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 20L;
+   }
+
+   public static float getMinVolume(MemorySegment mem) {
+      return getMinVolume(mem, 0);
+   }
+
+   public static float getMinVolume(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 0);
+   }
+
+   public static float getMaxVolume(MemorySegment mem) {
+      return getMaxVolume(mem, 0);
+   }
+
+   public static float getMaxVolume(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 4);
+   }
+
+   public static float getMinPitch(MemorySegment mem) {
+      return getMinPitch(mem, 0);
+   }
+
+   public static float getMinPitch(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 8);
+   }
+
+   public static float getMaxPitch(MemorySegment mem) {
+      return getMaxPitch(mem, 0);
+   }
+
+   public static float getMaxPitch(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 12);
+   }
+
+   public static float getMaxStartOffset(MemorySegment mem) {
+      return getMaxStartOffset(mem, 0);
+   }
+
+   public static float getMaxStartOffset(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 16);
+   }
+
+   public static SoundEventLayerRandomSettings toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static SoundEventLayerRandomSettings toObject(MemorySegment mem, int offset) {
+      if (offset + 20 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("SoundEventLayerRandomSettings", offset + 20, (int)mem.byteSize());
+      } else {
+         return new SoundEventLayerRandomSettings(
+            mem.get(PacketIO.PROTO_FLOAT, offset + 0),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 4),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 8),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 12),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 16)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeFloatLE(this.minVolume);
       buf.writeFloatLE(this.maxVolume);
       buf.writeFloatLE(this.minPitch);
       buf.writeFloatLE(this.maxPitch);
       buf.writeFloatLE(this.maxStartOffset);
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_FLOAT, offset + 0, this.minVolume);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 4, this.maxVolume);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 8, this.minPitch);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 12, this.maxPitch);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 16, this.maxStartOffset);
+      return 20;
    }
 
    public int computeSize() {

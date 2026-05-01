@@ -1,8 +1,10 @@
 package com.hypixel.hytale.protocol.packets.interface_;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -56,12 +58,83 @@ public class BlockChange {
       return 17;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 17L;
+   }
+
+   public static int getX(MemorySegment mem) {
+      return getX(mem, 0);
+   }
+
+   public static int getX(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 0);
+   }
+
+   public static int getY(MemorySegment mem) {
+      return getY(mem, 0);
+   }
+
+   public static int getY(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 4);
+   }
+
+   public static int getZ(MemorySegment mem) {
+      return getZ(mem, 0);
+   }
+
+   public static int getZ(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 8);
+   }
+
+   public static int getBlock(MemorySegment mem) {
+      return getBlock(mem, 0);
+   }
+
+   public static int getBlock(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 12);
+   }
+
+   public static byte getRotation(MemorySegment mem) {
+      return getRotation(mem, 0);
+   }
+
+   public static byte getRotation(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BYTE, offset + 16);
+   }
+
+   public static BlockChange toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static BlockChange toObject(MemorySegment mem, int offset) {
+      if (offset + 17 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BlockChange", offset + 17, (int)mem.byteSize());
+      } else {
+         return new BlockChange(
+            mem.get(PacketIO.PROTO_INT, offset + 0),
+            mem.get(PacketIO.PROTO_INT, offset + 4),
+            mem.get(PacketIO.PROTO_INT, offset + 8),
+            mem.get(PacketIO.PROTO_INT, offset + 12),
+            mem.get(PacketIO.PROTO_BYTE, offset + 16)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeIntLE(this.x);
       buf.writeIntLE(this.y);
       buf.writeIntLE(this.z);
       buf.writeIntLE(this.block);
       buf.writeByte(this.rotation);
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_INT, offset + 0, this.x);
+      mem.set(PacketIO.PROTO_INT, offset + 4, this.y);
+      mem.set(PacketIO.PROTO_INT, offset + 8, this.z);
+      mem.set(PacketIO.PROTO_INT, offset + 12, this.block);
+      mem.set(PacketIO.PROTO_BYTE, offset + 16, this.rotation);
+      return 17;
    }
 
    public int computeSize() {

@@ -762,9 +762,6 @@ public class Role implements IAnnotatedComponentCollection {
             break;
          case Push:
             this.computeSummedDistancePush(selfRef, position, transformComponentType, commandBuffer, ignoredTargetRef);
-            break;
-         default:
-            return;
       }
 
       if (this.debugSupport.isDebugFlagSet(RoleDebugFlags.VisSeparationSummed)) {
@@ -1368,7 +1365,7 @@ public class Role implements IAnnotatedComponentCollection {
          }
       }
 
-      this.initialiseItemsAndArmor(holder, npcComponent);
+      this.initialiseItemsAndArmor(holder, npcComponent, store);
       if (this.defaultOffHandSlot >= 0) {
          InventoryComponent.Utility utilityComponent = holder.getComponent(InventoryComponent.Utility.getComponentType());
          if (utilityComponent != null
@@ -1419,55 +1416,54 @@ public class Role implements IAnnotatedComponentCollection {
       this.initialiseInventories(ref, npcComponent, accessor);
    }
 
-   private void initialiseItemsAndArmor(@Nonnull Holder<EntityStore> holder, @Nonnull NPCEntity npcComponent) {
-      if (this.hotbarItems != null && this.hotbarItems.length > 0) {
-         InventoryComponent.Hotbar hotbarComponent = holder.getComponent(InventoryComponent.Hotbar.getComponentType());
-         if (hotbarComponent != null && hotbarComponent.getInventory().isEmpty()) {
-            ItemContainer hotbarContainer = hotbarComponent.getInventory();
+   private void initialiseItemsAndArmor(@Nonnull Holder<EntityStore> holder, @Nonnull NPCEntity npcComponent, Store<EntityStore> store) {
+      InventoryComponent.Hotbar hotbarComponent = holder.getComponent(InventoryComponent.Hotbar.getComponentType());
+      InventoryComponent.Utility utilityComponent = holder.getComponent(InventoryComponent.Utility.getComponentType());
+      InventoryComponent.Armor armorComponent = holder.getComponent(InventoryComponent.Armor.getComponentType());
+      if (this.hotbarItems != null && this.hotbarItems.length > 0 && hotbarComponent != null && hotbarComponent.getInventory().isEmpty()) {
+         ItemContainer hotbarContainer = hotbarComponent.getInventory();
 
-            for (byte i = 0; i < this.hotbarItems.length; i++) {
-               String hotbarItem = this.hotbarItems[i];
-               if (hotbarItem != null) {
-                  if (hotbarItem.startsWith("Droplist:")) {
-                     if (i >= hotbarContainer.getCapacity()) {
-                        NPCPlugin.get().getLogger().at(Level.WARNING).log("Invalid hotbar slot %s. Max is %s", i, (int)(hotbarContainer.getCapacity() - 1));
-                     } else {
-                        List<ItemStack> items = ItemModule.get().getRandomItemDrops(hotbarItem.substring("Droplist:".length()));
-                        hotbarContainer.setItemStackForSlot(i, items.get(RandomExtra.randomRange(items.size())));
-                     }
-                  } else if (InventoryHelper.itemKeyExists(hotbarItem)
-                     && i < hotbarContainer.getCapacity()
-                     && !InventoryHelper.matchesItem(hotbarItem, hotbarContainer.getItemStack(i))) {
-                     hotbarContainer.setItemStackForSlot(i, InventoryHelper.createItem(hotbarItem));
+         for (byte i = 0; i < this.hotbarItems.length; i++) {
+            String hotbarItem = this.hotbarItems[i];
+            if (hotbarItem != null) {
+               if (hotbarItem.startsWith("Droplist:")) {
+                  if (i >= hotbarContainer.getCapacity()) {
+                     NPCPlugin.get().getLogger().at(Level.WARNING).log("Invalid hotbar slot %s. Max is %s", i, (int)(hotbarContainer.getCapacity() - 1));
+                  } else {
+                     List<ItemStack> items = ItemModule.get().getRandomItemDrops(hotbarItem.substring("Droplist:".length()));
+                     hotbarContainer.setItemStackForSlot(i, items.get(RandomExtra.randomRange(items.size())));
                   }
+               } else if (InventoryHelper.itemKeyExists(hotbarItem)
+                  && i < hotbarContainer.getCapacity()
+                  && !InventoryHelper.matchesItem(hotbarItem, hotbarContainer.getItemStack(i))) {
+                  ItemStack itemStack = InventoryHelper.createItem(hotbarItem);
+                  hotbarContainer.setItemStackForSlot(i, itemStack);
                }
             }
          }
+
+         hotbarComponent.setActiveSlot((byte)0, holder, store);
       }
 
-      if (this.offHandItems != null && this.offHandItems.length > 0) {
-         InventoryComponent.Utility utilityComponent = holder.getComponent(InventoryComponent.Utility.getComponentType());
-         if (utilityComponent != null) {
-            ItemContainer utilityContainer = utilityComponent.getInventory();
+      if (this.offHandItems != null && this.offHandItems.length > 0 && utilityComponent != null) {
+         ItemContainer utilityContainer = utilityComponent.getInventory();
 
-            for (byte i = 0; i < this.offHandItems.length; i++) {
-               String offHandItem = this.offHandItems[i];
-               if (InventoryHelper.itemKeyExists(offHandItem)
-                  && i < utilityContainer.getCapacity()
-                  && !InventoryHelper.matchesItem(offHandItem, utilityContainer.getItemStack(i))) {
-                  utilityContainer.setItemStackForSlot(i, InventoryHelper.createItem(offHandItem));
-               }
+         for (byte i = 0; i < this.offHandItems.length; i++) {
+            String offHandItem = this.offHandItems[i];
+            if (InventoryHelper.itemKeyExists(offHandItem)
+               && i < utilityContainer.getCapacity()
+               && !InventoryHelper.matchesItem(offHandItem, utilityContainer.getItemStack(i))) {
+               utilityContainer.setItemStackForSlot(i, InventoryHelper.createItem(offHandItem));
             }
          }
+
+         utilityComponent.setActiveSlot((byte)0, holder, store);
       }
 
-      if (this.armor != null) {
-         InventoryComponent.Armor armorComponent = holder.getComponent(InventoryComponent.Armor.getComponentType());
-         if (armorComponent != null) {
-            for (String s : this.armor) {
-               if (!InventoryHelper.useArmor(armorComponent.getInventory(), s)) {
-                  NPCPlugin.get().getLogger().at(Level.WARNING).log("NPC of type '%s': Failed to use armor '%s'", npcComponent.getRoleName(), s);
-               }
+      if (this.armor != null && armorComponent != null) {
+         for (String s : this.armor) {
+            if (!InventoryHelper.useArmor(armorComponent.getInventory(), s)) {
+               NPCPlugin.get().getLogger().at(Level.WARNING).log("NPC of type '%s': Failed to use armor '%s'", npcComponent.getRoleName(), s);
             }
          }
       }

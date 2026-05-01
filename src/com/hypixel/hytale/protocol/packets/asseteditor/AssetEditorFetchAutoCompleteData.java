@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -145,6 +146,81 @@ public class AssetEditorFetchAutoCompleteData implements Packet, ToServerPacket 
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 13L;
+   }
+
+   public static int getToken(MemorySegment mem) {
+      return getToken(mem, 0);
+   }
+
+   public static int getToken(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   @Nullable
+   public static String getDataset(MemorySegment mem) {
+      return getDataset(mem, 0);
+   }
+
+   @Nullable
+   public static String getDataset(MemorySegment mem, int offset) {
+      return hasDataset(mem, offset)
+         ? PacketIO.readVarString("Dataset", mem, offset + getValidatedOffset(mem, offset, 5, 13, "Dataset"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getQuery(MemorySegment mem) {
+      return getQuery(mem, 0);
+   }
+
+   @Nullable
+   public static String getQuery(MemorySegment mem, int offset) {
+      return hasQuery(mem, offset)
+         ? PacketIO.readVarString("Query", mem, offset + getValidatedOffset(mem, offset, 9, 13, "Query"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static boolean hasDataset(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasQuery(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static AssetEditorFetchAutoCompleteData toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AssetEditorFetchAutoCompleteData toObject(MemorySegment mem, int offset) {
+      if (offset + 13 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AssetEditorFetchAutoCompleteData", offset + 13, (int)mem.byteSize());
+      } else {
+         return new AssetEditorFetchAutoCompleteData(
+            mem.get(PacketIO.PROTO_INT, offset + 1),
+            hasDataset(mem, offset)
+               ? PacketIO.readVarString("Dataset", mem, offset + getValidatedOffset(mem, offset, 5, 13, "Dataset"), 4096000, PacketIO.UTF8)
+               : null,
+            hasQuery(mem, offset)
+               ? PacketIO.readVarString("Query", mem, offset + getValidatedOffset(mem, offset, 9, 13, "Query"), 4096000, PacketIO.UTF8)
+               : null
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -177,6 +253,37 @@ public class AssetEditorFetchAutoCompleteData implements Packet, ToServerPacket 
       } else {
          buf.setIntLE(queryOffsetSlot, -1);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.dataset != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.query != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.token);
+      int varOffset = offset + 13;
+      if (this.dataset != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 5, varOffset - offset - 13);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.dataset, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 5, -1);
+      }
+
+      if (this.query != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 9, varOffset - offset - 13);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.query, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 9, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

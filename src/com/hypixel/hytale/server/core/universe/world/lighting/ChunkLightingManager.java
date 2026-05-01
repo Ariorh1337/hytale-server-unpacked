@@ -138,8 +138,7 @@ public class ChunkLightingManager implements Runnable {
                   sb.append("\tat ").append(traceElement).append('\n');
                }
 
-               HytaleLogger.getLogger().at(Level.SEVERE).log("Forcing ChunkLighting Thread %s to stop:\n%s", this.thread, sb.toString());
-               this.thread.stop();
+               HytaleLogger.getLogger().at(Level.SEVERE).log("Abandoning ChunkLighting Thread %s (stuck for >5s):\n%s", this.thread, sb.toString());
                break;
             }
          }

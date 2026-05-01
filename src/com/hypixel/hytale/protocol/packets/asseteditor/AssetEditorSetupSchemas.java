@@ -3,10 +3,12 @@ package com.hypixel.hytale.protocol.packets.asseteditor;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -94,6 +96,92 @@ public class AssetEditorSetupSchemas implements Packet, ToClientPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 1L;
+   }
+
+   @Nullable
+   public static SchemaFile[] getSchemas(MemorySegment mem) {
+      return getSchemas(mem, 0);
+   }
+
+   @Nullable
+   public static SchemaFile[] getSchemas(MemorySegment mem, int offset) {
+      if (!hasSchemas(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + 1;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Schemas", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Schemas", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Schemas", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      SchemaFile[] data = new SchemaFile[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = SchemaFile.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   public static boolean hasSchemas(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static AssetEditorSetupSchemas toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AssetEditorSetupSchemas toObject(MemorySegment mem, int offset) {
+      if (offset + 1 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AssetEditorSetupSchemas", offset + 1, (int)mem.byteSize());
+      }
+
+      SchemaFile[] schemas = null;
+      if (hasSchemas(mem, offset)) {
+         int off = offset + 1;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Schemas", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Schemas", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Schemas", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         schemas = new SchemaFile[len];
+
+         for (int i = 0; i < len; i++) {
+            schemas[i] = SchemaFile.toObject(mem, off);
+            off += schemas[i].computeSize();
+         }
+      }
+
+      return new AssetEditorSetupSchemas(schemas);
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -113,6 +201,33 @@ public class AssetEditorSetupSchemas implements Packet, ToClientPacket {
             item.serialize(buf);
          }
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.schemas != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 1;
+      if (this.schemas != null) {
+         if (this.schemas.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Schemas", this.schemas.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.schemas.length);
+         int schemasValueOffset = 0;
+
+         for (int i = 0; i < this.schemas.length; i++) {
+            schemasValueOffset += this.schemas[i].serialize(mem, varOffset + schemasValueOffset);
+         }
+
+         varOffset += schemasValueOffset;
+      }
+
+      return varOffset - offset;
    }
 
    @Override

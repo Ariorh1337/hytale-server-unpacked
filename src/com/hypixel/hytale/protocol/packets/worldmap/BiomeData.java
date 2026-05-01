@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -134,6 +135,90 @@ public class BiomeData {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 17L;
+   }
+
+   public static int getZoneId(MemorySegment mem) {
+      return getZoneId(mem, 0);
+   }
+
+   public static int getZoneId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   @Nullable
+   public static String getZoneName(MemorySegment mem) {
+      return getZoneName(mem, 0);
+   }
+
+   @Nullable
+   public static String getZoneName(MemorySegment mem, int offset) {
+      return hasZoneName(mem, offset)
+         ? PacketIO.readVarString("ZoneName", mem, offset + getValidatedOffset(mem, offset, 9, 17, "ZoneName"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getBiomeName(MemorySegment mem) {
+      return getBiomeName(mem, 0);
+   }
+
+   @Nullable
+   public static String getBiomeName(MemorySegment mem, int offset) {
+      return hasBiomeName(mem, offset)
+         ? PacketIO.readVarString("BiomeName", mem, offset + getValidatedOffset(mem, offset, 13, 17, "BiomeName"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static int getBiomeColor(MemorySegment mem) {
+      return getBiomeColor(mem, 0);
+   }
+
+   public static int getBiomeColor(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 5);
+   }
+
+   public static boolean hasZoneName(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasBiomeName(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static BiomeData toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static BiomeData toObject(MemorySegment mem, int offset) {
+      if (offset + 17 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BiomeData", offset + 17, (int)mem.byteSize());
+      } else {
+         return new BiomeData(
+            mem.get(PacketIO.PROTO_INT, offset + 1),
+            hasZoneName(mem, offset)
+               ? PacketIO.readVarString("ZoneName", mem, offset + getValidatedOffset(mem, offset, 9, 17, "ZoneName"), 4096000, PacketIO.UTF8)
+               : null,
+            hasBiomeName(mem, offset)
+               ? PacketIO.readVarString("BiomeName", mem, offset + getValidatedOffset(mem, offset, 13, 17, "BiomeName"), 4096000, PacketIO.UTF8)
+               : null,
+            mem.get(PacketIO.PROTO_INT, offset + 5)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -166,6 +251,37 @@ public class BiomeData {
       } else {
          buf.setIntLE(biomeNameOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.zoneName != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.biomeName != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.zoneId);
+      mem.set(PacketIO.PROTO_INT, offset + 5, this.biomeColor);
+      int varOffset = offset + 17;
+      if (this.zoneName != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 9, varOffset - offset - 17);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.zoneName, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 9, -1);
+      }
+
+      if (this.biomeName != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 13, varOffset - offset - 17);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.biomeName, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 13, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

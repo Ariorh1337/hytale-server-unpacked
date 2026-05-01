@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -139,6 +140,97 @@ public class ItemWithAllMetadata {
       }
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 30L;
+   }
+
+   public static String getItemId(MemorySegment mem) {
+      return getItemId(mem, 0);
+   }
+
+   public static String getItemId(MemorySegment mem, int offset) {
+      return PacketIO.readVarString("ItemId", mem, offset + getValidatedOffset(mem, offset, 22, 30, "ItemId"), 4096000, PacketIO.UTF8);
+   }
+
+   public static int getQuantity(MemorySegment mem) {
+      return getQuantity(mem, 0);
+   }
+
+   public static int getQuantity(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   public static double getDurability(MemorySegment mem) {
+      return getDurability(mem, 0);
+   }
+
+   public static double getDurability(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_DOUBLE, offset + 5);
+   }
+
+   public static double getMaxDurability(MemorySegment mem) {
+      return getMaxDurability(mem, 0);
+   }
+
+   public static double getMaxDurability(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_DOUBLE, offset + 13);
+   }
+
+   public static boolean getOverrideDroppedItemAnimation(MemorySegment mem) {
+      return getOverrideDroppedItemAnimation(mem, 0);
+   }
+
+   public static boolean getOverrideDroppedItemAnimation(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 21);
+   }
+
+   @Nullable
+   public static String getMetadata(MemorySegment mem) {
+      return getMetadata(mem, 0);
+   }
+
+   @Nullable
+   public static String getMetadata(MemorySegment mem, int offset) {
+      return hasMetadata(mem, offset)
+         ? PacketIO.readVarString("Metadata", mem, offset + getValidatedOffset(mem, offset, 26, 30, "Metadata"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static boolean hasMetadata(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static ItemWithAllMetadata toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ItemWithAllMetadata toObject(MemorySegment mem, int offset) {
+      if (offset + 30 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ItemWithAllMetadata", offset + 30, (int)mem.byteSize());
+      } else {
+         return new ItemWithAllMetadata(
+            PacketIO.readVarString("ItemId", mem, offset + getValidatedOffset(mem, offset, 22, 30, "ItemId"), 4096000, PacketIO.UTF8),
+            mem.get(PacketIO.PROTO_INT, offset + 1),
+            mem.get(PacketIO.PROTO_DOUBLE, offset + 5),
+            mem.get(PacketIO.PROTO_DOUBLE, offset + 13),
+            mem.get(PacketIO.PROTO_BOOL, offset + 21),
+            hasMetadata(mem, offset)
+               ? PacketIO.readVarString("Metadata", mem, offset + getValidatedOffset(mem, offset, 26, 30, "Metadata"), 4096000, PacketIO.UTF8)
+               : null
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -164,6 +256,30 @@ public class ItemWithAllMetadata {
       } else {
          buf.setIntLE(metadataOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.metadata != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.quantity);
+      mem.set(PacketIO.PROTO_DOUBLE, offset + 5, this.durability);
+      mem.set(PacketIO.PROTO_DOUBLE, offset + 13, this.maxDurability);
+      mem.set(PacketIO.PROTO_BOOL, offset + 21, this.overrideDroppedItemAnimation);
+      int varOffset = offset + 30;
+      mem.set(PacketIO.PROTO_INT, offset + 22, varOffset - offset - 30);
+      varOffset += PacketIO.writeVarString(mem, varOffset, this.itemId, 4096000);
+      if (this.metadata != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 26, varOffset - offset - 30);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.metadata, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 26, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

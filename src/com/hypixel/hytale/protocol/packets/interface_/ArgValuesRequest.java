@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -141,6 +142,72 @@ public class ArgValuesRequest implements Packet, ToServerPacket {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 9L;
+   }
+
+   @Nullable
+   public static String getArgTypeId(MemorySegment mem) {
+      return getArgTypeId(mem, 0);
+   }
+
+   @Nullable
+   public static String getArgTypeId(MemorySegment mem, int offset) {
+      return hasArgTypeId(mem, offset)
+         ? PacketIO.readVarString("ArgTypeId", mem, offset + getValidatedOffset(mem, offset, 1, 9, "ArgTypeId"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getPartial(MemorySegment mem) {
+      return getPartial(mem, 0);
+   }
+
+   @Nullable
+   public static String getPartial(MemorySegment mem, int offset) {
+      return hasPartial(mem, offset)
+         ? PacketIO.readVarString("Partial", mem, offset + getValidatedOffset(mem, offset, 5, 9, "Partial"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static boolean hasArgTypeId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasPartial(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static ArgValuesRequest toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ArgValuesRequest toObject(MemorySegment mem, int offset) {
+      if (offset + 9 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ArgValuesRequest", offset + 9, (int)mem.byteSize());
+      } else {
+         return new ArgValuesRequest(
+            hasArgTypeId(mem, offset)
+               ? PacketIO.readVarString("ArgTypeId", mem, offset + getValidatedOffset(mem, offset, 1, 9, "ArgTypeId"), 4096000, PacketIO.UTF8)
+               : null,
+            hasPartial(mem, offset)
+               ? PacketIO.readVarString("Partial", mem, offset + getValidatedOffset(mem, offset, 5, 9, "Partial"), 4096000, PacketIO.UTF8)
+               : null
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -172,6 +239,36 @@ public class ArgValuesRequest implements Packet, ToServerPacket {
       } else {
          buf.setIntLE(partialOffsetSlot, -1);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.argTypeId != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.partial != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 9;
+      if (this.argTypeId != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 1, varOffset - offset - 9);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.argTypeId, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 1, -1);
+      }
+
+      if (this.partial != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 5, varOffset - offset - 9);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.partial, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 5, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

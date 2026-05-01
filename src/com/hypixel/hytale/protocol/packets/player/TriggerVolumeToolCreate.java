@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -109,6 +110,75 @@ public class TriggerVolumeToolCreate implements Packet, ToServerPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 38L;
+   }
+
+   public static TriggerVolumeShapeType getShapeType(MemorySegment mem) {
+      return getShapeType(mem, 0);
+   }
+
+   public static TriggerVolumeShapeType getShapeType(MemorySegment mem, int offset) {
+      return TriggerVolumeShapeType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1));
+   }
+
+   public static Vector3fc getPosition(MemorySegment mem) {
+      return getPosition(mem, 0);
+   }
+
+   public static Vector3fc getPosition(MemorySegment mem, int offset) {
+      return PacketIO.readVector3f(mem, offset + 2);
+   }
+
+   public static Vector3fc getParam1(MemorySegment mem) {
+      return getParam1(mem, 0);
+   }
+
+   public static Vector3fc getParam1(MemorySegment mem, int offset) {
+      return PacketIO.readVector3f(mem, offset + 14);
+   }
+
+   public static Vector3fc getParam2(MemorySegment mem) {
+      return getParam2(mem, 0);
+   }
+
+   public static Vector3fc getParam2(MemorySegment mem, int offset) {
+      return PacketIO.readVector3f(mem, offset + 26);
+   }
+
+   @Nullable
+   public static String getName(MemorySegment mem) {
+      return getName(mem, 0);
+   }
+
+   @Nullable
+   public static String getName(MemorySegment mem, int offset) {
+      return hasName(mem, offset) ? PacketIO.readVarString("Name", mem, offset + 38, 4096000, PacketIO.UTF8) : null;
+   }
+
+   public static boolean hasName(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static TriggerVolumeToolCreate toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static TriggerVolumeToolCreate toObject(MemorySegment mem, int offset) {
+      if (offset + 38 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("TriggerVolumeToolCreate", offset + 38, (int)mem.byteSize());
+      } else {
+         return new TriggerVolumeToolCreate(
+            TriggerVolumeShapeType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1)),
+            PacketIO.readVector3f(mem, offset + 2),
+            PacketIO.readVector3f(mem, offset + 14),
+            PacketIO.readVector3f(mem, offset + 26),
+            hasName(mem, offset) ? PacketIO.readVarString("Name", mem, offset + 38, 4096000, PacketIO.UTF8) : null
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -124,6 +194,26 @@ public class TriggerVolumeToolCreate implements Packet, ToServerPacket {
       if (this.name != null) {
          PacketIO.writeVarString(buf, this.name, 4096000);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.name != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.shapeType.getValue());
+      PacketIO.writeVector3f(mem, offset + 2, this.position);
+      PacketIO.writeVector3f(mem, offset + 14, this.param1);
+      PacketIO.writeVector3f(mem, offset + 26, this.param2);
+      int varOffset = offset + 38;
+      if (this.name != null) {
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.name, 4096000);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

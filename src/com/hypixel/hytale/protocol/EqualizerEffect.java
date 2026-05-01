@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -123,6 +124,129 @@ public class EqualizerEffect {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 41L;
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem) {
+      return getId(mem, 0);
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem, int offset) {
+      return hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + 41, 4096000, PacketIO.UTF8) : null;
+   }
+
+   public static float getLowGain(MemorySegment mem) {
+      return getLowGain(mem, 0);
+   }
+
+   public static float getLowGain(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 1);
+   }
+
+   public static float getLowCutOff(MemorySegment mem) {
+      return getLowCutOff(mem, 0);
+   }
+
+   public static float getLowCutOff(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 5);
+   }
+
+   public static float getLowMidGain(MemorySegment mem) {
+      return getLowMidGain(mem, 0);
+   }
+
+   public static float getLowMidGain(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 9);
+   }
+
+   public static float getLowMidCenter(MemorySegment mem) {
+      return getLowMidCenter(mem, 0);
+   }
+
+   public static float getLowMidCenter(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 13);
+   }
+
+   public static float getLowMidWidth(MemorySegment mem) {
+      return getLowMidWidth(mem, 0);
+   }
+
+   public static float getLowMidWidth(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 17);
+   }
+
+   public static float getHighMidGain(MemorySegment mem) {
+      return getHighMidGain(mem, 0);
+   }
+
+   public static float getHighMidGain(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 21);
+   }
+
+   public static float getHighMidCenter(MemorySegment mem) {
+      return getHighMidCenter(mem, 0);
+   }
+
+   public static float getHighMidCenter(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 25);
+   }
+
+   public static float getHighMidWidth(MemorySegment mem) {
+      return getHighMidWidth(mem, 0);
+   }
+
+   public static float getHighMidWidth(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 29);
+   }
+
+   public static float getHighGain(MemorySegment mem) {
+      return getHighGain(mem, 0);
+   }
+
+   public static float getHighGain(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 33);
+   }
+
+   public static float getHighCutOff(MemorySegment mem) {
+      return getHighCutOff(mem, 0);
+   }
+
+   public static float getHighCutOff(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 37);
+   }
+
+   public static boolean hasId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static EqualizerEffect toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static EqualizerEffect toObject(MemorySegment mem, int offset) {
+      if (offset + 41 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("EqualizerEffect", offset + 41, (int)mem.byteSize());
+      } else {
+         return new EqualizerEffect(
+            hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + 41, 4096000, PacketIO.UTF8) : null,
+            mem.get(PacketIO.PROTO_FLOAT, offset + 1),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 5),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 9),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 13),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 17),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 21),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 25),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 29),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 33),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 37)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
       if (this.id != null) {
@@ -143,6 +267,31 @@ public class EqualizerEffect {
       if (this.id != null) {
          PacketIO.writeVarString(buf, this.id, 4096000);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.id != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 1, this.lowGain);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 5, this.lowCutOff);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 9, this.lowMidGain);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 13, this.lowMidCenter);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 17, this.lowMidWidth);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 21, this.highMidGain);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 25, this.highMidCenter);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 29, this.highMidWidth);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 33, this.highGain);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 37, this.highCutOff);
+      int varOffset = offset + 41;
+      if (this.id != null) {
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.id, 4096000);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

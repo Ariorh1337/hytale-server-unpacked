@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import java.util.UUID;
 import javax.annotation.Nonnull;
@@ -118,6 +119,114 @@ public class InteractionChainData {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 61L;
+   }
+
+   public static int getEntityId(MemorySegment mem) {
+      return getEntityId(mem, 0);
+   }
+
+   public static int getEntityId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   public static UUID getProxyId(MemorySegment mem) {
+      return getProxyId(mem, 0);
+   }
+
+   public static UUID getProxyId(MemorySegment mem, int offset) {
+      return PacketIO.readUUID(mem, offset + 5);
+   }
+
+   @Nullable
+   public static Vector3fc getHitLocation(MemorySegment mem) {
+      return getHitLocation(mem, 0);
+   }
+
+   @Nullable
+   public static Vector3fc getHitLocation(MemorySegment mem, int offset) {
+      return hasHitLocation(mem, offset) ? PacketIO.readVector3f(mem, offset + 21) : null;
+   }
+
+   @Nullable
+   public static String getHitDetail(MemorySegment mem) {
+      return getHitDetail(mem, 0);
+   }
+
+   @Nullable
+   public static String getHitDetail(MemorySegment mem, int offset) {
+      return hasHitDetail(mem, offset) ? PacketIO.readVarString("HitDetail", mem, offset + 61, 4096000, PacketIO.UTF8) : null;
+   }
+
+   @Nullable
+   public static BlockPosition getBlockPosition(MemorySegment mem) {
+      return getBlockPosition(mem, 0);
+   }
+
+   @Nullable
+   public static BlockPosition getBlockPosition(MemorySegment mem, int offset) {
+      return hasBlockPosition(mem, offset) ? BlockPosition.toObject(mem, offset + 33) : null;
+   }
+
+   public static int getTargetSlot(MemorySegment mem) {
+      return getTargetSlot(mem, 0);
+   }
+
+   public static int getTargetSlot(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 45);
+   }
+
+   @Nullable
+   public static Vector3fc getHitNormal(MemorySegment mem) {
+      return getHitNormal(mem, 0);
+   }
+
+   @Nullable
+   public static Vector3fc getHitNormal(MemorySegment mem, int offset) {
+      return hasHitNormal(mem, offset) ? PacketIO.readVector3f(mem, offset + 49) : null;
+   }
+
+   public static boolean hasHitLocation(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasBlockPosition(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasHitNormal(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasHitDetail(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   public static InteractionChainData toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static InteractionChainData toObject(MemorySegment mem, int offset) {
+      if (offset + 61 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("InteractionChainData", offset + 61, (int)mem.byteSize());
+      } else {
+         return new InteractionChainData(
+            mem.get(PacketIO.PROTO_INT, offset + 1),
+            PacketIO.readUUID(mem, offset + 5),
+            hasHitLocation(mem, offset) ? PacketIO.readVector3f(mem, offset + 21) : null,
+            hasHitDetail(mem, offset) ? PacketIO.readVarString("HitDetail", mem, offset + 61, 4096000, PacketIO.UTF8) : null,
+            hasBlockPosition(mem, offset) ? BlockPosition.toObject(mem, offset + 33) : null,
+            mem.get(PacketIO.PROTO_INT, offset + 45),
+            hasHitNormal(mem, offset) ? PacketIO.readVector3f(mem, offset + 49) : null
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
       if (this.hitLocation != null) {
@@ -161,6 +270,54 @@ public class InteractionChainData {
       if (this.hitDetail != null) {
          PacketIO.writeVarString(buf, this.hitDetail, 4096000);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.hitLocation != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.blockPosition != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.hitNormal != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.hitDetail != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.entityId);
+      PacketIO.writeUUID(mem, offset + 5, this.proxyId);
+      if (this.hitLocation != null) {
+         PacketIO.writeVector3f(mem, offset + 21, this.hitLocation);
+      } else {
+         mem.asSlice(offset + 21, 12L).fill((byte)0);
+      }
+
+      if (this.blockPosition != null) {
+         this.blockPosition.serialize(mem, offset + 33);
+      } else {
+         mem.asSlice(offset + 33, 12L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_INT, offset + 45, this.targetSlot);
+      if (this.hitNormal != null) {
+         PacketIO.writeVector3f(mem, offset + 49, this.hitNormal);
+      } else {
+         mem.asSlice(offset + 49, 12L).fill((byte)0);
+      }
+
+      int varOffset = offset + 61;
+      if (this.hitDetail != null) {
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.hitDetail, 4096000);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

@@ -151,12 +151,12 @@ public class PlayerItemEntityPickupSystem extends EntityTickingSystem<EntityStor
                   if (!store.getArchetype(targetPlayerRef).contains(DeathComponent.getComponentType())) {
                      Player playerComponent = store.getComponent(targetPlayerRef, this.playerComponentType);
                      assert playerComponent != null;
-                     ItemStackTransaction transaction = playerComponent.giveItem(itemStack, targetPlayerRef, commandBuffer);
+                     ItemStackTransaction transaction = Player.giveItem(itemStack, targetPlayerRef, commandBuffer);
                      ItemStack remainder = transaction.getRemainder();
                      if (ItemStack.isEmpty(remainder)) {
                         itemComponent.setRemovedByPlayerPickup(true);
                         commandBuffer.removeEntity(itemRef, RemoveReason.REMOVE);
-                        playerComponent.notifyPickupItem(targetPlayerRef, itemStack, itemEntityPosition, commandBuffer);
+                        Player.notifyPickupItem(targetPlayerRef, itemStack, itemEntityPosition, commandBuffer);
                         Holder<EntityStore> pickupItemHolder = ItemComponent.generatePickedUpItem(itemRef, commandBuffer, targetPlayerRef, itemEntityPosition);
                         if (pickupItemHolder != null) {
                            commandBuffer.addEntity(pickupItemHolder, AddReason.SPAWN);
@@ -176,7 +176,7 @@ public class PlayerItemEntityPickupSystem extends EntityTickingSystem<EntityStor
                         }
 
                         if (quantity > 0) {
-                           playerComponent.notifyPickupItem(targetPlayerRef, itemStack.withQuantity(quantity), itemEntityPosition, commandBuffer);
+                           Player.notifyPickupItem(targetPlayerRef, itemStack.withQuantity(quantity), itemEntityPosition, commandBuffer);
                         }
                      }
                   }

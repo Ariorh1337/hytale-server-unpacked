@@ -1,8 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -52,11 +54,72 @@ public class ColorLight {
       return 4;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 4L;
+   }
+
+   public static byte getRadius(MemorySegment mem) {
+      return getRadius(mem, 0);
+   }
+
+   public static byte getRadius(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BYTE, offset + 0);
+   }
+
+   public static byte getRed(MemorySegment mem) {
+      return getRed(mem, 0);
+   }
+
+   public static byte getRed(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BYTE, offset + 1);
+   }
+
+   public static byte getGreen(MemorySegment mem) {
+      return getGreen(mem, 0);
+   }
+
+   public static byte getGreen(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BYTE, offset + 2);
+   }
+
+   public static byte getBlue(MemorySegment mem) {
+      return getBlue(mem, 0);
+   }
+
+   public static byte getBlue(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BYTE, offset + 3);
+   }
+
+   public static ColorLight toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ColorLight toObject(MemorySegment mem, int offset) {
+      if (offset + 4 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ColorLight", offset + 4, (int)mem.byteSize());
+      } else {
+         return new ColorLight(
+            mem.get(PacketIO.PROTO_BYTE, offset + 0),
+            mem.get(PacketIO.PROTO_BYTE, offset + 1),
+            mem.get(PacketIO.PROTO_BYTE, offset + 2),
+            mem.get(PacketIO.PROTO_BYTE, offset + 3)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeByte(this.radius);
       buf.writeByte(this.red);
       buf.writeByte(this.green);
       buf.writeByte(this.blue);
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, this.radius);
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, this.red);
+      mem.set(PacketIO.PROTO_BYTE, offset + 2, this.green);
+      mem.set(PacketIO.PROTO_BYTE, offset + 3, this.blue);
+      return 4;
    }
 
    public int computeSize() {

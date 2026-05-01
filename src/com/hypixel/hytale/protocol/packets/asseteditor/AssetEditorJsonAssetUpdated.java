@@ -3,10 +3,12 @@ package com.hypixel.hytale.protocol.packets.asseteditor;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -137,6 +139,118 @@ public class AssetEditorJsonAssetUpdated implements Packet, ToClientPacket {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 9L;
+   }
+
+   @Nullable
+   public static AssetPath getPath(MemorySegment mem) {
+      return getPath(mem, 0);
+   }
+
+   @Nullable
+   public static AssetPath getPath(MemorySegment mem, int offset) {
+      return hasPath(mem, offset) ? AssetPath.toObject(mem, offset + getValidatedOffset(mem, offset, 1, 9, "Path")) : null;
+   }
+
+   @Nullable
+   public static JsonUpdateCommand[] getCommands(MemorySegment mem) {
+      return getCommands(mem, 0);
+   }
+
+   @Nullable
+   public static JsonUpdateCommand[] getCommands(MemorySegment mem, int offset) {
+      if (!hasCommands(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 5, 9, "Commands");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Commands", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Commands", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Commands", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      JsonUpdateCommand[] data = new JsonUpdateCommand[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = JsonUpdateCommand.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   public static boolean hasPath(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasCommands(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static AssetEditorJsonAssetUpdated toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AssetEditorJsonAssetUpdated toObject(MemorySegment mem, int offset) {
+      if (offset + 9 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AssetEditorJsonAssetUpdated", offset + 9, (int)mem.byteSize());
+      }
+
+      JsonUpdateCommand[] commands = null;
+      if (hasCommands(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 5, 9, "Commands");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Commands", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Commands", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Commands", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         commands = new JsonUpdateCommand[len];
+
+         for (int i = 0; i < len; i++) {
+            commands[i] = JsonUpdateCommand.toObject(mem, off);
+            off += commands[i].computeSize();
+         }
+      }
+
+      return new AssetEditorJsonAssetUpdated(
+         hasPath(mem, offset) ? AssetPath.toObject(mem, offset + getValidatedOffset(mem, offset, 1, 9, "Path")) : null, commands
+      );
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -176,6 +290,47 @@ public class AssetEditorJsonAssetUpdated implements Packet, ToClientPacket {
       } else {
          buf.setIntLE(commandsOffsetSlot, -1);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.path != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.commands != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 9;
+      if (this.path != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 1, varOffset - offset - 9);
+         varOffset += this.path.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 1, -1);
+      }
+
+      if (this.commands != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 5, varOffset - offset - 9);
+         if (this.commands.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Commands", this.commands.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.commands.length);
+         int commandsValueOffset = 0;
+
+         for (int i = 0; i < this.commands.length; i++) {
+            commandsValueOffset += this.commands[i].serialize(mem, varOffset + commandsValueOffset);
+         }
+
+         varOffset += commandsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 5, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

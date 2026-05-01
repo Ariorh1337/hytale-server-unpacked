@@ -3,9 +3,11 @@ package com.hypixel.hytale.protocol.packets.buildertools;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -75,6 +77,77 @@ public class BuilderToolSelectionUpdate implements Packet, ToServerPacket {
       return 24;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 24L;
+   }
+
+   public static int getXMin(MemorySegment mem) {
+      return getXMin(mem, 0);
+   }
+
+   public static int getXMin(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 0);
+   }
+
+   public static int getYMin(MemorySegment mem) {
+      return getYMin(mem, 0);
+   }
+
+   public static int getYMin(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 4);
+   }
+
+   public static int getZMin(MemorySegment mem) {
+      return getZMin(mem, 0);
+   }
+
+   public static int getZMin(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 8);
+   }
+
+   public static int getXMax(MemorySegment mem) {
+      return getXMax(mem, 0);
+   }
+
+   public static int getXMax(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 12);
+   }
+
+   public static int getYMax(MemorySegment mem) {
+      return getYMax(mem, 0);
+   }
+
+   public static int getYMax(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 16);
+   }
+
+   public static int getZMax(MemorySegment mem) {
+      return getZMax(mem, 0);
+   }
+
+   public static int getZMax(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 20);
+   }
+
+   public static BuilderToolSelectionUpdate toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static BuilderToolSelectionUpdate toObject(MemorySegment mem, int offset) {
+      if (offset + 24 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BuilderToolSelectionUpdate", offset + 24, (int)mem.byteSize());
+      } else {
+         return new BuilderToolSelectionUpdate(
+            mem.get(PacketIO.PROTO_INT, offset + 0),
+            mem.get(PacketIO.PROTO_INT, offset + 4),
+            mem.get(PacketIO.PROTO_INT, offset + 8),
+            mem.get(PacketIO.PROTO_INT, offset + 12),
+            mem.get(PacketIO.PROTO_INT, offset + 16),
+            mem.get(PacketIO.PROTO_INT, offset + 20)
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeIntLE(this.xMin);
@@ -83,6 +156,17 @@ public class BuilderToolSelectionUpdate implements Packet, ToServerPacket {
       buf.writeIntLE(this.xMax);
       buf.writeIntLE(this.yMax);
       buf.writeIntLE(this.zMax);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_INT, offset + 0, this.xMin);
+      mem.set(PacketIO.PROTO_INT, offset + 4, this.yMin);
+      mem.set(PacketIO.PROTO_INT, offset + 8, this.zMin);
+      mem.set(PacketIO.PROTO_INT, offset + 12, this.xMax);
+      mem.set(PacketIO.PROTO_INT, offset + 16, this.yMax);
+      mem.set(PacketIO.PROTO_INT, offset + 20, this.zMax);
+      return 24;
    }
 
    @Override

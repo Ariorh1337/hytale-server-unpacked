@@ -1,9 +1,11 @@
 package com.hypixel.hytale.protocol.packets.world;
 
 import com.hypixel.hytale.protocol.InstantData;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -63,6 +65,73 @@ public class SleepClock {
       return 33;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 33L;
+   }
+
+   @Nullable
+   public static InstantData getStartGametime(MemorySegment mem) {
+      return getStartGametime(mem, 0);
+   }
+
+   @Nullable
+   public static InstantData getStartGametime(MemorySegment mem, int offset) {
+      return hasStartGametime(mem, offset) ? InstantData.toObject(mem, offset + 1) : null;
+   }
+
+   @Nullable
+   public static InstantData getTargetGametime(MemorySegment mem) {
+      return getTargetGametime(mem, 0);
+   }
+
+   @Nullable
+   public static InstantData getTargetGametime(MemorySegment mem, int offset) {
+      return hasTargetGametime(mem, offset) ? InstantData.toObject(mem, offset + 13) : null;
+   }
+
+   public static float getProgress(MemorySegment mem) {
+      return getProgress(mem, 0);
+   }
+
+   public static float getProgress(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 25);
+   }
+
+   public static float getDurationSeconds(MemorySegment mem) {
+      return getDurationSeconds(mem, 0);
+   }
+
+   public static float getDurationSeconds(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 29);
+   }
+
+   public static boolean hasStartGametime(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasTargetGametime(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static SleepClock toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static SleepClock toObject(MemorySegment mem, int offset) {
+      if (offset + 33 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("SleepClock", offset + 33, (int)mem.byteSize());
+      } else {
+         return new SleepClock(
+            hasStartGametime(mem, offset) ? InstantData.toObject(mem, offset + 1) : null,
+            hasTargetGametime(mem, offset) ? InstantData.toObject(mem, offset + 13) : null,
+            mem.get(PacketIO.PROTO_FLOAT, offset + 25),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 29)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
       if (this.startGametime != null) {
@@ -88,6 +157,34 @@ public class SleepClock {
 
       buf.writeFloatLE(this.progress);
       buf.writeFloatLE(this.durationSeconds);
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.startGametime != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.targetGametime != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      if (this.startGametime != null) {
+         this.startGametime.serialize(mem, offset + 1);
+      } else {
+         mem.asSlice(offset + 1, 12L).fill((byte)0);
+      }
+
+      if (this.targetGametime != null) {
+         this.targetGametime.serialize(mem, offset + 13);
+      } else {
+         mem.asSlice(offset + 13, 12L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_FLOAT, offset + 25, this.progress);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 29, this.durationSeconds);
+      return 33;
    }
 
    public int computeSize() {

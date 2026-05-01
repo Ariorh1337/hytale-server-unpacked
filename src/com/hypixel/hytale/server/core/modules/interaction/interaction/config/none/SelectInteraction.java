@@ -23,6 +23,7 @@ import com.hypixel.hytale.protocol.WaitForDataFrom;
 import com.hypixel.hytale.server.core.entity.EntitySnapshot;
 import com.hypixel.hytale.server.core.entity.InteractionChain;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
+import com.hypixel.hytale.server.core.entity.InteractionManager;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import com.hypixel.hytale.server.core.meta.DynamicMetaStore;
@@ -35,6 +36,9 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHa
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.RootInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.data.Collector;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.data.CollectorTag;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.data.StringTag;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.selector.ClientSourcedSelector;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.selector.Selector;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.selector.SelectorType;
@@ -129,6 +133,8 @@ public class SelectInteraction extends SimpleInteraction {
    protected FailOnType failOn = FailOnType.Neither;
    protected boolean ignoreOwner = true;
    protected int maxTargets;
+   private static final StringTag TAG_HIT_ENTITY = StringTag.of("HitEntity");
+   private static final StringTag TAG_HIT_BLOCK = StringTag.of("HitBlock");
 
    @Nonnull
    @Override
@@ -299,6 +305,35 @@ public class SelectInteraction extends SimpleInteraction {
    ) {
    }
 
+   @Override
+   public boolean walk(@Nonnull Collector collector, @Nonnull InteractionContext context) {
+      if (this.hitEntity != null
+         && InteractionManager.walkInteractions(
+            collector, context, TAG_HIT_ENTITY, RootInteraction.getRootInteractionOrUnknown(this.hitEntity).getInteractionIds()
+         )) {
+         return true;
+      }
+
+      if (this.hitEntityRules != null) {
+         for (int i = 0; i < this.hitEntityRules.length; i++) {
+            SelectInteraction.HitEntity rule = this.hitEntityRules[i];
+            if (rule.next != null
+               && InteractionManager.walkInteractions(
+                  collector, context, SelectInteraction.HitEntityRuleTag.of(i), RootInteraction.getRootInteractionOrUnknown(rule.next).getInteractionIds()
+               )) {
+               return true;
+            }
+         }
+      }
+
+      return this.hitBlock != null
+            && InteractionManager.walkInteractions(
+               collector, context, TAG_HIT_BLOCK, RootInteraction.getRootInteractionOrUnknown(this.hitBlock).getInteractionIds()
+            )
+         ? true
+         : super.walk(collector, context);
+   }
+
    @Nullable
    @Override
    public InteractionChain mapForkChain(@Nonnull InteractionContext context, @Nonnull InteractionChainData data) {
@@ -444,6 +479,43 @@ public class SelectInteraction extends SimpleInteraction {
          }
 
          return new com.hypixel.hytale.protocol.HitEntity(RootInteraction.getRootInteractionIdOrUnknown(this.next), protoMatchers);
+      }
+   }
+
+   public static final class HitEntityRuleTag implements CollectorTag {
+      private final int index;
+
+      private HitEntityRuleTag(int index) {
+         this.index = index;
+      }
+
+      public int getIndex() {
+         return this.index;
+      }
+
+      @Override
+      public boolean equals(@Nullable Object o) {
+         if (this == o) {
+            return true;
+         } else {
+            return o != null && this.getClass() == o.getClass() ? this.index == ((SelectInteraction.HitEntityRuleTag)o).index : false;
+         }
+      }
+
+      @Override
+      public int hashCode() {
+         return this.index;
+      }
+
+      @Nonnull
+      @Override
+      public String toString() {
+         return "HitEntityRuleTag{index=" + this.index + "}";
+      }
+
+      @Nonnull
+      public static SelectInteraction.HitEntityRuleTag of(int index) {
+         return new SelectInteraction.HitEntityRuleTag(index);
       }
    }
 

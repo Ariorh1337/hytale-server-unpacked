@@ -105,7 +105,7 @@ public class ModelSystems {
          @Nonnull ActiveAnimationComponent animationComponent,
          @Nonnull Map<Ref<EntityStore>, EntityTrackerSystems.EntityViewer> visibleTo
       ) {
-         ActiveAnimationsUpdate update = new ActiveAnimationsUpdate(animationComponent.getActiveAnimations());
+         ActiveAnimationsUpdate update = new ActiveAnimationsUpdate((String[])animationComponent.getActiveAnimations().clone());
 
          for (Entry<Ref<EntityStore>, EntityTrackerSystems.EntityViewer> entry : visibleTo.entrySet()) {
             entry.getValue().queueUpdate(ref, update);

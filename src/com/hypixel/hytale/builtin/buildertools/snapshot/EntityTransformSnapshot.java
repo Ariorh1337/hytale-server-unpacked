@@ -10,13 +10,14 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class EntityTransformSnapshot implements EntitySnapshot<EntityTransformSnapshot> {
    @Nonnull
    private Ref<EntityStore> ref;
    @Nonnull
    private final Transform transform;
-   @Nonnull
+   @Nullable
    private final Rotation3f headRotation;
 
    public EntityTransformSnapshot(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
@@ -24,9 +25,8 @@ public class EntityTransformSnapshot implements EntitySnapshot<EntityTransformSn
       TransformComponent transformComponent = componentAccessor.getComponent(ref, TransformComponent.getComponentType());
       assert transformComponent != null;
       HeadRotation headRotationComponent = componentAccessor.getComponent(ref, HeadRotation.getComponentType());
-      assert headRotationComponent != null;
       this.transform = new Transform(transformComponent.getTransform());
-      this.headRotation = new Rotation3f(headRotationComponent.getRotation());
+      this.headRotation = headRotationComponent != null ? new Rotation3f(headRotationComponent.getRotation()) : null;
    }
 
    @Override
@@ -43,7 +43,7 @@ public class EntityTransformSnapshot implements EntitySnapshot<EntityTransformSn
             transformComponent.setPosition(this.transform.getPosition());
             transformComponent.setRotation(this.transform.getRotation());
             HeadRotation headRotationComponent = componentAccessor.getComponent(this.ref, HeadRotation.getComponentType());
-            if (headRotationComponent != null) {
+            if (headRotationComponent != null && this.headRotation != null) {
                headRotationComponent.setRotation(this.headRotation);
             }
          }
@@ -60,7 +60,7 @@ public class EntityTransformSnapshot implements EntitySnapshot<EntityTransformSn
       transformComponent.setPosition(this.transform.getPosition());
       transformComponent.setRotation(this.transform.getRotation());
       HeadRotation headRotationComponent = componentAccessor.getComponent(this.ref, HeadRotation.getComponentType());
-      if (headRotationComponent != null) {
+      if (headRotationComponent != null && this.headRotation != null) {
          headRotationComponent.setRotation(this.headRotation);
       }
 

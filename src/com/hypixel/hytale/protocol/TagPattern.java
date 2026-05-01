@@ -1,9 +1,11 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -131,6 +133,137 @@ public class TagPattern {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 14L;
+   }
+
+   public static TagPatternType getType(MemorySegment mem) {
+      return getType(mem, 0);
+   }
+
+   public static TagPatternType getType(MemorySegment mem, int offset) {
+      return TagPatternType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1));
+   }
+
+   public static int getTagIndex(MemorySegment mem) {
+      return getTagIndex(mem, 0);
+   }
+
+   public static int getTagIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 2);
+   }
+
+   @Nullable
+   public static TagPattern[] getOperands(MemorySegment mem) {
+      return getOperands(mem, 0);
+   }
+
+   @Nullable
+   public static TagPattern[] getOperands(MemorySegment mem, int offset) {
+      if (!hasOperands(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 6, 14, "Operands");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Operands", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Operands", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Operands", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      TagPattern[] data = new TagPattern[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static TagPattern getNot(MemorySegment mem) {
+      return getNot(mem, 0);
+   }
+
+   @Nullable
+   public static TagPattern getNot(MemorySegment mem, int offset) {
+      return hasNot(mem, offset) ? toObject(mem, offset + getValidatedOffset(mem, offset, 10, 14, "Not")) : null;
+   }
+
+   public static boolean hasOperands(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasNot(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static TagPattern toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static TagPattern toObject(MemorySegment mem, int offset) {
+      if (offset + 14 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("TagPattern", offset + 14, (int)mem.byteSize());
+      }
+
+      TagPattern[] operands = null;
+      if (hasOperands(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 6, 14, "Operands");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Operands", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Operands", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Operands", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         operands = new TagPattern[len];
+
+         for (int i = 0; i < len; i++) {
+            operands[i] = toObject(mem, off);
+            off += operands[i].computeSize();
+         }
+      }
+
+      return new TagPattern(
+         TagPatternType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1)),
+         mem.get(PacketIO.PROTO_INT, offset + 2),
+         operands,
+         hasNot(mem, offset) ? toObject(mem, offset + getValidatedOffset(mem, offset, 10, 14, "Not")) : null
+      );
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -171,6 +304,48 @@ public class TagPattern {
       } else {
          buf.setIntLE(notOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.operands != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.not != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.type.getValue());
+      mem.set(PacketIO.PROTO_INT, offset + 2, this.tagIndex);
+      int varOffset = offset + 14;
+      if (this.operands != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 6, varOffset - offset - 14);
+         if (this.operands.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Operands", this.operands.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.operands.length);
+         int operandsValueOffset = 0;
+
+         for (int i = 0; i < this.operands.length; i++) {
+            operandsValueOffset += this.operands[i].serialize(mem, varOffset + operandsValueOffset);
+         }
+
+         varOffset += operandsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 6, -1);
+      }
+
+      if (this.not != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 10, varOffset - offset - 14);
+         varOffset += this.not.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 10, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

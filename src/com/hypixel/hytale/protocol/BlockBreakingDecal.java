@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -95,6 +96,96 @@ public class BlockBreakingDecal {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 1L;
+   }
+
+   @Nullable
+   public static String[] getStageTextures(MemorySegment mem) {
+      return getStageTextures(mem, 0);
+   }
+
+   @Nullable
+   public static String[] getStageTextures(MemorySegment mem, int offset) {
+      if (!hasStageTextures(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + 1;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("StageTextures", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("StageTextures", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("StageTextures", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      String[] data = new String[len];
+
+      for (int i = 0; i < len; i++) {
+         long sp = VarInt.getWithLength(mem, off);
+         int n = (int)sp + (int)(sp >>> 32);
+         data[i] = PacketIO.readVarString("StageTextures", mem, off, 16384000, PacketIO.UTF8);
+         off += n;
+      }
+
+      return data;
+   }
+
+   public static boolean hasStageTextures(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static BlockBreakingDecal toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static BlockBreakingDecal toObject(MemorySegment mem, int offset) {
+      if (offset + 1 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BlockBreakingDecal", offset + 1, (int)mem.byteSize());
+      }
+
+      String[] stageTextures = null;
+      if (hasStageTextures(mem, offset)) {
+         int off = offset + 1;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("StageTextures", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("StageTextures", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("StageTextures", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         stageTextures = new String[len];
+
+         for (int i = 0; i < len; i++) {
+            long sp = VarInt.getWithLength(mem, off);
+            int n = (int)sp + (int)(sp >>> 32);
+            stageTextures[i] = PacketIO.readVarString("StageTextures", mem, off, 16384000, PacketIO.UTF8);
+            off += n;
+         }
+      }
+
+      return new BlockBreakingDecal(stageTextures);
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
       if (this.stageTextures != null) {
@@ -113,6 +204,32 @@ public class BlockBreakingDecal {
             PacketIO.writeVarString(buf, item, 4096000);
          }
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.stageTextures != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 1;
+      if (this.stageTextures != null) {
+         if (this.stageTextures.length > 4096000) {
+            throw ProtocolException.arrayTooLong("StageTextures", this.stageTextures.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.stageTextures.length);
+         int stageTexturesValueOffset = 0;
+
+         for (int i = 0; i < this.stageTextures.length; i++) {
+            stageTexturesValueOffset += PacketIO.writeVarString(mem, varOffset + stageTexturesValueOffset, this.stageTextures[i], 16384000);
+         }
+
+         varOffset += stageTexturesValueOffset;
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

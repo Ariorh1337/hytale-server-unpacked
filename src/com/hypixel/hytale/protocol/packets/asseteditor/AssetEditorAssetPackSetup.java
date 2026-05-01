@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -115,6 +116,96 @@ public class AssetEditorAssetPackSetup implements Packet, ToClientPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 1L;
+   }
+
+   @Nullable
+   public static Map<String, AssetPackManifest> getPacks(MemorySegment mem) {
+      return getPacks(mem, 0);
+   }
+
+   @Nullable
+   public static Map<String, AssetPackManifest> getPacks(MemorySegment mem, int offset) {
+      if (!hasPacks(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + 1;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Packs", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("Packs", len, 4096000);
+      }
+
+      Map<String, AssetPackManifest> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         long keyPacked = VarInt.getWithLength(mem, off);
+         int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+         String key = PacketIO.readVarString("key", mem, off, 16384000, PacketIO.UTF8);
+         off += nkey;
+         AssetPackManifest value = AssetPackManifest.toObject(mem, off);
+         off += value.computeSize();
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("Packs", key);
+         }
+      }
+
+      return data;
+   }
+
+   public static boolean hasPacks(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static AssetEditorAssetPackSetup toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AssetEditorAssetPackSetup toObject(MemorySegment mem, int offset) {
+      if (offset + 1 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AssetEditorAssetPackSetup", offset + 1, (int)mem.byteSize());
+      }
+
+      Map<String, AssetPackManifest> packs = null;
+      if (hasPacks(mem, offset)) {
+         int off = offset + 1;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Packs", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Packs", len, 4096000);
+         }
+
+         packs = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            long keyPacked = VarInt.getWithLength(mem, off);
+            int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+            String key = PacketIO.readVarString("key", mem, off, 16384000, PacketIO.UTF8);
+            off += nkey;
+            AssetPackManifest value = AssetPackManifest.toObject(mem, off);
+            off += value.computeSize();
+            if (packs.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("Packs", key);
+            }
+         }
+      }
+
+      return new AssetEditorAssetPackSetup(packs);
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -135,6 +226,31 @@ public class AssetEditorAssetPackSetup implements Packet, ToClientPacket {
             e.getValue().serialize(buf);
          }
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.packs != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 1;
+      if (this.packs != null) {
+         if (this.packs.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Packs", this.packs.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.packs.size());
+
+         for (Entry<String, AssetPackManifest> e : this.packs.entrySet()) {
+            varOffset += PacketIO.writeVarString(mem, varOffset, e.getKey(), 16384000);
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      }
+
+      return varOffset - offset;
    }
 
    @Override

@@ -5,9 +5,11 @@ import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.SmartMoveType;
 import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -70,12 +72,74 @@ public class SmartMoveItemStack implements Packet, ToServerPacket, ToClientPacke
       return 13;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 13L;
+   }
+
+   public static int getFromSectionId(MemorySegment mem) {
+      return getFromSectionId(mem, 0);
+   }
+
+   public static int getFromSectionId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 0);
+   }
+
+   public static int getFromSlotId(MemorySegment mem) {
+      return getFromSlotId(mem, 0);
+   }
+
+   public static int getFromSlotId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 4);
+   }
+
+   public static int getQuantity(MemorySegment mem) {
+      return getQuantity(mem, 0);
+   }
+
+   public static int getQuantity(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 8);
+   }
+
+   public static SmartMoveType getMoveType(MemorySegment mem) {
+      return getMoveType(mem, 0);
+   }
+
+   public static SmartMoveType getMoveType(MemorySegment mem, int offset) {
+      return SmartMoveType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 12));
+   }
+
+   public static SmartMoveItemStack toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static SmartMoveItemStack toObject(MemorySegment mem, int offset) {
+      if (offset + 13 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("SmartMoveItemStack", offset + 13, (int)mem.byteSize());
+      } else {
+         return new SmartMoveItemStack(
+            mem.get(PacketIO.PROTO_INT, offset + 0),
+            mem.get(PacketIO.PROTO_INT, offset + 4),
+            mem.get(PacketIO.PROTO_INT, offset + 8),
+            SmartMoveType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 12))
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeIntLE(this.fromSectionId);
       buf.writeIntLE(this.fromSlotId);
       buf.writeIntLE(this.quantity);
       buf.writeByte(this.moveType.getValue());
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_INT, offset + 0, this.fromSectionId);
+      mem.set(PacketIO.PROTO_INT, offset + 4, this.fromSlotId);
+      mem.set(PacketIO.PROTO_INT, offset + 8, this.quantity);
+      mem.set(PacketIO.PROTO_BYTE, offset + 12, (byte)this.moveType.getValue());
+      return 13;
    }
 
    @Override

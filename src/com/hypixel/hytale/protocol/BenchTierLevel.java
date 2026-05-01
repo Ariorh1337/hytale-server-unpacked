@@ -1,8 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -68,6 +70,66 @@ public class BenchTierLevel {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 17L;
+   }
+
+   @Nullable
+   public static BenchUpgradeRequirement getBenchUpgradeRequirement(MemorySegment mem) {
+      return getBenchUpgradeRequirement(mem, 0);
+   }
+
+   @Nullable
+   public static BenchUpgradeRequirement getBenchUpgradeRequirement(MemorySegment mem, int offset) {
+      return hasBenchUpgradeRequirement(mem, offset) ? BenchUpgradeRequirement.toObject(mem, offset + 17) : null;
+   }
+
+   public static double getCraftingTimeReductionModifier(MemorySegment mem) {
+      return getCraftingTimeReductionModifier(mem, 0);
+   }
+
+   public static double getCraftingTimeReductionModifier(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_DOUBLE, offset + 1);
+   }
+
+   public static int getExtraInputSlot(MemorySegment mem) {
+      return getExtraInputSlot(mem, 0);
+   }
+
+   public static int getExtraInputSlot(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 9);
+   }
+
+   public static int getExtraOutputSlot(MemorySegment mem) {
+      return getExtraOutputSlot(mem, 0);
+   }
+
+   public static int getExtraOutputSlot(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 13);
+   }
+
+   public static boolean hasBenchUpgradeRequirement(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static BenchTierLevel toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static BenchTierLevel toObject(MemorySegment mem, int offset) {
+      if (offset + 17 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BenchTierLevel", offset + 17, (int)mem.byteSize());
+      } else {
+         return new BenchTierLevel(
+            hasBenchUpgradeRequirement(mem, offset) ? BenchUpgradeRequirement.toObject(mem, offset + 17) : null,
+            mem.get(PacketIO.PROTO_DOUBLE, offset + 1),
+            mem.get(PacketIO.PROTO_INT, offset + 9),
+            mem.get(PacketIO.PROTO_INT, offset + 13)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
       if (this.benchUpgradeRequirement != null) {
@@ -81,6 +143,24 @@ public class BenchTierLevel {
       if (this.benchUpgradeRequirement != null) {
          this.benchUpgradeRequirement.serialize(buf);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.benchUpgradeRequirement != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_DOUBLE, offset + 1, this.craftingTimeReductionModifier);
+      mem.set(PacketIO.PROTO_INT, offset + 9, this.extraInputSlot);
+      mem.set(PacketIO.PROTO_INT, offset + 13, this.extraOutputSlot);
+      int varOffset = offset + 17;
+      if (this.benchUpgradeRequirement != null) {
+         varOffset += this.benchUpgradeRequirement.serialize(mem, varOffset);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

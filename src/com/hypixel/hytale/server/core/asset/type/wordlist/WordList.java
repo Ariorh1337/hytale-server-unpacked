@@ -12,6 +12,7 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.validation.ValidatorCache;
 import com.hypixel.hytale.server.core.modules.i18n.I18nModule;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
@@ -142,6 +143,6 @@ public class WordList implements JsonAssetWithMap<String, DefaultAssetMap<String
    @Nonnull
    @Override
    public String toString() {
-      return "WordList{id='" + this.id + "', translationKeys=" + this.translationKeys + "}";
+      return "WordList{id='" + this.id + "', translationKeys=" + Arrays.toString(this.translationKeys) + "}";
    }
 }

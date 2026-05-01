@@ -9,12 +9,14 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
+import com.hypixel.hytale.server.core.command.system.arguments.system.FlagArg;
 import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalArg;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import java.util.ArrayList;
 import java.util.Locale;
 import javax.annotation.Nonnull;
 
@@ -22,6 +24,7 @@ public class TriggerVolumeEffectsCommand extends AbstractPlayerCommand {
    private final OptionalArg<String> volumeNameArg = this.withOptionalArg(
       "volumeName", "server.commands.triggervolume.effects.volumeName.desc", TriggerVolumeArgTypes.VOLUME_NAME
    );
+   private final FlagArg groupFlag = this.withFlagArg("group", "server.commands.triggervolume.effects.group.desc");
 
    public TriggerVolumeEffectsCommand() {
       super("effects", "server.commands.triggervolume.effects.desc");
@@ -50,6 +53,24 @@ public class TriggerVolumeEffectsCommand extends AbstractPlayerCommand {
                Player playerComponent = store.getComponent(ref, Player.getComponentType());
                if (playerComponent != null) {
                   String groupId = entry.getGroupId();
+                  if (this.groupFlag.get(context) && groupId != null) {
+                     GroupEntry group = manager.getGroup(groupId);
+                     if (group != null) {
+                        ArrayList<VolumeEntry> members = new ArrayList<>();
+
+                        for (String memberId : group.getMemberVolumeIds()) {
+                           VolumeEntry m = manager.getVolume(memberId);
+                           if (m != null) {
+                              members.add(m);
+                           }
+                        }
+
+                        playerComponent.getPageManager()
+                           .openCustomPage(ref, store, new TriggerVolumeEffectEditorPage(playerRef, entry, manager, groupId, members));
+                        return;
+                     }
+                  }
+
                   if (groupId != null) {
                      GroupEntry group = manager.getGroup(groupId);
                      if (group != null) {

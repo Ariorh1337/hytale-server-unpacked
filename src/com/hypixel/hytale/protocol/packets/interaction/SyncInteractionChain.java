@@ -10,6 +10,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -408,6 +409,393 @@ public class SyncInteractionChain {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 61L;
+   }
+
+   public static int getActiveHotbarSlot(MemorySegment mem) {
+      return getActiveHotbarSlot(mem, 0);
+   }
+
+   public static int getActiveHotbarSlot(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   public static int getActiveUtilitySlot(MemorySegment mem) {
+      return getActiveUtilitySlot(mem, 0);
+   }
+
+   public static int getActiveUtilitySlot(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 5);
+   }
+
+   public static int getActiveToolsSlot(MemorySegment mem) {
+      return getActiveToolsSlot(mem, 0);
+   }
+
+   public static int getActiveToolsSlot(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 9);
+   }
+
+   @Nullable
+   public static String getItemInHandId(MemorySegment mem) {
+      return getItemInHandId(mem, 0);
+   }
+
+   @Nullable
+   public static String getItemInHandId(MemorySegment mem, int offset) {
+      return hasItemInHandId(mem, offset)
+         ? PacketIO.readVarString("ItemInHandId", mem, offset + getValidatedOffset(mem, offset, 33, 61, "ItemInHandId"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getUtilityItemId(MemorySegment mem) {
+      return getUtilityItemId(mem, 0);
+   }
+
+   @Nullable
+   public static String getUtilityItemId(MemorySegment mem, int offset) {
+      return hasUtilityItemId(mem, offset)
+         ? PacketIO.readVarString("UtilityItemId", mem, offset + getValidatedOffset(mem, offset, 37, 61, "UtilityItemId"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getToolsItemId(MemorySegment mem) {
+      return getToolsItemId(mem, 0);
+   }
+
+   @Nullable
+   public static String getToolsItemId(MemorySegment mem, int offset) {
+      return hasToolsItemId(mem, offset)
+         ? PacketIO.readVarString("ToolsItemId", mem, offset + getValidatedOffset(mem, offset, 41, 61, "ToolsItemId"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static boolean getInitial(MemorySegment mem) {
+      return getInitial(mem, 0);
+   }
+
+   public static boolean getInitial(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 13);
+   }
+
+   public static boolean getDesync(MemorySegment mem) {
+      return getDesync(mem, 0);
+   }
+
+   public static boolean getDesync(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 14);
+   }
+
+   public static int getOverrideRootInteraction(MemorySegment mem) {
+      return getOverrideRootInteraction(mem, 0);
+   }
+
+   public static int getOverrideRootInteraction(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 15);
+   }
+
+   public static InteractionType getInteractionType(MemorySegment mem) {
+      return getInteractionType(mem, 0);
+   }
+
+   public static InteractionType getInteractionType(MemorySegment mem, int offset) {
+      return InteractionType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 19));
+   }
+
+   public static int getEquipSlot(MemorySegment mem) {
+      return getEquipSlot(mem, 0);
+   }
+
+   public static int getEquipSlot(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 20);
+   }
+
+   public static int getChainId(MemorySegment mem) {
+      return getChainId(mem, 0);
+   }
+
+   public static int getChainId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 24);
+   }
+
+   @Nullable
+   public static ForkedChainId getForkedId(MemorySegment mem) {
+      return getForkedId(mem, 0);
+   }
+
+   @Nullable
+   public static ForkedChainId getForkedId(MemorySegment mem, int offset) {
+      return hasForkedId(mem, offset) ? ForkedChainId.toObject(mem, offset + getValidatedOffset(mem, offset, 45, 61, "ForkedId")) : null;
+   }
+
+   @Nullable
+   public static InteractionChainData getData(MemorySegment mem) {
+      return getData(mem, 0);
+   }
+
+   @Nullable
+   public static InteractionChainData getData(MemorySegment mem, int offset) {
+      return hasData(mem, offset) ? InteractionChainData.toObject(mem, offset + getValidatedOffset(mem, offset, 49, 61, "Data")) : null;
+   }
+
+   public static InteractionState getState(MemorySegment mem) {
+      return getState(mem, 0);
+   }
+
+   public static InteractionState getState(MemorySegment mem, int offset) {
+      return InteractionState.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 28));
+   }
+
+   @Nullable
+   public static SyncInteractionChain[] getNewForks(MemorySegment mem) {
+      return getNewForks(mem, 0);
+   }
+
+   @Nullable
+   public static SyncInteractionChain[] getNewForks(MemorySegment mem, int offset) {
+      if (!hasNewForks(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 53, 61, "NewForks");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("NewForks", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("NewForks", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("NewForks", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      SyncInteractionChain[] data = new SyncInteractionChain[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   public static int getOperationBaseIndex(MemorySegment mem) {
+      return getOperationBaseIndex(mem, 0);
+   }
+
+   public static int getOperationBaseIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 29);
+   }
+
+   @Nullable
+   public static InteractionSyncData[] getInteractionData(MemorySegment mem) {
+      return getInteractionData(mem, 0);
+   }
+
+   @Nullable
+   public static InteractionSyncData[] getInteractionData(MemorySegment mem, int offset) {
+      if (!hasInteractionData(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 57, 61, "InteractionData");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("InteractionData", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("InteractionData", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + (len + 7) / 8 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("InteractionData", off + lenOffset + (len + 7) / 8, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      InteractionSyncData[] data = new InteractionSyncData[len];
+      int bitfieldSize = (len + 7) / 8;
+      int bitfieldOff = off;
+      off += bitfieldSize;
+      if (bitfieldOff + bitfieldSize > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("InteractionData", bitfieldOff + bitfieldSize, (int)mem.byteSize());
+      }
+
+      int i = 0;
+
+      while (i < len) {
+         byte bits = mem.get(PacketIO.PROTO_BYTE, bitfieldOff + i / 8);
+
+         for (int batchEnd = Math.min(len, (i & -8) + 8); i < batchEnd; i++) {
+            if ((bits & 1 << (i & 7)) != 0) {
+               data[i] = InteractionSyncData.toObject(mem, off);
+               off += data[i].computeSize();
+            }
+         }
+      }
+
+      return data;
+   }
+
+   public static boolean hasItemInHandId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasUtilityItemId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasToolsItemId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasForkedId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasData(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 16) != 0;
+   }
+
+   public static boolean hasNewForks(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 32) != 0;
+   }
+
+   public static boolean hasInteractionData(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 64) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static SyncInteractionChain toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static SyncInteractionChain toObject(MemorySegment mem, int offset) {
+      if (offset + 61 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("SyncInteractionChain", offset + 61, (int)mem.byteSize());
+      }
+
+      SyncInteractionChain[] newForks = null;
+      if (hasNewForks(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 53, 61, "NewForks");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("NewForks", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("NewForks", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("NewForks", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         newForks = new SyncInteractionChain[len];
+
+         for (int i = 0; i < len; i++) {
+            newForks[i] = toObject(mem, off);
+            off += newForks[i].computeSize();
+         }
+      }
+
+      InteractionSyncData[] interactionData = null;
+      if (hasInteractionData(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 57, 61, "InteractionData");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("InteractionData", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("InteractionData", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + (len + 7) / 8 > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("InteractionData", off + lenOffset + (len + 7) / 8, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         interactionData = new InteractionSyncData[len];
+         int bitfieldSize = (len + 7) / 8;
+         int bitfieldOff = off;
+         off += bitfieldSize;
+         if (bitfieldOff + bitfieldSize > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("InteractionData", bitfieldOff + bitfieldSize, (int)mem.byteSize());
+         }
+
+         int i = 0;
+
+         while (i < len) {
+            byte bits = mem.get(PacketIO.PROTO_BYTE, bitfieldOff + i / 8);
+
+            for (int batchEnd = Math.min(len, (i & -8) + 8); i < batchEnd; i++) {
+               if ((bits & 1 << (i & 7)) != 0) {
+                  interactionData[i] = InteractionSyncData.toObject(mem, off);
+                  off += interactionData[i].computeSize();
+               }
+            }
+         }
+      }
+
+      return new SyncInteractionChain(
+         mem.get(PacketIO.PROTO_INT, offset + 1),
+         mem.get(PacketIO.PROTO_INT, offset + 5),
+         mem.get(PacketIO.PROTO_INT, offset + 9),
+         hasItemInHandId(mem, offset)
+            ? PacketIO.readVarString("ItemInHandId", mem, offset + getValidatedOffset(mem, offset, 33, 61, "ItemInHandId"), 4096000, PacketIO.UTF8)
+            : null,
+         hasUtilityItemId(mem, offset)
+            ? PacketIO.readVarString("UtilityItemId", mem, offset + getValidatedOffset(mem, offset, 37, 61, "UtilityItemId"), 4096000, PacketIO.UTF8)
+            : null,
+         hasToolsItemId(mem, offset)
+            ? PacketIO.readVarString("ToolsItemId", mem, offset + getValidatedOffset(mem, offset, 41, 61, "ToolsItemId"), 4096000, PacketIO.UTF8)
+            : null,
+         mem.get(PacketIO.PROTO_BOOL, offset + 13),
+         mem.get(PacketIO.PROTO_BOOL, offset + 14),
+         mem.get(PacketIO.PROTO_INT, offset + 15),
+         InteractionType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 19)),
+         mem.get(PacketIO.PROTO_INT, offset + 20),
+         mem.get(PacketIO.PROTO_INT, offset + 24),
+         hasForkedId(mem, offset) ? ForkedChainId.toObject(mem, offset + getValidatedOffset(mem, offset, 45, 61, "ForkedId")) : null,
+         hasData(mem, offset) ? InteractionChainData.toObject(mem, offset + getValidatedOffset(mem, offset, 49, 61, "Data")) : null,
+         InteractionState.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 28)),
+         newForks,
+         mem.get(PacketIO.PROTO_INT, offset + 29),
+         interactionData
+      );
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -542,6 +930,137 @@ public class SyncInteractionChain {
       } else {
          buf.setIntLE(interactionDataOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.itemInHandId != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.utilityItemId != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.toolsItemId != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.forkedId != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.data != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.newForks != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
+      if (this.interactionData != null) {
+         nullBits = (byte)(nullBits | 64);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.activeHotbarSlot);
+      mem.set(PacketIO.PROTO_INT, offset + 5, this.activeUtilitySlot);
+      mem.set(PacketIO.PROTO_INT, offset + 9, this.activeToolsSlot);
+      mem.set(PacketIO.PROTO_BOOL, offset + 13, this.initial);
+      mem.set(PacketIO.PROTO_BOOL, offset + 14, this.desync);
+      mem.set(PacketIO.PROTO_INT, offset + 15, this.overrideRootInteraction);
+      mem.set(PacketIO.PROTO_BYTE, offset + 19, (byte)this.interactionType.getValue());
+      mem.set(PacketIO.PROTO_INT, offset + 20, this.equipSlot);
+      mem.set(PacketIO.PROTO_INT, offset + 24, this.chainId);
+      mem.set(PacketIO.PROTO_BYTE, offset + 28, (byte)this.state.getValue());
+      mem.set(PacketIO.PROTO_INT, offset + 29, this.operationBaseIndex);
+      int varOffset = offset + 61;
+      if (this.itemInHandId != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 33, varOffset - offset - 61);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.itemInHandId, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 33, -1);
+      }
+
+      if (this.utilityItemId != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 37, varOffset - offset - 61);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.utilityItemId, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 37, -1);
+      }
+
+      if (this.toolsItemId != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 41, varOffset - offset - 61);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.toolsItemId, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 41, -1);
+      }
+
+      if (this.forkedId != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 45, varOffset - offset - 61);
+         varOffset += this.forkedId.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 45, -1);
+      }
+
+      if (this.data != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 49, varOffset - offset - 61);
+         varOffset += this.data.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 49, -1);
+      }
+
+      if (this.newForks != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 53, varOffset - offset - 61);
+         if (this.newForks.length > 4096000) {
+            throw ProtocolException.arrayTooLong("NewForks", this.newForks.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.newForks.length);
+         int newForksValueOffset = 0;
+
+         for (int i = 0; i < this.newForks.length; i++) {
+            newForksValueOffset += this.newForks[i].serialize(mem, varOffset + newForksValueOffset);
+         }
+
+         varOffset += newForksValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 53, -1);
+      }
+
+      if (this.interactionData != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 57, varOffset - offset - 61);
+         if (this.interactionData.length > 4096000) {
+            throw ProtocolException.arrayTooLong("InteractionData", this.interactionData.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.interactionData.length);
+         int interactionDataBitfieldSize = (this.interactionData.length + 7) / 8;
+
+         for (int bi = 0; bi < interactionDataBitfieldSize; bi++) {
+            byte bits = 0;
+
+            for (int j = bi * 8; j < Math.min(this.interactionData.length, bi * 8 + 8); j++) {
+               if (this.interactionData[j] != null) {
+                  bits |= (byte)(1 << (j & 7));
+               }
+            }
+
+            mem.set(PacketIO.PROTO_BYTE, varOffset + bi, bits);
+         }
+
+         varOffset += interactionDataBitfieldSize;
+
+         for (int i = 0; i < this.interactionData.length; i++) {
+            if (this.interactionData[i] != null) {
+               varOffset += this.interactionData[i].serialize(mem, varOffset);
+            }
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 57, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

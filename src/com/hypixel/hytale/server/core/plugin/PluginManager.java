@@ -160,11 +160,13 @@ public class PluginManager {
          }
       }
 
-      this.loadPluginsInClasspath(pending, this.availablePlugins);
-      this.loadPluginsFromDirectory(pending, MODS_PATH, !Options.getOptionSet().has(Options.BARE), this.availablePlugins);
+      if (!Options.getOptionSet().has(Options.BOOTSTRAP)) {
+         this.loadPluginsInClasspath(pending, this.availablePlugins);
+         this.loadPluginsFromDirectory(pending, MODS_PATH, !Options.isBare(), this.availablePlugins);
 
-      for (Path modsPath : Options.getOptionSet().valuesOf(Options.MODS_DIRECTORIES)) {
-         this.loadPluginsFromDirectory(pending, modsPath, false, this.availablePlugins);
+         for (Path modsPath : Options.getOptionSet().valuesOf(Options.MODS_DIRECTORIES)) {
+            this.loadPluginsFromDirectory(pending, modsPath, false, this.availablePlugins);
+         }
       }
 
       this.lock.readLock().lock();
@@ -979,7 +981,11 @@ public class PluginManager {
             AssetStore.DISABLE_DYNAMIC_DEPENDENCIES = prev;
          }
 
-         AssetModule.get().initPendingStores();
+         AssetModule assetModule = AssetModule.get();
+         if (assetModule != null) {
+            assetModule.initPendingStores();
+         }
+
          HytaleServer.get().doneSetup(plugin);
          if (!plugin.getState().isInactive()) {
             IEventDispatcher<PluginSetupEvent, PluginSetupEvent> dispatch = HytaleServer.get()

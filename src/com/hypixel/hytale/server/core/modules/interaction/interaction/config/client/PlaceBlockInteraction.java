@@ -162,6 +162,8 @@ public class PlaceBlockInteraction extends SimpleInteraction {
                chunkReference,
                chunkStore,
                commandBuffer,
+               false,
+               false,
                false
             );
             Player playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());

@@ -4,6 +4,7 @@ import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -57,6 +58,57 @@ public class InteractionCamera {
       return 29;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 29L;
+   }
+
+   public static float getTime(MemorySegment mem) {
+      return getTime(mem, 0);
+   }
+
+   public static float getTime(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 1);
+   }
+
+   public static Vector3fc getPosition(MemorySegment mem) {
+      return getPosition(mem, 0);
+   }
+
+   public static Vector3fc getPosition(MemorySegment mem, int offset) {
+      return PacketIO.readVector3f(mem, offset + 5);
+   }
+
+   @Nullable
+   public static Direction getRotation(MemorySegment mem) {
+      return getRotation(mem, 0);
+   }
+
+   @Nullable
+   public static Direction getRotation(MemorySegment mem, int offset) {
+      return hasRotation(mem, offset) ? Direction.toObject(mem, offset + 17) : null;
+   }
+
+   public static boolean hasRotation(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static InteractionCamera toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static InteractionCamera toObject(MemorySegment mem, int offset) {
+      if (offset + 29 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("InteractionCamera", offset + 29, (int)mem.byteSize());
+      } else {
+         return new InteractionCamera(
+            mem.get(PacketIO.PROTO_FLOAT, offset + 1),
+            PacketIO.readVector3f(mem, offset + 5),
+            hasRotation(mem, offset) ? Direction.toObject(mem, offset + 17) : null
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
       if (this.rotation != null) {
@@ -71,6 +123,24 @@ public class InteractionCamera {
       } else {
          buf.writeZero(12);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.rotation != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 1, this.time);
+      PacketIO.writeVector3f(mem, offset + 5, this.position);
+      if (this.rotation != null) {
+         this.rotation.serialize(mem, offset + 17);
+      } else {
+         mem.asSlice(offset + 17, 12L).fill((byte)0);
+      }
+
+      return 29;
    }
 
    public int computeSize() {

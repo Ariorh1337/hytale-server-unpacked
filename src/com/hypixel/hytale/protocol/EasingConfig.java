@@ -1,8 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -45,9 +47,47 @@ public class EasingConfig {
       return 5;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 5L;
+   }
+
+   public static float getTime(MemorySegment mem) {
+      return getTime(mem, 0);
+   }
+
+   public static float getTime(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 0);
+   }
+
+   public static EasingType getType(MemorySegment mem) {
+      return getType(mem, 0);
+   }
+
+   public static EasingType getType(MemorySegment mem, int offset) {
+      return EasingType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 4));
+   }
+
+   public static EasingConfig toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static EasingConfig toObject(MemorySegment mem, int offset) {
+      if (offset + 5 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("EasingConfig", offset + 5, (int)mem.byteSize());
+      } else {
+         return new EasingConfig(mem.get(PacketIO.PROTO_FLOAT, offset + 0), EasingType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 4)));
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeFloatLE(this.time);
       buf.writeByte(this.type.getValue());
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_FLOAT, offset + 0, this.time);
+      mem.set(PacketIO.PROTO_BYTE, offset + 4, (byte)this.type.getValue());
+      return 5;
    }
 
    public int computeSize() {

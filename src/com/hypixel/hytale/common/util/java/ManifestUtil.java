@@ -41,7 +41,7 @@ public class ManifestUtil {
 
          return theManifest;
       } catch (Throwable t) {
-         HytaleLogger.getLogger().at(Level.WARNING).log("Exception was thrown getting manifest!", t);
+         HytaleLogger.getLogger().at(Level.WARNING).withCause(t).log("Exception was thrown getting manifest!");
          return null;
       }
    });
@@ -53,7 +53,7 @@ public class ManifestUtil {
                ? "NoJar"
                : Objects.requireNonNull(localManifest.getMainAttributes().getValue("Implementation-Version"), "Null implementation version!");
          } catch (Throwable t) {
-            HytaleLogger.getLogger().at(Level.WARNING).log("Exception was thrown getting implementation version!", t);
+            HytaleLogger.getLogger().at(Level.WARNING).withCause(t).log("Exception was thrown getting implementation version!");
             return "UNKNOWN";
          }
       }
@@ -66,7 +66,7 @@ public class ManifestUtil {
                ? "NoJar"
                : Objects.requireNonNull(localManifest.getMainAttributes().getValue("Implementation-Revision-Id"), "Null implementation revision id!");
          } catch (Throwable t) {
-            HytaleLogger.getLogger().at(Level.WARNING).log("Exception was thrown getting implementation revision id!", t);
+            HytaleLogger.getLogger().at(Level.WARNING).withCause(t).log("Exception was thrown getting implementation revision id!");
             return "UNKNOWN";
          }
       }
@@ -81,7 +81,7 @@ public class ManifestUtil {
          String value = localManifest.getMainAttributes().getValue("Implementation-Patchline");
          return value != null && !value.isEmpty() ? value : "dev";
       } catch (Throwable t) {
-         HytaleLogger.getLogger().at(Level.WARNING).log("Exception was thrown getting implementation patchline!", t);
+         HytaleLogger.getLogger().at(Level.WARNING).withCause(t).log("Exception was thrown getting implementation patchline!");
          return "dev";
       }
    });

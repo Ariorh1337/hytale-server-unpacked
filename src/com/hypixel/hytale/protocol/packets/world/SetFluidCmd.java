@@ -1,8 +1,10 @@
 package com.hypixel.hytale.protocol.packets.world;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -48,10 +50,57 @@ public class SetFluidCmd {
       return 7;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 7L;
+   }
+
+   public static short getIndex(MemorySegment mem) {
+      return getIndex(mem, 0);
+   }
+
+   public static short getIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_SHORT, offset + 0);
+   }
+
+   public static int getFluidId(MemorySegment mem) {
+      return getFluidId(mem, 0);
+   }
+
+   public static int getFluidId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 2);
+   }
+
+   public static byte getFluidLevel(MemorySegment mem) {
+      return getFluidLevel(mem, 0);
+   }
+
+   public static byte getFluidLevel(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BYTE, offset + 6);
+   }
+
+   public static SetFluidCmd toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static SetFluidCmd toObject(MemorySegment mem, int offset) {
+      if (offset + 7 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("SetFluidCmd", offset + 7, (int)mem.byteSize());
+      } else {
+         return new SetFluidCmd(mem.get(PacketIO.PROTO_SHORT, offset + 0), mem.get(PacketIO.PROTO_INT, offset + 2), mem.get(PacketIO.PROTO_BYTE, offset + 6));
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeShortLE(this.index);
       buf.writeIntLE(this.fluidId);
       buf.writeByte(this.fluidLevel);
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_SHORT, offset + 0, this.index);
+      mem.set(PacketIO.PROTO_INT, offset + 2, this.fluidId);
+      mem.set(PacketIO.PROTO_BYTE, offset + 6, this.fluidLevel);
+      return 7;
    }
 
    public int computeSize() {

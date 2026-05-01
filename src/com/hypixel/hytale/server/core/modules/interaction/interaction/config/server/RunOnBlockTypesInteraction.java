@@ -127,6 +127,8 @@ public class RunOnBlockTypesInteraction extends SimpleInteraction {
                   case Finished:
                      anySucceeded = true;
                   case Failed:
+                  case Skip:
+                  case ItemChanged:
                }
             }
 

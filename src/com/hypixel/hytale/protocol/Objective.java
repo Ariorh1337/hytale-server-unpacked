@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.UUID;
@@ -204,6 +205,168 @@ public class Objective {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 33L;
+   }
+
+   public static UUID getObjectiveUuid(MemorySegment mem) {
+      return getObjectiveUuid(mem, 0);
+   }
+
+   public static UUID getObjectiveUuid(MemorySegment mem, int offset) {
+      return PacketIO.readUUID(mem, offset + 1);
+   }
+
+   @Nullable
+   public static FormattedMessage getObjectiveTitleKey(MemorySegment mem) {
+      return getObjectiveTitleKey(mem, 0);
+   }
+
+   @Nullable
+   public static FormattedMessage getObjectiveTitleKey(MemorySegment mem, int offset) {
+      return hasObjectiveTitleKey(mem, offset) ? FormattedMessage.toObject(mem, offset + getValidatedOffset(mem, offset, 17, 33, "ObjectiveTitleKey")) : null;
+   }
+
+   @Nullable
+   public static FormattedMessage getObjectiveDescriptionKey(MemorySegment mem) {
+      return getObjectiveDescriptionKey(mem, 0);
+   }
+
+   @Nullable
+   public static FormattedMessage getObjectiveDescriptionKey(MemorySegment mem, int offset) {
+      return hasObjectiveDescriptionKey(mem, offset)
+         ? FormattedMessage.toObject(mem, offset + getValidatedOffset(mem, offset, 21, 33, "ObjectiveDescriptionKey"))
+         : null;
+   }
+
+   @Nullable
+   public static String getObjectiveLineId(MemorySegment mem) {
+      return getObjectiveLineId(mem, 0);
+   }
+
+   @Nullable
+   public static String getObjectiveLineId(MemorySegment mem, int offset) {
+      return hasObjectiveLineId(mem, offset)
+         ? PacketIO.readVarString("ObjectiveLineId", mem, offset + getValidatedOffset(mem, offset, 25, 33, "ObjectiveLineId"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static ObjectiveTask[] getTasks(MemorySegment mem) {
+      return getTasks(mem, 0);
+   }
+
+   @Nullable
+   public static ObjectiveTask[] getTasks(MemorySegment mem, int offset) {
+      if (!hasTasks(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 29, 33, "Tasks");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Tasks", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Tasks", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Tasks", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      ObjectiveTask[] data = new ObjectiveTask[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = ObjectiveTask.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   public static boolean hasObjectiveTitleKey(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasObjectiveDescriptionKey(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasObjectiveLineId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasTasks(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static Objective toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static Objective toObject(MemorySegment mem, int offset) {
+      if (offset + 33 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Objective", offset + 33, (int)mem.byteSize());
+      }
+
+      ObjectiveTask[] tasks = null;
+      if (hasTasks(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 29, 33, "Tasks");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Tasks", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Tasks", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Tasks", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         tasks = new ObjectiveTask[len];
+
+         for (int i = 0; i < len; i++) {
+            tasks[i] = ObjectiveTask.toObject(mem, off);
+            off += tasks[i].computeSize();
+         }
+      }
+
+      return new Objective(
+         PacketIO.readUUID(mem, offset + 1),
+         hasObjectiveTitleKey(mem, offset) ? FormattedMessage.toObject(mem, offset + getValidatedOffset(mem, offset, 17, 33, "ObjectiveTitleKey")) : null,
+         hasObjectiveDescriptionKey(mem, offset)
+            ? FormattedMessage.toObject(mem, offset + getValidatedOffset(mem, offset, 21, 33, "ObjectiveDescriptionKey"))
+            : null,
+         hasObjectiveLineId(mem, offset)
+            ? PacketIO.readVarString("ObjectiveLineId", mem, offset + getValidatedOffset(mem, offset, 25, 33, "ObjectiveLineId"), 4096000, PacketIO.UTF8)
+            : null,
+         tasks
+      );
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -269,6 +432,69 @@ public class Objective {
       } else {
          buf.setIntLE(tasksOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.objectiveTitleKey != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.objectiveDescriptionKey != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.objectiveLineId != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.tasks != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      PacketIO.writeUUID(mem, offset + 1, this.objectiveUuid);
+      int varOffset = offset + 33;
+      if (this.objectiveTitleKey != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 17, varOffset - offset - 33);
+         varOffset += this.objectiveTitleKey.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 17, -1);
+      }
+
+      if (this.objectiveDescriptionKey != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 21, varOffset - offset - 33);
+         varOffset += this.objectiveDescriptionKey.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 21, -1);
+      }
+
+      if (this.objectiveLineId != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 25, varOffset - offset - 33);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.objectiveLineId, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 25, -1);
+      }
+
+      if (this.tasks != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 29, varOffset - offset - 33);
+         if (this.tasks.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Tasks", this.tasks.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.tasks.length);
+         int tasksValueOffset = 0;
+
+         for (int i = 0; i < this.tasks.length; i++) {
+            tasksValueOffset += this.tasks[i].serialize(mem, varOffset + tasksValueOffset);
+         }
+
+         varOffset += tasksValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 29, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

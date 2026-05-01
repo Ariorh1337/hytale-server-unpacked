@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -101,6 +102,92 @@ public class UpdateServerPlayerListPing implements Packet, ToClientPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 1L;
+   }
+
+   @Nullable
+   public static Map<UUID, Integer> getPlayers(MemorySegment mem) {
+      return getPlayers(mem, 0);
+   }
+
+   @Nullable
+   public static Map<UUID, Integer> getPlayers(MemorySegment mem, int offset) {
+      if (!hasPlayers(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + 1;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Players", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("Players", len, 4096000);
+      }
+
+      Map<UUID, Integer> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         UUID key = PacketIO.readUUID(mem, off);
+         off += 16;
+         int value = mem.get(PacketIO.PROTO_INT, off);
+         off += 4;
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("Players", key);
+         }
+      }
+
+      return data;
+   }
+
+   public static boolean hasPlayers(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static UpdateServerPlayerListPing toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UpdateServerPlayerListPing toObject(MemorySegment mem, int offset) {
+      if (offset + 1 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("UpdateServerPlayerListPing", offset + 1, (int)mem.byteSize());
+      }
+
+      Map<UUID, Integer> players = null;
+      if (hasPlayers(mem, offset)) {
+         int off = offset + 1;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Players", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Players", len, 4096000);
+         }
+
+         players = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            UUID key = PacketIO.readUUID(mem, off);
+            off += 16;
+            int value = mem.get(PacketIO.PROTO_INT, off);
+            off += 4;
+            if (players.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("Players", key);
+            }
+         }
+      }
+
+      return new UpdateServerPlayerListPing(players);
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -121,6 +208,33 @@ public class UpdateServerPlayerListPing implements Packet, ToClientPacket {
             buf.writeIntLE(e.getValue());
          }
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.players != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 1;
+      if (this.players != null) {
+         if (this.players.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Players", this.players.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.players.size());
+
+         for (Entry<UUID, Integer> e : this.players.entrySet()) {
+            PacketIO.writeUUID(mem, varOffset, e.getKey());
+            varOffset += 16;
+            mem.set(PacketIO.PROTO_INT, varOffset, e.getValue());
+            varOffset += 4;
+         }
+      }
+
+      return varOffset - offset;
    }
 
    @Override

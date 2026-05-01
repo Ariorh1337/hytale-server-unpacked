@@ -53,7 +53,7 @@ import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.player.ChunkTracker;
-import com.hypixel.hytale.server.core.modules.entity.tracker.LegacyEntityTrackerSystems;
+import com.hypixel.hytale.server.core.modules.entity.tracker.EntityTrackerSystems;
 import com.hypixel.hytale.server.core.modules.time.TimeResource;
 import com.hypixel.hytale.server.core.modules.time.WorldTimeResource;
 import com.hypixel.hytale.server.core.prefab.selection.buffer.impl.IPrefabBuffer;
@@ -972,7 +972,7 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
       PlayerConfigData configData = playerComponent.getPlayerConfigData();
       configData.setWorld(this.name);
       if (clearWorld) {
-         LegacyEntityTrackerSystems.clear(playerComponent, holder);
+         EntityTrackerSystems.clear(holder);
          ChunkTracker chunkTrackerComponent = holder.getComponent(ChunkTracker.getComponentType());
          if (chunkTrackerComponent != null) {
             chunkTrackerComponent.unloadAll(playerRefComponent);

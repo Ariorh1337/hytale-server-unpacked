@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import java.util.UUID;
 import javax.annotation.Nonnull;
@@ -81,6 +82,57 @@ public class UpdateObjectiveTask implements Packet, ToClientPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 21L;
+   }
+
+   public static UUID getObjectiveUuid(MemorySegment mem) {
+      return getObjectiveUuid(mem, 0);
+   }
+
+   public static UUID getObjectiveUuid(MemorySegment mem, int offset) {
+      return PacketIO.readUUID(mem, offset + 1);
+   }
+
+   public static int getTaskIndex(MemorySegment mem) {
+      return getTaskIndex(mem, 0);
+   }
+
+   public static int getTaskIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 17);
+   }
+
+   @Nullable
+   public static ObjectiveTask getTask(MemorySegment mem) {
+      return getTask(mem, 0);
+   }
+
+   @Nullable
+   public static ObjectiveTask getTask(MemorySegment mem, int offset) {
+      return hasTask(mem, offset) ? ObjectiveTask.toObject(mem, offset + 21) : null;
+   }
+
+   public static boolean hasTask(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static UpdateObjectiveTask toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UpdateObjectiveTask toObject(MemorySegment mem, int offset) {
+      if (offset + 21 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("UpdateObjectiveTask", offset + 21, (int)mem.byteSize());
+      } else {
+         return new UpdateObjectiveTask(
+            PacketIO.readUUID(mem, offset + 1),
+            mem.get(PacketIO.PROTO_INT, offset + 17),
+            hasTask(mem, offset) ? ObjectiveTask.toObject(mem, offset + 21) : null
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -94,6 +146,24 @@ public class UpdateObjectiveTask implements Packet, ToClientPacket {
       if (this.task != null) {
          this.task.serialize(buf);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.task != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      PacketIO.writeUUID(mem, offset + 1, this.objectiveUuid);
+      mem.set(PacketIO.PROTO_INT, offset + 17, this.taskIndex);
+      int varOffset = offset + 21;
+      if (this.task != null) {
+         varOffset += this.task.serialize(mem, varOffset);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

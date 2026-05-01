@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -329,6 +330,263 @@ public class EntityEffect {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 49L;
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem) {
+      return getId(mem, 0);
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem, int offset) {
+      return hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 25, 49, "Id"), 4096000, PacketIO.UTF8) : null;
+   }
+
+   @Nullable
+   public static String getName(MemorySegment mem) {
+      return getName(mem, 0);
+   }
+
+   @Nullable
+   public static String getName(MemorySegment mem, int offset) {
+      return hasName(mem, offset)
+         ? PacketIO.readVarString("Name", mem, offset + getValidatedOffset(mem, offset, 29, 49, "Name"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static ApplicationEffects getApplicationEffects(MemorySegment mem) {
+      return getApplicationEffects(mem, 0);
+   }
+
+   @Nullable
+   public static ApplicationEffects getApplicationEffects(MemorySegment mem, int offset) {
+      return hasApplicationEffects(mem, offset)
+         ? ApplicationEffects.toObject(mem, offset + getValidatedOffset(mem, offset, 33, 49, "ApplicationEffects"))
+         : null;
+   }
+
+   public static int getWorldRemovalSoundEventIndex(MemorySegment mem) {
+      return getWorldRemovalSoundEventIndex(mem, 0);
+   }
+
+   public static int getWorldRemovalSoundEventIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   public static int getLocalRemovalSoundEventIndex(MemorySegment mem) {
+      return getLocalRemovalSoundEventIndex(mem, 0);
+   }
+
+   public static int getLocalRemovalSoundEventIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 5);
+   }
+
+   @Nullable
+   public static ModelOverride getModelOverride(MemorySegment mem) {
+      return getModelOverride(mem, 0);
+   }
+
+   @Nullable
+   public static ModelOverride getModelOverride(MemorySegment mem, int offset) {
+      return hasModelOverride(mem, offset) ? ModelOverride.toObject(mem, offset + getValidatedOffset(mem, offset, 37, 49, "ModelOverride")) : null;
+   }
+
+   public static float getDuration(MemorySegment mem) {
+      return getDuration(mem, 0);
+   }
+
+   public static float getDuration(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 9);
+   }
+
+   public static boolean getInfinite(MemorySegment mem) {
+      return getInfinite(mem, 0);
+   }
+
+   public static boolean getInfinite(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 13);
+   }
+
+   public static boolean getDebuff(MemorySegment mem) {
+      return getDebuff(mem, 0);
+   }
+
+   public static boolean getDebuff(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 14);
+   }
+
+   @Nullable
+   public static String getStatusEffectIcon(MemorySegment mem) {
+      return getStatusEffectIcon(mem, 0);
+   }
+
+   @Nullable
+   public static String getStatusEffectIcon(MemorySegment mem, int offset) {
+      return hasStatusEffectIcon(mem, offset)
+         ? PacketIO.readVarString("StatusEffectIcon", mem, offset + getValidatedOffset(mem, offset, 41, 49, "StatusEffectIcon"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static OverlapBehavior getOverlapBehavior(MemorySegment mem) {
+      return getOverlapBehavior(mem, 0);
+   }
+
+   public static OverlapBehavior getOverlapBehavior(MemorySegment mem, int offset) {
+      return OverlapBehavior.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 15));
+   }
+
+   public static double getDamageCalculatorCooldown(MemorySegment mem) {
+      return getDamageCalculatorCooldown(mem, 0);
+   }
+
+   public static double getDamageCalculatorCooldown(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_DOUBLE, offset + 16);
+   }
+
+   @Nullable
+   public static Map<Integer, Float> getStatModifiers(MemorySegment mem) {
+      return getStatModifiers(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Integer, Float> getStatModifiers(MemorySegment mem, int offset) {
+      if (!hasStatModifiers(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 45, 49, "StatModifiers");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("StatModifiers", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("StatModifiers", len, 4096000);
+      }
+
+      Map<Integer, Float> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         int key = mem.get(PacketIO.PROTO_INT, off);
+         off += 4;
+         float value = mem.get(PacketIO.PROTO_FLOAT, off);
+         off += 4;
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("StatModifiers", key);
+         }
+      }
+
+      return data;
+   }
+
+   public static ValueType getValueType(MemorySegment mem) {
+      return getValueType(mem, 0);
+   }
+
+   public static ValueType getValueType(MemorySegment mem, int offset) {
+      return ValueType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 24));
+   }
+
+   public static boolean hasId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasName(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasApplicationEffects(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasModelOverride(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasStatusEffectIcon(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 16) != 0;
+   }
+
+   public static boolean hasStatModifiers(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 32) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static EntityEffect toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static EntityEffect toObject(MemorySegment mem, int offset) {
+      if (offset + 49 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("EntityEffect", offset + 49, (int)mem.byteSize());
+      }
+
+      Map<Integer, Float> statModifiers = null;
+      if (hasStatModifiers(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 45, 49, "StatModifiers");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("StatModifiers", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("StatModifiers", len, 4096000);
+         }
+
+         statModifiers = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            int key = mem.get(PacketIO.PROTO_INT, off);
+            off += 4;
+            float value = mem.get(PacketIO.PROTO_FLOAT, off);
+            off += 4;
+            if (statModifiers.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("StatModifiers", key);
+            }
+         }
+      }
+
+      return new EntityEffect(
+         hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 25, 49, "Id"), 4096000, PacketIO.UTF8) : null,
+         hasName(mem, offset) ? PacketIO.readVarString("Name", mem, offset + getValidatedOffset(mem, offset, 29, 49, "Name"), 4096000, PacketIO.UTF8) : null,
+         hasApplicationEffects(mem, offset) ? ApplicationEffects.toObject(mem, offset + getValidatedOffset(mem, offset, 33, 49, "ApplicationEffects")) : null,
+         mem.get(PacketIO.PROTO_INT, offset + 1),
+         mem.get(PacketIO.PROTO_INT, offset + 5),
+         hasModelOverride(mem, offset) ? ModelOverride.toObject(mem, offset + getValidatedOffset(mem, offset, 37, 49, "ModelOverride")) : null,
+         mem.get(PacketIO.PROTO_FLOAT, offset + 9),
+         mem.get(PacketIO.PROTO_BOOL, offset + 13),
+         mem.get(PacketIO.PROTO_BOOL, offset + 14),
+         hasStatusEffectIcon(mem, offset)
+            ? PacketIO.readVarString("StatusEffectIcon", mem, offset + getValidatedOffset(mem, offset, 41, 49, "StatusEffectIcon"), 4096000, PacketIO.UTF8)
+            : null,
+         OverlapBehavior.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 15)),
+         mem.get(PacketIO.PROTO_DOUBLE, offset + 16),
+         statModifiers,
+         ValueType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 24))
+      );
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -428,6 +686,98 @@ public class EntityEffect {
       } else {
          buf.setIntLE(statModifiersOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.id != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.name != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.applicationEffects != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.modelOverride != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.statusEffectIcon != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.statModifiers != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.worldRemovalSoundEventIndex);
+      mem.set(PacketIO.PROTO_INT, offset + 5, this.localRemovalSoundEventIndex);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 9, this.duration);
+      mem.set(PacketIO.PROTO_BOOL, offset + 13, this.infinite);
+      mem.set(PacketIO.PROTO_BOOL, offset + 14, this.debuff);
+      mem.set(PacketIO.PROTO_BYTE, offset + 15, (byte)this.overlapBehavior.getValue());
+      mem.set(PacketIO.PROTO_DOUBLE, offset + 16, this.damageCalculatorCooldown);
+      mem.set(PacketIO.PROTO_BYTE, offset + 24, (byte)this.valueType.getValue());
+      int varOffset = offset + 49;
+      if (this.id != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 25, varOffset - offset - 49);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.id, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 25, -1);
+      }
+
+      if (this.name != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 29, varOffset - offset - 49);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.name, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 29, -1);
+      }
+
+      if (this.applicationEffects != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 33, varOffset - offset - 49);
+         varOffset += this.applicationEffects.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 33, -1);
+      }
+
+      if (this.modelOverride != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 37, varOffset - offset - 49);
+         varOffset += this.modelOverride.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 37, -1);
+      }
+
+      if (this.statusEffectIcon != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 41, varOffset - offset - 49);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.statusEffectIcon, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 41, -1);
+      }
+
+      if (this.statModifiers != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 45, varOffset - offset - 49);
+         if (this.statModifiers.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("StatModifiers", this.statModifiers.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.statModifiers.size());
+
+         for (Entry<Integer, Float> e : this.statModifiers.entrySet()) {
+            mem.set(PacketIO.PROTO_INT, varOffset, e.getKey());
+            varOffset += 4;
+            mem.set(PacketIO.PROTO_FLOAT, varOffset, e.getValue());
+            varOffset += 4;
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 45, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

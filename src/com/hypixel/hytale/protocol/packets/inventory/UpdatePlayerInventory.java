@@ -4,9 +4,11 @@ import com.hypixel.hytale.protocol.InventorySection;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -225,6 +227,128 @@ public class UpdatePlayerInventory implements Packet, ToClientPacket {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 25L;
+   }
+
+   @Nullable
+   public static InventorySection getStorage(MemorySegment mem) {
+      return getStorage(mem, 0);
+   }
+
+   @Nullable
+   public static InventorySection getStorage(MemorySegment mem, int offset) {
+      return hasStorage(mem, offset) ? InventorySection.toObject(mem, offset + getValidatedOffset(mem, offset, 1, 25, "Storage")) : null;
+   }
+
+   @Nullable
+   public static InventorySection getArmor(MemorySegment mem) {
+      return getArmor(mem, 0);
+   }
+
+   @Nullable
+   public static InventorySection getArmor(MemorySegment mem, int offset) {
+      return hasArmor(mem, offset) ? InventorySection.toObject(mem, offset + getValidatedOffset(mem, offset, 5, 25, "Armor")) : null;
+   }
+
+   @Nullable
+   public static InventorySection getHotbar(MemorySegment mem) {
+      return getHotbar(mem, 0);
+   }
+
+   @Nullable
+   public static InventorySection getHotbar(MemorySegment mem, int offset) {
+      return hasHotbar(mem, offset) ? InventorySection.toObject(mem, offset + getValidatedOffset(mem, offset, 9, 25, "Hotbar")) : null;
+   }
+
+   @Nullable
+   public static InventorySection getUtility(MemorySegment mem) {
+      return getUtility(mem, 0);
+   }
+
+   @Nullable
+   public static InventorySection getUtility(MemorySegment mem, int offset) {
+      return hasUtility(mem, offset) ? InventorySection.toObject(mem, offset + getValidatedOffset(mem, offset, 13, 25, "Utility")) : null;
+   }
+
+   @Nullable
+   public static InventorySection getTools(MemorySegment mem) {
+      return getTools(mem, 0);
+   }
+
+   @Nullable
+   public static InventorySection getTools(MemorySegment mem, int offset) {
+      return hasTools(mem, offset) ? InventorySection.toObject(mem, offset + getValidatedOffset(mem, offset, 17, 25, "Tools")) : null;
+   }
+
+   @Nullable
+   public static InventorySection getBackpack(MemorySegment mem) {
+      return getBackpack(mem, 0);
+   }
+
+   @Nullable
+   public static InventorySection getBackpack(MemorySegment mem, int offset) {
+      return hasBackpack(mem, offset) ? InventorySection.toObject(mem, offset + getValidatedOffset(mem, offset, 21, 25, "Backpack")) : null;
+   }
+
+   public static boolean hasStorage(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasArmor(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasHotbar(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasUtility(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasTools(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 16) != 0;
+   }
+
+   public static boolean hasBackpack(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 32) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static UpdatePlayerInventory toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UpdatePlayerInventory toObject(MemorySegment mem, int offset) {
+      if (offset + 25 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("UpdatePlayerInventory", offset + 25, (int)mem.byteSize());
+      } else {
+         return new UpdatePlayerInventory(
+            hasStorage(mem, offset) ? InventorySection.toObject(mem, offset + getValidatedOffset(mem, offset, 1, 25, "Storage")) : null,
+            hasArmor(mem, offset) ? InventorySection.toObject(mem, offset + getValidatedOffset(mem, offset, 5, 25, "Armor")) : null,
+            hasHotbar(mem, offset) ? InventorySection.toObject(mem, offset + getValidatedOffset(mem, offset, 9, 25, "Hotbar")) : null,
+            hasUtility(mem, offset) ? InventorySection.toObject(mem, offset + getValidatedOffset(mem, offset, 13, 25, "Utility")) : null,
+            hasTools(mem, offset) ? InventorySection.toObject(mem, offset + getValidatedOffset(mem, offset, 17, 25, "Tools")) : null,
+            hasBackpack(mem, offset) ? InventorySection.toObject(mem, offset + getValidatedOffset(mem, offset, 21, 25, "Backpack")) : null
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -308,6 +432,80 @@ public class UpdatePlayerInventory implements Packet, ToClientPacket {
       } else {
          buf.setIntLE(backpackOffsetSlot, -1);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.storage != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.armor != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.hotbar != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.utility != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.tools != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.backpack != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 25;
+      if (this.storage != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 1, varOffset - offset - 25);
+         varOffset += this.storage.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 1, -1);
+      }
+
+      if (this.armor != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 5, varOffset - offset - 25);
+         varOffset += this.armor.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 5, -1);
+      }
+
+      if (this.hotbar != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 9, varOffset - offset - 25);
+         varOffset += this.hotbar.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 9, -1);
+      }
+
+      if (this.utility != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 13, varOffset - offset - 25);
+         varOffset += this.utility.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 13, -1);
+      }
+
+      if (this.tools != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 17, varOffset - offset - 25);
+         varOffset += this.tools.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 17, -1);
+      }
+
+      if (this.backpack != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 21, varOffset - offset - 25);
+         varOffset += this.backpack.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 21, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

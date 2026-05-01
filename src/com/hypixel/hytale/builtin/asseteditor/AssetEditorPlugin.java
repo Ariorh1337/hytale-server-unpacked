@@ -416,6 +416,9 @@ public class AssetEditorPlugin extends JavaPlugin {
 
       try {
          switch (this.initState) {
+            case NOT_INITIALIZED:
+            default:
+               break;
             case INITIALIZING:
                this.scheduledReinitFuture = HytaleServer.SCHEDULED_EXECUTOR.schedule(this::tryReinitializeAssetEditor, 1L, TimeUnit.SECONDS);
                break;

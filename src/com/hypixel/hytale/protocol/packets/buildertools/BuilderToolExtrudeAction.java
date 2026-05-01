@@ -3,9 +3,11 @@ package com.hypixel.hytale.protocol.packets.buildertools;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -90,6 +92,104 @@ public class BuilderToolExtrudeAction implements Packet, ToServerPacket {
       return 30;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 30L;
+   }
+
+   public static int getX(MemorySegment mem) {
+      return getX(mem, 0);
+   }
+
+   public static int getX(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 0);
+   }
+
+   public static int getY(MemorySegment mem) {
+      return getY(mem, 0);
+   }
+
+   public static int getY(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 4);
+   }
+
+   public static int getZ(MemorySegment mem) {
+      return getZ(mem, 0);
+   }
+
+   public static int getZ(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 8);
+   }
+
+   public static int getXNormal(MemorySegment mem) {
+      return getXNormal(mem, 0);
+   }
+
+   public static int getXNormal(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 12);
+   }
+
+   public static int getYNormal(MemorySegment mem) {
+      return getYNormal(mem, 0);
+   }
+
+   public static int getYNormal(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 16);
+   }
+
+   public static int getZNormal(MemorySegment mem) {
+      return getZNormal(mem, 0);
+   }
+
+   public static int getZNormal(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 20);
+   }
+
+   public static ExtrudeMode getMode(MemorySegment mem) {
+      return getMode(mem, 0);
+   }
+
+   public static ExtrudeMode getMode(MemorySegment mem, int offset) {
+      return ExtrudeMode.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 24));
+   }
+
+   public static boolean getIsHoldDownInteraction(MemorySegment mem) {
+      return getIsHoldDownInteraction(mem, 0);
+   }
+
+   public static boolean getIsHoldDownInteraction(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 25);
+   }
+
+   public static int getUndoGroupSize(MemorySegment mem) {
+      return getUndoGroupSize(mem, 0);
+   }
+
+   public static int getUndoGroupSize(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 26);
+   }
+
+   public static BuilderToolExtrudeAction toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static BuilderToolExtrudeAction toObject(MemorySegment mem, int offset) {
+      if (offset + 30 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BuilderToolExtrudeAction", offset + 30, (int)mem.byteSize());
+      } else {
+         return new BuilderToolExtrudeAction(
+            mem.get(PacketIO.PROTO_INT, offset + 0),
+            mem.get(PacketIO.PROTO_INT, offset + 4),
+            mem.get(PacketIO.PROTO_INT, offset + 8),
+            mem.get(PacketIO.PROTO_INT, offset + 12),
+            mem.get(PacketIO.PROTO_INT, offset + 16),
+            mem.get(PacketIO.PROTO_INT, offset + 20),
+            ExtrudeMode.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 24)),
+            mem.get(PacketIO.PROTO_BOOL, offset + 25),
+            mem.get(PacketIO.PROTO_INT, offset + 26)
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeIntLE(this.x);
@@ -101,6 +201,20 @@ public class BuilderToolExtrudeAction implements Packet, ToServerPacket {
       buf.writeByte(this.mode.getValue());
       buf.writeByte(this.isHoldDownInteraction ? 1 : 0);
       buf.writeIntLE(this.undoGroupSize);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_INT, offset + 0, this.x);
+      mem.set(PacketIO.PROTO_INT, offset + 4, this.y);
+      mem.set(PacketIO.PROTO_INT, offset + 8, this.z);
+      mem.set(PacketIO.PROTO_INT, offset + 12, this.xNormal);
+      mem.set(PacketIO.PROTO_INT, offset + 16, this.yNormal);
+      mem.set(PacketIO.PROTO_INT, offset + 20, this.zNormal);
+      mem.set(PacketIO.PROTO_BYTE, offset + 24, (byte)this.mode.getValue());
+      mem.set(PacketIO.PROTO_BOOL, offset + 25, this.isHoldDownInteraction);
+      mem.set(PacketIO.PROTO_INT, offset + 26, this.undoGroupSize);
+      return 30;
    }
 
    @Override

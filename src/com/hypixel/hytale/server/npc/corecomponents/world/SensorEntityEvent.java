@@ -33,10 +33,6 @@ public class SensorEntityEvent extends SensorEvent {
          case NpcOnly:
             this.playerEventMessageSlot = -1;
             this.npcEventMessageSlot = support.getEntityEventSlot(type, npcGroup, this.range, false);
-            break;
-         default:
-            this.playerEventMessageSlot = -1;
-            this.npcEventMessageSlot = -1;
       }
    }
 

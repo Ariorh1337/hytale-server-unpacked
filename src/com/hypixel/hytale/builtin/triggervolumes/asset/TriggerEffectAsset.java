@@ -8,7 +8,9 @@ import com.hypixel.hytale.builtin.triggervolumes.EntityTargetType;
 import com.hypixel.hytale.builtin.triggervolumes.effect.TriggerEffect;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.codecs.EnumCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Set;
 import javax.annotation.Nonnull;
@@ -21,7 +23,11 @@ public class TriggerEffectAsset implements JsonAssetWithMap<String, DefaultAsset
       )
       .append(new KeyedCodec<>("Effects", new ArrayCodec<>(TriggerEffect.CODEC, TriggerEffect[]::new)), (a, v) -> a.effects = v, a -> a.effects)
       .add()
-      .append(new KeyedCodec<>("TargetTypes", Codec.STRING_ARRAY, false), (a, v) -> a.targetTypeNames = v, a -> a.targetTypeNames)
+      .append(
+         new KeyedCodec<>("TargetTypes", new ArrayCodec<>(new EnumCodec<>(EntityTargetType.class), EntityTargetType[]::new), false),
+         (a, v) -> a.targetTypeArray = v,
+         a -> a.targetTypeArray
+      )
       .add()
       .afterDecode(TriggerEffectAsset::resolveTargetTypes)
       .build();
@@ -29,18 +35,13 @@ public class TriggerEffectAsset implements JsonAssetWithMap<String, DefaultAsset
    private AssetExtraInfo.Data data;
    private TriggerEffect[] effects;
    @Nullable
-   private String[] targetTypeNames;
+   private EntityTargetType[] targetTypeArray;
    private transient Set<EntityTargetType> targetTypes;
 
    private void resolveTargetTypes() {
       this.targetTypes = EnumSet.noneOf(EntityTargetType.class);
-      if (this.targetTypeNames != null) {
-         for (String name : this.targetTypeNames) {
-            try {
-               this.targetTypes.add(EntityTargetType.valueOf(name.toUpperCase()));
-            } catch (IllegalArgumentException var6) {
-            }
-         }
+      if (this.targetTypeArray != null) {
+         this.targetTypes.addAll(Arrays.asList(this.targetTypeArray));
       }
 
       if (this.targetTypes.isEmpty()) {

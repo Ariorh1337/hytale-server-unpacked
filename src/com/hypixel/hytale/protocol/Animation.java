@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -164,6 +165,166 @@ public class Animation {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 30L;
+   }
+
+   @Nullable
+   public static String getName(MemorySegment mem) {
+      return getName(mem, 0);
+   }
+
+   @Nullable
+   public static String getName(MemorySegment mem, int offset) {
+      return hasName(mem, offset)
+         ? PacketIO.readVarString("Name", mem, offset + getValidatedOffset(mem, offset, 22, 30, "Name"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static float getSpeed(MemorySegment mem) {
+      return getSpeed(mem, 0);
+   }
+
+   public static float getSpeed(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 1);
+   }
+
+   public static float getBlendingDuration(MemorySegment mem) {
+      return getBlendingDuration(mem, 0);
+   }
+
+   public static float getBlendingDuration(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 5);
+   }
+
+   public static boolean getLooping(MemorySegment mem) {
+      return getLooping(mem, 0);
+   }
+
+   public static boolean getLooping(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 9);
+   }
+
+   public static float getWeight(MemorySegment mem) {
+      return getWeight(mem, 0);
+   }
+
+   public static float getWeight(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 10);
+   }
+
+   @Nullable
+   public static int[] getFootstepIntervals(MemorySegment mem) {
+      return getFootstepIntervals(mem, 0);
+   }
+
+   @Nullable
+   public static int[] getFootstepIntervals(MemorySegment mem, int offset) {
+      if (!hasFootstepIntervals(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 26, 30, "FootstepIntervals");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("FootstepIntervals", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("FootstepIntervals", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 4L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("FootstepIntervals", off + lenOffset + len * 4, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      int[] data = new int[len];
+      MemorySegment.copy(mem, PacketIO.PROTO_INT, off, data, 0, len);
+      return data;
+   }
+
+   public static int getSoundEventIndex(MemorySegment mem) {
+      return getSoundEventIndex(mem, 0);
+   }
+
+   public static int getSoundEventIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 14);
+   }
+
+   public static int getPassiveLoopCount(MemorySegment mem) {
+      return getPassiveLoopCount(mem, 0);
+   }
+
+   public static int getPassiveLoopCount(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 18);
+   }
+
+   public static boolean hasName(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasFootstepIntervals(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static Animation toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static Animation toObject(MemorySegment mem, int offset) {
+      if (offset + 30 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Animation", offset + 30, (int)mem.byteSize());
+      }
+
+      int[] footstepIntervals = null;
+      if (hasFootstepIntervals(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 26, 30, "FootstepIntervals");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("FootstepIntervals", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("FootstepIntervals", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 4L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("FootstepIntervals", off + lenOffset + len * 4, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         footstepIntervals = new int[len];
+         MemorySegment.copy(mem, PacketIO.PROTO_INT, off, footstepIntervals, 0, len);
+      }
+
+      return new Animation(
+         hasName(mem, offset) ? PacketIO.readVarString("Name", mem, offset + getValidatedOffset(mem, offset, 22, 30, "Name"), 4096000, PacketIO.UTF8) : null,
+         mem.get(PacketIO.PROTO_FLOAT, offset + 1),
+         mem.get(PacketIO.PROTO_FLOAT, offset + 5),
+         mem.get(PacketIO.PROTO_BOOL, offset + 9),
+         mem.get(PacketIO.PROTO_FLOAT, offset + 10),
+         footstepIntervals,
+         mem.get(PacketIO.PROTO_INT, offset + 14),
+         mem.get(PacketIO.PROTO_INT, offset + 18)
+      );
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -208,6 +369,47 @@ public class Animation {
       } else {
          buf.setIntLE(footstepIntervalsOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.name != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.footstepIntervals != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 1, this.speed);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 5, this.blendingDuration);
+      mem.set(PacketIO.PROTO_BOOL, offset + 9, this.looping);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 10, this.weight);
+      mem.set(PacketIO.PROTO_INT, offset + 14, this.soundEventIndex);
+      mem.set(PacketIO.PROTO_INT, offset + 18, this.passiveLoopCount);
+      int varOffset = offset + 30;
+      if (this.name != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 22, varOffset - offset - 30);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.name, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 22, -1);
+      }
+
+      if (this.footstepIntervals != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 26, varOffset - offset - 30);
+         if (this.footstepIntervals.length > 4096000) {
+            throw ProtocolException.arrayTooLong("FootstepIntervals", this.footstepIntervals.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.footstepIntervals.length);
+         MemorySegment.copy(this.footstepIntervals, 0, mem, PacketIO.PROTO_INT, varOffset, this.footstepIntervals.length);
+         varOffset += this.footstepIntervals.length * 4;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 26, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

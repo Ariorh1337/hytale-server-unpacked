@@ -5,10 +5,12 @@ import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.UpdateType;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -102,6 +104,100 @@ public class UpdateFieldcraftCategories implements Packet, ToClientPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 2L;
+   }
+
+   public static UpdateType getType(MemorySegment mem) {
+      return getType(mem, 0);
+   }
+
+   public static UpdateType getType(MemorySegment mem, int offset) {
+      return UpdateType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1));
+   }
+
+   @Nullable
+   public static ItemCategory[] getItemCategories(MemorySegment mem) {
+      return getItemCategories(mem, 0);
+   }
+
+   @Nullable
+   public static ItemCategory[] getItemCategories(MemorySegment mem, int offset) {
+      if (!hasItemCategories(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + 2;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("ItemCategories", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("ItemCategories", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ItemCategories", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      ItemCategory[] data = new ItemCategory[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = ItemCategory.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   public static boolean hasItemCategories(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static UpdateFieldcraftCategories toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UpdateFieldcraftCategories toObject(MemorySegment mem, int offset) {
+      if (offset + 2 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("UpdateFieldcraftCategories", offset + 2, (int)mem.byteSize());
+      }
+
+      ItemCategory[] itemCategories = null;
+      if (hasItemCategories(mem, offset)) {
+         int off = offset + 2;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("ItemCategories", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("ItemCategories", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("ItemCategories", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         itemCategories = new ItemCategory[len];
+
+         for (int i = 0; i < len; i++) {
+            itemCategories[i] = ItemCategory.toObject(mem, off);
+            off += itemCategories[i].computeSize();
+         }
+      }
+
+      return new UpdateFieldcraftCategories(UpdateType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1)), itemCategories);
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -122,6 +218,34 @@ public class UpdateFieldcraftCategories implements Packet, ToClientPacket {
             item.serialize(buf);
          }
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.itemCategories != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.type.getValue());
+      int varOffset = offset + 2;
+      if (this.itemCategories != null) {
+         if (this.itemCategories.length > 4096000) {
+            throw ProtocolException.arrayTooLong("ItemCategories", this.itemCategories.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.itemCategories.length);
+         int itemCategoriesValueOffset = 0;
+
+         for (int i = 0; i < this.itemCategories.length; i++) {
+            itemCategoriesValueOffset += this.itemCategories[i].serialize(mem, varOffset + itemCategoriesValueOffset);
+         }
+
+         varOffset += itemCategoriesValueOffset;
+      }
+
+      return varOffset - offset;
    }
 
    @Override

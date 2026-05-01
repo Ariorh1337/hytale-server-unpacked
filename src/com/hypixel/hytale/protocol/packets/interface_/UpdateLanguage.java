@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -86,6 +87,37 @@ public class UpdateLanguage implements Packet, ToServerPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 1L;
+   }
+
+   @Nullable
+   public static String getLanguage(MemorySegment mem) {
+      return getLanguage(mem, 0);
+   }
+
+   @Nullable
+   public static String getLanguage(MemorySegment mem, int offset) {
+      return hasLanguage(mem, offset) ? PacketIO.readVarString("Language", mem, offset + 1, 4096000, PacketIO.UTF8) : null;
+   }
+
+   public static boolean hasLanguage(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static UpdateLanguage toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UpdateLanguage toObject(MemorySegment mem, int offset) {
+      if (offset + 1 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("UpdateLanguage", offset + 1, (int)mem.byteSize());
+      } else {
+         return new UpdateLanguage(hasLanguage(mem, offset) ? PacketIO.readVarString("Language", mem, offset + 1, 4096000, PacketIO.UTF8) : null);
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -97,6 +129,22 @@ public class UpdateLanguage implements Packet, ToServerPacket {
       if (this.language != null) {
          PacketIO.writeVarString(buf, this.language, 4096000);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.language != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 1;
+      if (this.language != null) {
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.language, 4096000);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

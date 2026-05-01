@@ -3,6 +3,7 @@ package com.hypixel.hytale.server.core.io.handlers.login;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.protocol.ToServerPacket;
 import com.hypixel.hytale.protocol.io.ChannelConnection;
+import com.hypixel.hytale.protocol.io.ConnectionHandler;
 import com.hypixel.hytale.protocol.packets.auth.PasswordAccepted;
 import com.hypixel.hytale.protocol.packets.auth.PasswordRejected;
 import com.hypixel.hytale.protocol.packets.auth.PasswordResponse;
@@ -53,7 +54,7 @@ public class PasswordPacketHandler extends GenericConnectionPacketHandler {
    }
 
    @Override
-   public void registered0(PacketHandler oldHandler) {
+   public void registered0(ConnectionHandler oldHandler) {
       HytaleServerConfig.TimeoutProfile timeouts = HytaleServer.get().getConfig().getConnectionTimeouts();
       if (this.passwordChallenge != null && this.passwordChallenge.length != 0) {
          LOGGER.at(Level.FINE).log("Waiting for password response from %s", this.pendingAuth.getUsername());

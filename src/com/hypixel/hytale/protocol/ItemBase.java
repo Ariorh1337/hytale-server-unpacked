@@ -6,6 +6,7 @@ import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolState;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -1415,6 +1416,1361 @@ public class ItemBase {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 260L;
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem) {
+      return getId(mem, 0);
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem, int offset) {
+      return hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 148, 260, "Id"), 4096000, PacketIO.UTF8) : null;
+   }
+
+   @Nullable
+   public static String getModel(MemorySegment mem) {
+      return getModel(mem, 0);
+   }
+
+   @Nullable
+   public static String getModel(MemorySegment mem, int offset) {
+      return hasModel(mem, offset)
+         ? PacketIO.readVarString("Model", mem, offset + getValidatedOffset(mem, offset, 152, 260, "Model"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static float getScale(MemorySegment mem) {
+      return getScale(mem, 0);
+   }
+
+   public static float getScale(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 5);
+   }
+
+   @Nullable
+   public static String getTexture(MemorySegment mem) {
+      return getTexture(mem, 0);
+   }
+
+   @Nullable
+   public static String getTexture(MemorySegment mem, int offset) {
+      return hasTexture(mem, offset)
+         ? PacketIO.readVarString("Texture", mem, offset + getValidatedOffset(mem, offset, 156, 260, "Texture"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getAnimation(MemorySegment mem) {
+      return getAnimation(mem, 0);
+   }
+
+   @Nullable
+   public static String getAnimation(MemorySegment mem, int offset) {
+      return hasAnimation(mem, offset)
+         ? PacketIO.readVarString("Animation", mem, offset + getValidatedOffset(mem, offset, 160, 260, "Animation"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getPlayerAnimationsId(MemorySegment mem) {
+      return getPlayerAnimationsId(mem, 0);
+   }
+
+   @Nullable
+   public static String getPlayerAnimationsId(MemorySegment mem, int offset) {
+      return hasPlayerAnimationsId(mem, offset)
+         ? PacketIO.readVarString("PlayerAnimationsId", mem, offset + getValidatedOffset(mem, offset, 164, 260, "PlayerAnimationsId"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static boolean getUsePlayerAnimations(MemorySegment mem) {
+      return getUsePlayerAnimations(mem, 0);
+   }
+
+   public static boolean getUsePlayerAnimations(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 9);
+   }
+
+   public static int getMaxStack(MemorySegment mem) {
+      return getMaxStack(mem, 0);
+   }
+
+   public static int getMaxStack(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 10);
+   }
+
+   public static int getReticleIndex(MemorySegment mem) {
+      return getReticleIndex(mem, 0);
+   }
+
+   public static int getReticleIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 14);
+   }
+
+   @Nullable
+   public static String getIcon(MemorySegment mem) {
+      return getIcon(mem, 0);
+   }
+
+   @Nullable
+   public static String getIcon(MemorySegment mem, int offset) {
+      return hasIcon(mem, offset)
+         ? PacketIO.readVarString("Icon", mem, offset + getValidatedOffset(mem, offset, 168, 260, "Icon"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static AssetIconProperties getIconProperties(MemorySegment mem) {
+      return getIconProperties(mem, 0);
+   }
+
+   @Nullable
+   public static AssetIconProperties getIconProperties(MemorySegment mem, int offset) {
+      return hasIconProperties(mem, offset) ? AssetIconProperties.toObject(mem, offset + 18) : null;
+   }
+
+   @Nullable
+   public static ItemTranslationProperties getTranslationProperties(MemorySegment mem) {
+      return getTranslationProperties(mem, 0);
+   }
+
+   @Nullable
+   public static ItemTranslationProperties getTranslationProperties(MemorySegment mem, int offset) {
+      return hasTranslationProperties(mem, offset)
+         ? ItemTranslationProperties.toObject(mem, offset + getValidatedOffset(mem, offset, 172, 260, "TranslationProperties"))
+         : null;
+   }
+
+   public static int getItemLevel(MemorySegment mem) {
+      return getItemLevel(mem, 0);
+   }
+
+   public static int getItemLevel(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 43);
+   }
+
+   public static int getQualityIndex(MemorySegment mem) {
+      return getQualityIndex(mem, 0);
+   }
+
+   public static int getQualityIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 47);
+   }
+
+   @Nullable
+   public static ItemResourceType[] getResourceTypes(MemorySegment mem) {
+      return getResourceTypes(mem, 0);
+   }
+
+   @Nullable
+   public static ItemResourceType[] getResourceTypes(MemorySegment mem, int offset) {
+      if (!hasResourceTypes(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 176, 260, "ResourceTypes");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("ResourceTypes", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("ResourceTypes", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ResourceTypes", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      ItemResourceType[] data = new ItemResourceType[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = ItemResourceType.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   public static boolean getConsumable(MemorySegment mem) {
+      return getConsumable(mem, 0);
+   }
+
+   public static boolean getConsumable(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 51);
+   }
+
+   public static boolean getVariant(MemorySegment mem) {
+      return getVariant(mem, 0);
+   }
+
+   public static boolean getVariant(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 52);
+   }
+
+   public static int getBlockId(MemorySegment mem) {
+      return getBlockId(mem, 0);
+   }
+
+   public static int getBlockId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 53);
+   }
+
+   @Nullable
+   public static ItemTool getTool(MemorySegment mem) {
+      return getTool(mem, 0);
+   }
+
+   @Nullable
+   public static ItemTool getTool(MemorySegment mem, int offset) {
+      return hasTool(mem, offset) ? ItemTool.toObject(mem, offset + getValidatedOffset(mem, offset, 180, 260, "Tool")) : null;
+   }
+
+   @Nullable
+   public static ItemWeapon getWeapon(MemorySegment mem) {
+      return getWeapon(mem, 0);
+   }
+
+   @Nullable
+   public static ItemWeapon getWeapon(MemorySegment mem, int offset) {
+      return hasWeapon(mem, offset) ? ItemWeapon.toObject(mem, offset + getValidatedOffset(mem, offset, 184, 260, "Weapon")) : null;
+   }
+
+   @Nullable
+   public static ItemArmor getArmor(MemorySegment mem) {
+      return getArmor(mem, 0);
+   }
+
+   @Nullable
+   public static ItemArmor getArmor(MemorySegment mem, int offset) {
+      return hasArmor(mem, offset) ? ItemArmor.toObject(mem, offset + getValidatedOffset(mem, offset, 188, 260, "Armor")) : null;
+   }
+
+   @Nullable
+   public static ItemGlider getGliderConfig(MemorySegment mem) {
+      return getGliderConfig(mem, 0);
+   }
+
+   @Nullable
+   public static ItemGlider getGliderConfig(MemorySegment mem, int offset) {
+      return hasGliderConfig(mem, offset) ? ItemGlider.toObject(mem, offset + 57) : null;
+   }
+
+   @Nullable
+   public static ItemUtility getUtility(MemorySegment mem) {
+      return getUtility(mem, 0);
+   }
+
+   @Nullable
+   public static ItemUtility getUtility(MemorySegment mem, int offset) {
+      return hasUtility(mem, offset) ? ItemUtility.toObject(mem, offset + getValidatedOffset(mem, offset, 192, 260, "Utility")) : null;
+   }
+
+   @Nullable
+   public static BlockSelectorToolData getBlockSelectorTool(MemorySegment mem) {
+      return getBlockSelectorTool(mem, 0);
+   }
+
+   @Nullable
+   public static BlockSelectorToolData getBlockSelectorTool(MemorySegment mem, int offset) {
+      return hasBlockSelectorTool(mem, offset) ? BlockSelectorToolData.toObject(mem, offset + 73) : null;
+   }
+
+   @Nullable
+   public static BuilderToolState getBuilderToolData(MemorySegment mem) {
+      return getBuilderToolData(mem, 0);
+   }
+
+   @Nullable
+   public static BuilderToolState getBuilderToolData(MemorySegment mem, int offset) {
+      return hasBuilderToolData(mem, offset) ? BuilderToolState.toObject(mem, offset + getValidatedOffset(mem, offset, 196, 260, "BuilderToolData")) : null;
+   }
+
+   @Nullable
+   public static ItemEntityConfig getItemEntity(MemorySegment mem) {
+      return getItemEntity(mem, 0);
+   }
+
+   @Nullable
+   public static ItemEntityConfig getItemEntity(MemorySegment mem, int offset) {
+      return hasItemEntity(mem, offset) ? ItemEntityConfig.toObject(mem, offset + getValidatedOffset(mem, offset, 200, 260, "ItemEntity")) : null;
+   }
+
+   @Nullable
+   public static String getSet(MemorySegment mem) {
+      return getSet(mem, 0);
+   }
+
+   @Nullable
+   public static String getSet(MemorySegment mem, int offset) {
+      return hasSet(mem, offset) ? PacketIO.readVarString("Set", mem, offset + getValidatedOffset(mem, offset, 204, 260, "Set"), 4096000, PacketIO.UTF8) : null;
+   }
+
+   @Nullable
+   public static String[] getCategories(MemorySegment mem) {
+      return getCategories(mem, 0);
+   }
+
+   @Nullable
+   public static String[] getCategories(MemorySegment mem, int offset) {
+      if (!hasCategories(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 208, 260, "Categories");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Categories", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Categories", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Categories", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      String[] data = new String[len];
+
+      for (int i = 0; i < len; i++) {
+         long sp = VarInt.getWithLength(mem, off);
+         int n = (int)sp + (int)(sp >>> 32);
+         data[i] = PacketIO.readVarString("Categories", mem, off, 16384000, PacketIO.UTF8);
+         off += n;
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static String getSubCategory(MemorySegment mem) {
+      return getSubCategory(mem, 0);
+   }
+
+   @Nullable
+   public static String getSubCategory(MemorySegment mem, int offset) {
+      return hasSubCategory(mem, offset)
+         ? PacketIO.readVarString("SubCategory", mem, offset + getValidatedOffset(mem, offset, 212, 260, "SubCategory"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static ModelParticle[] getParticles(MemorySegment mem) {
+      return getParticles(mem, 0);
+   }
+
+   @Nullable
+   public static ModelParticle[] getParticles(MemorySegment mem, int offset) {
+      if (!hasParticles(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 216, 260, "Particles");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Particles", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Particles", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Particles", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      ModelParticle[] data = new ModelParticle[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = ModelParticle.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static ModelParticle[] getFirstPersonParticles(MemorySegment mem) {
+      return getFirstPersonParticles(mem, 0);
+   }
+
+   @Nullable
+   public static ModelParticle[] getFirstPersonParticles(MemorySegment mem, int offset) {
+      if (!hasFirstPersonParticles(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 220, 260, "FirstPersonParticles");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("FirstPersonParticles", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("FirstPersonParticles", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("FirstPersonParticles", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      ModelParticle[] data = new ModelParticle[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = ModelParticle.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static ModelTrail[] getTrails(MemorySegment mem) {
+      return getTrails(mem, 0);
+   }
+
+   @Nullable
+   public static ModelTrail[] getTrails(MemorySegment mem, int offset) {
+      if (!hasTrails(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 224, 260, "Trails");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Trails", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Trails", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Trails", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      ModelTrail[] data = new ModelTrail[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = ModelTrail.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static ColorLight getLight(MemorySegment mem) {
+      return getLight(mem, 0);
+   }
+
+   @Nullable
+   public static ColorLight getLight(MemorySegment mem, int offset) {
+      return hasLight(mem, offset) ? ColorLight.toObject(mem, offset + 77) : null;
+   }
+
+   public static double getDurability(MemorySegment mem) {
+      return getDurability(mem, 0);
+   }
+
+   public static double getDurability(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_DOUBLE, offset + 81);
+   }
+
+   public static int getSoundEventIndex(MemorySegment mem) {
+      return getSoundEventIndex(mem, 0);
+   }
+
+   public static int getSoundEventIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 89);
+   }
+
+   public static int getItemSoundSetIndex(MemorySegment mem) {
+      return getItemSoundSetIndex(mem, 0);
+   }
+
+   public static int getItemSoundSetIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 93);
+   }
+
+   @Nullable
+   public static Map<InteractionType, Integer> getInteractions(MemorySegment mem) {
+      return getInteractions(mem, 0);
+   }
+
+   @Nullable
+   public static Map<InteractionType, Integer> getInteractions(MemorySegment mem, int offset) {
+      if (!hasInteractions(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 228, 260, "Interactions");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Interactions", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("Interactions", len, 4096000);
+      }
+
+      Map<InteractionType, Integer> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         InteractionType key = InteractionType.fromValue(mem.get(PacketIO.PROTO_BYTE, off));
+         int value = mem.get(PacketIO.PROTO_INT, ++off);
+         off += 4;
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("Interactions", key);
+         }
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static Map<String, Integer> getInteractionVars(MemorySegment mem) {
+      return getInteractionVars(mem, 0);
+   }
+
+   @Nullable
+   public static Map<String, Integer> getInteractionVars(MemorySegment mem, int offset) {
+      if (!hasInteractionVars(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 232, 260, "InteractionVars");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("InteractionVars", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("InteractionVars", len, 4096000);
+      }
+
+      Map<String, Integer> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         long keyPacked = VarInt.getWithLength(mem, off);
+         int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+         String key = PacketIO.readVarString("key", mem, off, 16384000, PacketIO.UTF8);
+         off += nkey;
+         int value = mem.get(PacketIO.PROTO_INT, off);
+         off += 4;
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("InteractionVars", key);
+         }
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static InteractionConfiguration getInteractionConfig(MemorySegment mem) {
+      return getInteractionConfig(mem, 0);
+   }
+
+   @Nullable
+   public static InteractionConfiguration getInteractionConfig(MemorySegment mem, int offset) {
+      return hasInteractionConfig(mem, offset)
+         ? InteractionConfiguration.toObject(mem, offset + getValidatedOffset(mem, offset, 236, 260, "InteractionConfig"))
+         : null;
+   }
+
+   @Nullable
+   public static String getDroppedItemAnimation(MemorySegment mem) {
+      return getDroppedItemAnimation(mem, 0);
+   }
+
+   @Nullable
+   public static String getDroppedItemAnimation(MemorySegment mem, int offset) {
+      return hasDroppedItemAnimation(mem, offset)
+         ? PacketIO.readVarString(
+            "DroppedItemAnimation", mem, offset + getValidatedOffset(mem, offset, 240, 260, "DroppedItemAnimation"), 4096000, PacketIO.UTF8
+         )
+         : null;
+   }
+
+   @Nullable
+   public static int[] getTagIndexes(MemorySegment mem) {
+      return getTagIndexes(mem, 0);
+   }
+
+   @Nullable
+   public static int[] getTagIndexes(MemorySegment mem, int offset) {
+      if (!hasTagIndexes(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 244, 260, "TagIndexes");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("TagIndexes", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("TagIndexes", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 4L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("TagIndexes", off + lenOffset + len * 4, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      int[] data = new int[len];
+      MemorySegment.copy(mem, PacketIO.PROTO_INT, off, data, 0, len);
+      return data;
+   }
+
+   @Nullable
+   public static Map<Integer, ItemAppearanceCondition[]> getItemAppearanceConditions(MemorySegment mem) {
+      return getItemAppearanceConditions(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Integer, ItemAppearanceCondition[]> getItemAppearanceConditions(MemorySegment mem, int offset) {
+      if (!hasItemAppearanceConditions(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 248, 260, "ItemAppearanceConditions");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("ItemAppearanceConditions", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("ItemAppearanceConditions", len, 4096000);
+      }
+
+      Map<Integer, ItemAppearanceCondition[]> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         int key = mem.get(PacketIO.PROTO_INT, off);
+         off += 4;
+         long valuePacked = VarInt.getWithLength(mem, off);
+         int valueLen = (int)valuePacked;
+         int valueVarLen = (int)(valuePacked >>> 32);
+         if (valueLen < 0) {
+            throw ProtocolException.negativeLength("value", valueLen);
+         }
+
+         if (valueLen > 64) {
+            throw ProtocolException.arrayTooLong("value", valueLen, 64);
+         }
+
+         if (off + valueVarLen + valueLen * 18L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("value", off + valueVarLen + valueLen * 18, (int)mem.byteSize());
+         }
+
+         off += valueVarLen;
+         ItemAppearanceCondition[] value = new ItemAppearanceCondition[valueLen];
+
+         for (int valueIdx = 0; valueIdx < valueLen; valueIdx++) {
+            value[valueIdx] = ItemAppearanceCondition.toObject(mem, off);
+            off += value[valueIdx].computeSize();
+         }
+
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("ItemAppearanceConditions", key);
+         }
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static int[] getDisplayEntityStatsHUD(MemorySegment mem) {
+      return getDisplayEntityStatsHUD(mem, 0);
+   }
+
+   @Nullable
+   public static int[] getDisplayEntityStatsHUD(MemorySegment mem, int offset) {
+      if (!hasDisplayEntityStatsHUD(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 252, 260, "DisplayEntityStatsHUD");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("DisplayEntityStatsHUD", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("DisplayEntityStatsHUD", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 4L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("DisplayEntityStatsHUD", off + lenOffset + len * 4, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      int[] data = new int[len];
+      MemorySegment.copy(mem, PacketIO.PROTO_INT, off, data, 0, len);
+      return data;
+   }
+
+   @Nullable
+   public static ItemPullbackConfiguration getPullbackConfig(MemorySegment mem) {
+      return getPullbackConfig(mem, 0);
+   }
+
+   @Nullable
+   public static ItemPullbackConfiguration getPullbackConfig(MemorySegment mem, int offset) {
+      return hasPullbackConfig(mem, offset) ? ItemPullbackConfiguration.toObject(mem, offset + 97) : null;
+   }
+
+   public static boolean getClipsGeometry(MemorySegment mem) {
+      return getClipsGeometry(mem, 0);
+   }
+
+   public static boolean getClipsGeometry(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 146);
+   }
+
+   public static boolean getRenderDeployablePreview(MemorySegment mem) {
+      return getRenderDeployablePreview(mem, 0);
+   }
+
+   public static boolean getRenderDeployablePreview(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 147);
+   }
+
+   @Nullable
+   public static ItemHudUI[] getHudUI(MemorySegment mem) {
+      return getHudUI(mem, 0);
+   }
+
+   @Nullable
+   public static ItemHudUI[] getHudUI(MemorySegment mem, int offset) {
+      if (!hasHudUI(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 256, 260, "HudUI");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("HudUI", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("HudUI", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("HudUI", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      ItemHudUI[] data = new ItemHudUI[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = ItemHudUI.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   public static boolean hasIconProperties(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasGliderConfig(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasBlockSelectorTool(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasLight(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasPullbackConfig(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 16) != 0;
+   }
+
+   public static boolean hasId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 32) != 0;
+   }
+
+   public static boolean hasModel(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 64) != 0;
+   }
+
+   public static boolean hasTexture(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 128) != 0;
+   }
+
+   public static boolean hasAnimation(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasPlayerAnimationsId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasIcon(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasTranslationProperties(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasResourceTypes(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 16) != 0;
+   }
+
+   public static boolean hasTool(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 32) != 0;
+   }
+
+   public static boolean hasWeapon(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 64) != 0;
+   }
+
+   public static boolean hasArmor(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 128) != 0;
+   }
+
+   public static boolean hasUtility(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 2);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasBuilderToolData(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 2);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasItemEntity(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 2);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasSet(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 2);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasCategories(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 2);
+      return (b & 16) != 0;
+   }
+
+   public static boolean hasSubCategory(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 2);
+      return (b & 32) != 0;
+   }
+
+   public static boolean hasParticles(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 2);
+      return (b & 64) != 0;
+   }
+
+   public static boolean hasFirstPersonParticles(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 2);
+      return (b & 128) != 0;
+   }
+
+   public static boolean hasTrails(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 3);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasInteractions(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 3);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasInteractionVars(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 3);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasInteractionConfig(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 3);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasDroppedItemAnimation(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 3);
+      return (b & 16) != 0;
+   }
+
+   public static boolean hasTagIndexes(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 3);
+      return (b & 32) != 0;
+   }
+
+   public static boolean hasItemAppearanceConditions(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 3);
+      return (b & 64) != 0;
+   }
+
+   public static boolean hasDisplayEntityStatsHUD(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 3);
+      return (b & 128) != 0;
+   }
+
+   public static boolean hasHudUI(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 4);
+      return (b & 1) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static ItemBase toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ItemBase toObject(MemorySegment mem, int offset) {
+      if (offset + 260 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ItemBase", offset + 260, (int)mem.byteSize());
+      }
+
+      ItemResourceType[] resourceTypes = null;
+      if (hasResourceTypes(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 176, 260, "ResourceTypes");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("ResourceTypes", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("ResourceTypes", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("ResourceTypes", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         resourceTypes = new ItemResourceType[len];
+
+         for (int i = 0; i < len; i++) {
+            resourceTypes[i] = ItemResourceType.toObject(mem, off);
+            off += resourceTypes[i].computeSize();
+         }
+      }
+
+      String[] categories = null;
+      if (hasCategories(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 208, 260, "Categories");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Categories", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Categories", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Categories", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         categories = new String[len];
+
+         for (int i = 0; i < len; i++) {
+            long sp = VarInt.getWithLength(mem, off);
+            int n = (int)sp + (int)(sp >>> 32);
+            categories[i] = PacketIO.readVarString("Categories", mem, off, 16384000, PacketIO.UTF8);
+            off += n;
+         }
+      }
+
+      ModelParticle[] particles = null;
+      if (hasParticles(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 216, 260, "Particles");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Particles", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Particles", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Particles", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         particles = new ModelParticle[len];
+
+         for (int i = 0; i < len; i++) {
+            particles[i] = ModelParticle.toObject(mem, off);
+            off += particles[i].computeSize();
+         }
+      }
+
+      ModelParticle[] firstPersonParticles = null;
+      if (hasFirstPersonParticles(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 220, 260, "FirstPersonParticles");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("FirstPersonParticles", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("FirstPersonParticles", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("FirstPersonParticles", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         firstPersonParticles = new ModelParticle[len];
+
+         for (int i = 0; i < len; i++) {
+            firstPersonParticles[i] = ModelParticle.toObject(mem, off);
+            off += firstPersonParticles[i].computeSize();
+         }
+      }
+
+      ModelTrail[] trails = null;
+      if (hasTrails(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 224, 260, "Trails");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Trails", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Trails", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Trails", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         trails = new ModelTrail[len];
+
+         for (int i = 0; i < len; i++) {
+            trails[i] = ModelTrail.toObject(mem, off);
+            off += trails[i].computeSize();
+         }
+      }
+
+      Map<InteractionType, Integer> interactions = null;
+      if (hasInteractions(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 228, 260, "Interactions");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Interactions", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Interactions", len, 4096000);
+         }
+
+         interactions = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            InteractionType key = InteractionType.fromValue(mem.get(PacketIO.PROTO_BYTE, off));
+            int value = mem.get(PacketIO.PROTO_INT, ++off);
+            off += 4;
+            if (interactions.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("Interactions", key);
+            }
+         }
+      }
+
+      Map<String, Integer> interactionVars = null;
+      if (hasInteractionVars(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 232, 260, "InteractionVars");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("InteractionVars", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("InteractionVars", len, 4096000);
+         }
+
+         interactionVars = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            long keyPacked = VarInt.getWithLength(mem, off);
+            int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+            String key = PacketIO.readVarString("key", mem, off, 16384000, PacketIO.UTF8);
+            off += nkey;
+            int value = mem.get(PacketIO.PROTO_INT, off);
+            off += 4;
+            if (interactionVars.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("InteractionVars", key);
+            }
+         }
+      }
+
+      int[] tagIndexes = null;
+      if (hasTagIndexes(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 244, 260, "TagIndexes");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("TagIndexes", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("TagIndexes", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 4L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("TagIndexes", off + lenOffset + len * 4, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         tagIndexes = new int[len];
+         MemorySegment.copy(mem, PacketIO.PROTO_INT, off, tagIndexes, 0, len);
+      }
+
+      Map<Integer, ItemAppearanceCondition[]> itemAppearanceConditions = null;
+      if (hasItemAppearanceConditions(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 248, 260, "ItemAppearanceConditions");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("ItemAppearanceConditions", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("ItemAppearanceConditions", len, 4096000);
+         }
+
+         itemAppearanceConditions = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            int key = mem.get(PacketIO.PROTO_INT, off);
+            off += 4;
+            long valuePacked = VarInt.getWithLength(mem, off);
+            int valueLen = (int)valuePacked;
+            int valueVarLen = (int)(valuePacked >>> 32);
+            if (valueLen < 0) {
+               throw ProtocolException.negativeLength("value", valueLen);
+            }
+
+            if (valueLen > 64) {
+               throw ProtocolException.arrayTooLong("value", valueLen, 64);
+            }
+
+            if (off + valueVarLen + valueLen * 18L > mem.byteSize()) {
+               throw ProtocolException.bufferTooSmall("value", off + valueVarLen + valueLen * 18, (int)mem.byteSize());
+            }
+
+            off += valueVarLen;
+            ItemAppearanceCondition[] value = new ItemAppearanceCondition[valueLen];
+
+            for (int valueIdx = 0; valueIdx < valueLen; valueIdx++) {
+               value[valueIdx] = ItemAppearanceCondition.toObject(mem, off);
+               off += value[valueIdx].computeSize();
+            }
+
+            if (itemAppearanceConditions.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("ItemAppearanceConditions", key);
+            }
+         }
+      }
+
+      int[] displayEntityStatsHUD = null;
+      if (hasDisplayEntityStatsHUD(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 252, 260, "DisplayEntityStatsHUD");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("DisplayEntityStatsHUD", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("DisplayEntityStatsHUD", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 4L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("DisplayEntityStatsHUD", off + lenOffset + len * 4, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         displayEntityStatsHUD = new int[len];
+         MemorySegment.copy(mem, PacketIO.PROTO_INT, off, displayEntityStatsHUD, 0, len);
+      }
+
+      ItemHudUI[] hudUI = null;
+      if (hasHudUI(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 256, 260, "HudUI");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("HudUI", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("HudUI", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("HudUI", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         hudUI = new ItemHudUI[len];
+
+         for (int i = 0; i < len; i++) {
+            hudUI[i] = ItemHudUI.toObject(mem, off);
+            off += hudUI[i].computeSize();
+         }
+      }
+
+      return new ItemBase(
+         hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 148, 260, "Id"), 4096000, PacketIO.UTF8) : null,
+         hasModel(mem, offset)
+            ? PacketIO.readVarString("Model", mem, offset + getValidatedOffset(mem, offset, 152, 260, "Model"), 4096000, PacketIO.UTF8)
+            : null,
+         mem.get(PacketIO.PROTO_FLOAT, offset + 5),
+         hasTexture(mem, offset)
+            ? PacketIO.readVarString("Texture", mem, offset + getValidatedOffset(mem, offset, 156, 260, "Texture"), 4096000, PacketIO.UTF8)
+            : null,
+         hasAnimation(mem, offset)
+            ? PacketIO.readVarString("Animation", mem, offset + getValidatedOffset(mem, offset, 160, 260, "Animation"), 4096000, PacketIO.UTF8)
+            : null,
+         hasPlayerAnimationsId(mem, offset)
+            ? PacketIO.readVarString(
+               "PlayerAnimationsId", mem, offset + getValidatedOffset(mem, offset, 164, 260, "PlayerAnimationsId"), 4096000, PacketIO.UTF8
+            )
+            : null,
+         mem.get(PacketIO.PROTO_BOOL, offset + 9),
+         mem.get(PacketIO.PROTO_INT, offset + 10),
+         mem.get(PacketIO.PROTO_INT, offset + 14),
+         hasIcon(mem, offset) ? PacketIO.readVarString("Icon", mem, offset + getValidatedOffset(mem, offset, 168, 260, "Icon"), 4096000, PacketIO.UTF8) : null,
+         hasIconProperties(mem, offset) ? AssetIconProperties.toObject(mem, offset + 18) : null,
+         hasTranslationProperties(mem, offset)
+            ? ItemTranslationProperties.toObject(mem, offset + getValidatedOffset(mem, offset, 172, 260, "TranslationProperties"))
+            : null,
+         mem.get(PacketIO.PROTO_INT, offset + 43),
+         mem.get(PacketIO.PROTO_INT, offset + 47),
+         resourceTypes,
+         mem.get(PacketIO.PROTO_BOOL, offset + 51),
+         mem.get(PacketIO.PROTO_BOOL, offset + 52),
+         mem.get(PacketIO.PROTO_INT, offset + 53),
+         hasTool(mem, offset) ? ItemTool.toObject(mem, offset + getValidatedOffset(mem, offset, 180, 260, "Tool")) : null,
+         hasWeapon(mem, offset) ? ItemWeapon.toObject(mem, offset + getValidatedOffset(mem, offset, 184, 260, "Weapon")) : null,
+         hasArmor(mem, offset) ? ItemArmor.toObject(mem, offset + getValidatedOffset(mem, offset, 188, 260, "Armor")) : null,
+         hasGliderConfig(mem, offset) ? ItemGlider.toObject(mem, offset + 57) : null,
+         hasUtility(mem, offset) ? ItemUtility.toObject(mem, offset + getValidatedOffset(mem, offset, 192, 260, "Utility")) : null,
+         hasBlockSelectorTool(mem, offset) ? BlockSelectorToolData.toObject(mem, offset + 73) : null,
+         hasBuilderToolData(mem, offset) ? BuilderToolState.toObject(mem, offset + getValidatedOffset(mem, offset, 196, 260, "BuilderToolData")) : null,
+         hasItemEntity(mem, offset) ? ItemEntityConfig.toObject(mem, offset + getValidatedOffset(mem, offset, 200, 260, "ItemEntity")) : null,
+         hasSet(mem, offset) ? PacketIO.readVarString("Set", mem, offset + getValidatedOffset(mem, offset, 204, 260, "Set"), 4096000, PacketIO.UTF8) : null,
+         categories,
+         hasSubCategory(mem, offset)
+            ? PacketIO.readVarString("SubCategory", mem, offset + getValidatedOffset(mem, offset, 212, 260, "SubCategory"), 4096000, PacketIO.UTF8)
+            : null,
+         particles,
+         firstPersonParticles,
+         trails,
+         hasLight(mem, offset) ? ColorLight.toObject(mem, offset + 77) : null,
+         mem.get(PacketIO.PROTO_DOUBLE, offset + 81),
+         mem.get(PacketIO.PROTO_INT, offset + 89),
+         mem.get(PacketIO.PROTO_INT, offset + 93),
+         interactions,
+         interactionVars,
+         hasInteractionConfig(mem, offset)
+            ? InteractionConfiguration.toObject(mem, offset + getValidatedOffset(mem, offset, 236, 260, "InteractionConfig"))
+            : null,
+         hasDroppedItemAnimation(mem, offset)
+            ? PacketIO.readVarString(
+               "DroppedItemAnimation", mem, offset + getValidatedOffset(mem, offset, 240, 260, "DroppedItemAnimation"), 4096000, PacketIO.UTF8
+            )
+            : null,
+         tagIndexes,
+         itemAppearanceConditions,
+         displayEntityStatsHUD,
+         hasPullbackConfig(mem, offset) ? ItemPullbackConfiguration.toObject(mem, offset + 97) : null,
+         mem.get(PacketIO.PROTO_BOOL, offset + 146),
+         mem.get(PacketIO.PROTO_BOOL, offset + 147),
+         hudUI
+      );
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte[] nullBits = new byte[5];
@@ -1942,6 +3298,505 @@ public class ItemBase {
       } else {
          buf.setIntLE(hudUIOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.iconProperties != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.gliderConfig != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.blockSelectorTool != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.light != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.pullbackConfig != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.id != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
+      if (this.model != null) {
+         nullBits = (byte)(nullBits | 64);
+      }
+
+      if (this.texture != null) {
+         nullBits = (byte)(nullBits | 128);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      nullBits = 0;
+      if (this.animation != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.playerAnimationsId != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.icon != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.translationProperties != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.resourceTypes != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.tool != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
+      if (this.weapon != null) {
+         nullBits = (byte)(nullBits | 64);
+      }
+
+      if (this.armor != null) {
+         nullBits = (byte)(nullBits | 128);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, nullBits);
+      nullBits = 0;
+      if (this.utility != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.builderToolData != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.itemEntity != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.set != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.categories != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.subCategory != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
+      if (this.particles != null) {
+         nullBits = (byte)(nullBits | 64);
+      }
+
+      if (this.firstPersonParticles != null) {
+         nullBits = (byte)(nullBits | 128);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 2, nullBits);
+      nullBits = 0;
+      if (this.trails != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.interactions != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.interactionVars != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.interactionConfig != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.droppedItemAnimation != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.tagIndexes != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
+      if (this.itemAppearanceConditions != null) {
+         nullBits = (byte)(nullBits | 64);
+      }
+
+      if (this.displayEntityStatsHUD != null) {
+         nullBits = (byte)(nullBits | 128);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 3, nullBits);
+      nullBits = 0;
+      if (this.hudUI != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 4, nullBits);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 5, this.scale);
+      mem.set(PacketIO.PROTO_BOOL, offset + 9, this.usePlayerAnimations);
+      mem.set(PacketIO.PROTO_INT, offset + 10, this.maxStack);
+      mem.set(PacketIO.PROTO_INT, offset + 14, this.reticleIndex);
+      if (this.iconProperties != null) {
+         this.iconProperties.serialize(mem, offset + 18);
+      } else {
+         mem.asSlice(offset + 18, 25L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_INT, offset + 43, this.itemLevel);
+      mem.set(PacketIO.PROTO_INT, offset + 47, this.qualityIndex);
+      mem.set(PacketIO.PROTO_BOOL, offset + 51, this.consumable);
+      mem.set(PacketIO.PROTO_BOOL, offset + 52, this.variant);
+      mem.set(PacketIO.PROTO_INT, offset + 53, this.blockId);
+      if (this.gliderConfig != null) {
+         this.gliderConfig.serialize(mem, offset + 57);
+      } else {
+         mem.asSlice(offset + 57, 16L).fill((byte)0);
+      }
+
+      if (this.blockSelectorTool != null) {
+         this.blockSelectorTool.serialize(mem, offset + 73);
+      } else {
+         mem.asSlice(offset + 73, 4L).fill((byte)0);
+      }
+
+      if (this.light != null) {
+         this.light.serialize(mem, offset + 77);
+      } else {
+         mem.asSlice(offset + 77, 4L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_DOUBLE, offset + 81, this.durability);
+      mem.set(PacketIO.PROTO_INT, offset + 89, this.soundEventIndex);
+      mem.set(PacketIO.PROTO_INT, offset + 93, this.itemSoundSetIndex);
+      if (this.pullbackConfig != null) {
+         this.pullbackConfig.serialize(mem, offset + 97);
+      } else {
+         mem.asSlice(offset + 97, 49L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_BOOL, offset + 146, this.clipsGeometry);
+      mem.set(PacketIO.PROTO_BOOL, offset + 147, this.renderDeployablePreview);
+      int varOffset = offset + 260;
+      if (this.id != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 148, varOffset - offset - 260);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.id, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 148, -1);
+      }
+
+      if (this.model != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 152, varOffset - offset - 260);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.model, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 152, -1);
+      }
+
+      if (this.texture != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 156, varOffset - offset - 260);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.texture, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 156, -1);
+      }
+
+      if (this.animation != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 160, varOffset - offset - 260);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.animation, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 160, -1);
+      }
+
+      if (this.playerAnimationsId != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 164, varOffset - offset - 260);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.playerAnimationsId, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 164, -1);
+      }
+
+      if (this.icon != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 168, varOffset - offset - 260);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.icon, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 168, -1);
+      }
+
+      if (this.translationProperties != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 172, varOffset - offset - 260);
+         varOffset += this.translationProperties.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 172, -1);
+      }
+
+      if (this.resourceTypes != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 176, varOffset - offset - 260);
+         if (this.resourceTypes.length > 4096000) {
+            throw ProtocolException.arrayTooLong("ResourceTypes", this.resourceTypes.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.resourceTypes.length);
+         int resourceTypesValueOffset = 0;
+
+         for (int i = 0; i < this.resourceTypes.length; i++) {
+            resourceTypesValueOffset += this.resourceTypes[i].serialize(mem, varOffset + resourceTypesValueOffset);
+         }
+
+         varOffset += resourceTypesValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 176, -1);
+      }
+
+      if (this.tool != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 180, varOffset - offset - 260);
+         varOffset += this.tool.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 180, -1);
+      }
+
+      if (this.weapon != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 184, varOffset - offset - 260);
+         varOffset += this.weapon.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 184, -1);
+      }
+
+      if (this.armor != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 188, varOffset - offset - 260);
+         varOffset += this.armor.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 188, -1);
+      }
+
+      if (this.utility != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 192, varOffset - offset - 260);
+         varOffset += this.utility.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 192, -1);
+      }
+
+      if (this.builderToolData != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 196, varOffset - offset - 260);
+         varOffset += this.builderToolData.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 196, -1);
+      }
+
+      if (this.itemEntity != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 200, varOffset - offset - 260);
+         varOffset += this.itemEntity.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 200, -1);
+      }
+
+      if (this.set != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 204, varOffset - offset - 260);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.set, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 204, -1);
+      }
+
+      if (this.categories != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 208, varOffset - offset - 260);
+         if (this.categories.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Categories", this.categories.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.categories.length);
+         int categoriesValueOffset = 0;
+
+         for (int i = 0; i < this.categories.length; i++) {
+            categoriesValueOffset += PacketIO.writeVarString(mem, varOffset + categoriesValueOffset, this.categories[i], 16384000);
+         }
+
+         varOffset += categoriesValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 208, -1);
+      }
+
+      if (this.subCategory != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 212, varOffset - offset - 260);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.subCategory, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 212, -1);
+      }
+
+      if (this.particles != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 216, varOffset - offset - 260);
+         if (this.particles.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Particles", this.particles.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.particles.length);
+         int particlesValueOffset = 0;
+
+         for (int i = 0; i < this.particles.length; i++) {
+            particlesValueOffset += this.particles[i].serialize(mem, varOffset + particlesValueOffset);
+         }
+
+         varOffset += particlesValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 216, -1);
+      }
+
+      if (this.firstPersonParticles != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 220, varOffset - offset - 260);
+         if (this.firstPersonParticles.length > 4096000) {
+            throw ProtocolException.arrayTooLong("FirstPersonParticles", this.firstPersonParticles.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.firstPersonParticles.length);
+         int firstPersonParticlesValueOffset = 0;
+
+         for (int i = 0; i < this.firstPersonParticles.length; i++) {
+            firstPersonParticlesValueOffset += this.firstPersonParticles[i].serialize(mem, varOffset + firstPersonParticlesValueOffset);
+         }
+
+         varOffset += firstPersonParticlesValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 220, -1);
+      }
+
+      if (this.trails != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 224, varOffset - offset - 260);
+         if (this.trails.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Trails", this.trails.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.trails.length);
+         int trailsValueOffset = 0;
+
+         for (int i = 0; i < this.trails.length; i++) {
+            trailsValueOffset += this.trails[i].serialize(mem, varOffset + trailsValueOffset);
+         }
+
+         varOffset += trailsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 224, -1);
+      }
+
+      if (this.interactions != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 228, varOffset - offset - 260);
+         if (this.interactions.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Interactions", this.interactions.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.interactions.size());
+
+         for (Entry<InteractionType, Integer> e : this.interactions.entrySet()) {
+            mem.set(PacketIO.PROTO_BYTE, varOffset, (byte)e.getKey().getValue());
+            mem.set(PacketIO.PROTO_INT, ++varOffset, e.getValue());
+            varOffset += 4;
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 228, -1);
+      }
+
+      if (this.interactionVars != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 232, varOffset - offset - 260);
+         if (this.interactionVars.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("InteractionVars", this.interactionVars.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.interactionVars.size());
+
+         for (Entry<String, Integer> e : this.interactionVars.entrySet()) {
+            varOffset += PacketIO.writeVarString(mem, varOffset, e.getKey(), 16384000);
+            mem.set(PacketIO.PROTO_INT, varOffset, e.getValue());
+            varOffset += 4;
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 232, -1);
+      }
+
+      if (this.interactionConfig != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 236, varOffset - offset - 260);
+         varOffset += this.interactionConfig.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 236, -1);
+      }
+
+      if (this.droppedItemAnimation != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 240, varOffset - offset - 260);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.droppedItemAnimation, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 240, -1);
+      }
+
+      if (this.tagIndexes != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 244, varOffset - offset - 260);
+         if (this.tagIndexes.length > 4096000) {
+            throw ProtocolException.arrayTooLong("TagIndexes", this.tagIndexes.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.tagIndexes.length);
+         MemorySegment.copy(this.tagIndexes, 0, mem, PacketIO.PROTO_INT, varOffset, this.tagIndexes.length);
+         varOffset += this.tagIndexes.length * 4;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 244, -1);
+      }
+
+      if (this.itemAppearanceConditions != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 248, varOffset - offset - 260);
+         if (this.itemAppearanceConditions.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("ItemAppearanceConditions", this.itemAppearanceConditions.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.itemAppearanceConditions.size());
+
+         for (Entry<Integer, ItemAppearanceCondition[]> e : this.itemAppearanceConditions.entrySet()) {
+            mem.set(PacketIO.PROTO_INT, varOffset, e.getKey());
+            varOffset += 4;
+            varOffset += VarInt.set(mem, varOffset, e.getValue().length);
+
+            for (ItemAppearanceCondition arrItem : e.getValue()) {
+               varOffset += arrItem.serialize(mem, varOffset);
+            }
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 248, -1);
+      }
+
+      if (this.displayEntityStatsHUD != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 252, varOffset - offset - 260);
+         if (this.displayEntityStatsHUD.length > 4096000) {
+            throw ProtocolException.arrayTooLong("DisplayEntityStatsHUD", this.displayEntityStatsHUD.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.displayEntityStatsHUD.length);
+         MemorySegment.copy(this.displayEntityStatsHUD, 0, mem, PacketIO.PROTO_INT, varOffset, this.displayEntityStatsHUD.length);
+         varOffset += this.displayEntityStatsHUD.length * 4;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 252, -1);
+      }
+
+      if (this.hudUI != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 256, varOffset - offset - 260);
+         if (this.hudUI.length > 4096000) {
+            throw ProtocolException.arrayTooLong("HudUI", this.hudUI.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.hudUI.length);
+         int hudUIValueOffset = 0;
+
+         for (int i = 0; i < this.hudUI.length; i++) {
+            hudUIValueOffset += this.hudUI[i].serialize(mem, varOffset + hudUIValueOffset);
+         }
+
+         varOffset += hudUIValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 256, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

@@ -1,8 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -58,6 +60,45 @@ public class ModelUpdate extends ComponentUpdate {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 5L;
+   }
+
+   @Nullable
+   public static Model getModel(MemorySegment mem) {
+      return getModel(mem, 0);
+   }
+
+   @Nullable
+   public static Model getModel(MemorySegment mem, int offset) {
+      return hasModel(mem, offset) ? Model.toObject(mem, offset + 5) : null;
+   }
+
+   public static float getEntityScale(MemorySegment mem) {
+      return getEntityScale(mem, 0);
+   }
+
+   public static float getEntityScale(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 1);
+   }
+
+   public static boolean hasModel(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static ModelUpdate toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ModelUpdate toObject(MemorySegment mem, int offset) {
+      if (offset + 5 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ModelUpdate", offset + 5, (int)mem.byteSize());
+      } else {
+         return new ModelUpdate(hasModel(mem, offset) ? Model.toObject(mem, offset + 5) : null, mem.get(PacketIO.PROTO_FLOAT, offset + 1));
+      }
+   }
+
    @Override
    public int serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -73,6 +114,23 @@ public class ModelUpdate extends ComponentUpdate {
       }
 
       return buf.writerIndex() - startPos;
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.model != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 1, this.entityScale);
+      int varOffset = offset + 5;
+      if (this.model != null) {
+         varOffset += this.model.serialize(mem, varOffset);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

@@ -1,9 +1,11 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -151,6 +153,179 @@ public class DamageEffects {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 13L;
+   }
+
+   @Nullable
+   public static ModelParticle[] getModelParticles(MemorySegment mem) {
+      return getModelParticles(mem, 0);
+   }
+
+   @Nullable
+   public static ModelParticle[] getModelParticles(MemorySegment mem, int offset) {
+      if (!hasModelParticles(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 5, 13, "ModelParticles");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("ModelParticles", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("ModelParticles", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ModelParticles", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      ModelParticle[] data = new ModelParticle[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = ModelParticle.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static WorldParticle[] getWorldParticles(MemorySegment mem) {
+      return getWorldParticles(mem, 0);
+   }
+
+   @Nullable
+   public static WorldParticle[] getWorldParticles(MemorySegment mem, int offset) {
+      if (!hasWorldParticles(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 9, 13, "WorldParticles");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("WorldParticles", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("WorldParticles", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("WorldParticles", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      WorldParticle[] data = new WorldParticle[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = WorldParticle.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   public static int getSoundEventIndex(MemorySegment mem) {
+      return getSoundEventIndex(mem, 0);
+   }
+
+   public static int getSoundEventIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   public static boolean hasModelParticles(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasWorldParticles(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static DamageEffects toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static DamageEffects toObject(MemorySegment mem, int offset) {
+      if (offset + 13 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("DamageEffects", offset + 13, (int)mem.byteSize());
+      }
+
+      ModelParticle[] modelParticles = null;
+      if (hasModelParticles(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 5, 13, "ModelParticles");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("ModelParticles", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("ModelParticles", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("ModelParticles", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         modelParticles = new ModelParticle[len];
+
+         for (int i = 0; i < len; i++) {
+            modelParticles[i] = ModelParticle.toObject(mem, off);
+            off += modelParticles[i].computeSize();
+         }
+      }
+
+      WorldParticle[] worldParticles = null;
+      if (hasWorldParticles(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 9, 13, "WorldParticles");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("WorldParticles", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("WorldParticles", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("WorldParticles", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         worldParticles = new WorldParticle[len];
+
+         for (int i = 0; i < len; i++) {
+            worldParticles[i] = WorldParticle.toObject(mem, off);
+            off += worldParticles[i].computeSize();
+         }
+      }
+
+      return new DamageEffects(modelParticles, worldParticles, mem.get(PacketIO.PROTO_INT, offset + 1));
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -198,6 +373,58 @@ public class DamageEffects {
       } else {
          buf.setIntLE(worldParticlesOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.modelParticles != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.worldParticles != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.soundEventIndex);
+      int varOffset = offset + 13;
+      if (this.modelParticles != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 5, varOffset - offset - 13);
+         if (this.modelParticles.length > 4096000) {
+            throw ProtocolException.arrayTooLong("ModelParticles", this.modelParticles.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.modelParticles.length);
+         int modelParticlesValueOffset = 0;
+
+         for (int i = 0; i < this.modelParticles.length; i++) {
+            modelParticlesValueOffset += this.modelParticles[i].serialize(mem, varOffset + modelParticlesValueOffset);
+         }
+
+         varOffset += modelParticlesValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 5, -1);
+      }
+
+      if (this.worldParticles != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 9, varOffset - offset - 13);
+         if (this.worldParticles.length > 4096000) {
+            throw ProtocolException.arrayTooLong("WorldParticles", this.worldParticles.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.worldParticles.length);
+         int worldParticlesValueOffset = 0;
+
+         for (int i = 0; i < this.worldParticles.length; i++) {
+            worldParticlesValueOffset += this.worldParticles[i].serialize(mem, varOffset + worldParticlesValueOffset);
+         }
+
+         varOffset += worldParticlesValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 9, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

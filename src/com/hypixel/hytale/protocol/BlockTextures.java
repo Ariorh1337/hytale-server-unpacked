@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -300,6 +301,153 @@ public class BlockTextures {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 29L;
+   }
+
+   @Nullable
+   public static String getTop(MemorySegment mem) {
+      return getTop(mem, 0);
+   }
+
+   @Nullable
+   public static String getTop(MemorySegment mem, int offset) {
+      return hasTop(mem, offset) ? PacketIO.readVarString("Top", mem, offset + getValidatedOffset(mem, offset, 5, 29, "Top"), 4096000, PacketIO.UTF8) : null;
+   }
+
+   @Nullable
+   public static String getBottom(MemorySegment mem) {
+      return getBottom(mem, 0);
+   }
+
+   @Nullable
+   public static String getBottom(MemorySegment mem, int offset) {
+      return hasBottom(mem, offset)
+         ? PacketIO.readVarString("Bottom", mem, offset + getValidatedOffset(mem, offset, 9, 29, "Bottom"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getFront(MemorySegment mem) {
+      return getFront(mem, 0);
+   }
+
+   @Nullable
+   public static String getFront(MemorySegment mem, int offset) {
+      return hasFront(mem, offset)
+         ? PacketIO.readVarString("Front", mem, offset + getValidatedOffset(mem, offset, 13, 29, "Front"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getBack(MemorySegment mem) {
+      return getBack(mem, 0);
+   }
+
+   @Nullable
+   public static String getBack(MemorySegment mem, int offset) {
+      return hasBack(mem, offset)
+         ? PacketIO.readVarString("Back", mem, offset + getValidatedOffset(mem, offset, 17, 29, "Back"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getLeft(MemorySegment mem) {
+      return getLeft(mem, 0);
+   }
+
+   @Nullable
+   public static String getLeft(MemorySegment mem, int offset) {
+      return hasLeft(mem, offset)
+         ? PacketIO.readVarString("Left", mem, offset + getValidatedOffset(mem, offset, 21, 29, "Left"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getRight(MemorySegment mem) {
+      return getRight(mem, 0);
+   }
+
+   @Nullable
+   public static String getRight(MemorySegment mem, int offset) {
+      return hasRight(mem, offset)
+         ? PacketIO.readVarString("Right", mem, offset + getValidatedOffset(mem, offset, 25, 29, "Right"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static float getWeight(MemorySegment mem) {
+      return getWeight(mem, 0);
+   }
+
+   public static float getWeight(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 1);
+   }
+
+   public static boolean hasTop(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasBottom(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasFront(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasBack(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasLeft(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 16) != 0;
+   }
+
+   public static boolean hasRight(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 32) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static BlockTextures toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static BlockTextures toObject(MemorySegment mem, int offset) {
+      if (offset + 29 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BlockTextures", offset + 29, (int)mem.byteSize());
+      } else {
+         return new BlockTextures(
+            hasTop(mem, offset) ? PacketIO.readVarString("Top", mem, offset + getValidatedOffset(mem, offset, 5, 29, "Top"), 4096000, PacketIO.UTF8) : null,
+            hasBottom(mem, offset)
+               ? PacketIO.readVarString("Bottom", mem, offset + getValidatedOffset(mem, offset, 9, 29, "Bottom"), 4096000, PacketIO.UTF8)
+               : null,
+            hasFront(mem, offset)
+               ? PacketIO.readVarString("Front", mem, offset + getValidatedOffset(mem, offset, 13, 29, "Front"), 4096000, PacketIO.UTF8)
+               : null,
+            hasBack(mem, offset) ? PacketIO.readVarString("Back", mem, offset + getValidatedOffset(mem, offset, 17, 29, "Back"), 4096000, PacketIO.UTF8) : null,
+            hasLeft(mem, offset) ? PacketIO.readVarString("Left", mem, offset + getValidatedOffset(mem, offset, 21, 29, "Left"), 4096000, PacketIO.UTF8) : null,
+            hasRight(mem, offset)
+               ? PacketIO.readVarString("Right", mem, offset + getValidatedOffset(mem, offset, 25, 29, "Right"), 4096000, PacketIO.UTF8)
+               : null,
+            mem.get(PacketIO.PROTO_FLOAT, offset + 1)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -383,6 +531,80 @@ public class BlockTextures {
       } else {
          buf.setIntLE(rightOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.top != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.bottom != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.front != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.back != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.left != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.right != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 1, this.weight);
+      int varOffset = offset + 29;
+      if (this.top != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 5, varOffset - offset - 29);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.top, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 5, -1);
+      }
+
+      if (this.bottom != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 9, varOffset - offset - 29);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.bottom, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 9, -1);
+      }
+
+      if (this.front != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 13, varOffset - offset - 29);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.front, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 13, -1);
+      }
+
+      if (this.back != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 17, varOffset - offset - 29);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.back, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 17, -1);
+      }
+
+      if (this.left != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 21, varOffset - offset - 29);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.left, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 21, -1);
+      }
+
+      if (this.right != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 25, varOffset - offset - 29);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.right, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 25, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

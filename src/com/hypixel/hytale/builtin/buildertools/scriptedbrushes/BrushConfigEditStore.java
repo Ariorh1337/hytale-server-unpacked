@@ -86,6 +86,7 @@ public class BrushConfigEditStore {
             if (hasHistory) {
                return false;
             }
+         case None:
       }
 
       if (this.brushConfig.getRandom().nextInt(100) >= this.brushConfig.getDensity()) {
@@ -136,6 +137,7 @@ public class BrushConfigEditStore {
             if (hasHistory) {
                return false;
             }
+         case None:
       }
 
       if (this.brushConfig.getRandom().nextInt(100) >= this.brushConfig.getDensity()) {
@@ -186,6 +188,7 @@ public class BrushConfigEditStore {
             if (hasHistory) {
                return false;
             }
+         case None:
       }
 
       if (this.brushConfig.getRandom().nextInt(100) >= this.brushConfig.getDensity()) {

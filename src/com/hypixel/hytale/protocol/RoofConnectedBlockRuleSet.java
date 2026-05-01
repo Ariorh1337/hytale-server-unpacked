@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -148,6 +149,102 @@ public class RoofConnectedBlockRuleSet {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 21L;
+   }
+
+   @Nullable
+   public static StairConnectedBlockRuleSet getRegular(MemorySegment mem) {
+      return getRegular(mem, 0);
+   }
+
+   @Nullable
+   public static StairConnectedBlockRuleSet getRegular(MemorySegment mem, int offset) {
+      return hasRegular(mem, offset) ? StairConnectedBlockRuleSet.toObject(mem, offset + getValidatedOffset(mem, offset, 9, 21, "Regular")) : null;
+   }
+
+   @Nullable
+   public static StairConnectedBlockRuleSet getHollow(MemorySegment mem) {
+      return getHollow(mem, 0);
+   }
+
+   @Nullable
+   public static StairConnectedBlockRuleSet getHollow(MemorySegment mem, int offset) {
+      return hasHollow(mem, offset) ? StairConnectedBlockRuleSet.toObject(mem, offset + getValidatedOffset(mem, offset, 13, 21, "Hollow")) : null;
+   }
+
+   public static int getTopperBlockId(MemorySegment mem) {
+      return getTopperBlockId(mem, 0);
+   }
+
+   public static int getTopperBlockId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   public static int getWidth(MemorySegment mem) {
+      return getWidth(mem, 0);
+   }
+
+   public static int getWidth(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 5);
+   }
+
+   @Nullable
+   public static String getMaterialName(MemorySegment mem) {
+      return getMaterialName(mem, 0);
+   }
+
+   @Nullable
+   public static String getMaterialName(MemorySegment mem, int offset) {
+      return hasMaterialName(mem, offset)
+         ? PacketIO.readVarString("MaterialName", mem, offset + getValidatedOffset(mem, offset, 17, 21, "MaterialName"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static boolean hasRegular(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasHollow(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasMaterialName(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static RoofConnectedBlockRuleSet toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static RoofConnectedBlockRuleSet toObject(MemorySegment mem, int offset) {
+      if (offset + 21 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("RoofConnectedBlockRuleSet", offset + 21, (int)mem.byteSize());
+      } else {
+         return new RoofConnectedBlockRuleSet(
+            hasRegular(mem, offset) ? StairConnectedBlockRuleSet.toObject(mem, offset + getValidatedOffset(mem, offset, 9, 21, "Regular")) : null,
+            hasHollow(mem, offset) ? StairConnectedBlockRuleSet.toObject(mem, offset + getValidatedOffset(mem, offset, 13, 21, "Hollow")) : null,
+            mem.get(PacketIO.PROTO_INT, offset + 1),
+            mem.get(PacketIO.PROTO_INT, offset + 5),
+            hasMaterialName(mem, offset)
+               ? PacketIO.readVarString("MaterialName", mem, offset + getValidatedOffset(mem, offset, 17, 21, "MaterialName"), 4096000, PacketIO.UTF8)
+               : null
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -193,6 +290,48 @@ public class RoofConnectedBlockRuleSet {
       } else {
          buf.setIntLE(materialNameOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.regular != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.hollow != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.materialName != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.topperBlockId);
+      mem.set(PacketIO.PROTO_INT, offset + 5, this.width);
+      int varOffset = offset + 21;
+      if (this.regular != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 9, varOffset - offset - 21);
+         varOffset += this.regular.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 9, -1);
+      }
+
+      if (this.hollow != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 13, varOffset - offset - 21);
+         varOffset += this.hollow.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 13, -1);
+      }
+
+      if (this.materialName != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 17, varOffset - offset - 21);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.materialName, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 17, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

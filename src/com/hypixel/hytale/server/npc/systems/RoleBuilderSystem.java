@@ -25,6 +25,7 @@ import com.hypixel.hytale.server.core.modules.entity.component.DisplayNameCompon
 import com.hypixel.hytale.server.core.modules.entity.component.FromPrefab;
 import com.hypixel.hytale.server.core.modules.entity.component.Invulnerable;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.PersistentDisplayName;
 import com.hypixel.hytale.server.core.modules.entity.component.PersistentModel;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.system.ModelSystems;
@@ -142,8 +143,11 @@ public class RoleBuilderSystem extends HolderSystem<EntityStore> {
                holder.ensureComponent(Invulnerable.getComponentType());
             }
 
-            Message roleNameMessage = Message.translation(role.getNameTranslationKey());
-            holder.putComponent(DisplayNameComponent.getComponentType(), new DisplayNameComponent(roleNameMessage));
+            if (holder.getComponent(PersistentDisplayName.getComponentType()) == null) {
+               Message roleNameMessage = Message.translation(role.getNameTranslationKey());
+               holder.putComponent(DisplayNameComponent.getComponentType(), new DisplayNameComponent(roleNameMessage));
+            }
+
             Interactions interactionsComponent = holder.ensureAndGetComponent(Interactions.getComponentType());
             interactionsComponent.setInteractionId(InteractionType.Use, "*UseNPC");
             if (role.getDeathInteraction() != null) {

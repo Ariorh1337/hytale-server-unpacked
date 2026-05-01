@@ -1,6 +1,5 @@
 package com.hypixel.hytale.server.npc.asset.builder;
 
-import com.google.gson.JsonElement;
 import com.hypixel.hytale.server.npc.util.expression.ExecutionContext;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import java.util.Map;
@@ -40,16 +39,6 @@ public class BuilderObjectMapHelper<K, V> extends BuilderObjectArrayHelper<Map<K
       }
 
       return objects;
-   }
-
-   @Override
-   public void readConfig(
-      @Nonnull JsonElement data,
-      @Nonnull BuilderManager builderManager,
-      @Nonnull BuilderParameters builderParameters,
-      @Nonnull BuilderValidationHelper builderValidationHelper
-   ) {
-      super.readConfig(data, builderManager, builderParameters, builderValidationHelper);
    }
 
    @Nullable

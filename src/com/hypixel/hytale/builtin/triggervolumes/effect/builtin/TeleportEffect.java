@@ -21,7 +21,7 @@ public class TeleportEffect extends TriggerEffect {
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
    @Nonnull
    public static final BuilderCodec<TeleportEffect> CODEC = BuilderCodec.builder(TeleportEffect.class, TeleportEffect::new, BASE_CODEC)
-      .append(new KeyedCodec<>("Position", Vector3dUtil.AS_ARRAY_CODEC), (e, v) -> e.position = v, e -> e.position)
+      .append(new KeyedCodec<>("Position", Vector3dUtil.CODEC), (e, v) -> e.position = v, e -> e.position)
       .add()
       .append(new KeyedCodec<>("World", Codec.STRING, false), (e, v) -> e.world = v, e -> e.world)
       .add()

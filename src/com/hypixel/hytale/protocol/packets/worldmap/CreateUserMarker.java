@@ -9,6 +9,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -162,6 +163,113 @@ public class CreateUserMarker implements Packet, ToServerPacket {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 21L;
+   }
+
+   public static float getX(MemorySegment mem) {
+      return getX(mem, 0);
+   }
+
+   public static float getX(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 1);
+   }
+
+   public static float getZ(MemorySegment mem) {
+      return getZ(mem, 0);
+   }
+
+   public static float getZ(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 5);
+   }
+
+   @Nullable
+   public static String getName(MemorySegment mem) {
+      return getName(mem, 0);
+   }
+
+   @Nullable
+   public static String getName(MemorySegment mem, int offset) {
+      return hasName(mem, offset)
+         ? PacketIO.readVarString("Name", mem, offset + getValidatedOffset(mem, offset, 13, 21, "Name"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getMarkerImage(MemorySegment mem) {
+      return getMarkerImage(mem, 0);
+   }
+
+   @Nullable
+   public static String getMarkerImage(MemorySegment mem, int offset) {
+      return hasMarkerImage(mem, offset)
+         ? PacketIO.readVarString("MarkerImage", mem, offset + getValidatedOffset(mem, offset, 17, 21, "MarkerImage"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static Color getTintColor(MemorySegment mem) {
+      return getTintColor(mem, 0);
+   }
+
+   @Nullable
+   public static Color getTintColor(MemorySegment mem, int offset) {
+      return hasTintColor(mem, offset) ? Color.toObject(mem, offset + 9) : null;
+   }
+
+   public static boolean getShared(MemorySegment mem) {
+      return getShared(mem, 0);
+   }
+
+   public static boolean getShared(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 12);
+   }
+
+   public static boolean hasTintColor(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasName(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasMarkerImage(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static CreateUserMarker toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static CreateUserMarker toObject(MemorySegment mem, int offset) {
+      if (offset + 21 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("CreateUserMarker", offset + 21, (int)mem.byteSize());
+      } else {
+         return new CreateUserMarker(
+            mem.get(PacketIO.PROTO_FLOAT, offset + 1),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 5),
+            hasName(mem, offset) ? PacketIO.readVarString("Name", mem, offset + getValidatedOffset(mem, offset, 13, 21, "Name"), 4096000, PacketIO.UTF8) : null,
+            hasMarkerImage(mem, offset)
+               ? PacketIO.readVarString("MarkerImage", mem, offset + getValidatedOffset(mem, offset, 17, 21, "MarkerImage"), 4096000, PacketIO.UTF8)
+               : null,
+            hasTintColor(mem, offset) ? Color.toObject(mem, offset + 9) : null,
+            mem.get(PacketIO.PROTO_BOOL, offset + 12)
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -206,6 +314,49 @@ public class CreateUserMarker implements Packet, ToServerPacket {
       } else {
          buf.setIntLE(markerImageOffsetSlot, -1);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.tintColor != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.name != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.markerImage != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 1, this.x);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 5, this.z);
+      if (this.tintColor != null) {
+         this.tintColor.serialize(mem, offset + 9);
+      } else {
+         mem.asSlice(offset + 9, 3L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_BOOL, offset + 12, this.shared);
+      int varOffset = offset + 21;
+      if (this.name != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 13, varOffset - offset - 21);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.name, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 13, -1);
+      }
+
+      if (this.markerImage != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 17, varOffset - offset - 21);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.markerImage, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 17, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

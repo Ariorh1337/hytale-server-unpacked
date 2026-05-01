@@ -3,6 +3,7 @@ package com.hypixel.hytale.server.core.command.commands.utility.net;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.NetworkChannel;
+import com.hypixel.hytale.protocol.io.ChannelConnection;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
@@ -19,7 +20,6 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.netty.channel.Channel;
-import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.handler.codec.quic.QuicStreamPriority;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -159,9 +159,9 @@ public class NetworkCommand extends AbstractCommandCollection {
          PacketHandler handler = playerRef.getPacketHandler();
 
          for (Entry<NetworkChannel, QuicStreamPriority> entry : priorities.entrySet()) {
-            if (handler.getChannel(entry.getKey()) instanceof QuicStreamChannel quicStreamChannel) {
-               quicStreamChannel.updatePriority(entry.getValue());
-            }
+            ChannelConnection channel = handler.getChannel(entry.getKey());
+            QuicStreamPriority prio = entry.getValue();
+            channel.updateStreamPriority(prio.urgency(), prio.isIncremental());
          }
       }
 
@@ -281,16 +281,11 @@ public class NetworkCommand extends AbstractCommandCollection {
             NetworkChannel networkChannel = this.channelArg.get(context);
             int priority = this.priorityArg.get(context);
             if (priority >= 0 && priority <= 127) {
-               if (playerRef.getPacketHandler().getChannel(networkChannel) instanceof QuicStreamChannel quicStreamChannel) {
-                  quicStreamChannel.updatePriority(new QuicStreamPriority(priority, true));
-                  context.sendMessage(
-                     Message.translation("server.commands.network.streamPriority.set.success")
-                        .param("channel", networkChannel.name())
-                        .param("priority", priority)
-                  );
-               } else {
-                  context.sendMessage(Message.translation("server.commands.network.streamPriority.set.notQuic").param("channel", networkChannel.name()));
-               }
+               ChannelConnection channel = playerRef.getPacketHandler().getChannel(networkChannel);
+               channel.updateStreamPriority(priority, true);
+               context.sendMessage(
+                  Message.translation("server.commands.network.streamPriority.set.success").param("channel", networkChannel.name()).param("priority", priority)
+               );
             } else {
                context.sendMessage(Message.translation("server.commands.network.streamPriority.set.invalidPriority"));
             }

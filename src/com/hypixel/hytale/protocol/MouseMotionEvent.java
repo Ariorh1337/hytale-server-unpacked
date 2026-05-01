@@ -1,9 +1,11 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -84,6 +86,105 @@ public class MouseMotionEvent {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 9L;
+   }
+
+   @Nullable
+   public static MouseButtonType[] getMouseButtonType(MemorySegment mem) {
+      return getMouseButtonType(mem, 0);
+   }
+
+   @Nullable
+   public static MouseButtonType[] getMouseButtonType(MemorySegment mem, int offset) {
+      if (!hasMouseButtonType(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + 9;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("MouseButtonType", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("MouseButtonType", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 1L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("MouseButtonType", off + lenOffset + len * 1, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      MouseButtonType[] data = new MouseButtonType[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = MouseButtonType.fromValue(mem.get(PacketIO.PROTO_BYTE, off + i * 1));
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static Vector2i getRelativeMotion(MemorySegment mem) {
+      return getRelativeMotion(mem, 0);
+   }
+
+   @Nullable
+   public static Vector2i getRelativeMotion(MemorySegment mem, int offset) {
+      return hasRelativeMotion(mem, offset) ? Vector2i.toObject(mem, offset + 1) : null;
+   }
+
+   public static boolean hasRelativeMotion(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasMouseButtonType(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static MouseMotionEvent toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static MouseMotionEvent toObject(MemorySegment mem, int offset) {
+      if (offset + 9 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("MouseMotionEvent", offset + 9, (int)mem.byteSize());
+      }
+
+      MouseButtonType[] mouseButtonType = null;
+      if (hasMouseButtonType(mem, offset)) {
+         int off = offset + 9;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("MouseButtonType", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("MouseButtonType", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 1L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("MouseButtonType", off + lenOffset + len * 1, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         mouseButtonType = new MouseButtonType[len];
+
+         for (int i = 0; i < len; i++) {
+            mouseButtonType[i] = MouseButtonType.fromValue(mem.get(PacketIO.PROTO_BYTE, off + i * 1));
+         }
+      }
+
+      return new MouseMotionEvent(mouseButtonType, hasRelativeMotion(mem, offset) ? Vector2i.toObject(mem, offset + 1) : null);
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
       if (this.relativeMotion != null) {
@@ -112,6 +213,41 @@ public class MouseMotionEvent {
             buf.writeByte(item.getValue());
          }
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.relativeMotion != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.mouseButtonType != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      if (this.relativeMotion != null) {
+         this.relativeMotion.serialize(mem, offset + 1);
+      } else {
+         mem.asSlice(offset + 1, 8L).fill((byte)0);
+      }
+
+      int varOffset = offset + 9;
+      if (this.mouseButtonType != null) {
+         if (this.mouseButtonType.length > 4096000) {
+            throw ProtocolException.arrayTooLong("MouseButtonType", this.mouseButtonType.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.mouseButtonType.length);
+
+         for (int i = 0; i < this.mouseButtonType.length; i++) {
+            mem.set(PacketIO.PROTO_BYTE, varOffset + i * 1, (byte)this.mouseButtonType[i].getValue());
+         }
+
+         varOffset += this.mouseButtonType.length * 1;
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

@@ -4,9 +4,11 @@ import com.hypixel.hytale.protocol.InstantData;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -75,6 +77,66 @@ public class Pong implements Packet, ToServerPacket {
       return 20;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 20L;
+   }
+
+   public static int getId(MemorySegment mem) {
+      return getId(mem, 0);
+   }
+
+   public static int getId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   @Nullable
+   public static InstantData getTime(MemorySegment mem) {
+      return getTime(mem, 0);
+   }
+
+   @Nullable
+   public static InstantData getTime(MemorySegment mem, int offset) {
+      return hasTime(mem, offset) ? InstantData.toObject(mem, offset + 5) : null;
+   }
+
+   public static PongType getType(MemorySegment mem) {
+      return getType(mem, 0);
+   }
+
+   public static PongType getType(MemorySegment mem, int offset) {
+      return PongType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 17));
+   }
+
+   public static short getPacketQueueSize(MemorySegment mem) {
+      return getPacketQueueSize(mem, 0);
+   }
+
+   public static short getPacketQueueSize(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_SHORT, offset + 18);
+   }
+
+   public static boolean hasTime(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static Pong toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static Pong toObject(MemorySegment mem, int offset) {
+      if (offset + 20 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Pong", offset + 20, (int)mem.byteSize());
+      } else {
+         return new Pong(
+            mem.get(PacketIO.PROTO_INT, offset + 1),
+            hasTime(mem, offset) ? InstantData.toObject(mem, offset + 5) : null,
+            PongType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 17)),
+            mem.get(PacketIO.PROTO_SHORT, offset + 18)
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -92,6 +154,26 @@ public class Pong implements Packet, ToServerPacket {
 
       buf.writeByte(this.type.getValue());
       buf.writeShortLE(this.packetQueueSize);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.time != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.id);
+      if (this.time != null) {
+         this.time.serialize(mem, offset + 5);
+      } else {
+         mem.asSlice(offset + 5, 12L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 17, (byte)this.type.getValue());
+      mem.set(PacketIO.PROTO_SHORT, offset + 18, this.packetQueueSize);
+      return 20;
    }
 
    @Override

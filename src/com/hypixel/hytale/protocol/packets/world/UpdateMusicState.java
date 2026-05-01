@@ -3,9 +3,11 @@ package com.hypixel.hytale.protocol.packets.world;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -63,11 +65,61 @@ public class UpdateMusicState implements Packet, ToClientPacket {
       return 12;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 12L;
+   }
+
+   public static int getContainerIndex(MemorySegment mem) {
+      return getContainerIndex(mem, 0);
+   }
+
+   public static int getContainerIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 0);
+   }
+
+   public static int getStateIndex(MemorySegment mem) {
+      return getStateIndex(mem, 0);
+   }
+
+   public static int getStateIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 4);
+   }
+
+   public static float getFadeDuration(MemorySegment mem) {
+      return getFadeDuration(mem, 0);
+   }
+
+   public static float getFadeDuration(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 8);
+   }
+
+   public static UpdateMusicState toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UpdateMusicState toObject(MemorySegment mem, int offset) {
+      if (offset + 12 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("UpdateMusicState", offset + 12, (int)mem.byteSize());
+      } else {
+         return new UpdateMusicState(
+            mem.get(PacketIO.PROTO_INT, offset + 0), mem.get(PacketIO.PROTO_INT, offset + 4), mem.get(PacketIO.PROTO_FLOAT, offset + 8)
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeIntLE(this.containerIndex);
       buf.writeIntLE(this.stateIndex);
       buf.writeFloatLE(this.fadeDuration);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_INT, offset + 0, this.containerIndex);
+      mem.set(PacketIO.PROTO_INT, offset + 4, this.stateIndex);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 8, this.fadeDuration);
+      return 12;
    }
 
    @Override

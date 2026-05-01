@@ -171,7 +171,7 @@ public class EncryptedAuthCredentialStore implements IAuthCredentialStore {
    }
 
    @Nonnull
-   private static Path keyFilePath(@Nonnull Path credentialPath) {
+   public static Path keyFilePath(@Nonnull Path credentialPath) {
       String fileName = credentialPath.getFileName().toString();
       String keyFileName = fileName.contains(".") ? fileName.substring(0, fileName.lastIndexOf(46)) + ".key" : fileName + ".key";
       return credentialPath.resolveSibling(keyFileName);

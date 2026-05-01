@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -159,6 +160,115 @@ public class AssetInfo {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 23L;
+   }
+
+   @Nullable
+   public static AssetPath getPath(MemorySegment mem) {
+      return getPath(mem, 0);
+   }
+
+   @Nullable
+   public static AssetPath getPath(MemorySegment mem, int offset) {
+      return hasPath(mem, offset) ? AssetPath.toObject(mem, offset + getValidatedOffset(mem, offset, 11, 23, "Path")) : null;
+   }
+
+   @Nullable
+   public static AssetPath getOldPath(MemorySegment mem) {
+      return getOldPath(mem, 0);
+   }
+
+   @Nullable
+   public static AssetPath getOldPath(MemorySegment mem, int offset) {
+      return hasOldPath(mem, offset) ? AssetPath.toObject(mem, offset + getValidatedOffset(mem, offset, 15, 23, "OldPath")) : null;
+   }
+
+   public static boolean getIsDeleted(MemorySegment mem) {
+      return getIsDeleted(mem, 0);
+   }
+
+   public static boolean getIsDeleted(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 1);
+   }
+
+   public static boolean getIsNew(MemorySegment mem) {
+      return getIsNew(mem, 0);
+   }
+
+   public static boolean getIsNew(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 2);
+   }
+
+   public static long getLastModificationDate(MemorySegment mem) {
+      return getLastModificationDate(mem, 0);
+   }
+
+   public static long getLastModificationDate(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_LONG, offset + 3);
+   }
+
+   @Nullable
+   public static String getLastModificationUsername(MemorySegment mem) {
+      return getLastModificationUsername(mem, 0);
+   }
+
+   @Nullable
+   public static String getLastModificationUsername(MemorySegment mem, int offset) {
+      return hasLastModificationUsername(mem, offset)
+         ? PacketIO.readVarString(
+            "LastModificationUsername", mem, offset + getValidatedOffset(mem, offset, 19, 23, "LastModificationUsername"), 4096000, PacketIO.UTF8
+         )
+         : null;
+   }
+
+   public static boolean hasPath(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasOldPath(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasLastModificationUsername(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static AssetInfo toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AssetInfo toObject(MemorySegment mem, int offset) {
+      if (offset + 23 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AssetInfo", offset + 23, (int)mem.byteSize());
+      } else {
+         return new AssetInfo(
+            hasPath(mem, offset) ? AssetPath.toObject(mem, offset + getValidatedOffset(mem, offset, 11, 23, "Path")) : null,
+            hasOldPath(mem, offset) ? AssetPath.toObject(mem, offset + getValidatedOffset(mem, offset, 15, 23, "OldPath")) : null,
+            mem.get(PacketIO.PROTO_BOOL, offset + 1),
+            mem.get(PacketIO.PROTO_BOOL, offset + 2),
+            mem.get(PacketIO.PROTO_LONG, offset + 3),
+            hasLastModificationUsername(mem, offset)
+               ? PacketIO.readVarString(
+                  "LastModificationUsername", mem, offset + getValidatedOffset(mem, offset, 19, 23, "LastModificationUsername"), 4096000, PacketIO.UTF8
+               )
+               : null
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -205,6 +315,49 @@ public class AssetInfo {
       } else {
          buf.setIntLE(lastModificationUsernameOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.path != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.oldPath != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.lastModificationUsername != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BOOL, offset + 1, this.isDeleted);
+      mem.set(PacketIO.PROTO_BOOL, offset + 2, this.isNew);
+      mem.set(PacketIO.PROTO_LONG, offset + 3, this.lastModificationDate);
+      int varOffset = offset + 23;
+      if (this.path != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 11, varOffset - offset - 23);
+         varOffset += this.path.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 11, -1);
+      }
+
+      if (this.oldPath != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 15, varOffset - offset - 23);
+         varOffset += this.oldPath.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 15, -1);
+      }
+
+      if (this.lastModificationUsername != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 19, varOffset - offset - 23);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.lastModificationUsername, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 19, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

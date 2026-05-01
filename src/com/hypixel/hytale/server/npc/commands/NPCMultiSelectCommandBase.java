@@ -10,6 +10,7 @@ import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.FlagArg;
 import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
+import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -20,10 +21,17 @@ import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.joml.Vector3d;
 
 public abstract class NPCMultiSelectCommandBase extends NPCWorldCommandBase {
+   @Nonnull
+   protected static final Message MESSAGE_COMMANDS_ERRORS_PLAYER_OR_ARG = Message.translation("server.commands.errors.playerOrArg").param("option", "entity");
+   @Nonnull
+   protected static final Message MESSAGE_COMMANDS_ERRORS_NO_ENTITY_IN_VIEW = Message.translation("server.commands.errors.no_entity_in_view")
+      .param("option", "entity");
    protected static final float DEFAULT_CONE_ANGLE = 30.0F;
    protected static final float DEFAULT_RANGE = 8.0F;
    protected static final float RANGE_MIN = 0.0F;
@@ -57,6 +65,20 @@ public abstract class NPCMultiSelectCommandBase extends NPCWorldCommandBase {
 
    public NPCMultiSelectCommandBase(@Nonnull String description) {
       super(description);
+   }
+
+   @Nullable
+   protected static NPCEntity ensureIsNPC(@Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref) {
+      NPCEntity npcComponent = store.getComponent(ref, NPCEntity.getComponentType());
+      if (npcComponent == null) {
+         UUIDComponent uuidComponent = store.getComponent(ref, UUIDComponent.getComponentType());
+         assert uuidComponent != null;
+         UUID uuid = uuidComponent.getUuid();
+         context.sendMessage(Message.translation("server.commands.errors.not_npc").param("uuid", uuid.toString()));
+         return null;
+      } else {
+         return npcComponent;
+      }
    }
 
    @Override

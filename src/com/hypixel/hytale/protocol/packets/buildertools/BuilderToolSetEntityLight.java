@@ -4,9 +4,11 @@ import com.hypixel.hytale.protocol.ColorLight;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -66,6 +68,45 @@ public class BuilderToolSetEntityLight implements Packet, ToServerPacket {
       return 9;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 9L;
+   }
+
+   public static int getEntityId(MemorySegment mem) {
+      return getEntityId(mem, 0);
+   }
+
+   public static int getEntityId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   @Nullable
+   public static ColorLight getLight(MemorySegment mem) {
+      return getLight(mem, 0);
+   }
+
+   @Nullable
+   public static ColorLight getLight(MemorySegment mem, int offset) {
+      return hasLight(mem, offset) ? ColorLight.toObject(mem, offset + 5) : null;
+   }
+
+   public static boolean hasLight(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static BuilderToolSetEntityLight toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static BuilderToolSetEntityLight toObject(MemorySegment mem, int offset) {
+      if (offset + 9 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BuilderToolSetEntityLight", offset + 9, (int)mem.byteSize());
+      } else {
+         return new BuilderToolSetEntityLight(mem.get(PacketIO.PROTO_INT, offset + 1), hasLight(mem, offset) ? ColorLight.toObject(mem, offset + 5) : null);
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -80,6 +121,24 @@ public class BuilderToolSetEntityLight implements Packet, ToServerPacket {
       } else {
          buf.writeZero(4);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.light != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.entityId);
+      if (this.light != null) {
+         this.light.serialize(mem, offset + 5);
+      } else {
+         mem.asSlice(offset + 5, 4L).fill((byte)0);
+      }
+
+      return 9;
    }
 
    @Override

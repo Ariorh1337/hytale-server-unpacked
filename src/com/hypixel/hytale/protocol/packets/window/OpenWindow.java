@@ -10,6 +10,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -166,6 +167,102 @@ public class OpenWindow implements Packet, ToClientPacket {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 18L;
+   }
+
+   public static int getId(MemorySegment mem) {
+      return getId(mem, 0);
+   }
+
+   public static int getId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   public static WindowType getWindowType(MemorySegment mem) {
+      return getWindowType(mem, 0);
+   }
+
+   public static WindowType getWindowType(MemorySegment mem, int offset) {
+      return WindowType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 5));
+   }
+
+   @Nullable
+   public static String getWindowData(MemorySegment mem) {
+      return getWindowData(mem, 0);
+   }
+
+   @Nullable
+   public static String getWindowData(MemorySegment mem, int offset) {
+      return hasWindowData(mem, offset)
+         ? PacketIO.readVarString("WindowData", mem, offset + getValidatedOffset(mem, offset, 6, 18, "WindowData"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static InventorySection getInventory(MemorySegment mem) {
+      return getInventory(mem, 0);
+   }
+
+   @Nullable
+   public static InventorySection getInventory(MemorySegment mem, int offset) {
+      return hasInventory(mem, offset) ? InventorySection.toObject(mem, offset + getValidatedOffset(mem, offset, 10, 18, "Inventory")) : null;
+   }
+
+   @Nullable
+   public static ExtraResources getExtraResources(MemorySegment mem) {
+      return getExtraResources(mem, 0);
+   }
+
+   @Nullable
+   public static ExtraResources getExtraResources(MemorySegment mem, int offset) {
+      return hasExtraResources(mem, offset) ? ExtraResources.toObject(mem, offset + getValidatedOffset(mem, offset, 14, 18, "ExtraResources")) : null;
+   }
+
+   public static boolean hasWindowData(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasInventory(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasExtraResources(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static OpenWindow toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static OpenWindow toObject(MemorySegment mem, int offset) {
+      if (offset + 18 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("OpenWindow", offset + 18, (int)mem.byteSize());
+      } else {
+         return new OpenWindow(
+            mem.get(PacketIO.PROTO_INT, offset + 1),
+            WindowType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 5)),
+            hasWindowData(mem, offset)
+               ? PacketIO.readVarString("WindowData", mem, offset + getValidatedOffset(mem, offset, 6, 18, "WindowData"), 4096000, PacketIO.UTF8)
+               : null,
+            hasInventory(mem, offset) ? InventorySection.toObject(mem, offset + getValidatedOffset(mem, offset, 10, 18, "Inventory")) : null,
+            hasExtraResources(mem, offset) ? ExtraResources.toObject(mem, offset + getValidatedOffset(mem, offset, 14, 18, "ExtraResources")) : null
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -212,6 +309,49 @@ public class OpenWindow implements Packet, ToClientPacket {
       } else {
          buf.setIntLE(extraResourcesOffsetSlot, -1);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.windowData != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.inventory != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.extraResources != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.id);
+      mem.set(PacketIO.PROTO_BYTE, offset + 5, (byte)this.windowType.getValue());
+      int varOffset = offset + 18;
+      if (this.windowData != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 6, varOffset - offset - 18);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.windowData, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 6, -1);
+      }
+
+      if (this.inventory != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 10, varOffset - offset - 18);
+         varOffset += this.inventory.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 10, -1);
+      }
+
+      if (this.extraResources != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 14, varOffset - offset - 18);
+         varOffset += this.extraResources.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 14, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

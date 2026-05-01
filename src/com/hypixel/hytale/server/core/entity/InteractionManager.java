@@ -931,8 +931,13 @@ public class InteractionManager implements Component<EntityStore> {
                         int blockId = world.getBlock(targetBlock.x, targetBlock.y, targetBlock.z);
                         int otherBlockId = world.getBlock(packet.data.blockPosition.x, packet.data.blockPosition.y, packet.data.blockPosition.z);
                         if (blockId != otherBlockId) {
+                           int settings = 1036;
+                           if (blockId != 0) {
+                              settings |= 16;
+                           }
+
                            otherChunk.setBlock(
-                              packet.data.blockPosition.x, packet.data.blockPosition.y, packet.data.blockPosition.z, 0, BlockType.EMPTY, 0, 0, 1052
+                              packet.data.blockPosition.x, packet.data.blockPosition.y, packet.data.blockPosition.z, 0, BlockType.EMPTY, 0, 0, settings
                            );
                         }
                      }

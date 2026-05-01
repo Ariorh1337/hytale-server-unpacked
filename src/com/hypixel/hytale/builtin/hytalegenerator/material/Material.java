@@ -68,7 +68,7 @@ public final class Material {
       return "Material[solid=" + this.solid + ", fluid=" + this.fluid + "]";
    }
 
-   private class Hash {
+   private static class Hash {
       int value = 0;
       boolean isCalculated = false;
    }

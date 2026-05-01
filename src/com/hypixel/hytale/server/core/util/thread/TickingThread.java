@@ -60,11 +60,13 @@ public abstract class TickingThread implements Runnable {
                delta = now - beforeTick;
                beforeTick = now;
             } else {
-               while ((delta = System.nanoTime() - beforeTick) < this.tickStepNanos) {
+               long now;
+               while ((now = System.nanoTime()) - beforeTick < this.tickStepNanos) {
                   Thread.onSpinWait();
                }
 
-               beforeTick = System.nanoTime();
+               delta = now - beforeTick;
+               beforeTick = now;
             }
 
             this.tick((float)delta / 1.0E9F);
@@ -150,8 +152,7 @@ public abstract class TickingThread implements Runnable {
                      sb.append("\tat ").append(traceElement).append('\n');
                   }
 
-                  HytaleLogger.getLogger().at(Level.SEVERE).log("Forcing TickingThread %s to stop:\n%s", thread, sb.toString());
-                  thread.stop();
+                  HytaleLogger.getLogger().at(Level.SEVERE).log("Abandoning TickingThread %s (stuck for >30s):\n%s", thread, sb.toString());
                   Thread var9 = null;
                   if (this.needsShutdown.getAndSet(false)) {
                      this.onShutdown();

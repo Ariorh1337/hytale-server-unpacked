@@ -4,6 +4,7 @@ import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import org.joml.Vector3fc;
@@ -57,11 +58,72 @@ public class BlockMount {
       return 29;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 29L;
+   }
+
+   public static BlockMountType getType(MemorySegment mem) {
+      return getType(mem, 0);
+   }
+
+   public static BlockMountType getType(MemorySegment mem, int offset) {
+      return BlockMountType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 0));
+   }
+
+   public static Vector3fc getPosition(MemorySegment mem) {
+      return getPosition(mem, 0);
+   }
+
+   public static Vector3fc getPosition(MemorySegment mem, int offset) {
+      return PacketIO.readVector3f(mem, offset + 1);
+   }
+
+   public static Vector3fc getOrientation(MemorySegment mem) {
+      return getOrientation(mem, 0);
+   }
+
+   public static Vector3fc getOrientation(MemorySegment mem, int offset) {
+      return PacketIO.readVector3f(mem, offset + 13);
+   }
+
+   public static int getBlockTypeId(MemorySegment mem) {
+      return getBlockTypeId(mem, 0);
+   }
+
+   public static int getBlockTypeId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 25);
+   }
+
+   public static BlockMount toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static BlockMount toObject(MemorySegment mem, int offset) {
+      if (offset + 29 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BlockMount", offset + 29, (int)mem.byteSize());
+      } else {
+         return new BlockMount(
+            BlockMountType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 0)),
+            PacketIO.readVector3f(mem, offset + 1),
+            PacketIO.readVector3f(mem, offset + 13),
+            mem.get(PacketIO.PROTO_INT, offset + 25)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeByte(this.type.getValue());
       PacketIO.writeVector3f(buf, this.position);
       PacketIO.writeVector3f(buf, this.orientation);
       buf.writeIntLE(this.blockTypeId);
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, (byte)this.type.getValue());
+      PacketIO.writeVector3f(mem, offset + 1, this.position);
+      PacketIO.writeVector3f(mem, offset + 13, this.orientation);
+      mem.set(PacketIO.PROTO_INT, offset + 25, this.blockTypeId);
+      return 29;
    }
 
    public int computeSize() {

@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -145,6 +146,101 @@ public class UIObjectDataValue extends UIDataValue {
       }
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 8L;
+   }
+
+   public static String getTypeName(MemorySegment mem) {
+      return getTypeName(mem, 0);
+   }
+
+   public static String getTypeName(MemorySegment mem, int offset) {
+      return PacketIO.readVarString("TypeName", mem, offset + getValidatedOffset(mem, offset, 0, 8, "TypeName"), 4096000, PacketIO.UTF8);
+   }
+
+   public static Map<String, UIDataValue> getProperties(MemorySegment mem) {
+      return getProperties(mem, 0);
+   }
+
+   public static Map<String, UIDataValue> getProperties(MemorySegment mem, int offset) {
+      int off = offset + getValidatedOffset(mem, offset, 4, 8, "Properties");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Properties", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("Properties", len, 4096000);
+      }
+
+      Map<String, UIDataValue> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         long keyPacked = VarInt.getWithLength(mem, off);
+         int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+         String key = PacketIO.readVarString("key", mem, off, 16384000, PacketIO.UTF8);
+         off += nkey;
+         UIDataValue value = UIDataValue.toObject(mem, off);
+         off += value.computeSizeWithTypeId();
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("Properties", key);
+         }
+      }
+
+      return data;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static UIObjectDataValue toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UIObjectDataValue toObject(MemorySegment mem, int offset) {
+      if (offset + 8 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("UIObjectDataValue", offset + 8, (int)mem.byteSize());
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 4, 8, "Properties");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Properties", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("Properties", len, 4096000);
+      }
+
+      Map<String, UIDataValue> properties = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         long keyPacked = VarInt.getWithLength(mem, off);
+         int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+         String key = PacketIO.readVarString("key", mem, off, 16384000, PacketIO.UTF8);
+         off += nkey;
+         UIDataValue value = UIDataValue.toObject(mem, off);
+         off += value.computeSizeWithTypeId();
+         if (properties.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("Properties", key);
+         }
+      }
+
+      return new UIObjectDataValue(
+         PacketIO.readVarString("TypeName", mem, offset + getValidatedOffset(mem, offset, 0, 8, "TypeName"), 4096000, PacketIO.UTF8), properties
+      );
+   }
+
    @Override
    public int serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -168,6 +264,26 @@ public class UIObjectDataValue extends UIDataValue {
       }
 
       return buf.writerIndex() - startPos;
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      int varOffset = offset + 8;
+      mem.set(PacketIO.PROTO_INT, offset + 0, varOffset - offset - 8);
+      varOffset += PacketIO.writeVarString(mem, varOffset, this.typeName, 4096000);
+      mem.set(PacketIO.PROTO_INT, offset + 4, varOffset - offset - 8);
+      if (this.properties.size() > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("Properties", this.properties.size(), 4096000);
+      }
+
+      varOffset += VarInt.set(mem, varOffset, this.properties.size());
+
+      for (Entry<String, UIDataValue> e : this.properties.entrySet()) {
+         varOffset += PacketIO.writeVarString(mem, varOffset, e.getKey(), 16384000);
+         varOffset += e.getValue().serializeWithTypeId(mem, varOffset);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -187,6 +188,155 @@ public class AssetEditorCreateAsset implements Packet, ToServerPacket {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 22L;
+   }
+
+   public static int getToken(MemorySegment mem) {
+      return getToken(mem, 0);
+   }
+
+   public static int getToken(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   @Nullable
+   public static AssetPath getPath(MemorySegment mem) {
+      return getPath(mem, 0);
+   }
+
+   @Nullable
+   public static AssetPath getPath(MemorySegment mem, int offset) {
+      return hasPath(mem, offset) ? AssetPath.toObject(mem, offset + getValidatedOffset(mem, offset, 10, 22, "Path")) : null;
+   }
+
+   @Nullable
+   public static byte[] getData(MemorySegment mem) {
+      return getData(mem, 0);
+   }
+
+   @Nullable
+   public static byte[] getData(MemorySegment mem, int offset) {
+      if (!hasData(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 14, 22, "Data");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Data", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Data", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 1L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Data", off + lenOffset + len * 1, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      byte[] data = new byte[len];
+      MemorySegment.copy(mem, PacketIO.PROTO_BYTE, off, data, 0, len);
+      return data;
+   }
+
+   @Nullable
+   public static AssetEditorRebuildCaches getRebuildCaches(MemorySegment mem) {
+      return getRebuildCaches(mem, 0);
+   }
+
+   @Nullable
+   public static AssetEditorRebuildCaches getRebuildCaches(MemorySegment mem, int offset) {
+      return hasRebuildCaches(mem, offset) ? AssetEditorRebuildCaches.toObject(mem, offset + 5) : null;
+   }
+
+   @Nullable
+   public static String getButtonId(MemorySegment mem) {
+      return getButtonId(mem, 0);
+   }
+
+   @Nullable
+   public static String getButtonId(MemorySegment mem, int offset) {
+      return hasButtonId(mem, offset)
+         ? PacketIO.readVarString("ButtonId", mem, offset + getValidatedOffset(mem, offset, 18, 22, "ButtonId"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static boolean hasRebuildCaches(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasPath(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasData(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasButtonId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static AssetEditorCreateAsset toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AssetEditorCreateAsset toObject(MemorySegment mem, int offset) {
+      if (offset + 22 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AssetEditorCreateAsset", offset + 22, (int)mem.byteSize());
+      }
+
+      byte[] data = null;
+      if (hasData(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 14, 22, "Data");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Data", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Data", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 1L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Data", off + lenOffset + len * 1, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         data = new byte[len];
+         MemorySegment.copy(mem, PacketIO.PROTO_BYTE, off, data, 0, len);
+      }
+
+      return new AssetEditorCreateAsset(
+         mem.get(PacketIO.PROTO_INT, offset + 1),
+         hasPath(mem, offset) ? AssetPath.toObject(mem, offset + getValidatedOffset(mem, offset, 10, 22, "Path")) : null,
+         data,
+         hasRebuildCaches(mem, offset) ? AssetEditorRebuildCaches.toObject(mem, offset + 5) : null,
+         hasButtonId(mem, offset)
+            ? PacketIO.readVarString("ButtonId", mem, offset + getValidatedOffset(mem, offset, 18, 22, "ButtonId"), 4096000, PacketIO.UTF8)
+            : null
+      );
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -250,6 +400,64 @@ public class AssetEditorCreateAsset implements Packet, ToServerPacket {
       } else {
          buf.setIntLE(buttonIdOffsetSlot, -1);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.rebuildCaches != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.path != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.data != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.buttonId != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.token);
+      if (this.rebuildCaches != null) {
+         this.rebuildCaches.serialize(mem, offset + 5);
+      } else {
+         mem.asSlice(offset + 5, 5L).fill((byte)0);
+      }
+
+      int varOffset = offset + 22;
+      if (this.path != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 10, varOffset - offset - 22);
+         varOffset += this.path.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 10, -1);
+      }
+
+      if (this.data != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 14, varOffset - offset - 22);
+         if (this.data.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Data", this.data.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.data.length);
+         MemorySegment.copy(this.data, 0, mem, PacketIO.PROTO_BYTE, varOffset, this.data.length);
+         varOffset += this.data.length * 1;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 14, -1);
+      }
+
+      if (this.buttonId != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 18, varOffset - offset - 22);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.buttonId, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 18, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

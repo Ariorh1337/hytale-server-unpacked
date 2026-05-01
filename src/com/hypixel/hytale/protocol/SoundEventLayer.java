@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -137,6 +138,168 @@ public class SoundEventLayer {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 42L;
+   }
+
+   public static float getVolume(MemorySegment mem) {
+      return getVolume(mem, 0);
+   }
+
+   public static float getVolume(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 1);
+   }
+
+   public static float getStartDelay(MemorySegment mem) {
+      return getStartDelay(mem, 0);
+   }
+
+   public static float getStartDelay(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 5);
+   }
+
+   public static boolean getLooping(MemorySegment mem) {
+      return getLooping(mem, 0);
+   }
+
+   public static boolean getLooping(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 9);
+   }
+
+   public static int getProbability(MemorySegment mem) {
+      return getProbability(mem, 0);
+   }
+
+   public static int getProbability(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 10);
+   }
+
+   public static float getProbabilityRerollDelay(MemorySegment mem) {
+      return getProbabilityRerollDelay(mem, 0);
+   }
+
+   public static float getProbabilityRerollDelay(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 14);
+   }
+
+   public static int getRoundRobinHistorySize(MemorySegment mem) {
+      return getRoundRobinHistorySize(mem, 0);
+   }
+
+   public static int getRoundRobinHistorySize(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 18);
+   }
+
+   @Nullable
+   public static SoundEventLayerRandomSettings getRandomSettings(MemorySegment mem) {
+      return getRandomSettings(mem, 0);
+   }
+
+   @Nullable
+   public static SoundEventLayerRandomSettings getRandomSettings(MemorySegment mem, int offset) {
+      return hasRandomSettings(mem, offset) ? SoundEventLayerRandomSettings.toObject(mem, offset + 22) : null;
+   }
+
+   @Nullable
+   public static String[] getFiles(MemorySegment mem) {
+      return getFiles(mem, 0);
+   }
+
+   @Nullable
+   public static String[] getFiles(MemorySegment mem, int offset) {
+      if (!hasFiles(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + 42;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Files", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Files", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Files", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      String[] data = new String[len];
+
+      for (int i = 0; i < len; i++) {
+         long sp = VarInt.getWithLength(mem, off);
+         int n = (int)sp + (int)(sp >>> 32);
+         data[i] = PacketIO.readVarString("Files", mem, off, 16384000, PacketIO.UTF8);
+         off += n;
+      }
+
+      return data;
+   }
+
+   public static boolean hasRandomSettings(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasFiles(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static SoundEventLayer toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static SoundEventLayer toObject(MemorySegment mem, int offset) {
+      if (offset + 42 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("SoundEventLayer", offset + 42, (int)mem.byteSize());
+      }
+
+      String[] files = null;
+      if (hasFiles(mem, offset)) {
+         int off = offset + 42;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Files", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Files", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Files", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         files = new String[len];
+
+         for (int i = 0; i < len; i++) {
+            long sp = VarInt.getWithLength(mem, off);
+            int n = (int)sp + (int)(sp >>> 32);
+            files[i] = PacketIO.readVarString("Files", mem, off, 16384000, PacketIO.UTF8);
+            off += n;
+         }
+      }
+
+      return new SoundEventLayer(
+         mem.get(PacketIO.PROTO_FLOAT, offset + 1),
+         mem.get(PacketIO.PROTO_FLOAT, offset + 5),
+         mem.get(PacketIO.PROTO_BOOL, offset + 9),
+         mem.get(PacketIO.PROTO_INT, offset + 10),
+         mem.get(PacketIO.PROTO_FLOAT, offset + 14),
+         mem.get(PacketIO.PROTO_INT, offset + 18),
+         hasRandomSettings(mem, offset) ? SoundEventLayerRandomSettings.toObject(mem, offset + 22) : null,
+         files
+      );
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
       if (this.randomSettings != null) {
@@ -171,6 +334,48 @@ public class SoundEventLayer {
             PacketIO.writeVarString(buf, item, 4096000);
          }
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.randomSettings != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.files != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 1, this.volume);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 5, this.startDelay);
+      mem.set(PacketIO.PROTO_BOOL, offset + 9, this.looping);
+      mem.set(PacketIO.PROTO_INT, offset + 10, this.probability);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 14, this.probabilityRerollDelay);
+      mem.set(PacketIO.PROTO_INT, offset + 18, this.roundRobinHistorySize);
+      if (this.randomSettings != null) {
+         this.randomSettings.serialize(mem, offset + 22);
+      } else {
+         mem.asSlice(offset + 22, 20L).fill((byte)0);
+      }
+
+      int varOffset = offset + 42;
+      if (this.files != null) {
+         if (this.files.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Files", this.files.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.files.length);
+         int filesValueOffset = 0;
+
+         for (int i = 0; i < this.files.length; i++) {
+            filesValueOffset += PacketIO.writeVarString(mem, varOffset + filesValueOffset, this.files[i], 16384000);
+         }
+
+         varOffset += filesValueOffset;
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

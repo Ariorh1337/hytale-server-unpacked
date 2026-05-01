@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -168,6 +169,146 @@ public class AssetEditorAssetListSetup implements Packet, ToClientPacket {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 12L;
+   }
+
+   @Nullable
+   public static String getPack(MemorySegment mem) {
+      return getPack(mem, 0);
+   }
+
+   @Nullable
+   public static String getPack(MemorySegment mem, int offset) {
+      return hasPack(mem, offset) ? PacketIO.readVarString("Pack", mem, offset + getValidatedOffset(mem, offset, 4, 12, "Pack"), 4096000, PacketIO.UTF8) : null;
+   }
+
+   public static boolean getIsReadOnly(MemorySegment mem) {
+      return getIsReadOnly(mem, 0);
+   }
+
+   public static boolean getIsReadOnly(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 1);
+   }
+
+   public static boolean getCanBeDeleted(MemorySegment mem) {
+      return getCanBeDeleted(mem, 0);
+   }
+
+   public static boolean getCanBeDeleted(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 2);
+   }
+
+   public static AssetEditorFileTree getTree(MemorySegment mem) {
+      return getTree(mem, 0);
+   }
+
+   public static AssetEditorFileTree getTree(MemorySegment mem, int offset) {
+      return AssetEditorFileTree.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 3));
+   }
+
+   @Nullable
+   public static AssetEditorFileEntry[] getPaths(MemorySegment mem) {
+      return getPaths(mem, 0);
+   }
+
+   @Nullable
+   public static AssetEditorFileEntry[] getPaths(MemorySegment mem, int offset) {
+      if (!hasPaths(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 8, 12, "Paths");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Paths", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Paths", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Paths", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      AssetEditorFileEntry[] data = new AssetEditorFileEntry[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = AssetEditorFileEntry.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   public static boolean hasPack(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasPaths(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static AssetEditorAssetListSetup toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AssetEditorAssetListSetup toObject(MemorySegment mem, int offset) {
+      if (offset + 12 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AssetEditorAssetListSetup", offset + 12, (int)mem.byteSize());
+      }
+
+      AssetEditorFileEntry[] paths = null;
+      if (hasPaths(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 8, 12, "Paths");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Paths", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Paths", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Paths", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         paths = new AssetEditorFileEntry[len];
+
+         for (int i = 0; i < len; i++) {
+            paths[i] = AssetEditorFileEntry.toObject(mem, off);
+            off += paths[i].computeSize();
+         }
+      }
+
+      return new AssetEditorAssetListSetup(
+         hasPack(mem, offset) ? PacketIO.readVarString("Pack", mem, offset + getValidatedOffset(mem, offset, 4, 12, "Pack"), 4096000, PacketIO.UTF8) : null,
+         mem.get(PacketIO.PROTO_BOOL, offset + 1),
+         mem.get(PacketIO.PROTO_BOOL, offset + 2),
+         AssetEditorFileTree.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 3)),
+         paths
+      );
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -210,6 +351,50 @@ public class AssetEditorAssetListSetup implements Packet, ToClientPacket {
       } else {
          buf.setIntLE(pathsOffsetSlot, -1);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.pack != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.paths != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BOOL, offset + 1, this.isReadOnly);
+      mem.set(PacketIO.PROTO_BOOL, offset + 2, this.canBeDeleted);
+      mem.set(PacketIO.PROTO_BYTE, offset + 3, (byte)this.tree.getValue());
+      int varOffset = offset + 12;
+      if (this.pack != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 4, varOffset - offset - 12);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.pack, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 4, -1);
+      }
+
+      if (this.paths != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 8, varOffset - offset - 12);
+         if (this.paths.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Paths", this.paths.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.paths.length);
+         int pathsValueOffset = 0;
+
+         for (int i = 0; i < this.paths.length; i++) {
+            pathsValueOffset += this.paths[i].serialize(mem, varOffset + pathsValueOffset);
+         }
+
+         varOffset += pathsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 8, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

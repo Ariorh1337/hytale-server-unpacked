@@ -47,10 +47,15 @@ public final class Constants {
    private static final OptionSet OPTION_SET = Options.getOptionSet();
    public static final boolean DEBUG = true;
    public static final boolean SINGLEPLAYER = OPTION_SET.has(Options.SINGLEPLAYER);
+   public static final boolean BOOTSTRAP = OPTION_SET.has(Options.BOOTSTRAP);
    public static final boolean ALLOWS_SELF_OP_COMMAND = OPTION_SET.has(Options.ALLOW_SELF_OP_COMMAND);
    public static final boolean FRESH_UNIVERSE = checkFreshUniverse();
    public static final boolean FORCE_NETWORK_FLUSH = OPTION_SET.valueOf(Options.FORCE_NETWORK_FLUSH);
    public static final Path UNIVERSE_PATH = getUniversePath();
+   @Nonnull
+   public static final PluginManifest[] BOOTSTRAP_PLUGINS = new PluginManifest[]{
+      ConsoleModule.MANIFEST, PermissionsModule.MANIFEST, I18nModule.MANIFEST, UpdateModule.MANIFEST
+   };
    @Nonnull
    public static final PluginManifest[] CORE_PLUGINS = new PluginManifest[]{
       ConsoleModule.MANIFEST,

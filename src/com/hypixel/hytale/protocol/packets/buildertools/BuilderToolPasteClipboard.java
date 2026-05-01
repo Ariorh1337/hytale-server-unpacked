@@ -3,9 +3,11 @@ package com.hypixel.hytale.protocol.packets.buildertools;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -63,11 +65,61 @@ public class BuilderToolPasteClipboard implements Packet, ToServerPacket {
       return 12;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 12L;
+   }
+
+   public static int getX(MemorySegment mem) {
+      return getX(mem, 0);
+   }
+
+   public static int getX(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 0);
+   }
+
+   public static int getY(MemorySegment mem) {
+      return getY(mem, 0);
+   }
+
+   public static int getY(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 4);
+   }
+
+   public static int getZ(MemorySegment mem) {
+      return getZ(mem, 0);
+   }
+
+   public static int getZ(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 8);
+   }
+
+   public static BuilderToolPasteClipboard toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static BuilderToolPasteClipboard toObject(MemorySegment mem, int offset) {
+      if (offset + 12 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BuilderToolPasteClipboard", offset + 12, (int)mem.byteSize());
+      } else {
+         return new BuilderToolPasteClipboard(
+            mem.get(PacketIO.PROTO_INT, offset + 0), mem.get(PacketIO.PROTO_INT, offset + 4), mem.get(PacketIO.PROTO_INT, offset + 8)
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeIntLE(this.x);
       buf.writeIntLE(this.y);
       buf.writeIntLE(this.z);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_INT, offset + 0, this.x);
+      mem.set(PacketIO.PROTO_INT, offset + 4, this.y);
+      mem.set(PacketIO.PROTO_INT, offset + 8, this.z);
+      return 12;
    }
 
    @Override

@@ -5,9 +5,11 @@ import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.VelocityConfig;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -80,6 +82,75 @@ public class ChangeVelocity implements Packet, ToClientPacket {
       return 35;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 35L;
+   }
+
+   public static float getX(MemorySegment mem) {
+      return getX(mem, 0);
+   }
+
+   public static float getX(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 1);
+   }
+
+   public static float getY(MemorySegment mem) {
+      return getY(mem, 0);
+   }
+
+   public static float getY(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 5);
+   }
+
+   public static float getZ(MemorySegment mem) {
+      return getZ(mem, 0);
+   }
+
+   public static float getZ(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 9);
+   }
+
+   public static ChangeVelocityType getChangeType(MemorySegment mem) {
+      return getChangeType(mem, 0);
+   }
+
+   public static ChangeVelocityType getChangeType(MemorySegment mem, int offset) {
+      return ChangeVelocityType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 13));
+   }
+
+   @Nullable
+   public static VelocityConfig getConfig(MemorySegment mem) {
+      return getConfig(mem, 0);
+   }
+
+   @Nullable
+   public static VelocityConfig getConfig(MemorySegment mem, int offset) {
+      return hasConfig(mem, offset) ? VelocityConfig.toObject(mem, offset + 14) : null;
+   }
+
+   public static boolean hasConfig(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static ChangeVelocity toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ChangeVelocity toObject(MemorySegment mem, int offset) {
+      if (offset + 35 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ChangeVelocity", offset + 35, (int)mem.byteSize());
+      } else {
+         return new ChangeVelocity(
+            mem.get(PacketIO.PROTO_FLOAT, offset + 1),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 5),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 9),
+            ChangeVelocityType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 13)),
+            hasConfig(mem, offset) ? VelocityConfig.toObject(mem, offset + 14) : null
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -97,6 +168,27 @@ public class ChangeVelocity implements Packet, ToClientPacket {
       } else {
          buf.writeZero(21);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.config != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 1, this.x);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 5, this.y);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 9, this.z);
+      mem.set(PacketIO.PROTO_BYTE, offset + 13, (byte)this.changeType.getValue());
+      if (this.config != null) {
+         this.config.serialize(mem, offset + 14);
+      } else {
+         mem.asSlice(offset + 14, 21L).fill((byte)0);
+      }
+
+      return 35;
    }
 
    @Override

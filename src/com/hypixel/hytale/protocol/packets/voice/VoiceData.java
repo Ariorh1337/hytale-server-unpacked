@@ -3,10 +3,12 @@ package com.hypixel.hytale.protocol.packets.voice;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 
@@ -90,6 +92,84 @@ public class VoiceData implements Packet, ToServerPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 6L;
+   }
+
+   public static short getSequenceNumber(MemorySegment mem) {
+      return getSequenceNumber(mem, 0);
+   }
+
+   public static short getSequenceNumber(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_SHORT, offset + 0);
+   }
+
+   public static int getTimestamp(MemorySegment mem) {
+      return getTimestamp(mem, 0);
+   }
+
+   public static int getTimestamp(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 2);
+   }
+
+   public static byte[] getOpusData(MemorySegment mem) {
+      return getOpusData(mem, 0);
+   }
+
+   public static byte[] getOpusData(MemorySegment mem, int offset) {
+      int off = offset + 6;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("OpusData", len);
+      }
+
+      if (len > 512) {
+         throw ProtocolException.arrayTooLong("OpusData", len, 512);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 1L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("OpusData", off + lenOffset + len * 1, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      byte[] data = new byte[len];
+      MemorySegment.copy(mem, PacketIO.PROTO_BYTE, off, data, 0, len);
+      return data;
+   }
+
+   public static VoiceData toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static VoiceData toObject(MemorySegment mem, int offset) {
+      if (offset + 6 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("VoiceData", offset + 6, (int)mem.byteSize());
+      }
+
+      int off = offset + 6;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("OpusData", len);
+      }
+
+      if (len > 512) {
+         throw ProtocolException.arrayTooLong("OpusData", len, 512);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 1L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("OpusData", off + lenOffset + len * 1, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      byte[] opusData = new byte[len];
+      MemorySegment.copy(mem, PacketIO.PROTO_BYTE, off, opusData, 0, len);
+      return new VoiceData(mem.get(PacketIO.PROTO_SHORT, offset + 0), mem.get(PacketIO.PROTO_INT, offset + 2), opusData);
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeShortLE(this.sequenceNumber);
@@ -103,6 +183,21 @@ public class VoiceData implements Packet, ToServerPacket {
       for (byte item : this.opusData) {
          buf.writeByte(item);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_SHORT, offset + 0, this.sequenceNumber);
+      mem.set(PacketIO.PROTO_INT, offset + 2, this.timestamp);
+      int varOffset = offset + 6;
+      if (this.opusData.length > 512) {
+         throw ProtocolException.arrayTooLong("OpusData", this.opusData.length, 512);
+      }
+
+      varOffset += VarInt.set(mem, varOffset, this.opusData.length);
+      MemorySegment.copy(this.opusData, 0, mem, PacketIO.PROTO_BYTE, varOffset, this.opusData.length);
+      varOffset += this.opusData.length * 1;
+      return varOffset - offset;
    }
 
    @Override

@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -218,6 +219,205 @@ public class ArgValuesResponse implements Packet, ToClientPacket {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 14L;
+   }
+
+   @Nullable
+   public static String getArgTypeId(MemorySegment mem) {
+      return getArgTypeId(mem, 0);
+   }
+
+   @Nullable
+   public static String getArgTypeId(MemorySegment mem, int offset) {
+      return hasArgTypeId(mem, offset)
+         ? PacketIO.readVarString("ArgTypeId", mem, offset + getValidatedOffset(mem, offset, 2, 14, "ArgTypeId"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String[] getValues(MemorySegment mem) {
+      return getValues(mem, 0);
+   }
+
+   @Nullable
+   public static String[] getValues(MemorySegment mem, int offset) {
+      if (!hasValues(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 6, 14, "Values");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Values", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Values", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Values", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      String[] data = new String[len];
+
+      for (int i = 0; i < len; i++) {
+         long sp = VarInt.getWithLength(mem, off);
+         int n = (int)sp + (int)(sp >>> 32);
+         data[i] = PacketIO.readVarString("Values", mem, off, 16384000, PacketIO.UTF8);
+         off += n;
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static boolean[] getContinuations(MemorySegment mem) {
+      return getContinuations(mem, 0);
+   }
+
+   @Nullable
+   public static boolean[] getContinuations(MemorySegment mem, int offset) {
+      if (!hasContinuations(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 10, 14, "Continuations");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Continuations", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Continuations", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 1L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Continuations", off + lenOffset + len * 1, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      boolean[] data = new boolean[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = mem.get(PacketIO.PROTO_BOOL, off + i);
+      }
+
+      return data;
+   }
+
+   public static boolean getIsComplete(MemorySegment mem) {
+      return getIsComplete(mem, 0);
+   }
+
+   public static boolean getIsComplete(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 1);
+   }
+
+   public static boolean hasArgTypeId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasValues(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasContinuations(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static ArgValuesResponse toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ArgValuesResponse toObject(MemorySegment mem, int offset) {
+      if (offset + 14 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ArgValuesResponse", offset + 14, (int)mem.byteSize());
+      }
+
+      String[] values = null;
+      if (hasValues(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 6, 14, "Values");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Values", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Values", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Values", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         values = new String[len];
+
+         for (int i = 0; i < len; i++) {
+            long sp = VarInt.getWithLength(mem, off);
+            int n = (int)sp + (int)(sp >>> 32);
+            values[i] = PacketIO.readVarString("Values", mem, off, 16384000, PacketIO.UTF8);
+            off += n;
+         }
+      }
+
+      boolean[] continuations = null;
+      if (hasContinuations(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 10, 14, "Continuations");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Continuations", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Continuations", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 1L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Continuations", off + lenOffset + len * 1, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         continuations = new boolean[len];
+
+         for (int i = 0; i < len; i++) {
+            continuations[i] = mem.get(PacketIO.PROTO_BOOL, off + i);
+         }
+      }
+
+      return new ArgValuesResponse(
+         hasArgTypeId(mem, offset)
+            ? PacketIO.readVarString("ArgTypeId", mem, offset + getValidatedOffset(mem, offset, 2, 14, "ArgTypeId"), 4096000, PacketIO.UTF8)
+            : null,
+         values,
+         continuations,
+         mem.get(PacketIO.PROTO_BOOL, offset + 1)
+      );
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -279,6 +479,69 @@ public class ArgValuesResponse implements Packet, ToClientPacket {
       } else {
          buf.setIntLE(continuationsOffsetSlot, -1);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.argTypeId != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.values != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.continuations != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BOOL, offset + 1, this.isComplete);
+      int varOffset = offset + 14;
+      if (this.argTypeId != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 2, varOffset - offset - 14);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.argTypeId, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 2, -1);
+      }
+
+      if (this.values != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 6, varOffset - offset - 14);
+         if (this.values.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Values", this.values.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.values.length);
+         int valuesValueOffset = 0;
+
+         for (int i = 0; i < this.values.length; i++) {
+            valuesValueOffset += PacketIO.writeVarString(mem, varOffset + valuesValueOffset, this.values[i], 16384000);
+         }
+
+         varOffset += valuesValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 6, -1);
+      }
+
+      if (this.continuations != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 10, varOffset - offset - 14);
+         if (this.continuations.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Continuations", this.continuations.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.continuations.length);
+
+         for (int i = 0; i < this.continuations.length; i++) {
+            mem.set(PacketIO.PROTO_BOOL, varOffset + i, this.continuations[i]);
+         }
+
+         varOffset += this.continuations.length;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 10, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

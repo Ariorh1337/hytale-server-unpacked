@@ -4,10 +4,12 @@ import com.hypixel.hytale.protocol.HostAddress;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -101,6 +103,100 @@ public class UpdateServerAccess implements Packet, ToServerPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 2L;
+   }
+
+   public static Access getAccess(MemorySegment mem) {
+      return getAccess(mem, 0);
+   }
+
+   public static Access getAccess(MemorySegment mem, int offset) {
+      return Access.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1));
+   }
+
+   @Nullable
+   public static HostAddress[] getHosts(MemorySegment mem) {
+      return getHosts(mem, 0);
+   }
+
+   @Nullable
+   public static HostAddress[] getHosts(MemorySegment mem, int offset) {
+      if (!hasHosts(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + 2;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Hosts", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Hosts", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Hosts", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      HostAddress[] data = new HostAddress[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = HostAddress.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   public static boolean hasHosts(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static UpdateServerAccess toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UpdateServerAccess toObject(MemorySegment mem, int offset) {
+      if (offset + 2 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("UpdateServerAccess", offset + 2, (int)mem.byteSize());
+      }
+
+      HostAddress[] hosts = null;
+      if (hasHosts(mem, offset)) {
+         int off = offset + 2;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Hosts", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Hosts", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Hosts", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         hosts = new HostAddress[len];
+
+         for (int i = 0; i < len; i++) {
+            hosts[i] = HostAddress.toObject(mem, off);
+            off += hosts[i].computeSize();
+         }
+      }
+
+      return new UpdateServerAccess(Access.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1)), hosts);
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -121,6 +217,34 @@ public class UpdateServerAccess implements Packet, ToServerPacket {
             item.serialize(buf);
          }
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.hosts != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.access.getValue());
+      int varOffset = offset + 2;
+      if (this.hosts != null) {
+         if (this.hosts.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Hosts", this.hosts.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.hosts.length);
+         int hostsValueOffset = 0;
+
+         for (int i = 0; i < this.hosts.length; i++) {
+            hostsValueOffset += this.hosts[i].serialize(mem, varOffset + hostsValueOffset);
+         }
+
+         varOffset += hostsValueOffset;
+      }
+
+      return varOffset - offset;
    }
 
    @Override

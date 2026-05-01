@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -184,6 +185,203 @@ public class SingleTrackMusicContainer extends MusicContainer {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 67L;
+   }
+
+   public static float getVolume(MemorySegment mem) {
+      return getVolume(mem, 0);
+   }
+
+   public static float getVolume(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 1);
+   }
+
+   public static int getLoopCount(MemorySegment mem) {
+      return getLoopCount(mem, 0);
+   }
+
+   public static int getLoopCount(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 5);
+   }
+
+   public static float getWeight(MemorySegment mem) {
+      return getWeight(mem, 0);
+   }
+
+   public static float getWeight(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 9);
+   }
+
+   @Nullable
+   public static Rangef getSilenceAfter(MemorySegment mem) {
+      return getSilenceAfter(mem, 0);
+   }
+
+   @Nullable
+   public static Rangef getSilenceAfter(MemorySegment mem, int offset) {
+      return hasSilenceAfter(mem, offset) ? Rangef.toObject(mem, offset + 13) : null;
+   }
+
+   @Nullable
+   public static Rangef getExitSilence(MemorySegment mem) {
+      return getExitSilence(mem, 0);
+   }
+
+   @Nullable
+   public static Rangef getExitSilence(MemorySegment mem, int offset) {
+      return hasExitSilence(mem, offset) ? Rangef.toObject(mem, offset + 21) : null;
+   }
+
+   public static float getFadeInDuration(MemorySegment mem) {
+      return getFadeInDuration(mem, 0);
+   }
+
+   public static float getFadeInDuration(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 29);
+   }
+
+   public static float getFadeOutDuration(MemorySegment mem) {
+      return getFadeOutDuration(mem, 0);
+   }
+
+   public static float getFadeOutDuration(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 33);
+   }
+
+   public static MusicTransitionType getTransitionType(MemorySegment mem) {
+      return getTransitionType(mem, 0);
+   }
+
+   public static MusicTransitionType getTransitionType(MemorySegment mem, int offset) {
+      return MusicTransitionType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 37));
+   }
+
+   public static float getTransitionDuration(MemorySegment mem) {
+      return getTransitionDuration(mem, 0);
+   }
+
+   public static float getTransitionDuration(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 38);
+   }
+
+   public static boolean getPlayToCompletion(MemorySegment mem) {
+      return getPlayToCompletion(mem, 0);
+   }
+
+   public static boolean getPlayToCompletion(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 42);
+   }
+
+   @Nullable
+   public static String getNameTranslationKey(MemorySegment mem) {
+      return getNameTranslationKey(mem, 0);
+   }
+
+   @Nullable
+   public static String getNameTranslationKey(MemorySegment mem, int offset) {
+      return hasNameTranslationKey(mem, offset)
+         ? PacketIO.readVarString("NameTranslationKey", mem, offset + getValidatedOffset(mem, offset, 59, 67, "NameTranslationKey"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static int getAudioCategoryIndex(MemorySegment mem) {
+      return getAudioCategoryIndex(mem, 0);
+   }
+
+   public static int getAudioCategoryIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 43);
+   }
+
+   @Nullable
+   public static TempoSettings getTempo(MemorySegment mem) {
+      return getTempo(mem, 0);
+   }
+
+   @Nullable
+   public static TempoSettings getTempo(MemorySegment mem, int offset) {
+      return hasTempo(mem, offset) ? TempoSettings.toObject(mem, offset + 47) : null;
+   }
+
+   @Nullable
+   public static String getTrack(MemorySegment mem) {
+      return getTrack(mem, 0);
+   }
+
+   @Nullable
+   public static String getTrack(MemorySegment mem, int offset) {
+      return hasTrack(mem, offset)
+         ? PacketIO.readVarString("Track", mem, offset + getValidatedOffset(mem, offset, 63, 67, "Track"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static boolean hasSilenceAfter(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasExitSilence(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasTempo(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasNameTranslationKey(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasTrack(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 16) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static SingleTrackMusicContainer toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static SingleTrackMusicContainer toObject(MemorySegment mem, int offset) {
+      if (offset + 67 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("SingleTrackMusicContainer", offset + 67, (int)mem.byteSize());
+      } else {
+         return new SingleTrackMusicContainer(
+            mem.get(PacketIO.PROTO_FLOAT, offset + 1),
+            mem.get(PacketIO.PROTO_INT, offset + 5),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 9),
+            hasSilenceAfter(mem, offset) ? Rangef.toObject(mem, offset + 13) : null,
+            hasExitSilence(mem, offset) ? Rangef.toObject(mem, offset + 21) : null,
+            mem.get(PacketIO.PROTO_FLOAT, offset + 29),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 33),
+            MusicTransitionType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 37)),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 38),
+            mem.get(PacketIO.PROTO_BOOL, offset + 42),
+            hasNameTranslationKey(mem, offset)
+               ? PacketIO.readVarString(
+                  "NameTranslationKey", mem, offset + getValidatedOffset(mem, offset, 59, 67, "NameTranslationKey"), 4096000, PacketIO.UTF8
+               )
+               : null,
+            mem.get(PacketIO.PROTO_INT, offset + 43),
+            hasTempo(mem, offset) ? TempoSettings.toObject(mem, offset + 47) : null,
+            hasTrack(mem, offset)
+               ? PacketIO.readVarString("Track", mem, offset + getValidatedOffset(mem, offset, 63, 67, "Track"), 4096000, PacketIO.UTF8)
+               : null
+         );
+      }
+   }
+
    @Override
    public int serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -256,6 +454,75 @@ public class SingleTrackMusicContainer extends MusicContainer {
       }
 
       return buf.writerIndex() - startPos;
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.silenceAfter != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.exitSilence != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.tempo != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.nameTranslationKey != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.track != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 1, this.volume);
+      mem.set(PacketIO.PROTO_INT, offset + 5, this.loopCount);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 9, this.weight);
+      if (this.silenceAfter != null) {
+         this.silenceAfter.serialize(mem, offset + 13);
+      } else {
+         mem.asSlice(offset + 13, 8L).fill((byte)0);
+      }
+
+      if (this.exitSilence != null) {
+         this.exitSilence.serialize(mem, offset + 21);
+      } else {
+         mem.asSlice(offset + 21, 8L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_FLOAT, offset + 29, this.fadeInDuration);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 33, this.fadeOutDuration);
+      mem.set(PacketIO.PROTO_BYTE, offset + 37, (byte)this.transitionType.getValue());
+      mem.set(PacketIO.PROTO_FLOAT, offset + 38, this.transitionDuration);
+      mem.set(PacketIO.PROTO_BOOL, offset + 42, this.playToCompletion);
+      mem.set(PacketIO.PROTO_INT, offset + 43, this.audioCategoryIndex);
+      if (this.tempo != null) {
+         this.tempo.serialize(mem, offset + 47);
+      } else {
+         mem.asSlice(offset + 47, 12L).fill((byte)0);
+      }
+
+      int varOffset = offset + 67;
+      if (this.nameTranslationKey != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 59, varOffset - offset - 67);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.nameTranslationKey, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 59, -1);
+      }
+
+      if (this.track != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 63, varOffset - offset - 67);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.track, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 63, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

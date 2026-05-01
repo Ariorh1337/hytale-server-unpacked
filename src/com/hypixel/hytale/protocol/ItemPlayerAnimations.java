@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -211,6 +212,180 @@ public class ItemPlayerAnimations {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 103L;
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem) {
+      return getId(mem, 0);
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem, int offset) {
+      return hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 91, 103, "Id"), 4096000, PacketIO.UTF8) : null;
+   }
+
+   @Nullable
+   public static Map<String, ItemAnimation> getAnimations(MemorySegment mem) {
+      return getAnimations(mem, 0);
+   }
+
+   @Nullable
+   public static Map<String, ItemAnimation> getAnimations(MemorySegment mem, int offset) {
+      if (!hasAnimations(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 95, 103, "Animations");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Animations", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("Animations", len, 4096000);
+      }
+
+      Map<String, ItemAnimation> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         long keyPacked = VarInt.getWithLength(mem, off);
+         int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+         String key = PacketIO.readVarString("key", mem, off, 16384000, PacketIO.UTF8);
+         off += nkey;
+         ItemAnimation value = ItemAnimation.toObject(mem, off);
+         off += value.computeSize();
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("Animations", key);
+         }
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static WiggleWeights getWiggleWeights(MemorySegment mem) {
+      return getWiggleWeights(mem, 0);
+   }
+
+   @Nullable
+   public static WiggleWeights getWiggleWeights(MemorySegment mem, int offset) {
+      return hasWiggleWeights(mem, offset) ? WiggleWeights.toObject(mem, offset + 1) : null;
+   }
+
+   @Nullable
+   public static CameraSettings getCamera(MemorySegment mem) {
+      return getCamera(mem, 0);
+   }
+
+   @Nullable
+   public static CameraSettings getCamera(MemorySegment mem, int offset) {
+      return hasCamera(mem, offset) ? CameraSettings.toObject(mem, offset + getValidatedOffset(mem, offset, 99, 103, "Camera")) : null;
+   }
+
+   @Nullable
+   public static ItemPullbackConfiguration getPullbackConfig(MemorySegment mem) {
+      return getPullbackConfig(mem, 0);
+   }
+
+   @Nullable
+   public static ItemPullbackConfiguration getPullbackConfig(MemorySegment mem, int offset) {
+      return hasPullbackConfig(mem, offset) ? ItemPullbackConfiguration.toObject(mem, offset + 41) : null;
+   }
+
+   public static boolean getUseFirstPersonOverride(MemorySegment mem) {
+      return getUseFirstPersonOverride(mem, 0);
+   }
+
+   public static boolean getUseFirstPersonOverride(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 90);
+   }
+
+   public static boolean hasWiggleWeights(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasPullbackConfig(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasAnimations(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasCamera(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 16) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static ItemPlayerAnimations toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ItemPlayerAnimations toObject(MemorySegment mem, int offset) {
+      if (offset + 103 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ItemPlayerAnimations", offset + 103, (int)mem.byteSize());
+      }
+
+      Map<String, ItemAnimation> animations = null;
+      if (hasAnimations(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 95, 103, "Animations");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Animations", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Animations", len, 4096000);
+         }
+
+         animations = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            long keyPacked = VarInt.getWithLength(mem, off);
+            int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+            String key = PacketIO.readVarString("key", mem, off, 16384000, PacketIO.UTF8);
+            off += nkey;
+            ItemAnimation value = ItemAnimation.toObject(mem, off);
+            off += value.computeSize();
+            if (animations.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("Animations", key);
+            }
+         }
+      }
+
+      return new ItemPlayerAnimations(
+         hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 91, 103, "Id"), 4096000, PacketIO.UTF8) : null,
+         animations,
+         hasWiggleWeights(mem, offset) ? WiggleWeights.toObject(mem, offset + 1) : null,
+         hasCamera(mem, offset) ? CameraSettings.toObject(mem, offset + getValidatedOffset(mem, offset, 99, 103, "Camera")) : null,
+         hasPullbackConfig(mem, offset) ? ItemPullbackConfiguration.toObject(mem, offset + 41) : null,
+         mem.get(PacketIO.PROTO_BOOL, offset + 90)
+      );
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -284,6 +459,76 @@ public class ItemPlayerAnimations {
       } else {
          buf.setIntLE(cameraOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.wiggleWeights != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.pullbackConfig != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.id != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.animations != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.camera != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      if (this.wiggleWeights != null) {
+         this.wiggleWeights.serialize(mem, offset + 1);
+      } else {
+         mem.asSlice(offset + 1, 40L).fill((byte)0);
+      }
+
+      if (this.pullbackConfig != null) {
+         this.pullbackConfig.serialize(mem, offset + 41);
+      } else {
+         mem.asSlice(offset + 41, 49L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_BOOL, offset + 90, this.useFirstPersonOverride);
+      int varOffset = offset + 103;
+      if (this.id != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 91, varOffset - offset - 103);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.id, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 91, -1);
+      }
+
+      if (this.animations != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 95, varOffset - offset - 103);
+         if (this.animations.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Animations", this.animations.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.animations.size());
+
+         for (Entry<String, ItemAnimation> e : this.animations.entrySet()) {
+            varOffset += PacketIO.writeVarString(mem, varOffset, e.getKey(), 16384000);
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 95, -1);
+      }
+
+      if (this.camera != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 99, varOffset - offset - 103);
+         varOffset += this.camera.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 99, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

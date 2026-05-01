@@ -60,7 +60,7 @@ import com.hypixel.hytale.server.core.modules.entity.component.RespondToHit;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.player.ChunkTracker;
 import com.hypixel.hytale.server.core.modules.entity.player.PlayerSettings;
-import com.hypixel.hytale.server.core.modules.entity.tracker.LegacyEntityTrackerSystems;
+import com.hypixel.hytale.server.core.modules.entity.tracker.EntityTrackerSystems;
 import com.hypixel.hytale.server.core.modules.interaction.InteractionModule;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.RootInteraction;
 import com.hypixel.hytale.server.core.modules.physics.component.Velocity;
@@ -70,6 +70,7 @@ import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.WorldMapTracker;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
+import com.hypixel.hytale.server.core.universe.world.spawn.ISpawnProvider;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.NotificationUtil;
@@ -88,6 +89,7 @@ import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class Player extends LivingEntity implements MetricProvider {
    @Nonnull
@@ -340,7 +342,7 @@ public class Player extends LivingEntity implements MetricProvider {
 
    public void resetManagers(@Nonnull Holder<EntityStore> holder) {
       PlayerRef playerRef = this.playerRef;
-      LegacyEntityTrackerSystems.clear(this, holder);
+      EntityTrackerSystems.clear(holder);
       this.worldMapTracker.clear();
       this.hudManager.resetUserInterface(this.playerRef);
       this.hudManager.resetHud(this.playerRef);
@@ -353,7 +355,7 @@ public class Player extends LivingEntity implements MetricProvider {
       movementManagerComponent.update(playerRef.getPacketHandler());
    }
 
-   public void notifyPickupItem(
+   public static void notifyPickupItem(
       @Nonnull Ref<EntityStore> ref, @Nonnull ItemStack itemStack, @Nullable Vector3d position, @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       World world = componentAccessor.getExternalData().getWorld();
@@ -496,14 +498,24 @@ public class Player extends LivingEntity implements MetricProvider {
          assert playerRef != null;
          return tryUseSpawnPoint(world, sortedRespawnPoints, 0, ref, playerRef, playerBoundingBoxComponent.getBoundingBox());
       } else {
-         Transform worldSpawnPoint = world.getWorldConfig().getSpawnProvider().getSpawnPoint(ref, componentAccessor);
+         ISpawnProvider spawnProvider = world.getWorldConfig().getSpawnProvider();
+         if (spawnProvider == null) {
+            return CompletableFuture.completedFuture(new Transform());
+         }
+
+         Transform worldSpawnPoint = spawnProvider.getSpawnPoint(ref, componentAccessor);
          return CompletableFuture.completedFuture(worldSpawnPoint);
       }
    }
 
    @Nonnull
    private static CompletableFuture<Transform> tryUseSpawnPoint(
-      World world, List<PlayerRespawnPointData> sortedRespawnPoints, int index, Ref<EntityStore> ref, PlayerRef playerRef, Box boundingBox
+      @Nonnull World world,
+      @Nullable List<PlayerRespawnPointData> sortedRespawnPoints,
+      int index,
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull PlayerRef playerRef,
+      @Nonnull Box boundingBox
    ) {
       if (sortedRespawnPoints != null && index < sortedRespawnPoints.size()) {
          PlayerRespawnPointData respawnPoint = sortedRespawnPoints.get(index);
@@ -530,10 +542,10 @@ public class Player extends LivingEntity implements MetricProvider {
             long chunkIndex = iterator.nextLong();
             chunkFutures[i++] = world.getChunkStore().getChunkReferenceAsync(chunkIndex).thenApplyAsync(v -> {
                if (v != null && v.isValid()) {
-                  WorldChunk wc = v.getStore().getComponent((Ref<ChunkStore>)v, WorldChunk.getComponentType());
-                  assert wc != null;
-                  wc.addKeepLoaded();
-                  return wc;
+                  WorldChunk worldChunkComponent = v.getStore().getComponent((Ref<ChunkStore>)v, WorldChunk.getComponentType());
+                  assert worldChunkComponent != null;
+                  worldChunkComponent.addKeepLoaded();
+                  return worldChunkComponent;
                } else {
                   return null;
                }
@@ -541,7 +553,7 @@ public class Player extends LivingEntity implements MetricProvider {
          }
 
          return CompletableFuture.allOf(chunkFutures)
-            .thenApplyAsync(v -> {
+            .thenApplyAsync(var4x -> {
                Vector3d pos = ensureNoCollisionAtRespawnPosition(respawnPoint, boundingBox, world);
                if (pos != null) {
                   return new Transform(pos, new Rotation3f(Rotation3f.IDENTITY));
@@ -550,7 +562,7 @@ public class Player extends LivingEntity implements MetricProvider {
                playerRef.sendMessage(Message.translation("server.general.respawnPointObstructed").param("respawnPointName", respawnPoint.getName()));
                return null;
             }, world)
-            .whenComplete((unused, throwable) -> {
+            .whenComplete((var1x, var2x) -> {
                for (CompletableFuture<WorldChunk> future : chunkFutures) {
                   future.thenAccept(WorldChunk::removeKeepLoaded);
                }
@@ -565,7 +577,12 @@ public class Player extends LivingEntity implements MetricProvider {
                return new Transform();
             }
 
-            Transform worldSpawnPoint = world.getWorldConfig().getSpawnProvider().getSpawnPoint(ref, ref.getStore());
+            ISpawnProvider spawnProvider = world.getWorldConfig().getSpawnProvider();
+            if (spawnProvider == null) {
+               return new Transform();
+            }
+
+            Transform worldSpawnPoint = spawnProvider.getSpawnPoint(ref, ref.getStore());
             worldSpawnPoint.setRotation(Rotation3f.IDENTITY);
             return worldSpawnPoint;
          }, world);
@@ -573,15 +590,18 @@ public class Player extends LivingEntity implements MetricProvider {
    }
 
    @Nullable
-   private static Vector3d ensureNoCollisionAtRespawnPosition(PlayerRespawnPointData playerRespawnPointData, Box playerHitbox, World world) {
+   private static Vector3d ensureNoCollisionAtRespawnPosition(
+      @Nonnull PlayerRespawnPointData playerRespawnPointData, @Nonnull Box playerHitbox, @Nonnull World world
+   ) {
       Vector3d respawnPosition = new Vector3d(playerRespawnPointData.getRespawnPosition());
       if (CollisionModule.get().validatePosition(world, playerHitbox, respawnPosition, new CollisionResult()) != -1) {
          return respawnPosition;
       }
 
-      respawnPosition.x = playerRespawnPointData.getBlockPosition().x + 0.5F;
-      respawnPosition.y = playerRespawnPointData.getBlockPosition().y;
-      respawnPosition.z = playerRespawnPointData.getBlockPosition().z + 0.5F;
+      Vector3i blockPosition = playerRespawnPointData.getBlockPosition();
+      respawnPosition.x = blockPosition.x + 0.5F;
+      respawnPosition.y = blockPosition.y;
+      respawnPosition.z = blockPosition.z + 0.5F;
 
       for (int distance = 1; distance <= 2; distance++) {
          for (int offset = -distance; offset <= distance; offset++) {
@@ -716,7 +736,6 @@ public class Player extends LivingEntity implements MetricProvider {
       assert playerComponent != null;
       PlayerRef playerRefComponent = componentAccessor.getComponent(playerRef, PlayerRef.getComponentType());
       assert playerRefComponent != null;
-      GameMode oldGameMode = playerComponent.gameMode;
       playerComponent.gameMode = gameMode;
       playerRefComponent.getPacketHandler().writeNoCache(new SetGameMode(gameMode));
       if (movementManager.getDefaultSettings() != null) {
@@ -768,13 +787,15 @@ public class Player extends LivingEntity implements MetricProvider {
    }
 
    @Nonnull
-   public ItemStackTransaction giveItem(@Nonnull ItemStack stack, @Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      PlayerSettings playerSettings = componentAccessor.getComponent(ref, PlayerSettings.getComponentType());
-      if (playerSettings == null) {
-         playerSettings = PlayerSettings.defaults();
+   public static ItemStackTransaction giveItem(
+      @Nonnull ItemStack stack, @Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
+      PlayerSettings playerSettingsComponent = componentAccessor.getComponent(ref, PlayerSettings.getComponentType());
+      if (playerSettingsComponent == null) {
+         playerSettingsComponent = PlayerSettings.defaults();
       }
 
-      return InventoryUtils.getContainerForItemPickup(ref, stack.getItem(), playerSettings, componentAccessor).addItemStack(stack);
+      return InventoryUtils.getContainerForItemPickup(ref, stack.getItem(), playerSettingsComponent, componentAccessor).addItemStack(stack);
    }
 
    @Override

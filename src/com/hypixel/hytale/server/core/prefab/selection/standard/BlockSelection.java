@@ -40,6 +40,7 @@ import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.entity.entities.BlockEntity;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import com.hypixel.hytale.server.core.modules.block.BlockModule;
+import com.hypixel.hytale.server.core.modules.block.components.ItemContainerBlock;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.entity.component.EntityScaleComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.FromPrefab;
@@ -51,6 +52,7 @@ import com.hypixel.hytale.server.core.prefab.event.PrefabPlaceEntityEvent;
 import com.hypixel.hytale.server.core.prefab.selection.mask.BlockMask;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
+import com.hypixel.hytale.server.core.universe.world.chunk.BlockComponentChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockRotationUtil;
 import com.hypixel.hytale.server.core.universe.world.chunk.ChunkColumn;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
@@ -876,6 +878,7 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
                }
             }
 
+            this.clearBlockItemContainer(outerWorld, chunk, blockX, blockY, blockZ);
             chunk.setState(blockX, blockY, blockZ, newBlockType, newRotation, holder);
             dirtyChunks.add(chunkIndex);
             feedbackConsumer.accept(feedbackKey, totalBlocks, counter, feedback, componentAccessor);
@@ -925,6 +928,32 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
                FluidSection fluidSection = store.getComponent(section, FluidSection.getComponentType());
                if (fluidSection != null) {
                   fluidSection.setFluid(blockX, blockY, blockZ, 0, (byte)0);
+               }
+            }
+         }
+      }
+   }
+
+   private void clearBlockItemContainer(@Nonnull World world, @Nonnull WorldChunk chunk, int blockX, int blockY, int blockZ) {
+      Ref<ChunkStore> ref = chunk.getReference();
+      if (ref != null && ref.isValid()) {
+         Store<ChunkStore> store = world.getChunkStore().getStore();
+         BlockComponentChunk blockComponentChunk = store.getComponent(ref, BlockComponentChunk.getComponentType());
+         if (blockComponentChunk != null) {
+            int index = ChunkUtil.indexBlockInColumn(blockX, blockY, blockZ);
+            Ref<ChunkStore> entityRef = blockComponentChunk.getEntityReference(index);
+            if (entityRef != null) {
+               ItemContainerBlock container = entityRef.getStore().getComponent(entityRef, ItemContainerBlock.getComponentType());
+               if (container != null) {
+                  container.getItemContainer().dropAllItemStacks();
+               }
+            } else {
+               Holder<ChunkStore> holder = blockComponentChunk.getEntityHolder(index);
+               if (holder != null) {
+                  ItemContainerBlock container = holder.getComponent(ItemContainerBlock.getComponentType());
+                  if (container != null) {
+                     container.getItemContainer().dropAllItemStacks();
+                  }
                }
             }
          }
@@ -1122,6 +1151,7 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
                }
             }
 
+            this.clearBlockItemContainer(outerWorld, chunk, blockX, blockY, blockZ);
             chunk.setState(blockX, blockY, blockZ, newBlockType, newRotation, holder);
             dirtyChunks.add(chunkIndex);
          }

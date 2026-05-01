@@ -1,9 +1,11 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -88,6 +90,100 @@ public class InventorySection {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 3L;
+   }
+
+   @Nullable
+   public static Map<Integer, ItemWithAllMetadata> getItems(MemorySegment mem) {
+      return getItems(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Integer, ItemWithAllMetadata> getItems(MemorySegment mem, int offset) {
+      if (!hasItems(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + 3;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Items", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("Items", len, 4096000);
+      }
+
+      Map<Integer, ItemWithAllMetadata> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         int key = mem.get(PacketIO.PROTO_INT, off);
+         off += 4;
+         ItemWithAllMetadata value = ItemWithAllMetadata.toObject(mem, off);
+         off += value.computeSize();
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("Items", key);
+         }
+      }
+
+      return data;
+   }
+
+   public static short getCapacity(MemorySegment mem) {
+      return getCapacity(mem, 0);
+   }
+
+   public static short getCapacity(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_SHORT, offset + 1);
+   }
+
+   public static boolean hasItems(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static InventorySection toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static InventorySection toObject(MemorySegment mem, int offset) {
+      if (offset + 3 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("InventorySection", offset + 3, (int)mem.byteSize());
+      }
+
+      Map<Integer, ItemWithAllMetadata> items = null;
+      if (hasItems(mem, offset)) {
+         int off = offset + 3;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Items", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Items", len, 4096000);
+         }
+
+         items = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            int key = mem.get(PacketIO.PROTO_INT, off);
+            off += 4;
+            ItemWithAllMetadata value = ItemWithAllMetadata.toObject(mem, off);
+            off += value.computeSize();
+            if (items.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("Items", key);
+            }
+         }
+      }
+
+      return new InventorySection(items, mem.get(PacketIO.PROTO_SHORT, offset + 1));
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
       if (this.items != null) {
@@ -108,6 +204,32 @@ public class InventorySection {
             e.getValue().serialize(buf);
          }
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.items != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_SHORT, offset + 1, this.capacity);
+      int varOffset = offset + 3;
+      if (this.items != null) {
+         if (this.items.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Items", this.items.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.items.size());
+
+         for (Entry<Integer, ItemWithAllMetadata> e : this.items.entrySet()) {
+            mem.set(PacketIO.PROTO_INT, varOffset, e.getKey());
+            varOffset += 4;
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

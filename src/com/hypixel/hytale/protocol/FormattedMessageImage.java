@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -70,10 +71,62 @@ public class FormattedMessageImage {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 8L;
+   }
+
+   public static String getFilePath(MemorySegment mem) {
+      return getFilePath(mem, 0);
+   }
+
+   public static String getFilePath(MemorySegment mem, int offset) {
+      return PacketIO.readVarString("FilePath", mem, offset + 8, 4096000, PacketIO.UTF8);
+   }
+
+   public static int getWidth(MemorySegment mem) {
+      return getWidth(mem, 0);
+   }
+
+   public static int getWidth(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 0);
+   }
+
+   public static int getHeight(MemorySegment mem) {
+      return getHeight(mem, 0);
+   }
+
+   public static int getHeight(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 4);
+   }
+
+   public static FormattedMessageImage toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static FormattedMessageImage toObject(MemorySegment mem, int offset) {
+      if (offset + 8 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("FormattedMessageImage", offset + 8, (int)mem.byteSize());
+      } else {
+         return new FormattedMessageImage(
+            PacketIO.readVarString("FilePath", mem, offset + 8, 4096000, PacketIO.UTF8),
+            mem.get(PacketIO.PROTO_INT, offset + 0),
+            mem.get(PacketIO.PROTO_INT, offset + 4)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeIntLE(this.width);
       buf.writeIntLE(this.height);
       PacketIO.writeVarString(buf, this.filePath, 4096000);
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_INT, offset + 0, this.width);
+      mem.set(PacketIO.PROTO_INT, offset + 4, this.height);
+      int varOffset = offset + 8;
+      varOffset += PacketIO.writeVarString(mem, varOffset, this.filePath, 4096000);
+      return varOffset - offset;
    }
 
    public int computeSize() {

@@ -87,9 +87,11 @@ import com.hypixel.hytale.server.core.prefab.selection.standard.BlockSelection;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.FillerBlockUtil;
 import com.hypixel.hytale.server.core.util.NotificationUtil;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -562,12 +564,20 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
                      }
 
                      BlockSelection selection = s.getSelection();
-                     BlockChange[] blocksChange = selection.toPacket().blocksChange;
-                     prototypeSettings.setBlockChangesForPlaySelectionToolPasteMode(blocksChange);
-                     ArrayList<PrototypePlayerBuilderToolSettings.FluidChange> fluidChanges = new ArrayList<>();
                      int anchorX = selection.getAnchorX();
                      int anchorY = selection.getAnchorY();
                      int anchorZ = selection.getAnchorZ();
+                     ObjectArrayList<BlockChange> blockChangeList = new ObjectArrayList<>();
+                     ObjectArrayList<Holder<ChunkStore>> blockHolderList = new ObjectArrayList<>();
+                     selection.forEachBlock((x, y, z, block) -> {
+                        if (block.filler() == 0) {
+                           blockChangeList.add(new BlockChange(x - anchorX, y - anchorY, z - anchorZ, block.blockId(), (byte)block.rotation()));
+                           blockHolderList.add(block.holder() != null ? block.holder().clone() : null);
+                        }
+                     });
+                     prototypeSettings.setBlockChangesForPlaySelectionToolPasteMode(blockChangeList.toArray(BlockChange[]::new));
+                     prototypeSettings.setBlockHoldersForPasteMode(blockHolderList.toArray(new Holder[0]));
+                     ArrayList<PrototypePlayerBuilderToolSettings.FluidChange> fluidChanges = new ArrayList<>();
                      selection.forEachFluid(
                         (x, y, z, fluidId, fluidLevel) -> fluidChanges.add(
                            new PrototypePlayerBuilderToolSettings.FluidChange(x - anchorX, y - anchorY, z - anchorZ, fluidId, fluidLevel)
@@ -591,6 +601,7 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
                   BlockChange[] localBlockChanges = prototypeSettings.getBlockChangesForPlaySelectionToolPasteMode();
                   PrototypePlayerBuilderToolSettings.FluidChange[] localFluidChanges = prototypeSettings.getFluidChangesForPlaySelectionToolPasteMode();
                   PrototypePlayerBuilderToolSettings.EntityChange[] localEntityChanges = prototypeSettings.getEntityChangesForPlaySelectionToolPasteMode();
+                  Holder<ChunkStore>[] localBlockHolders = prototypeSettings.getBlockHoldersForPasteMode();
                   Vector3i blockChangeOffsetOrigin = prototypeSettings.getBlockChangeOffsetOrigin();
                   if (packet.initialPastePointForClipboardPaste != null) {
                      blockChangeOffsetOrigin = new Vector3i(
@@ -604,6 +615,7 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
                         localBlockChanges,
                         localFluidChanges,
                         localEntityChanges,
+                        localBlockHolders,
                         rotation,
                         translationOffset,
                         rotationOrigin,

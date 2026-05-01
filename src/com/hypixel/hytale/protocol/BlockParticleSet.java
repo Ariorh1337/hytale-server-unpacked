@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -191,6 +192,178 @@ public class BlockParticleSet {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 40L;
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem) {
+      return getId(mem, 0);
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem, int offset) {
+      return hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 32, 40, "Id"), 4096000, PacketIO.UTF8) : null;
+   }
+
+   @Nullable
+   public static Color getColor(MemorySegment mem) {
+      return getColor(mem, 0);
+   }
+
+   @Nullable
+   public static Color getColor(MemorySegment mem, int offset) {
+      return hasColor(mem, offset) ? Color.toObject(mem, offset + 1) : null;
+   }
+
+   public static float getScale(MemorySegment mem) {
+      return getScale(mem, 0);
+   }
+
+   public static float getScale(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 4);
+   }
+
+   @Nullable
+   public static Vector3fc getPositionOffset(MemorySegment mem) {
+      return getPositionOffset(mem, 0);
+   }
+
+   @Nullable
+   public static Vector3fc getPositionOffset(MemorySegment mem, int offset) {
+      return hasPositionOffset(mem, offset) ? PacketIO.readVector3f(mem, offset + 8) : null;
+   }
+
+   @Nullable
+   public static Direction getRotationOffset(MemorySegment mem) {
+      return getRotationOffset(mem, 0);
+   }
+
+   @Nullable
+   public static Direction getRotationOffset(MemorySegment mem, int offset) {
+      return hasRotationOffset(mem, offset) ? Direction.toObject(mem, offset + 20) : null;
+   }
+
+   @Nullable
+   public static Map<BlockParticleEvent, String> getParticleSystemIds(MemorySegment mem) {
+      return getParticleSystemIds(mem, 0);
+   }
+
+   @Nullable
+   public static Map<BlockParticleEvent, String> getParticleSystemIds(MemorySegment mem, int offset) {
+      if (!hasParticleSystemIds(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 36, 40, "ParticleSystemIds");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("ParticleSystemIds", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("ParticleSystemIds", len, 4096000);
+      }
+
+      Map<BlockParticleEvent, String> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         BlockParticleEvent key = BlockParticleEvent.fromValue(mem.get(PacketIO.PROTO_BYTE, off));
+         long valuePacked = VarInt.getWithLength(mem, ++off);
+         int nvalue = (int)valuePacked + (int)(valuePacked >>> 32);
+         String value = PacketIO.readVarString("value", mem, off, 16384000, PacketIO.UTF8);
+         off += nvalue;
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("ParticleSystemIds", key);
+         }
+      }
+
+      return data;
+   }
+
+   public static boolean hasColor(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasPositionOffset(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasRotationOffset(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasParticleSystemIds(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 16) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static BlockParticleSet toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static BlockParticleSet toObject(MemorySegment mem, int offset) {
+      if (offset + 40 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BlockParticleSet", offset + 40, (int)mem.byteSize());
+      }
+
+      Map<BlockParticleEvent, String> particleSystemIds = null;
+      if (hasParticleSystemIds(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 36, 40, "ParticleSystemIds");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("ParticleSystemIds", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("ParticleSystemIds", len, 4096000);
+         }
+
+         particleSystemIds = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            BlockParticleEvent key = BlockParticleEvent.fromValue(mem.get(PacketIO.PROTO_BYTE, off));
+            long valuePacked = VarInt.getWithLength(mem, ++off);
+            int nvalue = (int)valuePacked + (int)(valuePacked >>> 32);
+            String value = PacketIO.readVarString("value", mem, off, 16384000, PacketIO.UTF8);
+            off += nvalue;
+            if (particleSystemIds.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("ParticleSystemIds", key);
+            }
+         }
+      }
+
+      return new BlockParticleSet(
+         hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 32, 40, "Id"), 4096000, PacketIO.UTF8) : null,
+         hasColor(mem, offset) ? Color.toObject(mem, offset + 1) : null,
+         mem.get(PacketIO.PROTO_FLOAT, offset + 4),
+         hasPositionOffset(mem, offset) ? PacketIO.readVector3f(mem, offset + 8) : null,
+         hasRotationOffset(mem, offset) ? Direction.toObject(mem, offset + 20) : null,
+         particleSystemIds
+      );
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -261,6 +434,75 @@ public class BlockParticleSet {
       } else {
          buf.setIntLE(particleSystemIdsOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.color != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.positionOffset != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.rotationOffset != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.id != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.particleSystemIds != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      if (this.color != null) {
+         this.color.serialize(mem, offset + 1);
+      } else {
+         mem.asSlice(offset + 1, 3L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_FLOAT, offset + 4, this.scale);
+      if (this.positionOffset != null) {
+         PacketIO.writeVector3f(mem, offset + 8, this.positionOffset);
+      } else {
+         mem.asSlice(offset + 8, 12L).fill((byte)0);
+      }
+
+      if (this.rotationOffset != null) {
+         this.rotationOffset.serialize(mem, offset + 20);
+      } else {
+         mem.asSlice(offset + 20, 12L).fill((byte)0);
+      }
+
+      int varOffset = offset + 40;
+      if (this.id != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 32, varOffset - offset - 40);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.id, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 32, -1);
+      }
+
+      if (this.particleSystemIds != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 36, varOffset - offset - 40);
+         if (this.particleSystemIds.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("ParticleSystemIds", this.particleSystemIds.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.particleSystemIds.size());
+
+         for (Entry<BlockParticleEvent, String> e : this.particleSystemIds.entrySet()) {
+            mem.set(PacketIO.PROTO_BYTE, varOffset, (byte)e.getKey().getValue());
+            varOffset = ++varOffset + PacketIO.writeVarString(mem, varOffset, e.getValue(), 16384000);
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 36, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

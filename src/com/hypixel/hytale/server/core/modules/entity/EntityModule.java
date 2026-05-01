@@ -79,6 +79,7 @@ import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.MovementAudioComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.NPCMarkerComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.NewSpawnComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.PersistentDisplayName;
 import com.hypixel.hytale.server.core.modules.entity.component.PersistentDynamicLight;
 import com.hypixel.hytale.server.core.modules.entity.component.PersistentModel;
 import com.hypixel.hytale.server.core.modules.entity.component.PositionDataComponent;
@@ -144,6 +145,7 @@ import com.hypixel.hytale.server.core.modules.entity.repulsion.RepulsionConfig;
 import com.hypixel.hytale.server.core.modules.entity.repulsion.RepulsionConfigPacketGenerator;
 import com.hypixel.hytale.server.core.modules.entity.repulsion.RepulsionSystems;
 import com.hypixel.hytale.server.core.modules.entity.system.AudioSystems;
+import com.hypixel.hytale.server.core.modules.entity.system.DisplayNameSystems;
 import com.hypixel.hytale.server.core.modules.entity.system.EntityInteractableSystems;
 import com.hypixel.hytale.server.core.modules.entity.system.EntitySpatialSystem;
 import com.hypixel.hytale.server.core.modules.entity.system.EntitySystems;
@@ -166,7 +168,6 @@ import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.modules.entity.teleport.TeleportRecord;
 import com.hypixel.hytale.server.core.modules.entity.teleport.TeleportSystems;
 import com.hypixel.hytale.server.core.modules.entity.tracker.EntityTrackerSystems;
-import com.hypixel.hytale.server.core.modules.entity.tracker.LegacyEntityTrackerSystems;
 import com.hypixel.hytale.server.core.modules.entity.tracker.NetworkId;
 import com.hypixel.hytale.server.core.modules.physics.component.PhysicsValues;
 import com.hypixel.hytale.server.core.modules.physics.component.Velocity;
@@ -228,6 +229,7 @@ public class EntityModule extends JavaPlugin {
    private ResourceType<EntityStore, SpatialResource<Ref<EntityStore>, EntityStore>> itemSpatialResourceType;
    private ResourceType<EntityStore, SpatialResource<Ref<EntityStore>, EntityStore>> networkSendableSpatialResourceType;
    private ComponentType<EntityStore, DisplayNameComponent> displayNameComponentType;
+   private ComponentType<EntityStore, PersistentDisplayName> persistentDisplayNameComponentType;
    private ComponentType<EntityStore, EntityGroup> entityGroupComponentType;
    private ComponentType<EntityStore, MovementStatesComponent> movementStatesComponentType;
    private ComponentType<EntityStore, DamageDataComponent> damageDataComponentType;
@@ -389,7 +391,13 @@ public class EntityModule extends JavaPlugin {
          throw new UnsupportedOperationException();
       });
       this.movementManagerComponentType = entityStoreRegistry.registerComponent(MovementManager.class, MovementManager::new);
-      this.displayNameComponentType = entityStoreRegistry.registerComponent(DisplayNameComponent.class, "DisplayName", DisplayNameComponent.CODEC);
+      this.displayNameComponentType = entityStoreRegistry.registerComponent(DisplayNameComponent.class, DisplayNameComponent::new);
+      this.persistentDisplayNameComponentType = entityStoreRegistry.registerComponent(
+         PersistentDisplayName.class, "PersistentDisplayName", PersistentDisplayName.CODEC
+      );
+      entityStoreRegistry.registerSystem(new DisplayNameSystems.HydrateDisplayName());
+      entityStoreRegistry.registerSystem(new DisplayNameSystems.MigratePlayerDisplayName());
+      entityStoreRegistry.registerSystem(new DisplayNameSystems.SyncDisplayName());
       entityStoreRegistry.registerSystem(new PlayerSystems.PlayerSpawnedSystem());
       entityStoreRegistry.registerSystem(new PlayerSystems.PlayerAddedSystem(this.movementManagerComponentType));
       entityStoreRegistry.registerSystem(new PlayerSystems.PlayerRemovedSystem());
@@ -474,10 +482,10 @@ public class EntityModule extends JavaPlugin {
       this.networkSendableSpatialResourceType = entityStoreRegistry.registerSpatialResource(() -> new KDTree<>(Ref::isValid));
       entityStoreRegistry.registerSystem(new NetworkSendableSpatialSystem(this.networkSendableSpatialResourceType));
       entityStoreRegistry.registerSystem(new EntityTrackerSystems.CollectVisible(this.entityViewerComponentType));
-      entityStoreRegistry.registerSystem(new LegacyEntityTrackerSystems.LegacyLODCull(this.entityViewerComponentType));
-      entityStoreRegistry.registerSystem(new LegacyEntityTrackerSystems.LegacyHideFromEntity(this.entityViewerComponentType));
-      entityStoreRegistry.registerSystem(new LegacyEntityTrackerSystems.LegacyEntityModel(this.visibleComponentType));
-      entityStoreRegistry.registerSystem(new LegacyEntityTrackerSystems.LegacyEntitySkin(this.visibleComponentType, this.playerSkinComponentType));
+      entityStoreRegistry.registerSystem(new EntityTrackerSystems.LODCull(this.entityViewerComponentType));
+      entityStoreRegistry.registerSystem(new EntityTrackerSystems.HideFromPlayer(this.entityViewerComponentType));
+      entityStoreRegistry.registerSystem(new EntityTrackerSystems.EntityModel(this.visibleComponentType));
+      entityStoreRegistry.registerSystem(new EntityTrackerSystems.EntitySkin(this.visibleComponentType, this.playerSkinComponentType));
       entityStoreRegistry.registerSystem(new BlockEntitySystems.BlockEntityTrackerSystem(this.visibleComponentType, this.blockEntityComponentType));
       entityStoreRegistry.registerSystem(new EntityTrackerSystems.EffectControllerSystem(this.visibleComponentType, this.effectControllerComponentType));
       entityStoreRegistry.registerSystem(new EntitySystems.DynamicLightTracker(this.visibleComponentType));
@@ -690,6 +698,10 @@ public class EntityModule extends JavaPlugin {
 
    public ComponentType<EntityStore, DisplayNameComponent> getDisplayNameComponentType() {
       return this.displayNameComponentType;
+   }
+
+   public ComponentType<EntityStore, PersistentDisplayName> getPersistentDisplayNameComponentType() {
+      return this.persistentDisplayNameComponentType;
    }
 
    public ComponentType<EntityStore, ApplyRandomSkinPersistedComponent> getApplyRandomSkinPersistedComponent() {

@@ -280,6 +280,7 @@ public abstract class Interaction
             if (context.getOperationCounter() == previousCounter && previousDepth == context.getChain().getCallDepth()) {
                context.setOperationCounter(context.getOperationCounter() + 1);
             }
+         case NotFinished:
          default:
             return;
          case ItemChanged:
@@ -318,6 +319,8 @@ public abstract class Interaction
             if (context.getOperationCounter() == previousCounter && previousDepth == context.getChain().getSimulatedCallDepth()) {
                context.setOperationCounter(context.getOperationCounter() + 1);
             }
+         case ItemChanged:
+         case NotFinished:
       }
    }
 

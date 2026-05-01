@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -91,6 +92,48 @@ public class CustomPageEvent implements Packet, ToServerPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 2L;
+   }
+
+   public static CustomPageEventType getType(MemorySegment mem) {
+      return getType(mem, 0);
+   }
+
+   public static CustomPageEventType getType(MemorySegment mem, int offset) {
+      return CustomPageEventType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1));
+   }
+
+   @Nullable
+   public static String getData(MemorySegment mem) {
+      return getData(mem, 0);
+   }
+
+   @Nullable
+   public static String getData(MemorySegment mem, int offset) {
+      return hasData(mem, offset) ? PacketIO.readVarString("Data", mem, offset + 2, 4096000, PacketIO.UTF8) : null;
+   }
+
+   public static boolean hasData(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static CustomPageEvent toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static CustomPageEvent toObject(MemorySegment mem, int offset) {
+      if (offset + 2 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("CustomPageEvent", offset + 2, (int)mem.byteSize());
+      } else {
+         return new CustomPageEvent(
+            CustomPageEventType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1)),
+            hasData(mem, offset) ? PacketIO.readVarString("Data", mem, offset + 2, 4096000, PacketIO.UTF8) : null
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -103,6 +146,23 @@ public class CustomPageEvent implements Packet, ToServerPacket {
       if (this.data != null) {
          PacketIO.writeVarString(buf, this.data, 4096000);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.data != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.type.getValue());
+      int varOffset = offset + 2;
+      if (this.data != null) {
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.data, 4096000);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

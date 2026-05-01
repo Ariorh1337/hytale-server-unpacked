@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -81,10 +82,52 @@ public class TriggerVolumeToolSetActivationDelay implements Packet, ToServerPack
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 4L;
+   }
+
+   public static String getVolumeId(MemorySegment mem) {
+      return getVolumeId(mem, 0);
+   }
+
+   public static String getVolumeId(MemorySegment mem, int offset) {
+      return PacketIO.readVarString("VolumeId", mem, offset + 4, 4096000, PacketIO.UTF8);
+   }
+
+   public static float getActivationDelay(MemorySegment mem) {
+      return getActivationDelay(mem, 0);
+   }
+
+   public static float getActivationDelay(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 0);
+   }
+
+   public static TriggerVolumeToolSetActivationDelay toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static TriggerVolumeToolSetActivationDelay toObject(MemorySegment mem, int offset) {
+      if (offset + 4 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("TriggerVolumeToolSetActivationDelay", offset + 4, (int)mem.byteSize());
+      } else {
+         return new TriggerVolumeToolSetActivationDelay(
+            PacketIO.readVarString("VolumeId", mem, offset + 4, 4096000, PacketIO.UTF8), mem.get(PacketIO.PROTO_FLOAT, offset + 0)
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeFloatLE(this.activationDelay);
       PacketIO.writeVarString(buf, this.volumeId, 4096000);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_FLOAT, offset + 0, this.activationDelay);
+      int varOffset = offset + 4;
+      varOffset += PacketIO.writeVarString(mem, varOffset, this.volumeId, 4096000);
+      return varOffset - offset;
    }
 
    @Override

@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -113,6 +114,50 @@ public class ContextMenuItem {
       }
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 8L;
+   }
+
+   public static String getName(MemorySegment mem) {
+      return getName(mem, 0);
+   }
+
+   public static String getName(MemorySegment mem, int offset) {
+      return PacketIO.readVarString("Name", mem, offset + getValidatedOffset(mem, offset, 0, 8, "Name"), 4096000, PacketIO.UTF8);
+   }
+
+   public static String getCommand(MemorySegment mem) {
+      return getCommand(mem, 0);
+   }
+
+   public static String getCommand(MemorySegment mem, int offset) {
+      return PacketIO.readVarString("Command", mem, offset + getValidatedOffset(mem, offset, 4, 8, "Command"), 4096000, PacketIO.UTF8);
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static ContextMenuItem toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ContextMenuItem toObject(MemorySegment mem, int offset) {
+      if (offset + 8 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ContextMenuItem", offset + 8, (int)mem.byteSize());
+      } else {
+         return new ContextMenuItem(
+            PacketIO.readVarString("Name", mem, offset + getValidatedOffset(mem, offset, 0, 8, "Name"), 4096000, PacketIO.UTF8),
+            PacketIO.readVarString("Command", mem, offset + getValidatedOffset(mem, offset, 4, 8, "Command"), 4096000, PacketIO.UTF8)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       int nameOffsetSlot = buf.writerIndex();
@@ -124,6 +169,15 @@ public class ContextMenuItem {
       PacketIO.writeVarString(buf, this.name, 4096000);
       buf.setIntLE(commandOffsetSlot, buf.writerIndex() - varBlockStart);
       PacketIO.writeVarString(buf, this.command, 4096000);
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      int varOffset = offset + 8;
+      mem.set(PacketIO.PROTO_INT, offset + 0, varOffset - offset - 8);
+      varOffset += PacketIO.writeVarString(mem, varOffset, this.name, 4096000);
+      mem.set(PacketIO.PROTO_INT, offset + 4, varOffset - offset - 8);
+      varOffset += PacketIO.writeVarString(mem, varOffset, this.command, 4096000);
+      return varOffset - offset;
    }
 
    public int computeSize() {

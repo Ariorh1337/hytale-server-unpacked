@@ -5,10 +5,12 @@ import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.UpdateType;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -136,6 +138,150 @@ public class UpdateBlockHitboxes implements Packet, ToClientPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 6L;
+   }
+
+   public static UpdateType getType(MemorySegment mem) {
+      return getType(mem, 0);
+   }
+
+   public static UpdateType getType(MemorySegment mem, int offset) {
+      return UpdateType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1));
+   }
+
+   public static int getMaxId(MemorySegment mem) {
+      return getMaxId(mem, 0);
+   }
+
+   public static int getMaxId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 2);
+   }
+
+   @Nullable
+   public static Map<Integer, Hitbox[]> getBlockBaseHitboxes(MemorySegment mem) {
+      return getBlockBaseHitboxes(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Integer, Hitbox[]> getBlockBaseHitboxes(MemorySegment mem, int offset) {
+      if (!hasBlockBaseHitboxes(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + 6;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("BlockBaseHitboxes", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("BlockBaseHitboxes", len, 4096000);
+      }
+
+      Map<Integer, Hitbox[]> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         int key = mem.get(PacketIO.PROTO_INT, off);
+         off += 4;
+         long valuePacked = VarInt.getWithLength(mem, off);
+         int valueLen = (int)valuePacked;
+         int valueVarLen = (int)(valuePacked >>> 32);
+         if (valueLen < 0) {
+            throw ProtocolException.negativeLength("value", valueLen);
+         }
+
+         if (valueLen > 64) {
+            throw ProtocolException.arrayTooLong("value", valueLen, 64);
+         }
+
+         if (off + valueVarLen + valueLen * 24L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("value", off + valueVarLen + valueLen * 24, (int)mem.byteSize());
+         }
+
+         off += valueVarLen;
+         Hitbox[] value = new Hitbox[valueLen];
+
+         for (int valueIdx = 0; valueIdx < valueLen; valueIdx++) {
+            value[valueIdx] = Hitbox.toObject(mem, off);
+            off += value[valueIdx].computeSize();
+         }
+
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("BlockBaseHitboxes", key);
+         }
+      }
+
+      return data;
+   }
+
+   public static boolean hasBlockBaseHitboxes(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static UpdateBlockHitboxes toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UpdateBlockHitboxes toObject(MemorySegment mem, int offset) {
+      if (offset + 6 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("UpdateBlockHitboxes", offset + 6, (int)mem.byteSize());
+      }
+
+      Map<Integer, Hitbox[]> blockBaseHitboxes = null;
+      if (hasBlockBaseHitboxes(mem, offset)) {
+         int off = offset + 6;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("BlockBaseHitboxes", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("BlockBaseHitboxes", len, 4096000);
+         }
+
+         blockBaseHitboxes = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            int key = mem.get(PacketIO.PROTO_INT, off);
+            off += 4;
+            long valuePacked = VarInt.getWithLength(mem, off);
+            int valueLen = (int)valuePacked;
+            int valueVarLen = (int)(valuePacked >>> 32);
+            if (valueLen < 0) {
+               throw ProtocolException.negativeLength("value", valueLen);
+            }
+
+            if (valueLen > 64) {
+               throw ProtocolException.arrayTooLong("value", valueLen, 64);
+            }
+
+            if (off + valueVarLen + valueLen * 24L > mem.byteSize()) {
+               throw ProtocolException.bufferTooSmall("value", off + valueVarLen + valueLen * 24, (int)mem.byteSize());
+            }
+
+            off += valueVarLen;
+            Hitbox[] value = new Hitbox[valueLen];
+
+            for (int valueIdx = 0; valueIdx < valueLen; valueIdx++) {
+               value[valueIdx] = Hitbox.toObject(mem, off);
+               off += value[valueIdx].computeSize();
+            }
+
+            if (blockBaseHitboxes.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("BlockBaseHitboxes", key);
+            }
+         }
+      }
+
+      return new UpdateBlockHitboxes(UpdateType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1)), mem.get(PacketIO.PROTO_INT, offset + 2), blockBaseHitboxes);
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -162,6 +308,38 @@ public class UpdateBlockHitboxes implements Packet, ToClientPacket {
             }
          }
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.blockBaseHitboxes != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.type.getValue());
+      mem.set(PacketIO.PROTO_INT, offset + 2, this.maxId);
+      int varOffset = offset + 6;
+      if (this.blockBaseHitboxes != null) {
+         if (this.blockBaseHitboxes.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("BlockBaseHitboxes", this.blockBaseHitboxes.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.blockBaseHitboxes.size());
+
+         for (Entry<Integer, Hitbox[]> e : this.blockBaseHitboxes.entrySet()) {
+            mem.set(PacketIO.PROTO_INT, varOffset, e.getKey());
+            varOffset += 4;
+            varOffset += VarInt.set(mem, varOffset, e.getValue().length);
+
+            for (Hitbox arrItem : e.getValue()) {
+               varOffset += arrItem.serialize(mem, varOffset);
+            }
+         }
+      }
+
+      return varOffset - offset;
    }
 
    @Override

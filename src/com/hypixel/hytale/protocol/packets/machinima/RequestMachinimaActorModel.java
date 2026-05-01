@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -183,6 +184,92 @@ public class RequestMachinimaActorModel implements Packet, ToServerPacket {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 13L;
+   }
+
+   @Nullable
+   public static String getModelId(MemorySegment mem) {
+      return getModelId(mem, 0);
+   }
+
+   @Nullable
+   public static String getModelId(MemorySegment mem, int offset) {
+      return hasModelId(mem, offset)
+         ? PacketIO.readVarString("ModelId", mem, offset + getValidatedOffset(mem, offset, 1, 13, "ModelId"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getSceneName(MemorySegment mem) {
+      return getSceneName(mem, 0);
+   }
+
+   @Nullable
+   public static String getSceneName(MemorySegment mem, int offset) {
+      return hasSceneName(mem, offset)
+         ? PacketIO.readVarString("SceneName", mem, offset + getValidatedOffset(mem, offset, 5, 13, "SceneName"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getActorName(MemorySegment mem) {
+      return getActorName(mem, 0);
+   }
+
+   @Nullable
+   public static String getActorName(MemorySegment mem, int offset) {
+      return hasActorName(mem, offset)
+         ? PacketIO.readVarString("ActorName", mem, offset + getValidatedOffset(mem, offset, 9, 13, "ActorName"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static boolean hasModelId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasSceneName(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasActorName(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static RequestMachinimaActorModel toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static RequestMachinimaActorModel toObject(MemorySegment mem, int offset) {
+      if (offset + 13 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("RequestMachinimaActorModel", offset + 13, (int)mem.byteSize());
+      } else {
+         return new RequestMachinimaActorModel(
+            hasModelId(mem, offset)
+               ? PacketIO.readVarString("ModelId", mem, offset + getValidatedOffset(mem, offset, 1, 13, "ModelId"), 4096000, PacketIO.UTF8)
+               : null,
+            hasSceneName(mem, offset)
+               ? PacketIO.readVarString("SceneName", mem, offset + getValidatedOffset(mem, offset, 5, 13, "SceneName"), 4096000, PacketIO.UTF8)
+               : null,
+            hasActorName(mem, offset)
+               ? PacketIO.readVarString("ActorName", mem, offset + getValidatedOffset(mem, offset, 9, 13, "ActorName"), 4096000, PacketIO.UTF8)
+               : null
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -227,6 +314,47 @@ public class RequestMachinimaActorModel implements Packet, ToServerPacket {
       } else {
          buf.setIntLE(actorNameOffsetSlot, -1);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.modelId != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.sceneName != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.actorName != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 13;
+      if (this.modelId != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 1, varOffset - offset - 13);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.modelId, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 1, -1);
+      }
+
+      if (this.sceneName != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 5, varOffset - offset - 13);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.sceneName, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 5, -1);
+      }
+
+      if (this.actorName != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 9, varOffset - offset - 13);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.actorName, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 9, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

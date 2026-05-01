@@ -60,7 +60,7 @@ public class DiskPlayerStorageProvider implements PlayerStorageProvider {
 
       public DiskPlayerStorage(@Nonnull Path path) {
          this.path = path;
-         if (!Options.getOptionSet().has(Options.BARE)) {
+         if (!Options.isBare()) {
             try {
                Files.createDirectories(path);
             } catch (IOException e) {

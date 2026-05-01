@@ -53,7 +53,7 @@ public class BlockEventView extends EventView<BlockEventView, BlockEventType, Ev
          BlockEventType type = BlockEventType.VALUES[i];
          IntSet eventSets = npcComponent.getBlackboardBlockChangeSet(type);
          if (eventSets != null) {
-            this.entityMapsByEventType.get(type).initialiseEntity(npcComponent.getReference(), eventSets);
+            this.entityMapsByEventType.get(type).initialiseEntity(ref, eventSets);
          }
       }
    }

@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -146,6 +147,196 @@ public class EntityUIComponent {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 51L;
+   }
+
+   public static EntityUIType getType(MemorySegment mem) {
+      return getType(mem, 0);
+   }
+
+   public static EntityUIType getType(MemorySegment mem, int offset) {
+      return EntityUIType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1));
+   }
+
+   public static Vector2fc getHitboxOffset(MemorySegment mem) {
+      return getHitboxOffset(mem, 0);
+   }
+
+   public static Vector2fc getHitboxOffset(MemorySegment mem, int offset) {
+      return PacketIO.readVector2f(mem, offset + 2);
+   }
+
+   public static boolean getUnknown(MemorySegment mem) {
+      return getUnknown(mem, 0);
+   }
+
+   public static boolean getUnknown(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 10);
+   }
+
+   public static int getEntityStatIndex(MemorySegment mem) {
+      return getEntityStatIndex(mem, 0);
+   }
+
+   public static int getEntityStatIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 11);
+   }
+
+   @Nullable
+   public static RangeVector2f getCombatTextRandomPositionOffsetRange(MemorySegment mem) {
+      return getCombatTextRandomPositionOffsetRange(mem, 0);
+   }
+
+   @Nullable
+   public static RangeVector2f getCombatTextRandomPositionOffsetRange(MemorySegment mem, int offset) {
+      return hasCombatTextRandomPositionOffsetRange(mem, offset) ? RangeVector2f.toObject(mem, offset + 15) : null;
+   }
+
+   public static float getCombatTextViewportMargin(MemorySegment mem) {
+      return getCombatTextViewportMargin(mem, 0);
+   }
+
+   public static float getCombatTextViewportMargin(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 32);
+   }
+
+   public static float getCombatTextDuration(MemorySegment mem) {
+      return getCombatTextDuration(mem, 0);
+   }
+
+   public static float getCombatTextDuration(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 36);
+   }
+
+   public static float getCombatTextHitAngleModifierStrength(MemorySegment mem) {
+      return getCombatTextHitAngleModifierStrength(mem, 0);
+   }
+
+   public static float getCombatTextHitAngleModifierStrength(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 40);
+   }
+
+   public static float getCombatTextFontSize(MemorySegment mem) {
+      return getCombatTextFontSize(mem, 0);
+   }
+
+   public static float getCombatTextFontSize(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 44);
+   }
+
+   @Nullable
+   public static Color getCombatTextColor(MemorySegment mem) {
+      return getCombatTextColor(mem, 0);
+   }
+
+   @Nullable
+   public static Color getCombatTextColor(MemorySegment mem, int offset) {
+      return hasCombatTextColor(mem, offset) ? Color.toObject(mem, offset + 48) : null;
+   }
+
+   @Nullable
+   public static CombatTextEntityUIComponentAnimationEvent[] getCombatTextAnimationEvents(MemorySegment mem) {
+      return getCombatTextAnimationEvents(mem, 0);
+   }
+
+   @Nullable
+   public static CombatTextEntityUIComponentAnimationEvent[] getCombatTextAnimationEvents(MemorySegment mem, int offset) {
+      if (!hasCombatTextAnimationEvents(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + 51;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("CombatTextAnimationEvents", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("CombatTextAnimationEvents", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 33L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("CombatTextAnimationEvents", off + lenOffset + len * 33, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      CombatTextEntityUIComponentAnimationEvent[] data = new CombatTextEntityUIComponentAnimationEvent[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = CombatTextEntityUIComponentAnimationEvent.toObject(mem, off + i * 33);
+      }
+
+      return data;
+   }
+
+   public static boolean hasCombatTextRandomPositionOffsetRange(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasCombatTextColor(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasCombatTextAnimationEvents(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static EntityUIComponent toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static EntityUIComponent toObject(MemorySegment mem, int offset) {
+      if (offset + 51 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("EntityUIComponent", offset + 51, (int)mem.byteSize());
+      }
+
+      CombatTextEntityUIComponentAnimationEvent[] combatTextAnimationEvents = null;
+      if (hasCombatTextAnimationEvents(mem, offset)) {
+         int off = offset + 51;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("CombatTextAnimationEvents", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("CombatTextAnimationEvents", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 33L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("CombatTextAnimationEvents", off + lenOffset + len * 33, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         combatTextAnimationEvents = new CombatTextEntityUIComponentAnimationEvent[len];
+
+         for (int i = 0; i < len; i++) {
+            combatTextAnimationEvents[i] = CombatTextEntityUIComponentAnimationEvent.toObject(mem, off + i * 33);
+         }
+      }
+
+      return new EntityUIComponent(
+         EntityUIType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1)),
+         PacketIO.readVector2f(mem, offset + 2),
+         mem.get(PacketIO.PROTO_BOOL, offset + 10),
+         mem.get(PacketIO.PROTO_INT, offset + 11),
+         hasCombatTextRandomPositionOffsetRange(mem, offset) ? RangeVector2f.toObject(mem, offset + 15) : null,
+         mem.get(PacketIO.PROTO_FLOAT, offset + 32),
+         mem.get(PacketIO.PROTO_FLOAT, offset + 36),
+         mem.get(PacketIO.PROTO_FLOAT, offset + 40),
+         mem.get(PacketIO.PROTO_FLOAT, offset + 44),
+         hasCombatTextColor(mem, offset) ? Color.toObject(mem, offset + 48) : null,
+         combatTextAnimationEvents
+      );
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
       if (this.combatTextRandomPositionOffsetRange != null) {
@@ -192,6 +383,60 @@ public class EntityUIComponent {
             item.serialize(buf);
          }
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.combatTextRandomPositionOffsetRange != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.combatTextColor != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.combatTextAnimationEvents != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.type.getValue());
+      PacketIO.writeVector2f(mem, offset + 2, this.hitboxOffset);
+      mem.set(PacketIO.PROTO_BOOL, offset + 10, this.unknown);
+      mem.set(PacketIO.PROTO_INT, offset + 11, this.entityStatIndex);
+      if (this.combatTextRandomPositionOffsetRange != null) {
+         this.combatTextRandomPositionOffsetRange.serialize(mem, offset + 15);
+      } else {
+         mem.asSlice(offset + 15, 17L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_FLOAT, offset + 32, this.combatTextViewportMargin);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 36, this.combatTextDuration);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 40, this.combatTextHitAngleModifierStrength);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 44, this.combatTextFontSize);
+      if (this.combatTextColor != null) {
+         this.combatTextColor.serialize(mem, offset + 48);
+      } else {
+         mem.asSlice(offset + 48, 3L).fill((byte)0);
+      }
+
+      int varOffset = offset + 51;
+      if (this.combatTextAnimationEvents != null) {
+         if (this.combatTextAnimationEvents.length > 4096000) {
+            throw ProtocolException.arrayTooLong("CombatTextAnimationEvents", this.combatTextAnimationEvents.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.combatTextAnimationEvents.length);
+         int combatTextAnimationEventsValueOffset = 0;
+
+         for (int i = 0; i < this.combatTextAnimationEvents.length; i++) {
+            combatTextAnimationEventsValueOffset += this.combatTextAnimationEvents[i].serialize(mem, varOffset + combatTextAnimationEventsValueOffset);
+         }
+
+         varOffset += combatTextAnimationEventsValueOffset;
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

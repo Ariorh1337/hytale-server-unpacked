@@ -72,9 +72,15 @@ public interface BlockAccessor {
 
    default boolean breakBlock(int x, int y, int z, int filler, int settings) {
       if ((settings & 16) == 0) {
+         int fillerX = x;
+         int fillerY = y;
+         int fillerZ = z;
          x -= FillerBlockUtil.unpackX(filler);
          y -= FillerBlockUtil.unpackY(filler);
          z -= FillerBlockUtil.unpackZ(filler);
+         if (this.getBlock(x, y, z) == 0) {
+            return this.setBlock(fillerX, fillerY, fillerZ, 0, BlockType.EMPTY, 0, 0, settings);
+         }
       }
 
       return this.setBlock(x, y, z, 0, BlockType.EMPTY, 0, 0, settings);

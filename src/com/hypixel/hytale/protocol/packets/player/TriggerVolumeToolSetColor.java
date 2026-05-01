@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import org.joml.Vector3fc;
@@ -83,10 +84,52 @@ public class TriggerVolumeToolSetColor implements Packet, ToServerPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 12L;
+   }
+
+   public static String getVolumeId(MemorySegment mem) {
+      return getVolumeId(mem, 0);
+   }
+
+   public static String getVolumeId(MemorySegment mem, int offset) {
+      return PacketIO.readVarString("VolumeId", mem, offset + 12, 4096000, PacketIO.UTF8);
+   }
+
+   public static Vector3fc getColor(MemorySegment mem) {
+      return getColor(mem, 0);
+   }
+
+   public static Vector3fc getColor(MemorySegment mem, int offset) {
+      return PacketIO.readVector3f(mem, offset + 0);
+   }
+
+   public static TriggerVolumeToolSetColor toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static TriggerVolumeToolSetColor toObject(MemorySegment mem, int offset) {
+      if (offset + 12 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("TriggerVolumeToolSetColor", offset + 12, (int)mem.byteSize());
+      } else {
+         return new TriggerVolumeToolSetColor(
+            PacketIO.readVarString("VolumeId", mem, offset + 12, 4096000, PacketIO.UTF8), PacketIO.readVector3f(mem, offset + 0)
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       PacketIO.writeVector3f(buf, this.color);
       PacketIO.writeVarString(buf, this.volumeId, 4096000);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      PacketIO.writeVector3f(mem, offset + 0, this.color);
+      int varOffset = offset + 12;
+      varOffset += PacketIO.writeVarString(mem, varOffset, this.volumeId, 4096000);
+      return varOffset - offset;
    }
 
    @Override

@@ -4,9 +4,11 @@ import com.hypixel.hytale.protocol.InstantData;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -66,6 +68,45 @@ public class AssetEditorSetGameTime implements Packet, ToServerPacket {
       return 14;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 14L;
+   }
+
+   @Nullable
+   public static InstantData getGameTime(MemorySegment mem) {
+      return getGameTime(mem, 0);
+   }
+
+   @Nullable
+   public static InstantData getGameTime(MemorySegment mem, int offset) {
+      return hasGameTime(mem, offset) ? InstantData.toObject(mem, offset + 1) : null;
+   }
+
+   public static boolean getPaused(MemorySegment mem) {
+      return getPaused(mem, 0);
+   }
+
+   public static boolean getPaused(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 13);
+   }
+
+   public static boolean hasGameTime(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static AssetEditorSetGameTime toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AssetEditorSetGameTime toObject(MemorySegment mem, int offset) {
+      if (offset + 14 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AssetEditorSetGameTime", offset + 14, (int)mem.byteSize());
+      } else {
+         return new AssetEditorSetGameTime(hasGameTime(mem, offset) ? InstantData.toObject(mem, offset + 1) : null, mem.get(PacketIO.PROTO_BOOL, offset + 13));
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -81,6 +122,24 @@ public class AssetEditorSetGameTime implements Packet, ToServerPacket {
       }
 
       buf.writeByte(this.paused ? 1 : 0);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.gameTime != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      if (this.gameTime != null) {
+         this.gameTime.serialize(mem, offset + 1);
+      } else {
+         mem.asSlice(offset + 1, 12L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_BOOL, offset + 13, this.paused);
+      return 14;
    }
 
    @Override

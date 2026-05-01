@@ -13,8 +13,6 @@ import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.Rotation;
-import com.hypixel.hytale.server.core.entity.Entity;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.ProjectileComponent;
 import com.hypixel.hytale.server.core.modules.collision.commands.HitboxCommand;
 import com.hypixel.hytale.server.core.modules.entity.component.BoundingBox;
@@ -23,6 +21,7 @@ import com.hypixel.hytale.server.core.modules.entity.damage.DeathComponent;
 import com.hypixel.hytale.server.core.modules.projectile.component.Projectile;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.Config;
@@ -201,28 +200,29 @@ public class CollisionModule extends JavaPlugin {
       if (!isBelowMovementThreshold(v)) {
          Vector3d coll = new Vector3d();
          Vector2d minMax = new Vector2d();
-         List<Entity> collisionEntities = result.getCollisionEntities();
+         List<Ref<EntityStore>> collisionEntities = result.getCollisionEntities();
 
          for (int i = 0; i < collisionEntities.size(); i++) {
-            Entity entity = collisionEntities.get(i);
-            Ref<EntityStore> ref = entity.getReference();
-            assert ref != null;
-            Archetype<EntityStore> archetype = componentAccessor.getArchetype(ref);
-            boolean isProjectile = archetype.contains(Projectile.getComponentType()) || archetype.contains(ProjectileComponent.getComponentType());
-            if (!isProjectile) {
-               if (archetype.contains(DeathComponent.getComponentType())) {
-                  return;
-               }
+            Ref<EntityStore> ref = collisionEntities.get(i);
+            if (ref.isValid()) {
+               Archetype<EntityStore> archetype = componentAccessor.getArchetype(ref);
+               boolean isProjectile = archetype.contains(Projectile.getComponentType()) || archetype.contains(ProjectileComponent.getComponentType());
+               if (!isProjectile) {
+                  if (archetype.contains(DeathComponent.getComponentType())) {
+                     return;
+                  }
 
-               TransformComponent entityTransformComponent = componentAccessor.getComponent(ref, TransformComponent.getComponentType());
-               if (entityTransformComponent != null) {
-                  BoundingBox entityBoundingBoxComponent = componentAccessor.getComponent(ref, BoundingBox.getComponentType());
-                  if (entityBoundingBoxComponent != null) {
-                     Vector3d position = entityTransformComponent.getPosition();
-                     Box boundingBox = entityBoundingBoxComponent.getBoundingBox();
-                     if (boundingBox != null && CollisionMath.intersectVectorAABB(pos, v, position.x(), position.y(), position.z(), boundingBox, minMax)) {
-                        coll.set(pos).fma(minMax.x, v);
-                        result.allocCharacterCollision().assign(coll, minMax.x, entity.getReference(), entity instanceof Player);
+                  TransformComponent entityTransformComponent = componentAccessor.getComponent(ref, TransformComponent.getComponentType());
+                  if (entityTransformComponent != null) {
+                     BoundingBox entityBoundingBoxComponent = componentAccessor.getComponent(ref, BoundingBox.getComponentType());
+                     if (entityBoundingBoxComponent != null) {
+                        Vector3d position = entityTransformComponent.getPosition();
+                        Box boundingBox = entityBoundingBoxComponent.getBoundingBox();
+                        if (boundingBox != null && CollisionMath.intersectVectorAABB(pos, v, position.x(), position.y(), position.z(), boundingBox, minMax)) {
+                           boolean isPlayer = componentAccessor.getComponent(ref, PlayerRef.getComponentType()) != null;
+                           coll.set(pos).fma(minMax.x, v);
+                           result.allocCharacterCollision().assign(coll, minMax.x, ref, isPlayer);
+                        }
                      }
                   }
                }

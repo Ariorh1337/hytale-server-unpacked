@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -146,6 +147,135 @@ public class AnimationSet {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 17L;
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem) {
+      return getId(mem, 0);
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem, int offset) {
+      return hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 9, 17, "Id"), 4096000, PacketIO.UTF8) : null;
+   }
+
+   @Nullable
+   public static Animation[] getAnimations(MemorySegment mem) {
+      return getAnimations(mem, 0);
+   }
+
+   @Nullable
+   public static Animation[] getAnimations(MemorySegment mem, int offset) {
+      if (!hasAnimations(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 13, 17, "Animations");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Animations", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Animations", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Animations", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      Animation[] data = new Animation[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = Animation.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static Rangef getNextAnimationDelay(MemorySegment mem) {
+      return getNextAnimationDelay(mem, 0);
+   }
+
+   @Nullable
+   public static Rangef getNextAnimationDelay(MemorySegment mem, int offset) {
+      return hasNextAnimationDelay(mem, offset) ? Rangef.toObject(mem, offset + 1) : null;
+   }
+
+   public static boolean hasNextAnimationDelay(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasAnimations(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static AnimationSet toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AnimationSet toObject(MemorySegment mem, int offset) {
+      if (offset + 17 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AnimationSet", offset + 17, (int)mem.byteSize());
+      }
+
+      Animation[] animations = null;
+      if (hasAnimations(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 13, 17, "Animations");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Animations", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Animations", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Animations", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         animations = new Animation[len];
+
+         for (int i = 0; i < len; i++) {
+            animations[i] = Animation.toObject(mem, off);
+            off += animations[i].computeSize();
+         }
+      }
+
+      return new AnimationSet(
+         hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 9, 17, "Id"), 4096000, PacketIO.UTF8) : null,
+         animations,
+         hasNextAnimationDelay(mem, offset) ? Rangef.toObject(mem, offset + 1) : null
+      );
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -194,6 +324,56 @@ public class AnimationSet {
       } else {
          buf.setIntLE(animationsOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.nextAnimationDelay != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.id != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.animations != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      if (this.nextAnimationDelay != null) {
+         this.nextAnimationDelay.serialize(mem, offset + 1);
+      } else {
+         mem.asSlice(offset + 1, 8L).fill((byte)0);
+      }
+
+      int varOffset = offset + 17;
+      if (this.id != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 9, varOffset - offset - 17);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.id, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 9, -1);
+      }
+
+      if (this.animations != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 13, varOffset - offset - 17);
+         if (this.animations.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Animations", this.animations.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.animations.length);
+         int animationsValueOffset = 0;
+
+         for (int i = 0; i < this.animations.length; i++) {
+            animationsValueOffset += this.animations[i].serialize(mem, varOffset + animationsValueOffset);
+         }
+
+         varOffset += animationsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 13, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

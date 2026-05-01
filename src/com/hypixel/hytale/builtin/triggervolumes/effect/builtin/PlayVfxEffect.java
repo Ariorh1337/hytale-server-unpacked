@@ -20,7 +20,7 @@ public class PlayVfxEffect extends TriggerEffect {
    public static final BuilderCodec<PlayVfxEffect> CODEC = BuilderCodec.builder(PlayVfxEffect.class, PlayVfxEffect::new, BASE_CODEC)
       .append(new KeyedCodec<>("ParticleSystem", Codec.STRING), (e, v) -> e.particleSystem = v, e -> e.particleSystem)
       .add()
-      .append(new KeyedCodec<>("Offset", Vector3dUtil.AS_ARRAY_CODEC, false), (e, v) -> e.offset = v, e -> e.offset)
+      .append(new KeyedCodec<>("Offset", Vector3dUtil.CODEC, false), (e, v) -> e.offset = v, e -> e.offset)
       .add()
       .append(new KeyedCodec<>("AtEntity", Codec.BOOLEAN, false), (e, v) -> e.atEntity = v, e -> e.atEntity)
       .add()

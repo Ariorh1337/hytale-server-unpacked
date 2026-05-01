@@ -4,6 +4,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -77,6 +78,63 @@ public abstract class Interaction {
          case 42 -> SpawnDeployableFromRaycastInteraction.deserialize(buf, offset + typeIdLen);
          case 43 -> MemoriesConditionInteraction.deserialize(buf, offset + typeIdLen);
          case 44 -> ToggleGliderInteraction.deserialize(buf, offset + typeIdLen);
+      };
+   }
+
+   public static Interaction toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static Interaction toObject(MemorySegment mem, int offset) {
+      int typeId = VarInt.get(mem, offset);
+      int typeIdLen = VarInt.size(typeId);
+
+      return switch (typeId) {
+         case 0 -> SimpleBlockInteraction.toObject(mem, offset + typeIdLen);
+         case 1 -> SimpleInteraction.toObject(mem, offset + typeIdLen);
+         case 2 -> PlaceBlockInteraction.toObject(mem, offset + typeIdLen);
+         case 3 -> BreakBlockInteraction.toObject(mem, offset + typeIdLen);
+         case 4 -> PickBlockInteraction.toObject(mem, offset + typeIdLen);
+         case 5 -> UseBlockInteraction.toObject(mem, offset + typeIdLen);
+         case 6 -> UseEntityInteraction.toObject(mem, offset + typeIdLen);
+         case 7 -> BuilderToolInteraction.toObject(mem, offset + typeIdLen);
+         case 8 -> ModifyInventoryInteraction.toObject(mem, offset + typeIdLen);
+         case 9 -> ChargingInteraction.toObject(mem, offset + typeIdLen);
+         case 10 -> WieldingInteraction.toObject(mem, offset + typeIdLen);
+         case 11 -> ChainingInteraction.toObject(mem, offset + typeIdLen);
+         case 12 -> ConditionInteraction.toObject(mem, offset + typeIdLen);
+         case 13 -> StatsConditionInteraction.toObject(mem, offset + typeIdLen);
+         case 14 -> BlockConditionInteraction.toObject(mem, offset + typeIdLen);
+         case 15 -> ReplaceInteraction.toObject(mem, offset + typeIdLen);
+         case 16 -> ChangeBlockInteraction.toObject(mem, offset + typeIdLen);
+         case 17 -> ChangeStateInteraction.toObject(mem, offset + typeIdLen);
+         case 18 -> FirstClickInteraction.toObject(mem, offset + typeIdLen);
+         default -> throw ProtocolException.unknownPolymorphicType("Interaction", typeId);
+         case 20 -> SelectInteraction.toObject(mem, offset + typeIdLen);
+         case 21 -> DamageEntityInteraction.toObject(mem, offset + typeIdLen);
+         case 22 -> RepeatInteraction.toObject(mem, offset + typeIdLen);
+         case 23 -> ParallelInteraction.toObject(mem, offset + typeIdLen);
+         case 24 -> ChangeActiveSlotInteraction.toObject(mem, offset + typeIdLen);
+         case 25 -> EffectConditionInteraction.toObject(mem, offset + typeIdLen);
+         case 26 -> ApplyForceInteraction.toObject(mem, offset + typeIdLen);
+         case 27 -> ApplyEffectInteraction.toObject(mem, offset + typeIdLen);
+         case 28 -> ClearEntityEffectInteraction.toObject(mem, offset + typeIdLen);
+         case 29 -> SerialInteraction.toObject(mem, offset + typeIdLen);
+         case 30 -> ChangeStatInteraction.toObject(mem, offset + typeIdLen);
+         case 31 -> MovementConditionInteraction.toObject(mem, offset + typeIdLen);
+         case 32 -> ProjectileInteraction.toObject(mem, offset + typeIdLen);
+         case 33 -> RemoveEntityInteraction.toObject(mem, offset + typeIdLen);
+         case 34 -> ResetCooldownInteraction.toObject(mem, offset + typeIdLen);
+         case 35 -> TriggerCooldownInteraction.toObject(mem, offset + typeIdLen);
+         case 36 -> CooldownConditionInteraction.toObject(mem, offset + typeIdLen);
+         case 37 -> ChainFlagInteraction.toObject(mem, offset + typeIdLen);
+         case 38 -> IncrementCooldownInteraction.toObject(mem, offset + typeIdLen);
+         case 39 -> CancelChainInteraction.toObject(mem, offset + typeIdLen);
+         case 40 -> RunRootInteraction.toObject(mem, offset + typeIdLen);
+         case 41 -> CameraInteraction.toObject(mem, offset + typeIdLen);
+         case 42 -> SpawnDeployableFromRaycastInteraction.toObject(mem, offset + typeIdLen);
+         case 43 -> MemoriesConditionInteraction.toObject(mem, offset + typeIdLen);
+         case 44 -> ToggleGliderInteraction.toObject(mem, offset + typeIdLen);
       };
    }
 
@@ -229,6 +287,8 @@ public abstract class Interaction {
 
    public abstract int serialize(@Nonnull ByteBuf var1);
 
+   public abstract int serialize(@Nonnull MemorySegment var1, int var2);
+
    public abstract int computeSize();
 
    public int serializeWithTypeId(@Nonnull ByteBuf buf) {
@@ -236,6 +296,11 @@ public abstract class Interaction {
       VarInt.write(buf, this.getTypeId());
       this.serialize(buf);
       return buf.writerIndex() - startPos;
+   }
+
+   public int serializeWithTypeId(@Nonnull MemorySegment mem, int offset) {
+      int len = VarInt.set(mem, offset, this.getTypeId());
+      return len + this.serialize(mem, offset + len);
    }
 
    public int computeSizeWithTypeId() {

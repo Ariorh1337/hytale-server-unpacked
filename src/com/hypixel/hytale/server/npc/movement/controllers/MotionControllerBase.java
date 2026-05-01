@@ -301,8 +301,7 @@ public abstract class MotionControllerBase implements MotionController {
             case DROPPING:
                this.updateDroppingStates(movementStates);
                break;
-            case STANDING:
-            default: {
+            case STANDING: {
                NPCEntity npcComponent = componentAccessor.getComponent(ref, NPCEntity.getComponentType());
                assert npcComponent != null;
                this.updateStandingStates(movementStates, this.motionKind, npcComponent.getHoverHeight() > 0.0);
@@ -1308,9 +1307,9 @@ public abstract class MotionControllerBase implements MotionController {
    }
 
    protected static class AppliedVelocity {
-      protected final Vector3d velocity;
-      protected final VelocityConfig config;
-      protected boolean canClear;
+      public final Vector3d velocity;
+      public final VelocityConfig config;
+      public boolean canClear;
 
       public AppliedVelocity(Vector3d velocity, VelocityConfig config) {
          this.velocity = velocity;

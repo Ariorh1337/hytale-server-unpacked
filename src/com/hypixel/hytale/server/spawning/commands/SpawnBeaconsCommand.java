@@ -19,6 +19,7 @@ import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
 import com.hypixel.hytale.server.core.modules.entity.component.DisplayNameComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.PersistentDisplayName;
 import com.hypixel.hytale.server.core.modules.entity.component.PersistentModel;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -91,6 +92,7 @@ public class SpawnBeaconsCommand extends AbstractCommandCollection {
             holder.addComponent(ModelComponent.getComponentType(), new ModelComponent(model));
             holder.addComponent(PersistentModel.getComponentType(), new PersistentModel(model.toReference()));
             Message displayNameMessage = Message.raw(spawn.getId());
+            holder.addComponent(PersistentDisplayName.getComponentType(), new PersistentDisplayName(displayNameMessage));
             holder.addComponent(DisplayNameComponent.getComponentType(), new DisplayNameComponent(displayNameMessage));
             holder.addComponent(Nameplate.getComponentType(), new Nameplate(spawn.getId()));
             store.addEntity(holder, AddReason.SPAWN);

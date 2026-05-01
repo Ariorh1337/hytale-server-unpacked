@@ -4,6 +4,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import javax.annotation.Nonnull;
 
 public abstract class Selector {
@@ -20,6 +21,24 @@ public abstract class Selector {
          case 2 -> RaycastSelector.deserialize(buf, offset + typeIdLen);
          case 3 -> HorizontalSelector.deserialize(buf, offset + typeIdLen);
          case 4 -> StabSelector.deserialize(buf, offset + typeIdLen);
+         default -> throw ProtocolException.unknownPolymorphicType("Selector", typeId);
+      };
+   }
+
+   public static Selector toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static Selector toObject(MemorySegment mem, int offset) {
+      int typeId = VarInt.get(mem, offset);
+      int typeIdLen = VarInt.size(typeId);
+
+      return switch (typeId) {
+         case 0 -> AOECircleSelector.toObject(mem, offset + typeIdLen);
+         case 1 -> AOECylinderSelector.toObject(mem, offset + typeIdLen);
+         case 2 -> RaycastSelector.toObject(mem, offset + typeIdLen);
+         case 3 -> HorizontalSelector.toObject(mem, offset + typeIdLen);
+         case 4 -> StabSelector.toObject(mem, offset + typeIdLen);
          default -> throw ProtocolException.unknownPolymorphicType("Selector", typeId);
       };
    }
@@ -56,6 +75,8 @@ public abstract class Selector {
 
    public abstract int serialize(@Nonnull ByteBuf var1);
 
+   public abstract int serialize(@Nonnull MemorySegment var1, int var2);
+
    public abstract int computeSize();
 
    public int serializeWithTypeId(@Nonnull ByteBuf buf) {
@@ -63,6 +84,11 @@ public abstract class Selector {
       VarInt.write(buf, this.getTypeId());
       this.serialize(buf);
       return buf.writerIndex() - startPos;
+   }
+
+   public int serializeWithTypeId(@Nonnull MemorySegment mem, int offset) {
+      int len = VarInt.set(mem, offset, this.getTypeId());
+      return len + this.serialize(mem, offset + len);
    }
 
    public int computeSizeWithTypeId() {

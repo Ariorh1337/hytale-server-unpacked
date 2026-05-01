@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -73,9 +74,40 @@ public class TriggerVolumeToolUngroup implements Packet, ToServerPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 0L;
+   }
+
+   public static String getGroupId(MemorySegment mem) {
+      return getGroupId(mem, 0);
+   }
+
+   public static String getGroupId(MemorySegment mem, int offset) {
+      return PacketIO.readVarString("GroupId", mem, offset + 0, 4096000, PacketIO.UTF8);
+   }
+
+   public static TriggerVolumeToolUngroup toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static TriggerVolumeToolUngroup toObject(MemorySegment mem, int offset) {
+      if (offset + 0 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("TriggerVolumeToolUngroup", offset + 0, (int)mem.byteSize());
+      } else {
+         return new TriggerVolumeToolUngroup(PacketIO.readVarString("GroupId", mem, offset + 0, 4096000, PacketIO.UTF8));
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       PacketIO.writeVarString(buf, this.groupId, 4096000);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      int varOffset = offset + 0;
+      varOffset += PacketIO.writeVarString(mem, varOffset, this.groupId, 4096000);
+      return varOffset - offset;
    }
 
    @Override

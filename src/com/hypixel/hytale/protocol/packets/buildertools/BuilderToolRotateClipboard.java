@@ -3,9 +3,11 @@ package com.hypixel.hytale.protocol.packets.buildertools;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -60,10 +62,49 @@ public class BuilderToolRotateClipboard implements Packet, ToServerPacket {
       return 5;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 5L;
+   }
+
+   public static int getAngle(MemorySegment mem) {
+      return getAngle(mem, 0);
+   }
+
+   public static int getAngle(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 0);
+   }
+
+   public static Axis getAxis(MemorySegment mem) {
+      return getAxis(mem, 0);
+   }
+
+   public static Axis getAxis(MemorySegment mem, int offset) {
+      return Axis.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 4));
+   }
+
+   public static BuilderToolRotateClipboard toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static BuilderToolRotateClipboard toObject(MemorySegment mem, int offset) {
+      if (offset + 5 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BuilderToolRotateClipboard", offset + 5, (int)mem.byteSize());
+      } else {
+         return new BuilderToolRotateClipboard(mem.get(PacketIO.PROTO_INT, offset + 0), Axis.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 4)));
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeIntLE(this.angle);
       buf.writeByte(this.axis.getValue());
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_INT, offset + 0, this.angle);
+      mem.set(PacketIO.PROTO_BYTE, offset + 4, (byte)this.axis.getValue());
+      return 5;
    }
 
    @Override

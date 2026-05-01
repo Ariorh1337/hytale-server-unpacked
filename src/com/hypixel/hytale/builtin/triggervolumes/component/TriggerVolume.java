@@ -9,6 +9,7 @@ import com.hypixel.hytale.builtin.triggervolumes.shape.TriggerVolumeShape;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.codecs.EnumCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.codec.codecs.map.MapCodec;
 import com.hypixel.hytale.component.Component;
@@ -39,7 +40,10 @@ public class TriggerVolume implements Component<EntityStore> {
       .add()
       .append(new KeyedCodec<>("Enabled", Codec.BOOLEAN, false), (c, v) -> c.enabled = v, c -> c.enabled)
       .add()
-      .append(new KeyedCodec<>("TargetTypes", Codec.STRING_ARRAY, false), TriggerVolume::decodeTargetTypes, c -> encodeTargetTypes(c.targetTypes))
+      .append(new KeyedCodec<>("TargetTypes", new ArrayCodec<>(new EnumCodec<>(EntityTargetType.class), EntityTargetType[]::new), false), (c, arr) -> {
+         c.targetTypes.clear();
+         Collections.addAll(c.targetTypes, arr);
+      }, c -> c.targetTypes.isEmpty() ? null : c.targetTypes.toArray(EntityTargetType[]::new))
       .add()
       .append(new KeyedCodec<>("EffectAsset", Codec.STRING, false), (c, v) -> c.effectAssetRef = v, c -> c.effectAssetRef)
       .add()
@@ -142,22 +146,6 @@ public class TriggerVolume implements Component<EntityStore> {
 
    public void setGroupLinkId(@Nullable String groupLinkId) {
       this.groupLinkId = groupLinkId;
-   }
-
-   private static void decodeTargetTypes(@Nonnull TriggerVolume c, @Nonnull String[] names) {
-      c.targetTypes.clear();
-
-      for (String name : names) {
-         try {
-            c.targetTypes.add(EntityTargetType.valueOf(name.toUpperCase()));
-         } catch (IllegalArgumentException var7) {
-         }
-      }
-   }
-
-   @Nullable
-   private static String[] encodeTargetTypes(@Nonnull Set<EntityTargetType> types) {
-      return types.isEmpty() ? null : types.stream().map(t -> t.name().substring(0, 1) + t.name().substring(1).toLowerCase()).toArray(String[]::new);
    }
 
    @Nonnull

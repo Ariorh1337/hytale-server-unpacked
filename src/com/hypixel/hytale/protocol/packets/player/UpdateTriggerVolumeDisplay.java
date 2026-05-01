@@ -3,10 +3,12 @@ package com.hypixel.hytale.protocol.packets.player;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -94,6 +96,92 @@ public class UpdateTriggerVolumeDisplay implements Packet, ToClientPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 1L;
+   }
+
+   @Nullable
+   public static TriggerVolumeDisplayEntry[] getVolumes(MemorySegment mem) {
+      return getVolumes(mem, 0);
+   }
+
+   @Nullable
+   public static TriggerVolumeDisplayEntry[] getVolumes(MemorySegment mem, int offset) {
+      if (!hasVolumes(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + 1;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Volumes", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Volumes", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Volumes", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      TriggerVolumeDisplayEntry[] data = new TriggerVolumeDisplayEntry[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = TriggerVolumeDisplayEntry.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   public static boolean hasVolumes(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static UpdateTriggerVolumeDisplay toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UpdateTriggerVolumeDisplay toObject(MemorySegment mem, int offset) {
+      if (offset + 1 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("UpdateTriggerVolumeDisplay", offset + 1, (int)mem.byteSize());
+      }
+
+      TriggerVolumeDisplayEntry[] volumes = null;
+      if (hasVolumes(mem, offset)) {
+         int off = offset + 1;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Volumes", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Volumes", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Volumes", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         volumes = new TriggerVolumeDisplayEntry[len];
+
+         for (int i = 0; i < len; i++) {
+            volumes[i] = TriggerVolumeDisplayEntry.toObject(mem, off);
+            off += volumes[i].computeSize();
+         }
+      }
+
+      return new UpdateTriggerVolumeDisplay(volumes);
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -113,6 +201,33 @@ public class UpdateTriggerVolumeDisplay implements Packet, ToClientPacket {
             item.serialize(buf);
          }
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.volumes != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 1;
+      if (this.volumes != null) {
+         if (this.volumes.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Volumes", this.volumes.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.volumes.length);
+         int volumesValueOffset = 0;
+
+         for (int i = 0; i < this.volumes.length; i++) {
+            volumesValueOffset += this.volumes[i].serialize(mem, varOffset + volumesValueOffset);
+         }
+
+         varOffset += volumesValueOffset;
+      }
+
+      return varOffset - offset;
    }
 
    @Override

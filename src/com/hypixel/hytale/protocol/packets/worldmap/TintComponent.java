@@ -4,6 +4,7 @@ import com.hypixel.hytale.protocol.Color;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -42,11 +43,41 @@ public class TintComponent extends MapMarkerComponent {
       return 3;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 3L;
+   }
+
+   public static Color getColor(MemorySegment mem) {
+      return getColor(mem, 0);
+   }
+
+   public static Color getColor(MemorySegment mem, int offset) {
+      return Color.toObject(mem, offset + 0);
+   }
+
+   public static TintComponent toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static TintComponent toObject(MemorySegment mem, int offset) {
+      if (offset + 3 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("TintComponent", offset + 3, (int)mem.byteSize());
+      } else {
+         return new TintComponent(Color.toObject(mem, offset + 0));
+      }
+   }
+
    @Override
    public int serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       this.color.serialize(buf);
       return buf.writerIndex() - startPos;
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      this.color.serialize(mem, offset + 0);
+      return 3;
    }
 
    @Override

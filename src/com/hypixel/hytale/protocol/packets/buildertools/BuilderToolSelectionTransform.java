@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -124,6 +125,139 @@ public class BuilderToolSelectionTransform implements Packet, ToServerPacket {
       return 80;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 80L;
+   }
+
+   @Nullable
+   public static Quaternionfc getRotation(MemorySegment mem) {
+      return getRotation(mem, 0);
+   }
+
+   @Nullable
+   public static Quaternionfc getRotation(MemorySegment mem, int offset) {
+      return hasRotation(mem, offset) ? PacketIO.readQuaternionf(mem, offset + 1) : null;
+   }
+
+   @Nullable
+   public static BlockPosition getTranslationOffset(MemorySegment mem) {
+      return getTranslationOffset(mem, 0);
+   }
+
+   @Nullable
+   public static BlockPosition getTranslationOffset(MemorySegment mem, int offset) {
+      return hasTranslationOffset(mem, offset) ? BlockPosition.toObject(mem, offset + 17) : null;
+   }
+
+   @Nullable
+   public static BlockPosition getInitialSelectionMin(MemorySegment mem) {
+      return getInitialSelectionMin(mem, 0);
+   }
+
+   @Nullable
+   public static BlockPosition getInitialSelectionMin(MemorySegment mem, int offset) {
+      return hasInitialSelectionMin(mem, offset) ? BlockPosition.toObject(mem, offset + 29) : null;
+   }
+
+   @Nullable
+   public static BlockPosition getInitialSelectionMax(MemorySegment mem) {
+      return getInitialSelectionMax(mem, 0);
+   }
+
+   @Nullable
+   public static BlockPosition getInitialSelectionMax(MemorySegment mem, int offset) {
+      return hasInitialSelectionMax(mem, offset) ? BlockPosition.toObject(mem, offset + 41) : null;
+   }
+
+   public static Vector3fc getInitialRotationOrigin(MemorySegment mem) {
+      return getInitialRotationOrigin(mem, 0);
+   }
+
+   public static Vector3fc getInitialRotationOrigin(MemorySegment mem, int offset) {
+      return PacketIO.readVector3f(mem, offset + 53);
+   }
+
+   public static boolean getCutOriginal(MemorySegment mem) {
+      return getCutOriginal(mem, 0);
+   }
+
+   public static boolean getCutOriginal(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 65);
+   }
+
+   public static boolean getApplyTransformationToSelectionMinMax(MemorySegment mem) {
+      return getApplyTransformationToSelectionMinMax(mem, 0);
+   }
+
+   public static boolean getApplyTransformationToSelectionMinMax(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 66);
+   }
+
+   public static boolean getIsExitingTransformMode(MemorySegment mem) {
+      return getIsExitingTransformMode(mem, 0);
+   }
+
+   public static boolean getIsExitingTransformMode(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 67);
+   }
+
+   @Nullable
+   public static BlockPosition getInitialPastePointForClipboardPaste(MemorySegment mem) {
+      return getInitialPastePointForClipboardPaste(mem, 0);
+   }
+
+   @Nullable
+   public static BlockPosition getInitialPastePointForClipboardPaste(MemorySegment mem, int offset) {
+      return hasInitialPastePointForClipboardPaste(mem, offset) ? BlockPosition.toObject(mem, offset + 68) : null;
+   }
+
+   public static boolean hasRotation(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasTranslationOffset(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasInitialSelectionMin(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasInitialSelectionMax(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasInitialPastePointForClipboardPaste(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 16) != 0;
+   }
+
+   public static BuilderToolSelectionTransform toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static BuilderToolSelectionTransform toObject(MemorySegment mem, int offset) {
+      if (offset + 80 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BuilderToolSelectionTransform", offset + 80, (int)mem.byteSize());
+      } else {
+         return new BuilderToolSelectionTransform(
+            hasRotation(mem, offset) ? PacketIO.readQuaternionf(mem, offset + 1) : null,
+            hasTranslationOffset(mem, offset) ? BlockPosition.toObject(mem, offset + 17) : null,
+            hasInitialSelectionMin(mem, offset) ? BlockPosition.toObject(mem, offset + 29) : null,
+            hasInitialSelectionMax(mem, offset) ? BlockPosition.toObject(mem, offset + 41) : null,
+            PacketIO.readVector3f(mem, offset + 53),
+            mem.get(PacketIO.PROTO_BOOL, offset + 65),
+            mem.get(PacketIO.PROTO_BOOL, offset + 66),
+            mem.get(PacketIO.PROTO_BOOL, offset + 67),
+            hasInitialPastePointForClipboardPaste(mem, offset) ? BlockPosition.toObject(mem, offset + 68) : null
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -181,6 +315,67 @@ public class BuilderToolSelectionTransform implements Packet, ToServerPacket {
       } else {
          buf.writeZero(12);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.rotation != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.translationOffset != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.initialSelectionMin != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.initialSelectionMax != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.initialPastePointForClipboardPaste != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      if (this.rotation != null) {
+         PacketIO.writeQuaternionf(mem, offset + 1, this.rotation);
+      } else {
+         mem.asSlice(offset + 1, 16L).fill((byte)0);
+      }
+
+      if (this.translationOffset != null) {
+         this.translationOffset.serialize(mem, offset + 17);
+      } else {
+         mem.asSlice(offset + 17, 12L).fill((byte)0);
+      }
+
+      if (this.initialSelectionMin != null) {
+         this.initialSelectionMin.serialize(mem, offset + 29);
+      } else {
+         mem.asSlice(offset + 29, 12L).fill((byte)0);
+      }
+
+      if (this.initialSelectionMax != null) {
+         this.initialSelectionMax.serialize(mem, offset + 41);
+      } else {
+         mem.asSlice(offset + 41, 12L).fill((byte)0);
+      }
+
+      PacketIO.writeVector3f(mem, offset + 53, this.initialRotationOrigin);
+      mem.set(PacketIO.PROTO_BOOL, offset + 65, this.cutOriginal);
+      mem.set(PacketIO.PROTO_BOOL, offset + 66, this.applyTransformationToSelectionMinMax);
+      mem.set(PacketIO.PROTO_BOOL, offset + 67, this.isExitingTransformMode);
+      if (this.initialPastePointForClipboardPaste != null) {
+         this.initialPastePointForClipboardPaste.serialize(mem, offset + 68);
+      } else {
+         mem.asSlice(offset + 68, 12L).fill((byte)0);
+      }
+
+      return 80;
    }
 
    @Override

@@ -5,10 +5,12 @@ import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.UpdateType;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -106,6 +108,100 @@ public class UpdateCameraShake implements Packet, ToClientPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 2L;
+   }
+
+   public static UpdateType getType(MemorySegment mem) {
+      return getType(mem, 0);
+   }
+
+   public static UpdateType getType(MemorySegment mem, int offset) {
+      return UpdateType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1));
+   }
+
+   @Nullable
+   public static Map<Integer, CameraShake> getProfiles(MemorySegment mem) {
+      return getProfiles(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Integer, CameraShake> getProfiles(MemorySegment mem, int offset) {
+      if (!hasProfiles(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + 2;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Profiles", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("Profiles", len, 4096000);
+      }
+
+      Map<Integer, CameraShake> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         int key = mem.get(PacketIO.PROTO_INT, off);
+         off += 4;
+         CameraShake value = CameraShake.toObject(mem, off);
+         off += value.computeSize();
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("Profiles", key);
+         }
+      }
+
+      return data;
+   }
+
+   public static boolean hasProfiles(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static UpdateCameraShake toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UpdateCameraShake toObject(MemorySegment mem, int offset) {
+      if (offset + 2 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("UpdateCameraShake", offset + 2, (int)mem.byteSize());
+      }
+
+      Map<Integer, CameraShake> profiles = null;
+      if (hasProfiles(mem, offset)) {
+         int off = offset + 2;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Profiles", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Profiles", len, 4096000);
+         }
+
+         profiles = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            int key = mem.get(PacketIO.PROTO_INT, off);
+            off += 4;
+            CameraShake value = CameraShake.toObject(mem, off);
+            off += value.computeSize();
+            if (profiles.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("Profiles", key);
+            }
+         }
+      }
+
+      return new UpdateCameraShake(UpdateType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1)), profiles);
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -127,6 +223,33 @@ public class UpdateCameraShake implements Packet, ToClientPacket {
             e.getValue().serialize(buf);
          }
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.profiles != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.type.getValue());
+      int varOffset = offset + 2;
+      if (this.profiles != null) {
+         if (this.profiles.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Profiles", this.profiles.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.profiles.size());
+
+         for (Entry<Integer, CameraShake> e : this.profiles.entrySet()) {
+            mem.set(PacketIO.PROTO_INT, varOffset, e.getKey());
+            varOffset += 4;
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      }
+
+      return varOffset - offset;
    }
 
    @Override

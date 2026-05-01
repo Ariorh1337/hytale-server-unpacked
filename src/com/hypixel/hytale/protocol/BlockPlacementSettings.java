@@ -1,8 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -79,6 +81,95 @@ public class BlockPlacementSettings {
       return 17;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 17L;
+   }
+
+   public static boolean getAllowRotationKey(MemorySegment mem) {
+      return getAllowRotationKey(mem, 0);
+   }
+
+   public static boolean getAllowRotationKey(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 0);
+   }
+
+   public static boolean getPlaceInEmptyBlocks(MemorySegment mem) {
+      return getPlaceInEmptyBlocks(mem, 0);
+   }
+
+   public static boolean getPlaceInEmptyBlocks(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 1);
+   }
+
+   public static BlockPreviewVisibility getPreviewVisibility(MemorySegment mem) {
+      return getPreviewVisibility(mem, 0);
+   }
+
+   public static BlockPreviewVisibility getPreviewVisibility(MemorySegment mem, int offset) {
+      return BlockPreviewVisibility.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 2));
+   }
+
+   public static BlockPlacementRotationMode getRotationMode(MemorySegment mem) {
+      return getRotationMode(mem, 0);
+   }
+
+   public static BlockPlacementRotationMode getRotationMode(MemorySegment mem, int offset) {
+      return BlockPlacementRotationMode.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 3));
+   }
+
+   public static int getWallPlacementOverrideBlockId(MemorySegment mem) {
+      return getWallPlacementOverrideBlockId(mem, 0);
+   }
+
+   public static int getWallPlacementOverrideBlockId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 4);
+   }
+
+   public static int getFloorPlacementOverrideBlockId(MemorySegment mem) {
+      return getFloorPlacementOverrideBlockId(mem, 0);
+   }
+
+   public static int getFloorPlacementOverrideBlockId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 8);
+   }
+
+   public static int getCeilingPlacementOverrideBlockId(MemorySegment mem) {
+      return getCeilingPlacementOverrideBlockId(mem, 0);
+   }
+
+   public static int getCeilingPlacementOverrideBlockId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 12);
+   }
+
+   public static boolean getAllowBreakReplace(MemorySegment mem) {
+      return getAllowBreakReplace(mem, 0);
+   }
+
+   public static boolean getAllowBreakReplace(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 16);
+   }
+
+   public static BlockPlacementSettings toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static BlockPlacementSettings toObject(MemorySegment mem, int offset) {
+      if (offset + 17 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BlockPlacementSettings", offset + 17, (int)mem.byteSize());
+      } else {
+         return new BlockPlacementSettings(
+            mem.get(PacketIO.PROTO_BOOL, offset + 0),
+            mem.get(PacketIO.PROTO_BOOL, offset + 1),
+            BlockPreviewVisibility.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 2)),
+            BlockPlacementRotationMode.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 3)),
+            mem.get(PacketIO.PROTO_INT, offset + 4),
+            mem.get(PacketIO.PROTO_INT, offset + 8),
+            mem.get(PacketIO.PROTO_INT, offset + 12),
+            mem.get(PacketIO.PROTO_BOOL, offset + 16)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeByte(this.allowRotationKey ? 1 : 0);
       buf.writeByte(this.placeInEmptyBlocks ? 1 : 0);
@@ -88,6 +179,18 @@ public class BlockPlacementSettings {
       buf.writeIntLE(this.floorPlacementOverrideBlockId);
       buf.writeIntLE(this.ceilingPlacementOverrideBlockId);
       buf.writeByte(this.allowBreakReplace ? 1 : 0);
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_BOOL, offset + 0, this.allowRotationKey);
+      mem.set(PacketIO.PROTO_BOOL, offset + 1, this.placeInEmptyBlocks);
+      mem.set(PacketIO.PROTO_BYTE, offset + 2, (byte)this.previewVisibility.getValue());
+      mem.set(PacketIO.PROTO_BYTE, offset + 3, (byte)this.rotationMode.getValue());
+      mem.set(PacketIO.PROTO_INT, offset + 4, this.wallPlacementOverrideBlockId);
+      mem.set(PacketIO.PROTO_INT, offset + 8, this.floorPlacementOverrideBlockId);
+      mem.set(PacketIO.PROTO_INT, offset + 12, this.ceilingPlacementOverrideBlockId);
+      mem.set(PacketIO.PROTO_BOOL, offset + 16, this.allowBreakReplace);
+      return 17;
    }
 
    public int computeSize() {

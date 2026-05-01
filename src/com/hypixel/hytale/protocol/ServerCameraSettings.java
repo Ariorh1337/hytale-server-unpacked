@@ -4,6 +4,7 @@ import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -234,6 +235,349 @@ public class ServerCameraSettings {
       return 154;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 154L;
+   }
+
+   public static float getPositionLerpSpeed(MemorySegment mem) {
+      return getPositionLerpSpeed(mem, 0);
+   }
+
+   public static float getPositionLerpSpeed(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 1);
+   }
+
+   public static float getRotationLerpSpeed(MemorySegment mem) {
+      return getRotationLerpSpeed(mem, 0);
+   }
+
+   public static float getRotationLerpSpeed(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 5);
+   }
+
+   public static float getDistance(MemorySegment mem) {
+      return getDistance(mem, 0);
+   }
+
+   public static float getDistance(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 9);
+   }
+
+   public static float getSpeedModifier(MemorySegment mem) {
+      return getSpeedModifier(mem, 0);
+   }
+
+   public static float getSpeedModifier(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 13);
+   }
+
+   public static boolean getAllowPitchControls(MemorySegment mem) {
+      return getAllowPitchControls(mem, 0);
+   }
+
+   public static boolean getAllowPitchControls(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 17);
+   }
+
+   public static boolean getDisplayCursor(MemorySegment mem) {
+      return getDisplayCursor(mem, 0);
+   }
+
+   public static boolean getDisplayCursor(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 18);
+   }
+
+   public static boolean getDisplayReticle(MemorySegment mem) {
+      return getDisplayReticle(mem, 0);
+   }
+
+   public static boolean getDisplayReticle(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 19);
+   }
+
+   public static MouseInputTargetType getMouseInputTargetType(MemorySegment mem) {
+      return getMouseInputTargetType(mem, 0);
+   }
+
+   public static MouseInputTargetType getMouseInputTargetType(MemorySegment mem, int offset) {
+      return MouseInputTargetType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 20));
+   }
+
+   public static boolean getSendMouseMotion(MemorySegment mem) {
+      return getSendMouseMotion(mem, 0);
+   }
+
+   public static boolean getSendMouseMotion(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 21);
+   }
+
+   public static boolean getSkipCharacterPhysics(MemorySegment mem) {
+      return getSkipCharacterPhysics(mem, 0);
+   }
+
+   public static boolean getSkipCharacterPhysics(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 22);
+   }
+
+   public static boolean getIsFirstPerson(MemorySegment mem) {
+      return getIsFirstPerson(mem, 0);
+   }
+
+   public static boolean getIsFirstPerson(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 23);
+   }
+
+   public static MovementForceRotationType getMovementForceRotationType(MemorySegment mem) {
+      return getMovementForceRotationType(mem, 0);
+   }
+
+   public static MovementForceRotationType getMovementForceRotationType(MemorySegment mem, int offset) {
+      return MovementForceRotationType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 24));
+   }
+
+   @Nullable
+   public static Direction getMovementForceRotation(MemorySegment mem) {
+      return getMovementForceRotation(mem, 0);
+   }
+
+   @Nullable
+   public static Direction getMovementForceRotation(MemorySegment mem, int offset) {
+      return hasMovementForceRotation(mem, offset) ? Direction.toObject(mem, offset + 25) : null;
+   }
+
+   public static AttachedToType getAttachedToType(MemorySegment mem) {
+      return getAttachedToType(mem, 0);
+   }
+
+   public static AttachedToType getAttachedToType(MemorySegment mem, int offset) {
+      return AttachedToType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 37));
+   }
+
+   public static int getAttachedToEntityId(MemorySegment mem) {
+      return getAttachedToEntityId(mem, 0);
+   }
+
+   public static int getAttachedToEntityId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 38);
+   }
+
+   public static boolean getEyeOffset(MemorySegment mem) {
+      return getEyeOffset(mem, 0);
+   }
+
+   public static boolean getEyeOffset(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 42);
+   }
+
+   public static PositionDistanceOffsetType getPositionDistanceOffsetType(MemorySegment mem) {
+      return getPositionDistanceOffsetType(mem, 0);
+   }
+
+   public static PositionDistanceOffsetType getPositionDistanceOffsetType(MemorySegment mem, int offset) {
+      return PositionDistanceOffsetType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 43));
+   }
+
+   @Nullable
+   public static Position getPositionOffset(MemorySegment mem) {
+      return getPositionOffset(mem, 0);
+   }
+
+   @Nullable
+   public static Position getPositionOffset(MemorySegment mem, int offset) {
+      return hasPositionOffset(mem, offset) ? Position.toObject(mem, offset + 44) : null;
+   }
+
+   @Nullable
+   public static Direction getRotationOffset(MemorySegment mem) {
+      return getRotationOffset(mem, 0);
+   }
+
+   @Nullable
+   public static Direction getRotationOffset(MemorySegment mem, int offset) {
+      return hasRotationOffset(mem, offset) ? Direction.toObject(mem, offset + 68) : null;
+   }
+
+   public static PositionType getPositionType(MemorySegment mem) {
+      return getPositionType(mem, 0);
+   }
+
+   public static PositionType getPositionType(MemorySegment mem, int offset) {
+      return PositionType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 80));
+   }
+
+   @Nullable
+   public static Position getPosition(MemorySegment mem) {
+      return getPosition(mem, 0);
+   }
+
+   @Nullable
+   public static Position getPosition(MemorySegment mem, int offset) {
+      return hasPosition(mem, offset) ? Position.toObject(mem, offset + 81) : null;
+   }
+
+   public static RotationType getRotationType(MemorySegment mem) {
+      return getRotationType(mem, 0);
+   }
+
+   public static RotationType getRotationType(MemorySegment mem, int offset) {
+      return RotationType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 105));
+   }
+
+   @Nullable
+   public static Direction getRotation(MemorySegment mem) {
+      return getRotation(mem, 0);
+   }
+
+   @Nullable
+   public static Direction getRotation(MemorySegment mem, int offset) {
+      return hasRotation(mem, offset) ? Direction.toObject(mem, offset + 106) : null;
+   }
+
+   public static CanMoveType getCanMoveType(MemorySegment mem) {
+      return getCanMoveType(mem, 0);
+   }
+
+   public static CanMoveType getCanMoveType(MemorySegment mem, int offset) {
+      return CanMoveType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 118));
+   }
+
+   public static ApplyMovementType getApplyMovementType(MemorySegment mem) {
+      return getApplyMovementType(mem, 0);
+   }
+
+   public static ApplyMovementType getApplyMovementType(MemorySegment mem, int offset) {
+      return ApplyMovementType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 119));
+   }
+
+   @Nullable
+   public static Vector3fc getMovementMultiplier(MemorySegment mem) {
+      return getMovementMultiplier(mem, 0);
+   }
+
+   @Nullable
+   public static Vector3fc getMovementMultiplier(MemorySegment mem, int offset) {
+      return hasMovementMultiplier(mem, offset) ? PacketIO.readVector3f(mem, offset + 120) : null;
+   }
+
+   public static ApplyLookType getApplyLookType(MemorySegment mem) {
+      return getApplyLookType(mem, 0);
+   }
+
+   public static ApplyLookType getApplyLookType(MemorySegment mem, int offset) {
+      return ApplyLookType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 132));
+   }
+
+   @Nullable
+   public static Vector2fc getLookMultiplier(MemorySegment mem) {
+      return getLookMultiplier(mem, 0);
+   }
+
+   @Nullable
+   public static Vector2fc getLookMultiplier(MemorySegment mem, int offset) {
+      return hasLookMultiplier(mem, offset) ? PacketIO.readVector2f(mem, offset + 133) : null;
+   }
+
+   public static MouseInputType getMouseInputType(MemorySegment mem) {
+      return getMouseInputType(mem, 0);
+   }
+
+   public static MouseInputType getMouseInputType(MemorySegment mem, int offset) {
+      return MouseInputType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 141));
+   }
+
+   @Nullable
+   public static Vector3fc getPlaneNormal(MemorySegment mem) {
+      return getPlaneNormal(mem, 0);
+   }
+
+   @Nullable
+   public static Vector3fc getPlaneNormal(MemorySegment mem, int offset) {
+      return hasPlaneNormal(mem, offset) ? PacketIO.readVector3f(mem, offset + 142) : null;
+   }
+
+   public static boolean hasMovementForceRotation(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasPositionOffset(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasRotationOffset(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasPosition(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasRotation(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 16) != 0;
+   }
+
+   public static boolean hasMovementMultiplier(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 32) != 0;
+   }
+
+   public static boolean hasLookMultiplier(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 64) != 0;
+   }
+
+   public static boolean hasPlaneNormal(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 128) != 0;
+   }
+
+   public static ServerCameraSettings toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ServerCameraSettings toObject(MemorySegment mem, int offset) {
+      if (offset + 154 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ServerCameraSettings", offset + 154, (int)mem.byteSize());
+      } else {
+         return new ServerCameraSettings(
+            mem.get(PacketIO.PROTO_FLOAT, offset + 1),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 5),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 9),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 13),
+            mem.get(PacketIO.PROTO_BOOL, offset + 17),
+            mem.get(PacketIO.PROTO_BOOL, offset + 18),
+            mem.get(PacketIO.PROTO_BOOL, offset + 19),
+            MouseInputTargetType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 20)),
+            mem.get(PacketIO.PROTO_BOOL, offset + 21),
+            mem.get(PacketIO.PROTO_BOOL, offset + 22),
+            mem.get(PacketIO.PROTO_BOOL, offset + 23),
+            MovementForceRotationType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 24)),
+            hasMovementForceRotation(mem, offset) ? Direction.toObject(mem, offset + 25) : null,
+            AttachedToType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 37)),
+            mem.get(PacketIO.PROTO_INT, offset + 38),
+            mem.get(PacketIO.PROTO_BOOL, offset + 42),
+            PositionDistanceOffsetType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 43)),
+            hasPositionOffset(mem, offset) ? Position.toObject(mem, offset + 44) : null,
+            hasRotationOffset(mem, offset) ? Direction.toObject(mem, offset + 68) : null,
+            PositionType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 80)),
+            hasPosition(mem, offset) ? Position.toObject(mem, offset + 81) : null,
+            RotationType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 105)),
+            hasRotation(mem, offset) ? Direction.toObject(mem, offset + 106) : null,
+            CanMoveType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 118)),
+            ApplyMovementType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 119)),
+            hasMovementMultiplier(mem, offset) ? PacketIO.readVector3f(mem, offset + 120) : null,
+            ApplyLookType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 132)),
+            hasLookMultiplier(mem, offset) ? PacketIO.readVector2f(mem, offset + 133) : null,
+            MouseInputType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 141)),
+            hasPlaneNormal(mem, offset) ? PacketIO.readVector3f(mem, offset + 142) : null
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
       if (this.movementForceRotation != null) {
@@ -338,6 +682,114 @@ public class ServerCameraSettings {
       } else {
          buf.writeZero(12);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.movementForceRotation != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.positionOffset != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.rotationOffset != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.position != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.rotation != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.movementMultiplier != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
+      if (this.lookMultiplier != null) {
+         nullBits = (byte)(nullBits | 64);
+      }
+
+      if (this.planeNormal != null) {
+         nullBits = (byte)(nullBits | 128);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 1, this.positionLerpSpeed);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 5, this.rotationLerpSpeed);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 9, this.distance);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 13, this.speedModifier);
+      mem.set(PacketIO.PROTO_BOOL, offset + 17, this.allowPitchControls);
+      mem.set(PacketIO.PROTO_BOOL, offset + 18, this.displayCursor);
+      mem.set(PacketIO.PROTO_BOOL, offset + 19, this.displayReticle);
+      mem.set(PacketIO.PROTO_BYTE, offset + 20, (byte)this.mouseInputTargetType.getValue());
+      mem.set(PacketIO.PROTO_BOOL, offset + 21, this.sendMouseMotion);
+      mem.set(PacketIO.PROTO_BOOL, offset + 22, this.skipCharacterPhysics);
+      mem.set(PacketIO.PROTO_BOOL, offset + 23, this.isFirstPerson);
+      mem.set(PacketIO.PROTO_BYTE, offset + 24, (byte)this.movementForceRotationType.getValue());
+      if (this.movementForceRotation != null) {
+         this.movementForceRotation.serialize(mem, offset + 25);
+      } else {
+         mem.asSlice(offset + 25, 12L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 37, (byte)this.attachedToType.getValue());
+      mem.set(PacketIO.PROTO_INT, offset + 38, this.attachedToEntityId);
+      mem.set(PacketIO.PROTO_BOOL, offset + 42, this.eyeOffset);
+      mem.set(PacketIO.PROTO_BYTE, offset + 43, (byte)this.positionDistanceOffsetType.getValue());
+      if (this.positionOffset != null) {
+         this.positionOffset.serialize(mem, offset + 44);
+      } else {
+         mem.asSlice(offset + 44, 24L).fill((byte)0);
+      }
+
+      if (this.rotationOffset != null) {
+         this.rotationOffset.serialize(mem, offset + 68);
+      } else {
+         mem.asSlice(offset + 68, 12L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 80, (byte)this.positionType.getValue());
+      if (this.position != null) {
+         this.position.serialize(mem, offset + 81);
+      } else {
+         mem.asSlice(offset + 81, 24L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 105, (byte)this.rotationType.getValue());
+      if (this.rotation != null) {
+         this.rotation.serialize(mem, offset + 106);
+      } else {
+         mem.asSlice(offset + 106, 12L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 118, (byte)this.canMoveType.getValue());
+      mem.set(PacketIO.PROTO_BYTE, offset + 119, (byte)this.applyMovementType.getValue());
+      if (this.movementMultiplier != null) {
+         PacketIO.writeVector3f(mem, offset + 120, this.movementMultiplier);
+      } else {
+         mem.asSlice(offset + 120, 12L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 132, (byte)this.applyLookType.getValue());
+      if (this.lookMultiplier != null) {
+         PacketIO.writeVector2f(mem, offset + 133, this.lookMultiplier);
+      } else {
+         mem.asSlice(offset + 133, 8L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 141, (byte)this.mouseInputType.getValue());
+      if (this.planeNormal != null) {
+         PacketIO.writeVector3f(mem, offset + 142, this.planeNormal);
+      } else {
+         mem.asSlice(offset + 142, 12L).fill((byte)0);
+      }
+
+      return 154;
    }
 
    public int computeSize() {

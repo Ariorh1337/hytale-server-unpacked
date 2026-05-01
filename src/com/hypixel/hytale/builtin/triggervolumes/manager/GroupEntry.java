@@ -5,6 +5,7 @@ import com.hypixel.hytale.builtin.triggervolumes.effect.TriggerEffect;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.codecs.EnumCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.codec.codecs.map.MapCodec;
 import com.hypixel.hytale.math.vector.Vector3dUtil;
@@ -17,13 +18,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import org.joml.Vector3d;
 
 public class GroupEntry {
    @Nonnull
    public static final BuilderCodec<GroupEntry> CODEC = BuilderCodec.builder(GroupEntry.class, GroupEntry::new)
-      .append(new KeyedCodec<>("Origin", Vector3dUtil.AS_ARRAY_CODEC), (g, o) -> g.origin = o, g -> g.origin)
+      .append(new KeyedCodec<>("Origin", Vector3dUtil.CODEC), (g, o) -> g.origin = o, g -> g.origin)
       .add()
       .append(
          new KeyedCodec<>("Effects", new ArrayCodec<>(TriggerEffect.CODEC, TriggerEffect[]::new), false),
@@ -31,7 +31,10 @@ public class GroupEntry {
          g -> g.effects.isEmpty() ? null : g.effects.toArray(TriggerEffect[]::new)
       )
       .add()
-      .append(new KeyedCodec<>("TargetTypes", Codec.STRING_ARRAY, false), GroupEntry::decodeTargetTypes, g -> encodeTargetTypes(g.targetTypes))
+      .append(new KeyedCodec<>("TargetTypes", new ArrayCodec<>(new EnumCodec<>(EntityTargetType.class), EntityTargetType[]::new), false), (g, arr) -> {
+         g.targetTypes.clear();
+         Collections.addAll(g.targetTypes, arr);
+      }, g -> g.targetTypes.isEmpty() ? null : g.targetTypes.toArray(EntityTargetType[]::new))
       .add()
       .append(new KeyedCodec<>("Enabled", Codec.BOOLEAN, false), (g, b) -> g.enabled = b, g -> g.enabled)
       .add()
@@ -82,22 +85,6 @@ public class GroupEntry {
       this.targetTypes = targetTypes;
       this.enabled = enabled;
       this.color = color;
-   }
-
-   private static void decodeTargetTypes(@Nonnull GroupEntry g, @Nonnull String[] names) {
-      g.targetTypes.clear();
-
-      for (String name : names) {
-         try {
-            g.targetTypes.add(EntityTargetType.valueOf(name.toUpperCase()));
-         } catch (IllegalArgumentException var7) {
-         }
-      }
-   }
-
-   @Nullable
-   private static String[] encodeTargetTypes(@Nonnull Set<EntityTargetType> types) {
-      return types.isEmpty() ? null : types.stream().map(t -> t.name().substring(0, 1) + t.name().substring(1).toLowerCase()).toArray(String[]::new);
    }
 
    public void setId(@Nonnull String id) {

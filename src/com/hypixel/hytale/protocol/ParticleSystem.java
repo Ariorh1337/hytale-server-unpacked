@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -156,6 +157,155 @@ public class ParticleSystem {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 22L;
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem) {
+      return getId(mem, 0);
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem, int offset) {
+      return hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 14, 22, "Id"), 4096000, PacketIO.UTF8) : null;
+   }
+
+   @Nullable
+   public static ParticleSpawnerGroup[] getSpawners(MemorySegment mem) {
+      return getSpawners(mem, 0);
+   }
+
+   @Nullable
+   public static ParticleSpawnerGroup[] getSpawners(MemorySegment mem, int offset) {
+      if (!hasSpawners(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 18, 22, "Spawners");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Spawners", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Spawners", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Spawners", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      ParticleSpawnerGroup[] data = new ParticleSpawnerGroup[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = ParticleSpawnerGroup.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   public static float getLifeSpan(MemorySegment mem) {
+      return getLifeSpan(mem, 0);
+   }
+
+   public static float getLifeSpan(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 1);
+   }
+
+   public static float getCullDistance(MemorySegment mem) {
+      return getCullDistance(mem, 0);
+   }
+
+   public static float getCullDistance(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 5);
+   }
+
+   public static float getBoundingRadius(MemorySegment mem) {
+      return getBoundingRadius(mem, 0);
+   }
+
+   public static float getBoundingRadius(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 9);
+   }
+
+   public static boolean getIsImportant(MemorySegment mem) {
+      return getIsImportant(mem, 0);
+   }
+
+   public static boolean getIsImportant(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 13);
+   }
+
+   public static boolean hasId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasSpawners(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static ParticleSystem toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ParticleSystem toObject(MemorySegment mem, int offset) {
+      if (offset + 22 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ParticleSystem", offset + 22, (int)mem.byteSize());
+      }
+
+      ParticleSpawnerGroup[] spawners = null;
+      if (hasSpawners(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 18, 22, "Spawners");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Spawners", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Spawners", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Spawners", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         spawners = new ParticleSpawnerGroup[len];
+
+         for (int i = 0; i < len; i++) {
+            spawners[i] = ParticleSpawnerGroup.toObject(mem, off);
+            off += spawners[i].computeSize();
+         }
+      }
+
+      return new ParticleSystem(
+         hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 14, 22, "Id"), 4096000, PacketIO.UTF8) : null,
+         spawners,
+         mem.get(PacketIO.PROTO_FLOAT, offset + 1),
+         mem.get(PacketIO.PROTO_FLOAT, offset + 5),
+         mem.get(PacketIO.PROTO_FLOAT, offset + 9),
+         mem.get(PacketIO.PROTO_BOOL, offset + 13)
+      );
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -198,6 +348,50 @@ public class ParticleSystem {
       } else {
          buf.setIntLE(spawnersOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.id != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.spawners != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 1, this.lifeSpan);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 5, this.cullDistance);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 9, this.boundingRadius);
+      mem.set(PacketIO.PROTO_BOOL, offset + 13, this.isImportant);
+      int varOffset = offset + 22;
+      if (this.id != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 14, varOffset - offset - 22);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.id, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 14, -1);
+      }
+
+      if (this.spawners != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 18, varOffset - offset - 22);
+         if (this.spawners.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Spawners", this.spawners.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.spawners.length);
+         int spawnersValueOffset = 0;
+
+         for (int i = 0; i < this.spawners.length; i++) {
+            spawnersValueOffset += this.spawners[i].serialize(mem, varOffset + spawnersValueOffset);
+         }
+
+         varOffset += spawnersValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 18, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

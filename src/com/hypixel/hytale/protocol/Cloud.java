@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -197,6 +198,194 @@ public class Cloud {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 13L;
+   }
+
+   @Nullable
+   public static String getTexture(MemorySegment mem) {
+      return getTexture(mem, 0);
+   }
+
+   @Nullable
+   public static String getTexture(MemorySegment mem, int offset) {
+      return hasTexture(mem, offset)
+         ? PacketIO.readVarString("Texture", mem, offset + getValidatedOffset(mem, offset, 1, 13, "Texture"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static Map<Float, Float> getSpeeds(MemorySegment mem) {
+      return getSpeeds(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Float, Float> getSpeeds(MemorySegment mem, int offset) {
+      if (!hasSpeeds(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 5, 13, "Speeds");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Speeds", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("Speeds", len, 4096000);
+      }
+
+      Map<Float, Float> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         float key = mem.get(PacketIO.PROTO_FLOAT, off);
+         off += 4;
+         float value = mem.get(PacketIO.PROTO_FLOAT, off);
+         off += 4;
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("Speeds", key);
+         }
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static Map<Float, ColorAlpha> getColors(MemorySegment mem) {
+      return getColors(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Float, ColorAlpha> getColors(MemorySegment mem, int offset) {
+      if (!hasColors(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 9, 13, "Colors");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Colors", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("Colors", len, 4096000);
+      }
+
+      Map<Float, ColorAlpha> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         float key = mem.get(PacketIO.PROTO_FLOAT, off);
+         off += 4;
+         ColorAlpha value = ColorAlpha.toObject(mem, off);
+         off += value.computeSize();
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("Colors", key);
+         }
+      }
+
+      return data;
+   }
+
+   public static boolean hasTexture(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasSpeeds(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasColors(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static Cloud toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static Cloud toObject(MemorySegment mem, int offset) {
+      if (offset + 13 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Cloud", offset + 13, (int)mem.byteSize());
+      }
+
+      Map<Float, Float> speeds = null;
+      if (hasSpeeds(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 5, 13, "Speeds");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Speeds", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Speeds", len, 4096000);
+         }
+
+         speeds = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            float key = mem.get(PacketIO.PROTO_FLOAT, off);
+            off += 4;
+            float value = mem.get(PacketIO.PROTO_FLOAT, off);
+            off += 4;
+            if (speeds.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("Speeds", key);
+            }
+         }
+      }
+
+      Map<Float, ColorAlpha> colors = null;
+      if (hasColors(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 9, 13, "Colors");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Colors", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Colors", len, 4096000);
+         }
+
+         colors = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            float key = mem.get(PacketIO.PROTO_FLOAT, off);
+            off += 4;
+            ColorAlpha value = ColorAlpha.toObject(mem, off);
+            off += value.computeSize();
+            if (colors.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("Colors", key);
+            }
+         }
+      }
+
+      return new Cloud(
+         hasTexture(mem, offset)
+            ? PacketIO.readVarString("Texture", mem, offset + getValidatedOffset(mem, offset, 1, 13, "Texture"), 4096000, PacketIO.UTF8)
+            : null,
+         speeds,
+         colors
+      );
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -258,6 +447,67 @@ public class Cloud {
       } else {
          buf.setIntLE(colorsOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.texture != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.speeds != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.colors != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 13;
+      if (this.texture != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 1, varOffset - offset - 13);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.texture, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 1, -1);
+      }
+
+      if (this.speeds != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 5, varOffset - offset - 13);
+         if (this.speeds.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Speeds", this.speeds.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.speeds.size());
+
+         for (Entry<Float, Float> e : this.speeds.entrySet()) {
+            mem.set(PacketIO.PROTO_FLOAT, varOffset, e.getKey());
+            varOffset += 4;
+            mem.set(PacketIO.PROTO_FLOAT, varOffset, e.getValue());
+            varOffset += 4;
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 5, -1);
+      }
+
+      if (this.colors != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 9, varOffset - offset - 13);
+         if (this.colors.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Colors", this.colors.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.colors.size());
+
+         for (Entry<Float, ColorAlpha> e : this.colors.entrySet()) {
+            mem.set(PacketIO.PROTO_FLOAT, varOffset, e.getKey());
+            varOffset += 4;
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 9, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

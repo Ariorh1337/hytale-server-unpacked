@@ -1,9 +1,11 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -79,6 +81,90 @@ public class RailConfig {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 1L;
+   }
+
+   @Nullable
+   public static RailPoint[] getPoints(MemorySegment mem) {
+      return getPoints(mem, 0);
+   }
+
+   @Nullable
+   public static RailPoint[] getPoints(MemorySegment mem, int offset) {
+      if (!hasPoints(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + 1;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Points", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Points", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 24L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Points", off + lenOffset + len * 24, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      RailPoint[] data = new RailPoint[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = RailPoint.toObject(mem, off + i * 24);
+      }
+
+      return data;
+   }
+
+   public static boolean hasPoints(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static RailConfig toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static RailConfig toObject(MemorySegment mem, int offset) {
+      if (offset + 1 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("RailConfig", offset + 1, (int)mem.byteSize());
+      }
+
+      RailPoint[] points = null;
+      if (hasPoints(mem, offset)) {
+         int off = offset + 1;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Points", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Points", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 24L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Points", off + lenOffset + len * 24, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         points = new RailPoint[len];
+
+         for (int i = 0; i < len; i++) {
+            points[i] = RailPoint.toObject(mem, off + i * 24);
+         }
+      }
+
+      return new RailConfig(points);
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
       if (this.points != null) {
@@ -97,6 +183,32 @@ public class RailConfig {
             item.serialize(buf);
          }
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.points != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 1;
+      if (this.points != null) {
+         if (this.points.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Points", this.points.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.points.length);
+         int pointsValueOffset = 0;
+
+         for (int i = 0; i < this.points.length; i++) {
+            pointsValueOffset += this.points[i].serialize(mem, varOffset + pointsValueOffset);
+         }
+
+         varOffset += pointsValueOffset;
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

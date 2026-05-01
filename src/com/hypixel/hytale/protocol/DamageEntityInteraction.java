@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -460,6 +461,507 @@ public class DamageEntityInteraction extends Interaction {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 60L;
+   }
+
+   public static WaitForDataFrom getWaitForDataFrom(MemorySegment mem) {
+      return getWaitForDataFrom(mem, 0);
+   }
+
+   public static WaitForDataFrom getWaitForDataFrom(MemorySegment mem, int offset) {
+      return WaitForDataFrom.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 2));
+   }
+
+   @Nullable
+   public static InteractionEffects getEffects(MemorySegment mem) {
+      return getEffects(mem, 0);
+   }
+
+   @Nullable
+   public static InteractionEffects getEffects(MemorySegment mem, int offset) {
+      return hasEffects(mem, offset) ? InteractionEffects.toObject(mem, offset + getValidatedOffset(mem, offset, 24, 60, "Effects")) : null;
+   }
+
+   public static float getHorizontalSpeedMultiplier(MemorySegment mem) {
+      return getHorizontalSpeedMultiplier(mem, 0);
+   }
+
+   public static float getHorizontalSpeedMultiplier(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 3);
+   }
+
+   public static float getRunTime(MemorySegment mem) {
+      return getRunTime(mem, 0);
+   }
+
+   public static float getRunTime(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 7);
+   }
+
+   public static boolean getCancelOnItemChange(MemorySegment mem) {
+      return getCancelOnItemChange(mem, 0);
+   }
+
+   public static boolean getCancelOnItemChange(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 11);
+   }
+
+   @Nullable
+   public static Map<GameMode, InteractionSettings> getSettings(MemorySegment mem) {
+      return getSettings(mem, 0);
+   }
+
+   @Nullable
+   public static Map<GameMode, InteractionSettings> getSettings(MemorySegment mem, int offset) {
+      if (!hasSettings(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 28, 60, "Settings");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Settings", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("Settings", len, 4096000);
+      }
+
+      Map<GameMode, InteractionSettings> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         GameMode key = GameMode.fromValue(mem.get(PacketIO.PROTO_BYTE, off));
+         InteractionSettings value = InteractionSettings.toObject(mem, ++off);
+         off += value.computeSize();
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("Settings", key);
+         }
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static InteractionRules getRules(MemorySegment mem) {
+      return getRules(mem, 0);
+   }
+
+   @Nullable
+   public static InteractionRules getRules(MemorySegment mem, int offset) {
+      return hasRules(mem, offset) ? InteractionRules.toObject(mem, offset + getValidatedOffset(mem, offset, 32, 60, "Rules")) : null;
+   }
+
+   @Nullable
+   public static int[] getTags(MemorySegment mem) {
+      return getTags(mem, 0);
+   }
+
+   @Nullable
+   public static int[] getTags(MemorySegment mem, int offset) {
+      if (!hasTags(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 36, 60, "Tags");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Tags", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Tags", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 4L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Tags", off + lenOffset + len * 4, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      int[] data = new int[len];
+      MemorySegment.copy(mem, PacketIO.PROTO_INT, off, data, 0, len);
+      return data;
+   }
+
+   @Nullable
+   public static InteractionCameraSettings getCamera(MemorySegment mem) {
+      return getCamera(mem, 0);
+   }
+
+   @Nullable
+   public static InteractionCameraSettings getCamera(MemorySegment mem, int offset) {
+      return hasCamera(mem, offset) ? InteractionCameraSettings.toObject(mem, offset + getValidatedOffset(mem, offset, 40, 60, "Camera")) : null;
+   }
+
+   public static int getNext(MemorySegment mem) {
+      return getNext(mem, 0);
+   }
+
+   public static int getNext(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 12);
+   }
+
+   public static int getFailed(MemorySegment mem) {
+      return getFailed(mem, 0);
+   }
+
+   public static int getFailed(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 16);
+   }
+
+   public static int getBlocked(MemorySegment mem) {
+      return getBlocked(mem, 0);
+   }
+
+   public static int getBlocked(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 20);
+   }
+
+   @Nullable
+   public static DamageEffects getDamageEffects(MemorySegment mem) {
+      return getDamageEffects(mem, 0);
+   }
+
+   @Nullable
+   public static DamageEffects getDamageEffects(MemorySegment mem, int offset) {
+      return hasDamageEffects(mem, offset) ? DamageEffects.toObject(mem, offset + getValidatedOffset(mem, offset, 44, 60, "DamageEffects")) : null;
+   }
+
+   @Nullable
+   public static AngledDamage[] getAngledDamage(MemorySegment mem) {
+      return getAngledDamage(mem, 0);
+   }
+
+   @Nullable
+   public static AngledDamage[] getAngledDamage(MemorySegment mem, int offset) {
+      if (!hasAngledDamage(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 48, 60, "AngledDamage");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("AngledDamage", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("AngledDamage", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AngledDamage", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      AngledDamage[] data = new AngledDamage[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = AngledDamage.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static Map<String, TargetedDamage> getTargetedDamage(MemorySegment mem) {
+      return getTargetedDamage(mem, 0);
+   }
+
+   @Nullable
+   public static Map<String, TargetedDamage> getTargetedDamage(MemorySegment mem, int offset) {
+      if (!hasTargetedDamage(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 52, 60, "TargetedDamage");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("TargetedDamage", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("TargetedDamage", len, 4096000);
+      }
+
+      Map<String, TargetedDamage> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         long keyPacked = VarInt.getWithLength(mem, off);
+         int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+         String key = PacketIO.readVarString("key", mem, off, 16384000, PacketIO.UTF8);
+         off += nkey;
+         TargetedDamage value = TargetedDamage.toObject(mem, off);
+         off += value.computeSize();
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("TargetedDamage", key);
+         }
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static EntityStatOnHit[] getEntityStatsOnHit(MemorySegment mem) {
+      return getEntityStatsOnHit(mem, 0);
+   }
+
+   @Nullable
+   public static EntityStatOnHit[] getEntityStatsOnHit(MemorySegment mem, int offset) {
+      if (!hasEntityStatsOnHit(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 56, 60, "EntityStatsOnHit");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("EntityStatsOnHit", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("EntityStatsOnHit", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("EntityStatsOnHit", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      EntityStatOnHit[] data = new EntityStatOnHit[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = EntityStatOnHit.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   public static boolean hasEffects(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasSettings(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasRules(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasTags(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasCamera(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 16) != 0;
+   }
+
+   public static boolean hasDamageEffects(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 32) != 0;
+   }
+
+   public static boolean hasAngledDamage(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 64) != 0;
+   }
+
+   public static boolean hasTargetedDamage(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 128) != 0;
+   }
+
+   public static boolean hasEntityStatsOnHit(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 1) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static DamageEntityInteraction toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static DamageEntityInteraction toObject(MemorySegment mem, int offset) {
+      if (offset + 60 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("DamageEntityInteraction", offset + 60, (int)mem.byteSize());
+      }
+
+      Map<GameMode, InteractionSettings> settings = null;
+      if (hasSettings(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 28, 60, "Settings");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Settings", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Settings", len, 4096000);
+         }
+
+         settings = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            GameMode key = GameMode.fromValue(mem.get(PacketIO.PROTO_BYTE, off));
+            InteractionSettings value = InteractionSettings.toObject(mem, ++off);
+            off += value.computeSize();
+            if (settings.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("Settings", key);
+            }
+         }
+      }
+
+      int[] tags = null;
+      if (hasTags(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 36, 60, "Tags");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Tags", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Tags", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 4L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Tags", off + lenOffset + len * 4, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         tags = new int[len];
+         MemorySegment.copy(mem, PacketIO.PROTO_INT, off, tags, 0, len);
+      }
+
+      AngledDamage[] angledDamage = null;
+      if (hasAngledDamage(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 48, 60, "AngledDamage");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("AngledDamage", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("AngledDamage", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("AngledDamage", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         angledDamage = new AngledDamage[len];
+
+         for (int i = 0; i < len; i++) {
+            angledDamage[i] = AngledDamage.toObject(mem, off);
+            off += angledDamage[i].computeSize();
+         }
+      }
+
+      Map<String, TargetedDamage> targetedDamage = null;
+      if (hasTargetedDamage(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 52, 60, "TargetedDamage");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("TargetedDamage", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("TargetedDamage", len, 4096000);
+         }
+
+         targetedDamage = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            long keyPacked = VarInt.getWithLength(mem, off);
+            int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+            String key = PacketIO.readVarString("key", mem, off, 16384000, PacketIO.UTF8);
+            off += nkey;
+            TargetedDamage value = TargetedDamage.toObject(mem, off);
+            off += value.computeSize();
+            if (targetedDamage.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("TargetedDamage", key);
+            }
+         }
+      }
+
+      EntityStatOnHit[] entityStatsOnHit = null;
+      if (hasEntityStatsOnHit(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 56, 60, "EntityStatsOnHit");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("EntityStatsOnHit", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("EntityStatsOnHit", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("EntityStatsOnHit", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         entityStatsOnHit = new EntityStatOnHit[len];
+
+         for (int i = 0; i < len; i++) {
+            entityStatsOnHit[i] = EntityStatOnHit.toObject(mem, off);
+            off += entityStatsOnHit[i].computeSize();
+         }
+      }
+
+      return new DamageEntityInteraction(
+         WaitForDataFrom.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 2)),
+         hasEffects(mem, offset) ? InteractionEffects.toObject(mem, offset + getValidatedOffset(mem, offset, 24, 60, "Effects")) : null,
+         mem.get(PacketIO.PROTO_FLOAT, offset + 3),
+         mem.get(PacketIO.PROTO_FLOAT, offset + 7),
+         mem.get(PacketIO.PROTO_BOOL, offset + 11),
+         settings,
+         hasRules(mem, offset) ? InteractionRules.toObject(mem, offset + getValidatedOffset(mem, offset, 32, 60, "Rules")) : null,
+         tags,
+         hasCamera(mem, offset) ? InteractionCameraSettings.toObject(mem, offset + getValidatedOffset(mem, offset, 40, 60, "Camera")) : null,
+         mem.get(PacketIO.PROTO_INT, offset + 12),
+         mem.get(PacketIO.PROTO_INT, offset + 16),
+         mem.get(PacketIO.PROTO_INT, offset + 20),
+         hasDamageEffects(mem, offset) ? DamageEffects.toObject(mem, offset + getValidatedOffset(mem, offset, 44, 60, "DamageEffects")) : null,
+         angledDamage,
+         targetedDamage,
+         entityStatsOnHit
+      );
+   }
+
    @Override
    public int serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -633,6 +1135,168 @@ public class DamageEntityInteraction extends Interaction {
       }
 
       return buf.writerIndex() - startPos;
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.effects != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.settings != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.rules != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.tags != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.camera != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.damageEffects != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
+      if (this.angledDamage != null) {
+         nullBits = (byte)(nullBits | 64);
+      }
+
+      if (this.targetedDamage != null) {
+         nullBits = (byte)(nullBits | 128);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      nullBits = 0;
+      if (this.entityStatsOnHit != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, nullBits);
+      mem.set(PacketIO.PROTO_BYTE, offset + 2, (byte)this.waitForDataFrom.getValue());
+      mem.set(PacketIO.PROTO_FLOAT, offset + 3, this.horizontalSpeedMultiplier);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 7, this.runTime);
+      mem.set(PacketIO.PROTO_BOOL, offset + 11, this.cancelOnItemChange);
+      mem.set(PacketIO.PROTO_INT, offset + 12, this.next);
+      mem.set(PacketIO.PROTO_INT, offset + 16, this.failed);
+      mem.set(PacketIO.PROTO_INT, offset + 20, this.blocked);
+      int varOffset = offset + 60;
+      if (this.effects != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 24, varOffset - offset - 60);
+         varOffset += this.effects.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 24, -1);
+      }
+
+      if (this.settings != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 28, varOffset - offset - 60);
+         if (this.settings.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Settings", this.settings.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.settings.size());
+
+         for (Entry<GameMode, InteractionSettings> e : this.settings.entrySet()) {
+            mem.set(PacketIO.PROTO_BYTE, varOffset, (byte)e.getKey().getValue());
+            varOffset = ++varOffset + e.getValue().serialize(mem, varOffset);
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 28, -1);
+      }
+
+      if (this.rules != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 32, varOffset - offset - 60);
+         varOffset += this.rules.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 32, -1);
+      }
+
+      if (this.tags != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 36, varOffset - offset - 60);
+         if (this.tags.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Tags", this.tags.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.tags.length);
+         MemorySegment.copy(this.tags, 0, mem, PacketIO.PROTO_INT, varOffset, this.tags.length);
+         varOffset += this.tags.length * 4;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 36, -1);
+      }
+
+      if (this.camera != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 40, varOffset - offset - 60);
+         varOffset += this.camera.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 40, -1);
+      }
+
+      if (this.damageEffects != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 44, varOffset - offset - 60);
+         varOffset += this.damageEffects.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 44, -1);
+      }
+
+      if (this.angledDamage != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 48, varOffset - offset - 60);
+         if (this.angledDamage.length > 4096000) {
+            throw ProtocolException.arrayTooLong("AngledDamage", this.angledDamage.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.angledDamage.length);
+         int angledDamageValueOffset = 0;
+
+         for (int i = 0; i < this.angledDamage.length; i++) {
+            angledDamageValueOffset += this.angledDamage[i].serialize(mem, varOffset + angledDamageValueOffset);
+         }
+
+         varOffset += angledDamageValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 48, -1);
+      }
+
+      if (this.targetedDamage != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 52, varOffset - offset - 60);
+         if (this.targetedDamage.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("TargetedDamage", this.targetedDamage.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.targetedDamage.size());
+
+         for (Entry<String, TargetedDamage> e : this.targetedDamage.entrySet()) {
+            varOffset += PacketIO.writeVarString(mem, varOffset, e.getKey(), 16384000);
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 52, -1);
+      }
+
+      if (this.entityStatsOnHit != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 56, varOffset - offset - 60);
+         if (this.entityStatsOnHit.length > 4096000) {
+            throw ProtocolException.arrayTooLong("EntityStatsOnHit", this.entityStatsOnHit.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.entityStatsOnHit.length);
+         int entityStatsOnHitValueOffset = 0;
+
+         for (int i = 0; i < this.entityStatsOnHit.length; i++) {
+            entityStatsOnHitValueOffset += this.entityStatsOnHit[i].serialize(mem, varOffset + entityStatsOnHitValueOffset);
+         }
+
+         varOffset += entityStatsOnHitValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 56, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

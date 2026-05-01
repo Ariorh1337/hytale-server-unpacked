@@ -1,9 +1,11 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -146,6 +148,177 @@ public class EntityUpdate {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 13L;
+   }
+
+   public static int getNetworkId(MemorySegment mem) {
+      return getNetworkId(mem, 0);
+   }
+
+   public static int getNetworkId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   @Nullable
+   public static ComponentUpdateType[] getRemoved(MemorySegment mem) {
+      return getRemoved(mem, 0);
+   }
+
+   @Nullable
+   public static ComponentUpdateType[] getRemoved(MemorySegment mem, int offset) {
+      if (!hasRemoved(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 5, 13, "Removed");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Removed", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Removed", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 1L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Removed", off + lenOffset + len * 1, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      ComponentUpdateType[] data = new ComponentUpdateType[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = ComponentUpdateType.fromValue(mem.get(PacketIO.PROTO_BYTE, off + i * 1));
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static ComponentUpdate[] getUpdates(MemorySegment mem) {
+      return getUpdates(mem, 0);
+   }
+
+   @Nullable
+   public static ComponentUpdate[] getUpdates(MemorySegment mem, int offset) {
+      if (!hasUpdates(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 9, 13, "Updates");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Updates", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Updates", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Updates", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      ComponentUpdate[] data = new ComponentUpdate[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = ComponentUpdate.toObject(mem, off);
+         off += data[i].computeSizeWithTypeId();
+      }
+
+      return data;
+   }
+
+   public static boolean hasRemoved(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasUpdates(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static EntityUpdate toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static EntityUpdate toObject(MemorySegment mem, int offset) {
+      if (offset + 13 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("EntityUpdate", offset + 13, (int)mem.byteSize());
+      }
+
+      ComponentUpdateType[] removed = null;
+      if (hasRemoved(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 5, 13, "Removed");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Removed", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Removed", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 1L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Removed", off + lenOffset + len * 1, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         removed = new ComponentUpdateType[len];
+
+         for (int i = 0; i < len; i++) {
+            removed[i] = ComponentUpdateType.fromValue(mem.get(PacketIO.PROTO_BYTE, off + i * 1));
+         }
+      }
+
+      ComponentUpdate[] updates = null;
+      if (hasUpdates(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 9, 13, "Updates");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Updates", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Updates", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Updates", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         updates = new ComponentUpdate[len];
+
+         for (int i = 0; i < len; i++) {
+            updates[i] = ComponentUpdate.toObject(mem, off);
+            off += updates[i].computeSizeWithTypeId();
+         }
+      }
+
+      return new EntityUpdate(mem.get(PacketIO.PROTO_INT, offset + 1), removed, updates);
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -193,6 +366,57 @@ public class EntityUpdate {
       } else {
          buf.setIntLE(updatesOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.removed != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.updates != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.networkId);
+      int varOffset = offset + 13;
+      if (this.removed != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 5, varOffset - offset - 13);
+         if (this.removed.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Removed", this.removed.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.removed.length);
+
+         for (int i = 0; i < this.removed.length; i++) {
+            mem.set(PacketIO.PROTO_BYTE, varOffset + i * 1, (byte)this.removed[i].getValue());
+         }
+
+         varOffset += this.removed.length * 1;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 5, -1);
+      }
+
+      if (this.updates != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 9, varOffset - offset - 13);
+         if (this.updates.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Updates", this.updates.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.updates.length);
+         int updatesValueOffset = 0;
+
+         for (int i = 0; i < this.updates.length; i++) {
+            updatesValueOffset += this.updates[i].serializeWithTypeId(mem, varOffset + updatesValueOffset);
+         }
+
+         varOffset += updatesValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 9, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

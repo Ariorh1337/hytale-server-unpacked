@@ -7,6 +7,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -159,6 +160,145 @@ public class ClipboardEntityChange {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 53L;
+   }
+
+   public static float getX(MemorySegment mem) {
+      return getX(mem, 0);
+   }
+
+   public static float getX(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 1);
+   }
+
+   public static float getY(MemorySegment mem) {
+      return getY(mem, 0);
+   }
+
+   public static float getY(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 5);
+   }
+
+   public static float getZ(MemorySegment mem) {
+      return getZ(mem, 0);
+   }
+
+   public static float getZ(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 9);
+   }
+
+   public static int getBlockId(MemorySegment mem) {
+      return getBlockId(mem, 0);
+   }
+
+   public static int getBlockId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 13);
+   }
+
+   @Nullable
+   public static Model getModel(MemorySegment mem) {
+      return getModel(mem, 0);
+   }
+
+   @Nullable
+   public static Model getModel(MemorySegment mem, int offset) {
+      return hasModel(mem, offset) ? Model.toObject(mem, offset + getValidatedOffset(mem, offset, 45, 53, "Model")) : null;
+   }
+
+   @Nullable
+   public static String getItemId(MemorySegment mem) {
+      return getItemId(mem, 0);
+   }
+
+   @Nullable
+   public static String getItemId(MemorySegment mem, int offset) {
+      return hasItemId(mem, offset)
+         ? PacketIO.readVarString("ItemId", mem, offset + getValidatedOffset(mem, offset, 49, 53, "ItemId"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static Direction getBodyOrientation(MemorySegment mem) {
+      return getBodyOrientation(mem, 0);
+   }
+
+   @Nullable
+   public static Direction getBodyOrientation(MemorySegment mem, int offset) {
+      return hasBodyOrientation(mem, offset) ? Direction.toObject(mem, offset + 17) : null;
+   }
+
+   @Nullable
+   public static Direction getLookOrientation(MemorySegment mem) {
+      return getLookOrientation(mem, 0);
+   }
+
+   @Nullable
+   public static Direction getLookOrientation(MemorySegment mem, int offset) {
+      return hasLookOrientation(mem, offset) ? Direction.toObject(mem, offset + 29) : null;
+   }
+
+   public static float getScale(MemorySegment mem) {
+      return getScale(mem, 0);
+   }
+
+   public static float getScale(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 41);
+   }
+
+   public static boolean hasBodyOrientation(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasLookOrientation(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasModel(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasItemId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static ClipboardEntityChange toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ClipboardEntityChange toObject(MemorySegment mem, int offset) {
+      if (offset + 53 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ClipboardEntityChange", offset + 53, (int)mem.byteSize());
+      } else {
+         return new ClipboardEntityChange(
+            mem.get(PacketIO.PROTO_FLOAT, offset + 1),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 5),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 9),
+            mem.get(PacketIO.PROTO_INT, offset + 13),
+            hasModel(mem, offset) ? Model.toObject(mem, offset + getValidatedOffset(mem, offset, 45, 53, "Model")) : null,
+            hasItemId(mem, offset)
+               ? PacketIO.readVarString("ItemId", mem, offset + getValidatedOffset(mem, offset, 49, 53, "ItemId"), 4096000, PacketIO.UTF8)
+               : null,
+            hasBodyOrientation(mem, offset) ? Direction.toObject(mem, offset + 17) : null,
+            hasLookOrientation(mem, offset) ? Direction.toObject(mem, offset + 29) : null,
+            mem.get(PacketIO.PROTO_FLOAT, offset + 41)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -214,6 +354,60 @@ public class ClipboardEntityChange {
       } else {
          buf.setIntLE(itemIdOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.bodyOrientation != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.lookOrientation != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.model != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.itemId != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 1, this.x);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 5, this.y);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 9, this.z);
+      mem.set(PacketIO.PROTO_INT, offset + 13, this.blockId);
+      if (this.bodyOrientation != null) {
+         this.bodyOrientation.serialize(mem, offset + 17);
+      } else {
+         mem.asSlice(offset + 17, 12L).fill((byte)0);
+      }
+
+      if (this.lookOrientation != null) {
+         this.lookOrientation.serialize(mem, offset + 29);
+      } else {
+         mem.asSlice(offset + 29, 12L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_FLOAT, offset + 41, this.scale);
+      int varOffset = offset + 53;
+      if (this.model != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 45, varOffset - offset - 53);
+         varOffset += this.model.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 45, -1);
+      }
+
+      if (this.itemId != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 49, varOffset - offset - 53);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.itemId, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 49, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

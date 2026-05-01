@@ -9,6 +9,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -198,6 +199,152 @@ public class UpdateMachinimaScene implements Packet, ToServerPacket, ToClientPac
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 18L;
+   }
+
+   @Nullable
+   public static String getPlayer(MemorySegment mem) {
+      return getPlayer(mem, 0);
+   }
+
+   @Nullable
+   public static String getPlayer(MemorySegment mem, int offset) {
+      return hasPlayer(mem, offset)
+         ? PacketIO.readVarString("Player", mem, offset + getValidatedOffset(mem, offset, 6, 18, "Player"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getSceneName(MemorySegment mem) {
+      return getSceneName(mem, 0);
+   }
+
+   @Nullable
+   public static String getSceneName(MemorySegment mem, int offset) {
+      return hasSceneName(mem, offset)
+         ? PacketIO.readVarString("SceneName", mem, offset + getValidatedOffset(mem, offset, 10, 18, "SceneName"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static float getFrame(MemorySegment mem) {
+      return getFrame(mem, 0);
+   }
+
+   public static float getFrame(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 1);
+   }
+
+   public static SceneUpdateType getUpdateType(MemorySegment mem) {
+      return getUpdateType(mem, 0);
+   }
+
+   public static SceneUpdateType getUpdateType(MemorySegment mem, int offset) {
+      return SceneUpdateType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 5));
+   }
+
+   @Nullable
+   public static byte[] getScene(MemorySegment mem) {
+      return getScene(mem, 0);
+   }
+
+   @Nullable
+   public static byte[] getScene(MemorySegment mem, int offset) {
+      if (!hasScene(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 14, 18, "Scene");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Scene", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Scene", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 1L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Scene", off + lenOffset + len * 1, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      byte[] data = new byte[len];
+      MemorySegment.copy(mem, PacketIO.PROTO_BYTE, off, data, 0, len);
+      return data;
+   }
+
+   public static boolean hasPlayer(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasSceneName(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasScene(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static UpdateMachinimaScene toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UpdateMachinimaScene toObject(MemorySegment mem, int offset) {
+      if (offset + 18 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("UpdateMachinimaScene", offset + 18, (int)mem.byteSize());
+      }
+
+      byte[] scene = null;
+      if (hasScene(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 14, 18, "Scene");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Scene", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Scene", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 1L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Scene", off + lenOffset + len * 1, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         scene = new byte[len];
+         MemorySegment.copy(mem, PacketIO.PROTO_BYTE, off, scene, 0, len);
+      }
+
+      return new UpdateMachinimaScene(
+         hasPlayer(mem, offset)
+            ? PacketIO.readVarString("Player", mem, offset + getValidatedOffset(mem, offset, 6, 18, "Player"), 4096000, PacketIO.UTF8)
+            : null,
+         hasSceneName(mem, offset)
+            ? PacketIO.readVarString("SceneName", mem, offset + getValidatedOffset(mem, offset, 10, 18, "SceneName"), 4096000, PacketIO.UTF8)
+            : null,
+         mem.get(PacketIO.PROTO_FLOAT, offset + 1),
+         SceneUpdateType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 5)),
+         scene
+      );
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -252,6 +399,55 @@ public class UpdateMachinimaScene implements Packet, ToServerPacket, ToClientPac
       } else {
          buf.setIntLE(sceneOffsetSlot, -1);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.player != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.sceneName != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.scene != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 1, this.frame);
+      mem.set(PacketIO.PROTO_BYTE, offset + 5, (byte)this.updateType.getValue());
+      int varOffset = offset + 18;
+      if (this.player != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 6, varOffset - offset - 18);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.player, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 6, -1);
+      }
+
+      if (this.sceneName != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 10, varOffset - offset - 18);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.sceneName, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 10, -1);
+      }
+
+      if (this.scene != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 14, varOffset - offset - 18);
+         if (this.scene.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Scene", this.scene.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.scene.length);
+         MemorySegment.copy(this.scene, 0, mem, PacketIO.PROTO_BYTE, varOffset, this.scene.length);
+         varOffset += this.scene.length * 1;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 14, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

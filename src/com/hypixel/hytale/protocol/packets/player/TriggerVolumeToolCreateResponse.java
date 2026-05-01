@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -73,9 +74,40 @@ public class TriggerVolumeToolCreateResponse implements Packet, ToClientPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 0L;
+   }
+
+   public static String getVolumeId(MemorySegment mem) {
+      return getVolumeId(mem, 0);
+   }
+
+   public static String getVolumeId(MemorySegment mem, int offset) {
+      return PacketIO.readVarString("VolumeId", mem, offset + 0, 4096000, PacketIO.UTF8);
+   }
+
+   public static TriggerVolumeToolCreateResponse toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static TriggerVolumeToolCreateResponse toObject(MemorySegment mem, int offset) {
+      if (offset + 0 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("TriggerVolumeToolCreateResponse", offset + 0, (int)mem.byteSize());
+      } else {
+         return new TriggerVolumeToolCreateResponse(PacketIO.readVarString("VolumeId", mem, offset + 0, 4096000, PacketIO.UTF8));
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       PacketIO.writeVarString(buf, this.volumeId, 4096000);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      int varOffset = offset + 0;
+      varOffset += PacketIO.writeVarString(mem, varOffset, this.volumeId, 4096000);
+      return varOffset - offset;
    }
 
    @Override

@@ -437,7 +437,7 @@ public class HytaleServerConfig {
    public static HytaleServerConfig load(@Nonnull Path path) {
       if (!Files.isRegularFile(path)) {
          HytaleServerConfig hytaleServerConfig = new HytaleServerConfig();
-         if (!Options.getOptionSet().has(Options.BARE)) {
+         if (!Options.isBare()) {
             save(hytaleServerConfig).join();
          }
 

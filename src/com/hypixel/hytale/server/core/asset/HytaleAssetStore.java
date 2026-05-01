@@ -254,9 +254,6 @@ public class HytaleAssetStore<K, T extends JsonAssetWithMap<K, M>, M extends Ass
                      HytaleAssetStore.this.logger.at(Level.FINEST).log("File Modified: %s", path);
                      createdOrModifiedFilesToLoad.add(path);
                   }
-                  break;
-               default:
-                  throw new IllegalArgumentException("Unknown eventKind " + entry.getValue());
             }
          }
 

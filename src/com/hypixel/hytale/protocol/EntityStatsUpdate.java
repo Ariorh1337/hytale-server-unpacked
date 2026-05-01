@@ -1,9 +1,11 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -99,6 +101,120 @@ public class EntityStatsUpdate extends ComponentUpdate {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 0L;
+   }
+
+   public static Map<Integer, EntityStatUpdate[]> getEntityStatUpdates(MemorySegment mem) {
+      return getEntityStatUpdates(mem, 0);
+   }
+
+   public static Map<Integer, EntityStatUpdate[]> getEntityStatUpdates(MemorySegment mem, int offset) {
+      int off = offset + 0;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("EntityStatUpdates", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("EntityStatUpdates", len, 4096000);
+      }
+
+      Map<Integer, EntityStatUpdate[]> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         int key = mem.get(PacketIO.PROTO_INT, off);
+         off += 4;
+         long valuePacked = VarInt.getWithLength(mem, off);
+         int valueLen = (int)valuePacked;
+         int valueVarLen = (int)(valuePacked >>> 32);
+         if (valueLen < 0) {
+            throw ProtocolException.negativeLength("value", valueLen);
+         }
+
+         if (valueLen > 64) {
+            throw ProtocolException.arrayTooLong("value", valueLen, 64);
+         }
+
+         if (off + valueVarLen + valueLen * 13L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("value", off + valueVarLen + valueLen * 13, (int)mem.byteSize());
+         }
+
+         off += valueVarLen;
+         EntityStatUpdate[] value = new EntityStatUpdate[valueLen];
+
+         for (int valueIdx = 0; valueIdx < valueLen; valueIdx++) {
+            value[valueIdx] = EntityStatUpdate.toObject(mem, off);
+            off += value[valueIdx].computeSize();
+         }
+
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("EntityStatUpdates", key);
+         }
+      }
+
+      return data;
+   }
+
+   public static EntityStatsUpdate toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static EntityStatsUpdate toObject(MemorySegment mem, int offset) {
+      if (offset + 0 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("EntityStatsUpdate", offset + 0, (int)mem.byteSize());
+      }
+
+      int off = offset + 0;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("EntityStatUpdates", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("EntityStatUpdates", len, 4096000);
+      }
+
+      Map<Integer, EntityStatUpdate[]> entityStatUpdates = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         int key = mem.get(PacketIO.PROTO_INT, off);
+         off += 4;
+         long valuePacked = VarInt.getWithLength(mem, off);
+         int valueLen = (int)valuePacked;
+         int valueVarLen = (int)(valuePacked >>> 32);
+         if (valueLen < 0) {
+            throw ProtocolException.negativeLength("value", valueLen);
+         }
+
+         if (valueLen > 64) {
+            throw ProtocolException.arrayTooLong("value", valueLen, 64);
+         }
+
+         if (off + valueVarLen + valueLen * 13L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("value", off + valueVarLen + valueLen * 13, (int)mem.byteSize());
+         }
+
+         off += valueVarLen;
+         EntityStatUpdate[] value = new EntityStatUpdate[valueLen];
+
+         for (int valueIdx = 0; valueIdx < valueLen; valueIdx++) {
+            value[valueIdx] = EntityStatUpdate.toObject(mem, off);
+            off += value[valueIdx].computeSize();
+         }
+
+         if (entityStatUpdates.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("EntityStatUpdates", key);
+         }
+      }
+
+      return new EntityStatsUpdate(entityStatUpdates);
+   }
+
    @Override
    public int serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -118,6 +234,28 @@ public class EntityStatsUpdate extends ComponentUpdate {
       }
 
       return buf.writerIndex() - startPos;
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      int varOffset = offset + 0;
+      if (this.entityStatUpdates.size() > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("EntityStatUpdates", this.entityStatUpdates.size(), 4096000);
+      }
+
+      varOffset += VarInt.set(mem, varOffset, this.entityStatUpdates.size());
+
+      for (Entry<Integer, EntityStatUpdate[]> e : this.entityStatUpdates.entrySet()) {
+         mem.set(PacketIO.PROTO_INT, varOffset, e.getKey());
+         varOffset += 4;
+         varOffset += VarInt.set(mem, varOffset, e.getValue().length);
+
+         for (EntityStatUpdate arrItem : e.getValue()) {
+            varOffset += arrItem.serialize(mem, varOffset);
+         }
+      }
+
+      return varOffset - offset;
    }
 
    @Override

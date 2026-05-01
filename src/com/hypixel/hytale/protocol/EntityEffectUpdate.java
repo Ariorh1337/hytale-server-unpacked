@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -92,6 +93,84 @@ public class EntityEffectUpdate {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 12L;
+   }
+
+   public static EffectOp getType(MemorySegment mem) {
+      return getType(mem, 0);
+   }
+
+   public static EffectOp getType(MemorySegment mem, int offset) {
+      return EffectOp.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1));
+   }
+
+   public static int getId(MemorySegment mem) {
+      return getId(mem, 0);
+   }
+
+   public static int getId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 2);
+   }
+
+   public static float getRemainingTime(MemorySegment mem) {
+      return getRemainingTime(mem, 0);
+   }
+
+   public static float getRemainingTime(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 6);
+   }
+
+   public static boolean getInfinite(MemorySegment mem) {
+      return getInfinite(mem, 0);
+   }
+
+   public static boolean getInfinite(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 10);
+   }
+
+   public static boolean getDebuff(MemorySegment mem) {
+      return getDebuff(mem, 0);
+   }
+
+   public static boolean getDebuff(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 11);
+   }
+
+   @Nullable
+   public static String getStatusEffectIcon(MemorySegment mem) {
+      return getStatusEffectIcon(mem, 0);
+   }
+
+   @Nullable
+   public static String getStatusEffectIcon(MemorySegment mem, int offset) {
+      return hasStatusEffectIcon(mem, offset) ? PacketIO.readVarString("StatusEffectIcon", mem, offset + 12, 4096000, PacketIO.UTF8) : null;
+   }
+
+   public static boolean hasStatusEffectIcon(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static EntityEffectUpdate toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static EntityEffectUpdate toObject(MemorySegment mem, int offset) {
+      if (offset + 12 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("EntityEffectUpdate", offset + 12, (int)mem.byteSize());
+      } else {
+         return new EntityEffectUpdate(
+            EffectOp.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1)),
+            mem.get(PacketIO.PROTO_INT, offset + 2),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 6),
+            mem.get(PacketIO.PROTO_BOOL, offset + 10),
+            mem.get(PacketIO.PROTO_BOOL, offset + 11),
+            hasStatusEffectIcon(mem, offset) ? PacketIO.readVarString("StatusEffectIcon", mem, offset + 12, 4096000, PacketIO.UTF8) : null
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
       if (this.statusEffectIcon != null) {
@@ -107,6 +186,26 @@ public class EntityEffectUpdate {
       if (this.statusEffectIcon != null) {
          PacketIO.writeVarString(buf, this.statusEffectIcon, 4096000);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.statusEffectIcon != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.type.getValue());
+      mem.set(PacketIO.PROTO_INT, offset + 2, this.id);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 6, this.remainingTime);
+      mem.set(PacketIO.PROTO_BOOL, offset + 10, this.infinite);
+      mem.set(PacketIO.PROTO_BOOL, offset + 11, this.debuff);
+      int varOffset = offset + 12;
+      if (this.statusEffectIcon != null) {
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.statusEffectIcon, 4096000);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

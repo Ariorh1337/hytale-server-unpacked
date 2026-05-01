@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -87,6 +88,75 @@ public class PhysicalMaterial {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 17L;
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem) {
+      return getId(mem, 0);
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem, int offset) {
+      return hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + 17, 4096000, PacketIO.UTF8) : null;
+   }
+
+   public static float getReflectionCoeff(MemorySegment mem) {
+      return getReflectionCoeff(mem, 0);
+   }
+
+   public static float getReflectionCoeff(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 1);
+   }
+
+   public static float getAttenuationPerBlock(MemorySegment mem) {
+      return getAttenuationPerBlock(mem, 0);
+   }
+
+   public static float getAttenuationPerBlock(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 5);
+   }
+
+   public static float getHFAttenuationPerBlock(MemorySegment mem) {
+      return getHFAttenuationPerBlock(mem, 0);
+   }
+
+   public static float getHFAttenuationPerBlock(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 9);
+   }
+
+   public static float getShelterOpacity(MemorySegment mem) {
+      return getShelterOpacity(mem, 0);
+   }
+
+   public static float getShelterOpacity(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 13);
+   }
+
+   public static boolean hasId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static PhysicalMaterial toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static PhysicalMaterial toObject(MemorySegment mem, int offset) {
+      if (offset + 17 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("PhysicalMaterial", offset + 17, (int)mem.byteSize());
+      } else {
+         return new PhysicalMaterial(
+            hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + 17, 4096000, PacketIO.UTF8) : null,
+            mem.get(PacketIO.PROTO_FLOAT, offset + 1),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 5),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 9),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 13)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
       if (this.id != null) {
@@ -101,6 +171,25 @@ public class PhysicalMaterial {
       if (this.id != null) {
          PacketIO.writeVarString(buf, this.id, 4096000);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.id != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 1, this.reflectionCoeff);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 5, this.attenuationPerBlock);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 9, this.hFAttenuationPerBlock);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 13, this.shelterOpacity);
+      int varOffset = offset + 17;
+      if (this.id != null) {
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.id, 4096000);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

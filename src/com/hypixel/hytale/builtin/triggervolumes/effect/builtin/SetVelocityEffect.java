@@ -18,7 +18,7 @@ import org.joml.Vector3d;
 public class SetVelocityEffect extends TriggerEffect {
    @Nonnull
    public static final BuilderCodec<SetVelocityEffect> CODEC = BuilderCodec.builder(SetVelocityEffect.class, SetVelocityEffect::new, BASE_CODEC)
-      .append(new KeyedCodec<>("Velocity", Vector3dUtil.AS_ARRAY_CODEC), (e, v) -> e.velocity = v, e -> e.velocity)
+      .append(new KeyedCodec<>("Velocity", Vector3dUtil.CODEC), (e, v) -> e.velocity = v, e -> e.velocity)
       .add()
       .append(new KeyedCodec<>("Additive", Codec.BOOLEAN, false), (e, v) -> e.additive = v, e -> e.additive)
       .add()

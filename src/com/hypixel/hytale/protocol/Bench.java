@@ -1,9 +1,11 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -79,6 +81,92 @@ public class Bench {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 1L;
+   }
+
+   @Nullable
+   public static BenchTierLevel[] getBenchTierLevels(MemorySegment mem) {
+      return getBenchTierLevels(mem, 0);
+   }
+
+   @Nullable
+   public static BenchTierLevel[] getBenchTierLevels(MemorySegment mem, int offset) {
+      if (!hasBenchTierLevels(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + 1;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("BenchTierLevels", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("BenchTierLevels", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BenchTierLevels", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      BenchTierLevel[] data = new BenchTierLevel[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = BenchTierLevel.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   public static boolean hasBenchTierLevels(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static Bench toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static Bench toObject(MemorySegment mem, int offset) {
+      if (offset + 1 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Bench", offset + 1, (int)mem.byteSize());
+      }
+
+      BenchTierLevel[] benchTierLevels = null;
+      if (hasBenchTierLevels(mem, offset)) {
+         int off = offset + 1;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("BenchTierLevels", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("BenchTierLevels", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("BenchTierLevels", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         benchTierLevels = new BenchTierLevel[len];
+
+         for (int i = 0; i < len; i++) {
+            benchTierLevels[i] = BenchTierLevel.toObject(mem, off);
+            off += benchTierLevels[i].computeSize();
+         }
+      }
+
+      return new Bench(benchTierLevels);
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
       if (this.benchTierLevels != null) {
@@ -97,6 +185,32 @@ public class Bench {
             item.serialize(buf);
          }
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.benchTierLevels != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 1;
+      if (this.benchTierLevels != null) {
+         if (this.benchTierLevels.length > 4096000) {
+            throw ProtocolException.arrayTooLong("BenchTierLevels", this.benchTierLevels.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.benchTierLevels.length);
+         int benchTierLevelsValueOffset = 0;
+
+         for (int i = 0; i < this.benchTierLevels.length; i++) {
+            benchTierLevelsValueOffset += this.benchTierLevels[i].serialize(mem, varOffset + benchTierLevelsValueOffset);
+         }
+
+         varOffset += benchTierLevelsValueOffset;
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

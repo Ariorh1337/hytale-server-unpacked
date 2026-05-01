@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -283,6 +284,179 @@ public class ItemAnimation {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 32L;
+   }
+
+   @Nullable
+   public static String getThirdPerson(MemorySegment mem) {
+      return getThirdPerson(mem, 0);
+   }
+
+   @Nullable
+   public static String getThirdPerson(MemorySegment mem, int offset) {
+      return hasThirdPerson(mem, offset)
+         ? PacketIO.readVarString("ThirdPerson", mem, offset + getValidatedOffset(mem, offset, 12, 32, "ThirdPerson"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getThirdPersonMoving(MemorySegment mem) {
+      return getThirdPersonMoving(mem, 0);
+   }
+
+   @Nullable
+   public static String getThirdPersonMoving(MemorySegment mem, int offset) {
+      return hasThirdPersonMoving(mem, offset)
+         ? PacketIO.readVarString("ThirdPersonMoving", mem, offset + getValidatedOffset(mem, offset, 16, 32, "ThirdPersonMoving"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getThirdPersonFace(MemorySegment mem) {
+      return getThirdPersonFace(mem, 0);
+   }
+
+   @Nullable
+   public static String getThirdPersonFace(MemorySegment mem, int offset) {
+      return hasThirdPersonFace(mem, offset)
+         ? PacketIO.readVarString("ThirdPersonFace", mem, offset + getValidatedOffset(mem, offset, 20, 32, "ThirdPersonFace"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getFirstPerson(MemorySegment mem) {
+      return getFirstPerson(mem, 0);
+   }
+
+   @Nullable
+   public static String getFirstPerson(MemorySegment mem, int offset) {
+      return hasFirstPerson(mem, offset)
+         ? PacketIO.readVarString("FirstPerson", mem, offset + getValidatedOffset(mem, offset, 24, 32, "FirstPerson"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getFirstPersonOverride(MemorySegment mem) {
+      return getFirstPersonOverride(mem, 0);
+   }
+
+   @Nullable
+   public static String getFirstPersonOverride(MemorySegment mem, int offset) {
+      return hasFirstPersonOverride(mem, offset)
+         ? PacketIO.readVarString("FirstPersonOverride", mem, offset + getValidatedOffset(mem, offset, 28, 32, "FirstPersonOverride"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static boolean getKeepPreviousFirstPersonAnimation(MemorySegment mem) {
+      return getKeepPreviousFirstPersonAnimation(mem, 0);
+   }
+
+   public static boolean getKeepPreviousFirstPersonAnimation(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 1);
+   }
+
+   public static float getSpeed(MemorySegment mem) {
+      return getSpeed(mem, 0);
+   }
+
+   public static float getSpeed(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 2);
+   }
+
+   public static float getBlendingDuration(MemorySegment mem) {
+      return getBlendingDuration(mem, 0);
+   }
+
+   public static float getBlendingDuration(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 6);
+   }
+
+   public static boolean getLooping(MemorySegment mem) {
+      return getLooping(mem, 0);
+   }
+
+   public static boolean getLooping(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 10);
+   }
+
+   public static boolean getClipsGeometry(MemorySegment mem) {
+      return getClipsGeometry(mem, 0);
+   }
+
+   public static boolean getClipsGeometry(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 11);
+   }
+
+   public static boolean hasThirdPerson(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasThirdPersonMoving(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasThirdPersonFace(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasFirstPerson(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasFirstPersonOverride(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 16) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static ItemAnimation toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ItemAnimation toObject(MemorySegment mem, int offset) {
+      if (offset + 32 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ItemAnimation", offset + 32, (int)mem.byteSize());
+      } else {
+         return new ItemAnimation(
+            hasThirdPerson(mem, offset)
+               ? PacketIO.readVarString("ThirdPerson", mem, offset + getValidatedOffset(mem, offset, 12, 32, "ThirdPerson"), 4096000, PacketIO.UTF8)
+               : null,
+            hasThirdPersonMoving(mem, offset)
+               ? PacketIO.readVarString("ThirdPersonMoving", mem, offset + getValidatedOffset(mem, offset, 16, 32, "ThirdPersonMoving"), 4096000, PacketIO.UTF8)
+               : null,
+            hasThirdPersonFace(mem, offset)
+               ? PacketIO.readVarString("ThirdPersonFace", mem, offset + getValidatedOffset(mem, offset, 20, 32, "ThirdPersonFace"), 4096000, PacketIO.UTF8)
+               : null,
+            hasFirstPerson(mem, offset)
+               ? PacketIO.readVarString("FirstPerson", mem, offset + getValidatedOffset(mem, offset, 24, 32, "FirstPerson"), 4096000, PacketIO.UTF8)
+               : null,
+            hasFirstPersonOverride(mem, offset)
+               ? PacketIO.readVarString(
+                  "FirstPersonOverride", mem, offset + getValidatedOffset(mem, offset, 28, 32, "FirstPersonOverride"), 4096000, PacketIO.UTF8
+               )
+               : null,
+            mem.get(PacketIO.PROTO_BOOL, offset + 1),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 2),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 6),
+            mem.get(PacketIO.PROTO_BOOL, offset + 10),
+            mem.get(PacketIO.PROTO_BOOL, offset + 11)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -357,6 +531,73 @@ public class ItemAnimation {
       } else {
          buf.setIntLE(firstPersonOverrideOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.thirdPerson != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.thirdPersonMoving != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.thirdPersonFace != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.firstPerson != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.firstPersonOverride != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BOOL, offset + 1, this.keepPreviousFirstPersonAnimation);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 2, this.speed);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 6, this.blendingDuration);
+      mem.set(PacketIO.PROTO_BOOL, offset + 10, this.looping);
+      mem.set(PacketIO.PROTO_BOOL, offset + 11, this.clipsGeometry);
+      int varOffset = offset + 32;
+      if (this.thirdPerson != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 12, varOffset - offset - 32);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.thirdPerson, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 12, -1);
+      }
+
+      if (this.thirdPersonMoving != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 16, varOffset - offset - 32);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.thirdPersonMoving, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 16, -1);
+      }
+
+      if (this.thirdPersonFace != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 20, varOffset - offset - 32);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.thirdPersonFace, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 20, -1);
+      }
+
+      if (this.firstPerson != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 24, varOffset - offset - 32);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.firstPerson, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 24, -1);
+      }
+
+      if (this.firstPersonOverride != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 28, varOffset - offset - 32);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.firstPersonOverride, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 28, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

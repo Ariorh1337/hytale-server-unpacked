@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -134,6 +135,90 @@ public class MaterialQuantity {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 17L;
+   }
+
+   @Nullable
+   public static String getItemId(MemorySegment mem) {
+      return getItemId(mem, 0);
+   }
+
+   @Nullable
+   public static String getItemId(MemorySegment mem, int offset) {
+      return hasItemId(mem, offset)
+         ? PacketIO.readVarString("ItemId", mem, offset + getValidatedOffset(mem, offset, 9, 17, "ItemId"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static int getItemTag(MemorySegment mem) {
+      return getItemTag(mem, 0);
+   }
+
+   public static int getItemTag(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   @Nullable
+   public static String getResourceTypeId(MemorySegment mem) {
+      return getResourceTypeId(mem, 0);
+   }
+
+   @Nullable
+   public static String getResourceTypeId(MemorySegment mem, int offset) {
+      return hasResourceTypeId(mem, offset)
+         ? PacketIO.readVarString("ResourceTypeId", mem, offset + getValidatedOffset(mem, offset, 13, 17, "ResourceTypeId"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static int getQuantity(MemorySegment mem) {
+      return getQuantity(mem, 0);
+   }
+
+   public static int getQuantity(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 5);
+   }
+
+   public static boolean hasItemId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasResourceTypeId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static MaterialQuantity toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static MaterialQuantity toObject(MemorySegment mem, int offset) {
+      if (offset + 17 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("MaterialQuantity", offset + 17, (int)mem.byteSize());
+      } else {
+         return new MaterialQuantity(
+            hasItemId(mem, offset)
+               ? PacketIO.readVarString("ItemId", mem, offset + getValidatedOffset(mem, offset, 9, 17, "ItemId"), 4096000, PacketIO.UTF8)
+               : null,
+            mem.get(PacketIO.PROTO_INT, offset + 1),
+            hasResourceTypeId(mem, offset)
+               ? PacketIO.readVarString("ResourceTypeId", mem, offset + getValidatedOffset(mem, offset, 13, 17, "ResourceTypeId"), 4096000, PacketIO.UTF8)
+               : null,
+            mem.get(PacketIO.PROTO_INT, offset + 5)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -166,6 +251,37 @@ public class MaterialQuantity {
       } else {
          buf.setIntLE(resourceTypeIdOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.itemId != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.resourceTypeId != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.itemTag);
+      mem.set(PacketIO.PROTO_INT, offset + 5, this.quantity);
+      int varOffset = offset + 17;
+      if (this.itemId != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 9, varOffset - offset - 17);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.itemId, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 9, -1);
+      }
+
+      if (this.resourceTypeId != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 13, varOffset - offset - 17);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.resourceTypeId, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 13, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

@@ -3,6 +3,7 @@ package com.hypixel.hytale.builtin.triggervolumes.effect;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.codecs.EnumCodec;
 import com.hypixel.hytale.codec.lookup.CodecMapCodec;
 import java.util.UUID;
 import javax.annotation.Nonnull;
@@ -13,9 +14,9 @@ public abstract class TriggerEffect {
    @Nonnull
    public static final BuilderCodec<TriggerEffect> BASE_CODEC = BuilderCodec.abstractBuilder(TriggerEffect.class)
       .append(
-         new KeyedCodec<>("Event", Codec.STRING),
-         (e, s) -> e.eventType = TriggerEventType.valueOf(s.toUpperCase()),
-         e -> e.eventType != null ? e.eventType.name() : null
+         new KeyedCodec<>("Event", new EnumCodec<>(TriggerEventType.class, EnumCodec.EnumStyle.LEGACY)),
+         TriggerEffect::setEventType,
+         TriggerEffect::getEventType
       )
       .add()
       .append(new KeyedCodec<>("Interval", Codec.FLOAT, false), (e, v) -> e.interval = v, e -> e.interval)

@@ -178,58 +178,60 @@ public class MountSystems {
          assert playerInputComponent != null;
          MountController controller = mountedComponent.getControllerType();
          Ref<EntityStore> targetRef = controller == MountController.BlockMount ? archetypeChunk.getReferenceTo(index) : mountedComponent.getMountedToEntity();
-         List<PlayerInput.InputUpdate> queue = playerInputComponent.getMovementUpdateQueue();
+         if (targetRef != null && targetRef.isValid()) {
+            List<PlayerInput.InputUpdate> queue = playerInputComponent.getMovementUpdateQueue();
 
-         for (int i = 0; i < queue.size(); i++) {
-            PlayerInput.InputUpdate inputUpdate = queue.get(i);
-            if (controller == MountController.BlockMount
-               && (inputUpdate instanceof PlayerInput.RelativeMovement || inputUpdate instanceof PlayerInput.AbsoluteMovement)) {
-               if (mountedComponent.getMountedDurationMs() < 600L) {
-                  continue;
+            for (int i = 0; i < queue.size(); i++) {
+               PlayerInput.InputUpdate inputUpdate = queue.get(i);
+               if (controller == MountController.BlockMount
+                  && (inputUpdate instanceof PlayerInput.RelativeMovement || inputUpdate instanceof PlayerInput.AbsoluteMovement)) {
+                  if (mountedComponent.getMountedDurationMs() < 600L) {
+                     continue;
+                  }
+
+                  Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
+                  commandBuffer.tryRemoveComponent(ref, this.mountedComponentType);
                }
 
-               Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
-               commandBuffer.tryRemoveComponent(ref, this.mountedComponentType);
-            }
-
-            if (inputUpdate instanceof PlayerInput.SetRiderMovementStates s) {
-               MovementStates states = s.movementStates();
-               MovementStatesComponent movementStatesComponent = archetypeChunk.getComponent(index, this.movementStatesComponentType);
-               if (movementStatesComponent != null) {
-                  movementStatesComponent.setMovementStates(states);
-               }
-            } else if (!(inputUpdate instanceof PlayerInput.WishMovement)) {
-               if (inputUpdate instanceof PlayerInput.RelativeMovement relative) {
-                  relative.apply(commandBuffer, archetypeChunk, index);
-                  TransformComponent transform = commandBuffer.getComponent(targetRef, this.transformComponentType);
-                  if (transform != null) {
-                     transform.getPosition().add(relative.getX(), relative.getY(), relative.getZ());
-                  }
-               } else if (inputUpdate instanceof PlayerInput.AbsoluteMovement absolute) {
-                  absolute.apply(commandBuffer, archetypeChunk, index);
-                  TransformComponent transform = commandBuffer.getComponent(targetRef, this.transformComponentType);
-                  if (transform != null) {
-                     transform.getPosition().set(absolute.getX(), absolute.getY(), absolute.getZ());
-                  }
-               } else if (inputUpdate instanceof PlayerInput.SetMovementStates s) {
+               if (inputUpdate instanceof PlayerInput.SetRiderMovementStates s) {
                   MovementStates states = s.movementStates();
-                  MovementStatesComponent movementStatesComponent = commandBuffer.getComponent(targetRef, this.movementStatesComponentType);
+                  MovementStatesComponent movementStatesComponent = archetypeChunk.getComponent(index, this.movementStatesComponentType);
                   if (movementStatesComponent != null) {
                      movementStatesComponent.setMovementStates(states);
                   }
-               } else if (inputUpdate instanceof PlayerInput.SetBody body) {
-                  body.apply(commandBuffer, archetypeChunk, index);
-                  TransformComponent transform = commandBuffer.getComponent(targetRef, this.transformComponentType);
-                  if (transform != null) {
-                     transform.getRotation().set(body.direction().pitch, body.direction().yaw, body.direction().roll);
+               } else if (!(inputUpdate instanceof PlayerInput.WishMovement)) {
+                  if (inputUpdate instanceof PlayerInput.RelativeMovement relative) {
+                     relative.apply(commandBuffer, archetypeChunk, index);
+                     TransformComponent transform = commandBuffer.getComponent(targetRef, this.transformComponentType);
+                     if (transform != null) {
+                        transform.getPosition().add(relative.getX(), relative.getY(), relative.getZ());
+                     }
+                  } else if (inputUpdate instanceof PlayerInput.AbsoluteMovement absolute) {
+                     absolute.apply(commandBuffer, archetypeChunk, index);
+                     TransformComponent transform = commandBuffer.getComponent(targetRef, this.transformComponentType);
+                     if (transform != null) {
+                        transform.getPosition().set(absolute.getX(), absolute.getY(), absolute.getZ());
+                     }
+                  } else if (inputUpdate instanceof PlayerInput.SetMovementStates s) {
+                     MovementStates states = s.movementStates();
+                     MovementStatesComponent movementStatesComponent = commandBuffer.getComponent(targetRef, this.movementStatesComponentType);
+                     if (movementStatesComponent != null) {
+                        movementStatesComponent.setMovementStates(states);
+                     }
+                  } else if (inputUpdate instanceof PlayerInput.SetBody body) {
+                     body.apply(commandBuffer, archetypeChunk, index);
+                     TransformComponent transform = commandBuffer.getComponent(targetRef, this.transformComponentType);
+                     if (transform != null) {
+                        transform.getRotation().set(body.direction().pitch, body.direction().yaw, body.direction().roll);
+                     }
+                  } else if (inputUpdate instanceof PlayerInput.SetHead head) {
+                     head.apply(commandBuffer, archetypeChunk, index);
                   }
-               } else if (inputUpdate instanceof PlayerInput.SetHead head) {
-                  head.apply(commandBuffer, archetypeChunk, index);
                }
             }
-         }
 
-         queue.clear();
+            queue.clear();
+         }
       }
 
       @Nonnull
@@ -367,8 +369,9 @@ public class MountSystems {
                if (shouldDropItem && minecartComponent.getSourceItem() != null) {
                   TransformComponent transform = archetypeChunk.getComponent(index, this.transformComponentType);
                   assert transform != null;
+                  Vector3d dropPosition = transform.getPosition().add(new Vector3d(0.0, 0.5, 0.0));
                   Holder<EntityStore> drop = ItemComponent.generateItemDrop(
-                     commandBuffer, new ItemStack(minecartComponent.getSourceItem()), transform.getPosition(), transform.getRotation(), 0.0F, 1.0F, 0.0F
+                     commandBuffer, new ItemStack(minecartComponent.getSourceItem()), dropPosition, transform.getRotation(), 0.0F, 1.0F, 0.0F
                   );
                   if (drop != null) {
                      commandBuffer.addEntity(drop, AddReason.SPAWN);
@@ -839,7 +842,7 @@ public class MountSystems {
          Rotation3f offset = component.getAttachmentOffset();
          Vector3f netOffset = new Vector3f(offset.x, offset.y, offset.z);
          MountedUpdate mountedUpdate;
-         if (mountedToEntity != null) {
+         if (mountedToEntity != null && mountedToEntity.isValid()) {
             NetworkId mountedToNetworkIdComponent = ref.getStore().getComponent(mountedToEntity, NetworkId.getComponentType());
             if (mountedToNetworkIdComponent == null) {
                return;

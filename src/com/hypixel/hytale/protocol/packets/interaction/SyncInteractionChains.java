@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 
@@ -84,6 +85,78 @@ public class SyncInteractionChains implements Packet, ToServerPacket, ToClientPa
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 0L;
+   }
+
+   public static SyncInteractionChain[] getUpdates(MemorySegment mem) {
+      return getUpdates(mem, 0);
+   }
+
+   public static SyncInteractionChain[] getUpdates(MemorySegment mem, int offset) {
+      int off = offset + 0;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Updates", len);
+      }
+
+      if (len > 128) {
+         throw ProtocolException.arrayTooLong("Updates", len, 128);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Updates", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      SyncInteractionChain[] data = new SyncInteractionChain[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = SyncInteractionChain.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   public static SyncInteractionChains toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static SyncInteractionChains toObject(MemorySegment mem, int offset) {
+      if (offset + 0 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("SyncInteractionChains", offset + 0, (int)mem.byteSize());
+      }
+
+      int off = offset + 0;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Updates", len);
+      }
+
+      if (len > 128) {
+         throw ProtocolException.arrayTooLong("Updates", len, 128);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Updates", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      SyncInteractionChain[] updates = new SyncInteractionChain[len];
+
+      for (int i = 0; i < len; i++) {
+         updates[i] = SyncInteractionChain.toObject(mem, off);
+         off += updates[i].computeSize();
+      }
+
+      return new SyncInteractionChains(updates);
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       if (this.updates.length > 128) {
@@ -95,6 +168,24 @@ public class SyncInteractionChains implements Packet, ToServerPacket, ToClientPa
       for (SyncInteractionChain item : this.updates) {
          item.serialize(buf);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      int varOffset = offset + 0;
+      if (this.updates.length > 128) {
+         throw ProtocolException.arrayTooLong("Updates", this.updates.length, 128);
+      }
+
+      varOffset += VarInt.set(mem, varOffset, this.updates.length);
+      int updatesValueOffset = 0;
+
+      for (int i = 0; i < this.updates.length; i++) {
+         updatesValueOffset += this.updates[i].serialize(mem, varOffset + updatesValueOffset);
+      }
+
+      varOffset += updatesValueOffset;
+      return varOffset - offset;
    }
 
    @Override

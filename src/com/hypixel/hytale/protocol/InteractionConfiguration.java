@@ -1,9 +1,11 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -168,6 +170,193 @@ public class InteractionConfiguration {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 12L;
+   }
+
+   public static boolean getDisplayOutlines(MemorySegment mem) {
+      return getDisplayOutlines(mem, 0);
+   }
+
+   public static boolean getDisplayOutlines(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 1);
+   }
+
+   public static boolean getDebugOutlines(MemorySegment mem) {
+      return getDebugOutlines(mem, 0);
+   }
+
+   public static boolean getDebugOutlines(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 2);
+   }
+
+   @Nullable
+   public static Map<GameMode, Float> getUseDistance(MemorySegment mem) {
+      return getUseDistance(mem, 0);
+   }
+
+   @Nullable
+   public static Map<GameMode, Float> getUseDistance(MemorySegment mem, int offset) {
+      if (!hasUseDistance(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 4, 12, "UseDistance");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("UseDistance", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("UseDistance", len, 4096000);
+      }
+
+      Map<GameMode, Float> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         GameMode key = GameMode.fromValue(mem.get(PacketIO.PROTO_BYTE, off));
+         float value = mem.get(PacketIO.PROTO_FLOAT, ++off);
+         off += 4;
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("UseDistance", key);
+         }
+      }
+
+      return data;
+   }
+
+   public static boolean getAllEntities(MemorySegment mem) {
+      return getAllEntities(mem, 0);
+   }
+
+   public static boolean getAllEntities(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 3);
+   }
+
+   @Nullable
+   public static Map<InteractionType, InteractionPriority> getPriorities(MemorySegment mem) {
+      return getPriorities(mem, 0);
+   }
+
+   @Nullable
+   public static Map<InteractionType, InteractionPriority> getPriorities(MemorySegment mem, int offset) {
+      if (!hasPriorities(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 8, 12, "Priorities");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Priorities", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("Priorities", len, 4096000);
+      }
+
+      Map<InteractionType, InteractionPriority> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         InteractionType key = InteractionType.fromValue(mem.get(PacketIO.PROTO_BYTE, off));
+         InteractionPriority value = InteractionPriority.toObject(mem, ++off);
+         off += value.computeSize();
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("Priorities", key);
+         }
+      }
+
+      return data;
+   }
+
+   public static boolean hasUseDistance(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasPriorities(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static InteractionConfiguration toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static InteractionConfiguration toObject(MemorySegment mem, int offset) {
+      if (offset + 12 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("InteractionConfiguration", offset + 12, (int)mem.byteSize());
+      }
+
+      Map<GameMode, Float> useDistance = null;
+      if (hasUseDistance(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 4, 12, "UseDistance");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("UseDistance", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("UseDistance", len, 4096000);
+         }
+
+         useDistance = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            GameMode key = GameMode.fromValue(mem.get(PacketIO.PROTO_BYTE, off));
+            float value = mem.get(PacketIO.PROTO_FLOAT, ++off);
+            off += 4;
+            if (useDistance.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("UseDistance", key);
+            }
+         }
+      }
+
+      Map<InteractionType, InteractionPriority> priorities = null;
+      if (hasPriorities(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 8, 12, "Priorities");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Priorities", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Priorities", len, 4096000);
+         }
+
+         priorities = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            InteractionType key = InteractionType.fromValue(mem.get(PacketIO.PROTO_BYTE, off));
+            InteractionPriority value = InteractionPriority.toObject(mem, ++off);
+            off += value.computeSize();
+            if (priorities.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("Priorities", key);
+            }
+         }
+      }
+
+      return new InteractionConfiguration(
+         mem.get(PacketIO.PROTO_BOOL, offset + 1), mem.get(PacketIO.PROTO_BOOL, offset + 2), useDistance, mem.get(PacketIO.PROTO_BOOL, offset + 3), priorities
+      );
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -219,6 +408,57 @@ public class InteractionConfiguration {
       } else {
          buf.setIntLE(prioritiesOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.useDistance != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.priorities != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BOOL, offset + 1, this.displayOutlines);
+      mem.set(PacketIO.PROTO_BOOL, offset + 2, this.debugOutlines);
+      mem.set(PacketIO.PROTO_BOOL, offset + 3, this.allEntities);
+      int varOffset = offset + 12;
+      if (this.useDistance != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 4, varOffset - offset - 12);
+         if (this.useDistance.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("UseDistance", this.useDistance.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.useDistance.size());
+
+         for (Entry<GameMode, Float> e : this.useDistance.entrySet()) {
+            mem.set(PacketIO.PROTO_BYTE, varOffset, (byte)e.getKey().getValue());
+            mem.set(PacketIO.PROTO_FLOAT, ++varOffset, e.getValue());
+            varOffset += 4;
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 4, -1);
+      }
+
+      if (this.priorities != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 8, varOffset - offset - 12);
+         if (this.priorities.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Priorities", this.priorities.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.priorities.size());
+
+         for (Entry<InteractionType, InteractionPriority> e : this.priorities.entrySet()) {
+            mem.set(PacketIO.PROTO_BYTE, varOffset, (byte)e.getKey().getValue());
+            varOffset = ++varOffset + e.getValue().serialize(mem, varOffset);
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 8, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -142,6 +143,128 @@ public class BuilderToolState {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 10L;
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem) {
+      return getId(mem, 0);
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem, int offset) {
+      return hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 2, 10, "Id"), 4096000, PacketIO.UTF8) : null;
+   }
+
+   public static boolean getIsBrush(MemorySegment mem) {
+      return getIsBrush(mem, 0);
+   }
+
+   public static boolean getIsBrush(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 1);
+   }
+
+   @Nullable
+   public static BuilderToolArg[] getArgs(MemorySegment mem) {
+      return getArgs(mem, 0);
+   }
+
+   @Nullable
+   public static BuilderToolArg[] getArgs(MemorySegment mem, int offset) {
+      if (!hasArgs(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 6, 10, "Args");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Args", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Args", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Args", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      BuilderToolArg[] data = new BuilderToolArg[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = BuilderToolArg.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   public static boolean hasId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasArgs(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static BuilderToolState toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static BuilderToolState toObject(MemorySegment mem, int offset) {
+      if (offset + 10 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BuilderToolState", offset + 10, (int)mem.byteSize());
+      }
+
+      BuilderToolArg[] args = null;
+      if (hasArgs(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 6, 10, "Args");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Args", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Args", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Args", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         args = new BuilderToolArg[len];
+
+         for (int i = 0; i < len; i++) {
+            args[i] = BuilderToolArg.toObject(mem, off);
+            off += args[i].computeSize();
+         }
+      }
+
+      return new BuilderToolState(
+         hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 2, 10, "Id"), 4096000, PacketIO.UTF8) : null,
+         mem.get(PacketIO.PROTO_BOOL, offset + 1),
+         args
+      );
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -181,6 +304,47 @@ public class BuilderToolState {
       } else {
          buf.setIntLE(argsOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.id != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.args != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BOOL, offset + 1, this.isBrush);
+      int varOffset = offset + 10;
+      if (this.id != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 2, varOffset - offset - 10);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.id, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 2, -1);
+      }
+
+      if (this.args != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 6, varOffset - offset - 10);
+         if (this.args.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Args", this.args.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.args.length);
+         int argsValueOffset = 0;
+
+         for (int i = 0; i < this.args.length; i++) {
+            argsValueOffset += this.args[i].serialize(mem, varOffset + argsValueOffset);
+         }
+
+         varOffset += argsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 6, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

@@ -10,6 +10,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -206,6 +207,187 @@ public class UpdateParticleSystems implements Packet, ToClientPacket {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 10L;
+   }
+
+   public static UpdateType getType(MemorySegment mem) {
+      return getType(mem, 0);
+   }
+
+   public static UpdateType getType(MemorySegment mem, int offset) {
+      return UpdateType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1));
+   }
+
+   @Nullable
+   public static Map<String, ParticleSystem> getParticleSystems(MemorySegment mem) {
+      return getParticleSystems(mem, 0);
+   }
+
+   @Nullable
+   public static Map<String, ParticleSystem> getParticleSystems(MemorySegment mem, int offset) {
+      if (!hasParticleSystems(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 2, 10, "ParticleSystems");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("ParticleSystems", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("ParticleSystems", len, 4096000);
+      }
+
+      Map<String, ParticleSystem> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         long keyPacked = VarInt.getWithLength(mem, off);
+         int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+         String key = PacketIO.readVarString("key", mem, off, 16384000, PacketIO.UTF8);
+         off += nkey;
+         ParticleSystem value = ParticleSystem.toObject(mem, off);
+         off += value.computeSize();
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("ParticleSystems", key);
+         }
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static String[] getRemovedParticleSystems(MemorySegment mem) {
+      return getRemovedParticleSystems(mem, 0);
+   }
+
+   @Nullable
+   public static String[] getRemovedParticleSystems(MemorySegment mem, int offset) {
+      if (!hasRemovedParticleSystems(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 6, 10, "RemovedParticleSystems");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("RemovedParticleSystems", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("RemovedParticleSystems", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("RemovedParticleSystems", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      String[] data = new String[len];
+
+      for (int i = 0; i < len; i++) {
+         long sp = VarInt.getWithLength(mem, off);
+         int n = (int)sp + (int)(sp >>> 32);
+         data[i] = PacketIO.readVarString("RemovedParticleSystems", mem, off, 16384000, PacketIO.UTF8);
+         off += n;
+      }
+
+      return data;
+   }
+
+   public static boolean hasParticleSystems(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasRemovedParticleSystems(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static UpdateParticleSystems toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UpdateParticleSystems toObject(MemorySegment mem, int offset) {
+      if (offset + 10 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("UpdateParticleSystems", offset + 10, (int)mem.byteSize());
+      }
+
+      Map<String, ParticleSystem> particleSystems = null;
+      if (hasParticleSystems(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 2, 10, "ParticleSystems");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("ParticleSystems", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("ParticleSystems", len, 4096000);
+         }
+
+         particleSystems = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            long keyPacked = VarInt.getWithLength(mem, off);
+            int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+            String key = PacketIO.readVarString("key", mem, off, 16384000, PacketIO.UTF8);
+            off += nkey;
+            ParticleSystem value = ParticleSystem.toObject(mem, off);
+            off += value.computeSize();
+            if (particleSystems.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("ParticleSystems", key);
+            }
+         }
+      }
+
+      String[] removedParticleSystems = null;
+      if (hasRemovedParticleSystems(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 6, 10, "RemovedParticleSystems");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("RemovedParticleSystems", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("RemovedParticleSystems", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("RemovedParticleSystems", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         removedParticleSystems = new String[len];
+
+         for (int i = 0; i < len; i++) {
+            long sp = VarInt.getWithLength(mem, off);
+            int n = (int)sp + (int)(sp >>> 32);
+            removedParticleSystems[i] = PacketIO.readVarString("RemovedParticleSystems", mem, off, 16384000, PacketIO.UTF8);
+            off += n;
+         }
+      }
+
+      return new UpdateParticleSystems(UpdateType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1)), particleSystems, removedParticleSystems);
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -255,6 +437,59 @@ public class UpdateParticleSystems implements Packet, ToClientPacket {
       } else {
          buf.setIntLE(removedParticleSystemsOffsetSlot, -1);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.particleSystems != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.removedParticleSystems != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.type.getValue());
+      int varOffset = offset + 10;
+      if (this.particleSystems != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 2, varOffset - offset - 10);
+         if (this.particleSystems.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("ParticleSystems", this.particleSystems.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.particleSystems.size());
+
+         for (Entry<String, ParticleSystem> e : this.particleSystems.entrySet()) {
+            varOffset += PacketIO.writeVarString(mem, varOffset, e.getKey(), 16384000);
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 2, -1);
+      }
+
+      if (this.removedParticleSystems != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 6, varOffset - offset - 10);
+         if (this.removedParticleSystems.length > 4096000) {
+            throw ProtocolException.arrayTooLong("RemovedParticleSystems", this.removedParticleSystems.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.removedParticleSystems.length);
+         int removedParticleSystemsValueOffset = 0;
+
+         for (int i = 0; i < this.removedParticleSystems.length; i++) {
+            removedParticleSystemsValueOffset += PacketIO.writeVarString(
+               mem, varOffset + removedParticleSystemsValueOffset, this.removedParticleSystems[i], 16384000
+            );
+         }
+
+         varOffset += removedParticleSystemsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 6, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

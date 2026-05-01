@@ -4,9 +4,11 @@ import com.hypixel.hytale.protocol.InventoryActionType;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -65,11 +67,63 @@ public class InventoryAction implements Packet, ToServerPacket {
       return 6;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 6L;
+   }
+
+   public static int getInventorySectionId(MemorySegment mem) {
+      return getInventorySectionId(mem, 0);
+   }
+
+   public static int getInventorySectionId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 0);
+   }
+
+   public static InventoryActionType getInventoryActionType(MemorySegment mem) {
+      return getInventoryActionType(mem, 0);
+   }
+
+   public static InventoryActionType getInventoryActionType(MemorySegment mem, int offset) {
+      return InventoryActionType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 4));
+   }
+
+   public static byte getActionData(MemorySegment mem) {
+      return getActionData(mem, 0);
+   }
+
+   public static byte getActionData(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BYTE, offset + 5);
+   }
+
+   public static InventoryAction toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static InventoryAction toObject(MemorySegment mem, int offset) {
+      if (offset + 6 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("InventoryAction", offset + 6, (int)mem.byteSize());
+      } else {
+         return new InventoryAction(
+            mem.get(PacketIO.PROTO_INT, offset + 0),
+            InventoryActionType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 4)),
+            mem.get(PacketIO.PROTO_BYTE, offset + 5)
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeIntLE(this.inventorySectionId);
       buf.writeByte(this.inventoryActionType.getValue());
       buf.writeByte(this.actionData);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_INT, offset + 0, this.inventorySectionId);
+      mem.set(PacketIO.PROTO_BYTE, offset + 4, (byte)this.inventoryActionType.getValue());
+      mem.set(PacketIO.PROTO_BYTE, offset + 5, this.actionData);
+      return 6;
    }
 
    @Override

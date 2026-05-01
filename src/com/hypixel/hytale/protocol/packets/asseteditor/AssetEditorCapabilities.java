@@ -3,9 +3,11 @@ package com.hypixel.hytale.protocol.packets.asseteditor;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -73,6 +75,68 @@ public class AssetEditorCapabilities implements Packet, ToClientPacket {
       return 5;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 5L;
+   }
+
+   public static boolean getCanDiscardAssets(MemorySegment mem) {
+      return getCanDiscardAssets(mem, 0);
+   }
+
+   public static boolean getCanDiscardAssets(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 0);
+   }
+
+   public static boolean getCanEditAssets(MemorySegment mem) {
+      return getCanEditAssets(mem, 0);
+   }
+
+   public static boolean getCanEditAssets(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 1);
+   }
+
+   public static boolean getCanCreateAssetPacks(MemorySegment mem) {
+      return getCanCreateAssetPacks(mem, 0);
+   }
+
+   public static boolean getCanCreateAssetPacks(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 2);
+   }
+
+   public static boolean getCanEditAssetPacks(MemorySegment mem) {
+      return getCanEditAssetPacks(mem, 0);
+   }
+
+   public static boolean getCanEditAssetPacks(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 3);
+   }
+
+   public static boolean getCanDeleteAssetPacks(MemorySegment mem) {
+      return getCanDeleteAssetPacks(mem, 0);
+   }
+
+   public static boolean getCanDeleteAssetPacks(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 4);
+   }
+
+   public static AssetEditorCapabilities toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AssetEditorCapabilities toObject(MemorySegment mem, int offset) {
+      if (offset + 5 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AssetEditorCapabilities", offset + 5, (int)mem.byteSize());
+      } else {
+         return new AssetEditorCapabilities(
+            mem.get(PacketIO.PROTO_BOOL, offset + 0),
+            mem.get(PacketIO.PROTO_BOOL, offset + 1),
+            mem.get(PacketIO.PROTO_BOOL, offset + 2),
+            mem.get(PacketIO.PROTO_BOOL, offset + 3),
+            mem.get(PacketIO.PROTO_BOOL, offset + 4)
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeByte(this.canDiscardAssets ? 1 : 0);
@@ -80,6 +144,16 @@ public class AssetEditorCapabilities implements Packet, ToClientPacket {
       buf.writeByte(this.canCreateAssetPacks ? 1 : 0);
       buf.writeByte(this.canEditAssetPacks ? 1 : 0);
       buf.writeByte(this.canDeleteAssetPacks ? 1 : 0);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_BOOL, offset + 0, this.canDiscardAssets);
+      mem.set(PacketIO.PROTO_BOOL, offset + 1, this.canEditAssets);
+      mem.set(PacketIO.PROTO_BOOL, offset + 2, this.canCreateAssetPacks);
+      mem.set(PacketIO.PROTO_BOOL, offset + 3, this.canEditAssetPacks);
+      mem.set(PacketIO.PROTO_BOOL, offset + 4, this.canDeleteAssetPacks);
+      return 5;
    }
 
    @Override

@@ -3,7 +3,6 @@ package com.hypixel.hytale.server.spawning.systems;
 import com.hypixel.hytale.component.ArchetypeChunk;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.ResourceType;
-import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.spatial.SpatialResource;
 import com.hypixel.hytale.component.spatial.SpatialSystem;
@@ -27,11 +26,6 @@ public class BeaconSpatialSystem extends SpatialSystem<EntityStore> {
    @Override
    public Query<EntityStore> getQuery() {
       return QUERY;
-   }
-
-   @Override
-   public void tick(float dt, int systemIndex, @Nonnull Store<EntityStore> store) {
-      super.tick(dt, systemIndex, store);
    }
 
    @Nonnull

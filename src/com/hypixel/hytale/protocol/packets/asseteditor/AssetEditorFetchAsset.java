@@ -3,9 +3,11 @@ package com.hypixel.hytale.protocol.packets.asseteditor;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -77,6 +79,57 @@ public class AssetEditorFetchAsset implements Packet, ToServerPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 6L;
+   }
+
+   public static int getToken(MemorySegment mem) {
+      return getToken(mem, 0);
+   }
+
+   public static int getToken(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   @Nullable
+   public static AssetPath getPath(MemorySegment mem) {
+      return getPath(mem, 0);
+   }
+
+   @Nullable
+   public static AssetPath getPath(MemorySegment mem, int offset) {
+      return hasPath(mem, offset) ? AssetPath.toObject(mem, offset + 6) : null;
+   }
+
+   public static boolean getIsFromOpenedTab(MemorySegment mem) {
+      return getIsFromOpenedTab(mem, 0);
+   }
+
+   public static boolean getIsFromOpenedTab(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 5);
+   }
+
+   public static boolean hasPath(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static AssetEditorFetchAsset toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AssetEditorFetchAsset toObject(MemorySegment mem, int offset) {
+      if (offset + 6 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AssetEditorFetchAsset", offset + 6, (int)mem.byteSize());
+      } else {
+         return new AssetEditorFetchAsset(
+            mem.get(PacketIO.PROTO_INT, offset + 1),
+            hasPath(mem, offset) ? AssetPath.toObject(mem, offset + 6) : null,
+            mem.get(PacketIO.PROTO_BOOL, offset + 5)
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -90,6 +143,24 @@ public class AssetEditorFetchAsset implements Packet, ToServerPacket {
       if (this.path != null) {
          this.path.serialize(buf);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.path != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.token);
+      mem.set(PacketIO.PROTO_BOOL, offset + 5, this.isFromOpenedTab);
+      int varOffset = offset + 6;
+      if (this.path != null) {
+         varOffset += this.path.serialize(mem, varOffset);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

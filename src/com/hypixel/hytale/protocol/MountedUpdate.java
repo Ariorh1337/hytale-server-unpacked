@@ -4,6 +4,7 @@ import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -62,6 +63,66 @@ public class MountedUpdate extends ComponentUpdate {
       return 47;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 47L;
+   }
+
+   public static int getMountedToEntity(MemorySegment mem) {
+      return getMountedToEntity(mem, 0);
+   }
+
+   public static int getMountedToEntity(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   public static Vector3fc getAttachmentOffset(MemorySegment mem) {
+      return getAttachmentOffset(mem, 0);
+   }
+
+   public static Vector3fc getAttachmentOffset(MemorySegment mem, int offset) {
+      return PacketIO.readVector3f(mem, offset + 5);
+   }
+
+   public static MountController getController(MemorySegment mem) {
+      return getController(mem, 0);
+   }
+
+   public static MountController getController(MemorySegment mem, int offset) {
+      return MountController.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 17));
+   }
+
+   @Nullable
+   public static BlockMount getBlock(MemorySegment mem) {
+      return getBlock(mem, 0);
+   }
+
+   @Nullable
+   public static BlockMount getBlock(MemorySegment mem, int offset) {
+      return hasBlock(mem, offset) ? BlockMount.toObject(mem, offset + 18) : null;
+   }
+
+   public static boolean hasBlock(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static MountedUpdate toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static MountedUpdate toObject(MemorySegment mem, int offset) {
+      if (offset + 47 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("MountedUpdate", offset + 47, (int)mem.byteSize());
+      } else {
+         return new MountedUpdate(
+            mem.get(PacketIO.PROTO_INT, offset + 1),
+            PacketIO.readVector3f(mem, offset + 5),
+            MountController.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 17)),
+            hasBlock(mem, offset) ? BlockMount.toObject(mem, offset + 18) : null
+         );
+      }
+   }
+
    @Override
    public int serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -81,6 +142,26 @@ public class MountedUpdate extends ComponentUpdate {
       }
 
       return buf.writerIndex() - startPos;
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.block != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.mountedToEntity);
+      PacketIO.writeVector3f(mem, offset + 5, this.attachmentOffset);
+      mem.set(PacketIO.PROTO_BYTE, offset + 17, (byte)this.controller.getValue());
+      if (this.block != null) {
+         this.block.serialize(mem, offset + 18);
+      } else {
+         mem.asSlice(offset + 18, 29L).fill((byte)0);
+      }
+
+      return 47;
    }
 
    @Override

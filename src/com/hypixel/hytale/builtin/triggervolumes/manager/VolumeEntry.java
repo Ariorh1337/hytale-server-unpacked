@@ -9,6 +9,7 @@ import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.ExtraInfo;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.codecs.EnumCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.codec.codecs.map.MapCodec;
 import com.hypixel.hytale.codec.util.RawJsonReader;
@@ -65,7 +66,7 @@ public class VolumeEntry {
    };
    @Nonnull
    public static final BuilderCodec<VolumeEntry> CODEC = BuilderCodec.builder(VolumeEntry.class, VolumeEntry::new)
-      .append(new KeyedCodec<>("Position", Vector3dUtil.AS_ARRAY_CODEC), (v, pos) -> v.position = pos, v -> v.position)
+      .append(new KeyedCodec<>("Position", Vector3dUtil.CODEC), (v, pos) -> v.position = pos, v -> v.position)
       .add()
       .append(new KeyedCodec<>("Shape", TriggerVolumeShape.CODEC), (v, s) -> v.shape = s, v -> v.shape)
       .add()
@@ -79,7 +80,10 @@ public class VolumeEntry {
          }
       }, v -> v.effectAssetRef == null && !v.effects.isEmpty() ? v.effects.toArray(TriggerEffect[]::new) : null)
       .add()
-      .append(new KeyedCodec<>("TargetTypes", Codec.STRING_ARRAY, false), VolumeEntry::decodeTargetTypes, v -> encodeTargetTypes(v.targetTypes))
+      .append(new KeyedCodec<>("TargetTypes", new ArrayCodec<>(new EnumCodec<>(EntityTargetType.class), EntityTargetType[]::new), false), (v, arr) -> {
+         v.targetTypes.clear();
+         Collections.addAll(v.targetTypes, arr);
+      }, v -> v.targetTypes.isEmpty() ? null : v.targetTypes.toArray(EntityTargetType[]::new))
       .add()
       .append(new KeyedCodec<>("Enabled", Codec.BOOLEAN, false), (v, b) -> v.enabled = b, v -> v.enabled)
       .add()
@@ -164,22 +168,6 @@ public class VolumeEntry {
       this.effects = effects;
       this.targetTypes = targetTypes;
       this.enabled = enabled;
-   }
-
-   private static void decodeTargetTypes(@Nonnull VolumeEntry v, @Nonnull String[] names) {
-      v.targetTypes.clear();
-
-      for (String name : names) {
-         try {
-            v.targetTypes.add(EntityTargetType.valueOf(name.toUpperCase()));
-         } catch (IllegalArgumentException var7) {
-         }
-      }
-   }
-
-   @Nullable
-   private static String[] encodeTargetTypes(@Nonnull Set<EntityTargetType> types) {
-      return types.isEmpty() ? null : types.stream().map(t -> t.name().substring(0, 1) + t.name().substring(1).toLowerCase()).toArray(String[]::new);
    }
 
    public void setId(@Nonnull String id) {

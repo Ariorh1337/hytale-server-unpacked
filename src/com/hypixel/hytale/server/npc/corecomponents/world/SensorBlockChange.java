@@ -31,10 +31,6 @@ public class SensorBlockChange extends SensorEvent {
          case NpcOnly:
             this.playerEventMessageSlot = -1;
             this.npcEventMessageSlot = support.getBlockEventSlot(type, blockSet, this.range, false);
-            break;
-         default:
-            this.playerEventMessageSlot = -1;
-            this.npcEventMessageSlot = -1;
       }
    }
 

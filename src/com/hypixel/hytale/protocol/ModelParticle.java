@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -173,6 +174,147 @@ public class ModelParticle {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 42L;
+   }
+
+   @Nullable
+   public static String getSystemId(MemorySegment mem) {
+      return getSystemId(mem, 0);
+   }
+
+   @Nullable
+   public static String getSystemId(MemorySegment mem, int offset) {
+      return hasSystemId(mem, offset)
+         ? PacketIO.readVarString("SystemId", mem, offset + getValidatedOffset(mem, offset, 34, 42, "SystemId"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static float getScale(MemorySegment mem) {
+      return getScale(mem, 0);
+   }
+
+   public static float getScale(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 1);
+   }
+
+   @Nullable
+   public static Color getColor(MemorySegment mem) {
+      return getColor(mem, 0);
+   }
+
+   @Nullable
+   public static Color getColor(MemorySegment mem, int offset) {
+      return hasColor(mem, offset) ? Color.toObject(mem, offset + 5) : null;
+   }
+
+   public static EntityPart getTargetEntityPart(MemorySegment mem) {
+      return getTargetEntityPart(mem, 0);
+   }
+
+   public static EntityPart getTargetEntityPart(MemorySegment mem, int offset) {
+      return EntityPart.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 8));
+   }
+
+   @Nullable
+   public static String getTargetNodeName(MemorySegment mem) {
+      return getTargetNodeName(mem, 0);
+   }
+
+   @Nullable
+   public static String getTargetNodeName(MemorySegment mem, int offset) {
+      return hasTargetNodeName(mem, offset)
+         ? PacketIO.readVarString("TargetNodeName", mem, offset + getValidatedOffset(mem, offset, 38, 42, "TargetNodeName"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static Vector3fc getPositionOffset(MemorySegment mem) {
+      return getPositionOffset(mem, 0);
+   }
+
+   @Nullable
+   public static Vector3fc getPositionOffset(MemorySegment mem, int offset) {
+      return hasPositionOffset(mem, offset) ? PacketIO.readVector3f(mem, offset + 9) : null;
+   }
+
+   @Nullable
+   public static Direction getRotationOffset(MemorySegment mem) {
+      return getRotationOffset(mem, 0);
+   }
+
+   @Nullable
+   public static Direction getRotationOffset(MemorySegment mem, int offset) {
+      return hasRotationOffset(mem, offset) ? Direction.toObject(mem, offset + 21) : null;
+   }
+
+   public static boolean getDetachedFromModel(MemorySegment mem) {
+      return getDetachedFromModel(mem, 0);
+   }
+
+   public static boolean getDetachedFromModel(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 33);
+   }
+
+   public static boolean hasColor(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasPositionOffset(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasRotationOffset(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasSystemId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasTargetNodeName(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 16) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static ModelParticle toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ModelParticle toObject(MemorySegment mem, int offset) {
+      if (offset + 42 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ModelParticle", offset + 42, (int)mem.byteSize());
+      } else {
+         return new ModelParticle(
+            hasSystemId(mem, offset)
+               ? PacketIO.readVarString("SystemId", mem, offset + getValidatedOffset(mem, offset, 34, 42, "SystemId"), 4096000, PacketIO.UTF8)
+               : null,
+            mem.get(PacketIO.PROTO_FLOAT, offset + 1),
+            hasColor(mem, offset) ? Color.toObject(mem, offset + 5) : null,
+            EntityPart.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 8)),
+            hasTargetNodeName(mem, offset)
+               ? PacketIO.readVarString("TargetNodeName", mem, offset + getValidatedOffset(mem, offset, 38, 42, "TargetNodeName"), 4096000, PacketIO.UTF8)
+               : null,
+            hasPositionOffset(mem, offset) ? PacketIO.readVector3f(mem, offset + 9) : null,
+            hasRotationOffset(mem, offset) ? Direction.toObject(mem, offset + 21) : null,
+            mem.get(PacketIO.PROTO_BOOL, offset + 33)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -236,6 +378,68 @@ public class ModelParticle {
       } else {
          buf.setIntLE(targetNodeNameOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.color != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.positionOffset != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.rotationOffset != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.systemId != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.targetNodeName != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 1, this.scale);
+      if (this.color != null) {
+         this.color.serialize(mem, offset + 5);
+      } else {
+         mem.asSlice(offset + 5, 3L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 8, (byte)this.targetEntityPart.getValue());
+      if (this.positionOffset != null) {
+         PacketIO.writeVector3f(mem, offset + 9, this.positionOffset);
+      } else {
+         mem.asSlice(offset + 9, 12L).fill((byte)0);
+      }
+
+      if (this.rotationOffset != null) {
+         this.rotationOffset.serialize(mem, offset + 21);
+      } else {
+         mem.asSlice(offset + 21, 12L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_BOOL, offset + 33, this.detachedFromModel);
+      int varOffset = offset + 42;
+      if (this.systemId != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 34, varOffset - offset - 42);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.systemId, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 34, -1);
+      }
+
+      if (this.targetNodeName != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 38, varOffset - offset - 42);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.targetNodeName, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 38, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

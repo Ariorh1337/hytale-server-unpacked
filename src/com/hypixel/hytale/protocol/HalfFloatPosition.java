@@ -1,8 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -48,10 +50,59 @@ public class HalfFloatPosition {
       return 6;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 6L;
+   }
+
+   public static short getX(MemorySegment mem) {
+      return getX(mem, 0);
+   }
+
+   public static short getX(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_SHORT, offset + 0);
+   }
+
+   public static short getY(MemorySegment mem) {
+      return getY(mem, 0);
+   }
+
+   public static short getY(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_SHORT, offset + 2);
+   }
+
+   public static short getZ(MemorySegment mem) {
+      return getZ(mem, 0);
+   }
+
+   public static short getZ(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_SHORT, offset + 4);
+   }
+
+   public static HalfFloatPosition toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static HalfFloatPosition toObject(MemorySegment mem, int offset) {
+      if (offset + 6 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("HalfFloatPosition", offset + 6, (int)mem.byteSize());
+      } else {
+         return new HalfFloatPosition(
+            mem.get(PacketIO.PROTO_SHORT, offset + 0), mem.get(PacketIO.PROTO_SHORT, offset + 2), mem.get(PacketIO.PROTO_SHORT, offset + 4)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeShortLE(this.x);
       buf.writeShortLE(this.y);
       buf.writeShortLE(this.z);
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_SHORT, offset + 0, this.x);
+      mem.set(PacketIO.PROTO_SHORT, offset + 2, this.y);
+      mem.set(PacketIO.PROTO_SHORT, offset + 4, this.z);
+      return 6;
    }
 
    public int computeSize() {

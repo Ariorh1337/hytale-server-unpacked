@@ -211,6 +211,7 @@ public class CustomConnectedBlockPattern extends CustomTemplateConnectedBlockPat
                      break;
                   case Z:
                      coordinateToTest.z = -coordinateToTest.z();
+                  case NONE:
                }
 
                if (ruleToMatch.getPlacementNormals() != null) {

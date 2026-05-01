@@ -15,6 +15,7 @@ import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.HostAddress;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.io.ChannelConnection;
+import com.hypixel.hytale.protocol.io.ConnectionHandler;
 import com.hypixel.hytale.protocol.packets.camera.RequestFlyCameraMode;
 import com.hypixel.hytale.protocol.packets.camera.SetFlyCameraMode;
 import com.hypixel.hytale.protocol.packets.connection.ClientDisconnect;
@@ -77,7 +78,6 @@ import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerChatEvent;
 import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
-import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.io.ProtocolVersion;
 import com.hypixel.hytale.server.core.io.ServerManager;
 import com.hypixel.hytale.server.core.io.handlers.GenericPacketHandler;
@@ -173,7 +173,7 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
    }
 
    @Override
-   protected void registered0(PacketHandler oldHandler) {
+   protected void registered0(ConnectionHandler oldHandler) {
       HytaleServerConfig.TimeoutProfile timeouts = HytaleServer.get().getConfig().getConnectionTimeouts();
       this.enterStage("play", timeouts.getPlay());
       this.sendCommandTree();
@@ -543,7 +543,13 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
             packet.usableItemsItemsPreferredPickupLocation,
             packet.solidBlockItemsPreferredPickupLocation,
             packet.miscItemsPreferredPickupLocation,
-            new PlayerCreativeSettings(packet.allowNPCDetection, packet.respondToHit),
+            new PlayerCreativeSettings(
+               packet.allowNPCDetection,
+               packet.respondToHit,
+               packet.placeMode != null ? packet.placeMode : "default",
+               packet.creativeInteractionDistance,
+               packet.showBuilderToolNotifications
+            ),
             packet.hideHelmet,
             packet.hideCuirass,
             packet.hideGauntlets,
@@ -575,7 +581,7 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
                BlockSection section = blockChunk.getSectionAtBlockY(targetBlock.y);
                if (section != null) {
                   ItemStack itemInHand = InventoryComponent.getItemInHand(store, ref);
-                  if (itemInHand == null) {
+                  if (itemInHand == null && !packet.quickReplace) {
                      section.invalidateBlock(targetBlock.x, targetBlock.y, targetBlock.z);
                   } else if (!InteractionValidation.canPlayerInteractWithBlock(ref, store, itemInHand, targetBlock)) {
                      LOGGER.at(Level.WARNING)
@@ -583,13 +589,16 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
                      section.invalidateBlock(targetBlock.x, targetBlock.y, targetBlock.z);
                   } else {
                      String heldBlockKey = itemInHand.getBlockKey();
-                     if (heldBlockKey == null) {
+                     if (heldBlockKey == null && !packet.quickReplace) {
                         section.invalidateBlock(targetBlock.x, targetBlock.y, targetBlock.z);
                      } else {
                         if (packet.placedBlockId != -1) {
                            String clientPlacedBlockTypeKey = BlockType.getAssetMap().getAsset(packet.placedBlockId).getId();
                            BlockType heldBlockType = BlockType.getAssetMap().getAsset(heldBlockKey);
-                           if (heldBlockType != null && BlockPlaceUtils.canPlaceBlock(heldBlockType, clientPlacedBlockTypeKey)) {
+                           if (packet.quickReplace
+                              || packet.quickRetype
+                              || packet.noPhysics
+                              || heldBlockType != null && BlockPlaceUtils.canPlaceBlock(heldBlockType, clientPlacedBlockTypeKey)) {
                               heldBlockKey = clientPlacedBlockTypeKey;
                            }
                         }
@@ -607,7 +616,9 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
                            chunkReference,
                            chunkStore,
                            store,
-                           packet.quickReplace
+                           packet.quickReplace,
+                           packet.quickRetype,
+                           packet.noPhysics
                         );
                      }
                   }

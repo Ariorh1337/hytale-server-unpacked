@@ -9,6 +9,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -176,6 +177,201 @@ public class DisplayDebug implements Packet, ToClientPacket {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 31L;
+   }
+
+   public static DebugShape getShape(MemorySegment mem) {
+      return getShape(mem, 0);
+   }
+
+   public static DebugShape getShape(MemorySegment mem, int offset) {
+      return DebugShape.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1));
+   }
+
+   @Nullable
+   public static float[] getMatrix(MemorySegment mem) {
+      return getMatrix(mem, 0);
+   }
+
+   @Nullable
+   public static float[] getMatrix(MemorySegment mem, int offset) {
+      if (!hasMatrix(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 23, 31, "Matrix");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Matrix", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Matrix", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 4L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Matrix", off + lenOffset + len * 4, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      float[] data = new float[len];
+      MemorySegment.copy(mem, PacketIO.PROTO_FLOAT, off, data, 0, len);
+      return data;
+   }
+
+   public static Vector3fc getColor(MemorySegment mem) {
+      return getColor(mem, 0);
+   }
+
+   public static Vector3fc getColor(MemorySegment mem, int offset) {
+      return PacketIO.readVector3f(mem, offset + 2);
+   }
+
+   public static float getTime(MemorySegment mem) {
+      return getTime(mem, 0);
+   }
+
+   public static float getTime(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 14);
+   }
+
+   public static byte getFlags(MemorySegment mem) {
+      return getFlags(mem, 0);
+   }
+
+   public static byte getFlags(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BYTE, offset + 18);
+   }
+
+   @Nullable
+   public static float[] getFrustumProjection(MemorySegment mem) {
+      return getFrustumProjection(mem, 0);
+   }
+
+   @Nullable
+   public static float[] getFrustumProjection(MemorySegment mem, int offset) {
+      if (!hasFrustumProjection(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 27, 31, "FrustumProjection");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("FrustumProjection", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("FrustumProjection", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 4L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("FrustumProjection", off + lenOffset + len * 4, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      float[] data = new float[len];
+      MemorySegment.copy(mem, PacketIO.PROTO_FLOAT, off, data, 0, len);
+      return data;
+   }
+
+   public static float getOpacity(MemorySegment mem) {
+      return getOpacity(mem, 0);
+   }
+
+   public static float getOpacity(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 19);
+   }
+
+   public static boolean hasMatrix(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasFrustumProjection(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static DisplayDebug toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static DisplayDebug toObject(MemorySegment mem, int offset) {
+      if (offset + 31 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("DisplayDebug", offset + 31, (int)mem.byteSize());
+      }
+
+      float[] matrix = null;
+      if (hasMatrix(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 23, 31, "Matrix");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Matrix", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Matrix", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 4L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Matrix", off + lenOffset + len * 4, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         matrix = new float[len];
+         MemorySegment.copy(mem, PacketIO.PROTO_FLOAT, off, matrix, 0, len);
+      }
+
+      float[] frustumProjection = null;
+      if (hasFrustumProjection(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 27, 31, "FrustumProjection");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("FrustumProjection", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("FrustumProjection", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 4L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("FrustumProjection", off + lenOffset + len * 4, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         frustumProjection = new float[len];
+         MemorySegment.copy(mem, PacketIO.PROTO_FLOAT, off, frustumProjection, 0, len);
+      }
+
+      return new DisplayDebug(
+         DebugShape.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1)),
+         matrix,
+         PacketIO.readVector3f(mem, offset + 2),
+         mem.get(PacketIO.PROTO_FLOAT, offset + 14),
+         mem.get(PacketIO.PROTO_BYTE, offset + 18),
+         frustumProjection,
+         mem.get(PacketIO.PROTO_FLOAT, offset + 19)
+      );
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -228,6 +424,53 @@ public class DisplayDebug implements Packet, ToClientPacket {
       } else {
          buf.setIntLE(frustumProjectionOffsetSlot, -1);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.matrix != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.frustumProjection != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.shape.getValue());
+      PacketIO.writeVector3f(mem, offset + 2, this.color);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 14, this.time);
+      mem.set(PacketIO.PROTO_BYTE, offset + 18, this.flags);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 19, this.opacity);
+      int varOffset = offset + 31;
+      if (this.matrix != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 23, varOffset - offset - 31);
+         if (this.matrix.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Matrix", this.matrix.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.matrix.length);
+         MemorySegment.copy(this.matrix, 0, mem, PacketIO.PROTO_FLOAT, varOffset, this.matrix.length);
+         varOffset += this.matrix.length * 4;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 23, -1);
+      }
+
+      if (this.frustumProjection != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 27, varOffset - offset - 31);
+         if (this.frustumProjection.length > 4096000) {
+            throw ProtocolException.arrayTooLong("FrustumProjection", this.frustumProjection.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.frustumProjection.length);
+         MemorySegment.copy(this.frustumProjection, 0, mem, PacketIO.PROTO_FLOAT, varOffset, this.frustumProjection.length);
+         varOffset += this.frustumProjection.length * 4;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 27, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

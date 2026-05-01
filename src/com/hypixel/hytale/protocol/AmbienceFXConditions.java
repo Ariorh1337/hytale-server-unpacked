@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -659,6 +660,921 @@ public class AmbienceFXConditions {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 137L;
+   }
+
+   public static boolean getNever(MemorySegment mem) {
+      return getNever(mem, 0);
+   }
+
+   public static boolean getNever(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 3);
+   }
+
+   @Nullable
+   public static int[] getEnvironmentIndices(MemorySegment mem) {
+      return getEnvironmentIndices(mem, 0);
+   }
+
+   @Nullable
+   public static int[] getEnvironmentIndices(MemorySegment mem, int offset) {
+      if (!hasEnvironmentIndices(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 101, 137, "EnvironmentIndices");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("EnvironmentIndices", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("EnvironmentIndices", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 4L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("EnvironmentIndices", off + lenOffset + len * 4, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      int[] data = new int[len];
+      MemorySegment.copy(mem, PacketIO.PROTO_INT, off, data, 0, len);
+      return data;
+   }
+
+   @Nullable
+   public static int[] getWeatherIndices(MemorySegment mem) {
+      return getWeatherIndices(mem, 0);
+   }
+
+   @Nullable
+   public static int[] getWeatherIndices(MemorySegment mem, int offset) {
+      if (!hasWeatherIndices(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 105, 137, "WeatherIndices");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("WeatherIndices", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("WeatherIndices", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 4L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("WeatherIndices", off + lenOffset + len * 4, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      int[] data = new int[len];
+      MemorySegment.copy(mem, PacketIO.PROTO_INT, off, data, 0, len);
+      return data;
+   }
+
+   @Nullable
+   public static int[] getFluidFXIndices(MemorySegment mem) {
+      return getFluidFXIndices(mem, 0);
+   }
+
+   @Nullable
+   public static int[] getFluidFXIndices(MemorySegment mem, int offset) {
+      if (!hasFluidFXIndices(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 109, 137, "FluidFXIndices");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("FluidFXIndices", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("FluidFXIndices", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 4L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("FluidFXIndices", off + lenOffset + len * 4, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      int[] data = new int[len];
+      MemorySegment.copy(mem, PacketIO.PROTO_INT, off, data, 0, len);
+      return data;
+   }
+
+   public static int getEnvironmentTagPatternIndex(MemorySegment mem) {
+      return getEnvironmentTagPatternIndex(mem, 0);
+   }
+
+   public static int getEnvironmentTagPatternIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 4);
+   }
+
+   public static int getWeatherTagPatternIndex(MemorySegment mem) {
+      return getWeatherTagPatternIndex(mem, 0);
+   }
+
+   public static int getWeatherTagPatternIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 8);
+   }
+
+   @Nullable
+   public static AmbienceFXBlockSoundSet[] getSurroundingBlockSoundSets(MemorySegment mem) {
+      return getSurroundingBlockSoundSets(mem, 0);
+   }
+
+   @Nullable
+   public static AmbienceFXBlockSoundSet[] getSurroundingBlockSoundSets(MemorySegment mem, int offset) {
+      if (!hasSurroundingBlockSoundSets(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 113, 137, "SurroundingBlockSoundSets");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("SurroundingBlockSoundSets", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("SurroundingBlockSoundSets", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 13L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("SurroundingBlockSoundSets", off + lenOffset + len * 13, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      AmbienceFXBlockSoundSet[] data = new AmbienceFXBlockSoundSet[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = AmbienceFXBlockSoundSet.toObject(mem, off + i * 13);
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static Range getAltitude(MemorySegment mem) {
+      return getAltitude(mem, 0);
+   }
+
+   @Nullable
+   public static Range getAltitude(MemorySegment mem, int offset) {
+      return hasAltitude(mem, offset) ? Range.toObject(mem, offset + 12) : null;
+   }
+
+   @Nullable
+   public static Rangeb getWalls(MemorySegment mem) {
+      return getWalls(mem, 0);
+   }
+
+   @Nullable
+   public static Rangeb getWalls(MemorySegment mem, int offset) {
+      return hasWalls(mem, offset) ? Rangeb.toObject(mem, offset + 20) : null;
+   }
+
+   public static boolean getRoof(MemorySegment mem) {
+      return getRoof(mem, 0);
+   }
+
+   public static boolean getRoof(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 22);
+   }
+
+   public static int getRoofMaterialTagPatternIndex(MemorySegment mem) {
+      return getRoofMaterialTagPatternIndex(mem, 0);
+   }
+
+   public static int getRoofMaterialTagPatternIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 23);
+   }
+
+   public static boolean getFloor(MemorySegment mem) {
+      return getFloor(mem, 0);
+   }
+
+   public static boolean getFloor(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 27);
+   }
+
+   @Nullable
+   public static Rangeb getSunLightLevel(MemorySegment mem) {
+      return getSunLightLevel(mem, 0);
+   }
+
+   @Nullable
+   public static Rangeb getSunLightLevel(MemorySegment mem, int offset) {
+      return hasSunLightLevel(mem, offset) ? Rangeb.toObject(mem, offset + 28) : null;
+   }
+
+   @Nullable
+   public static Rangeb getTorchLightLevel(MemorySegment mem) {
+      return getTorchLightLevel(mem, 0);
+   }
+
+   @Nullable
+   public static Rangeb getTorchLightLevel(MemorySegment mem, int offset) {
+      return hasTorchLightLevel(mem, offset) ? Rangeb.toObject(mem, offset + 30) : null;
+   }
+
+   @Nullable
+   public static Rangeb getGlobalLightLevel(MemorySegment mem) {
+      return getGlobalLightLevel(mem, 0);
+   }
+
+   @Nullable
+   public static Rangeb getGlobalLightLevel(MemorySegment mem, int offset) {
+      return hasGlobalLightLevel(mem, offset) ? Rangeb.toObject(mem, offset + 32) : null;
+   }
+
+   @Nullable
+   public static Rangef getDayTime(MemorySegment mem) {
+      return getDayTime(mem, 0);
+   }
+
+   @Nullable
+   public static Rangef getDayTime(MemorySegment mem, int offset) {
+      return hasDayTime(mem, offset) ? Rangef.toObject(mem, offset + 34) : null;
+   }
+
+   @Nullable
+   public static SpaceSize[] getSpace(MemorySegment mem) {
+      return getSpace(mem, 0);
+   }
+
+   @Nullable
+   public static SpaceSize[] getSpace(MemorySegment mem, int offset) {
+      if (!hasSpace(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 117, 137, "Space");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Space", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Space", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 1L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Space", off + lenOffset + len * 1, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      SpaceSize[] data = new SpaceSize[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = SpaceSize.fromValue(mem.get(PacketIO.PROTO_BYTE, off + i * 1));
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static ShelterType[] getShelter(MemorySegment mem) {
+      return getShelter(mem, 0);
+   }
+
+   @Nullable
+   public static ShelterType[] getShelter(MemorySegment mem, int offset) {
+      if (!hasShelter(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 121, 137, "Shelter");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Shelter", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Shelter", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 1L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Shelter", off + lenOffset + len * 1, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      ShelterType[] data = new ShelterType[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = ShelterType.fromValue(mem.get(PacketIO.PROTO_BYTE, off + i * 1));
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static SurfaceType[] getSurfaces(MemorySegment mem) {
+      return getSurfaces(mem, 0);
+   }
+
+   @Nullable
+   public static SurfaceType[] getSurfaces(MemorySegment mem, int offset) {
+      if (!hasSurfaces(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 125, 137, "Surfaces");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Surfaces", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Surfaces", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 1L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Surfaces", off + lenOffset + len * 1, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      SurfaceType[] data = new SurfaceType[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = SurfaceType.fromValue(mem.get(PacketIO.PROTO_BYTE, off + i * 1));
+      }
+
+      return data;
+   }
+
+   public static RoofState getRoofState(MemorySegment mem) {
+      return getRoofState(mem, 0);
+   }
+
+   public static RoofState getRoofState(MemorySegment mem, int offset) {
+      return RoofState.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 42));
+   }
+
+   @Nullable
+   public static Rangef getSpaceScaleRange(MemorySegment mem) {
+      return getSpaceScaleRange(mem, 0);
+   }
+
+   @Nullable
+   public static Rangef getSpaceScaleRange(MemorySegment mem, int offset) {
+      return hasSpaceScaleRange(mem, offset) ? Rangef.toObject(mem, offset + 43) : null;
+   }
+
+   @Nullable
+   public static Rangef getSpaceScaleMinRange(MemorySegment mem) {
+      return getSpaceScaleMinRange(mem, 0);
+   }
+
+   @Nullable
+   public static Rangef getSpaceScaleMinRange(MemorySegment mem, int offset) {
+      return hasSpaceScaleMinRange(mem, offset) ? Rangef.toObject(mem, offset + 51) : null;
+   }
+
+   @Nullable
+   public static Rangef getSpaceScaleMaxRange(MemorySegment mem) {
+      return getSpaceScaleMaxRange(mem, 0);
+   }
+
+   @Nullable
+   public static Rangef getSpaceScaleMaxRange(MemorySegment mem, int offset) {
+      return hasSpaceScaleMaxRange(mem, offset) ? Rangef.toObject(mem, offset + 59) : null;
+   }
+
+   @Nullable
+   public static Rangef getEscapedRayPercentRange(MemorySegment mem) {
+      return getEscapedRayPercentRange(mem, 0);
+   }
+
+   @Nullable
+   public static Rangef getEscapedRayPercentRange(MemorySegment mem, int offset) {
+      return hasEscapedRayPercentRange(mem, offset) ? Rangef.toObject(mem, offset + 67) : null;
+   }
+
+   @Nullable
+   public static Rangef getReflectionCoeffRange(MemorySegment mem) {
+      return getReflectionCoeffRange(mem, 0);
+   }
+
+   @Nullable
+   public static Rangef getReflectionCoeffRange(MemorySegment mem, int offset) {
+      return hasReflectionCoeffRange(mem, offset) ? Rangef.toObject(mem, offset + 75) : null;
+   }
+
+   @Nullable
+   public static Rangef getAbsorptionCoeffRange(MemorySegment mem) {
+      return getAbsorptionCoeffRange(mem, 0);
+   }
+
+   @Nullable
+   public static Rangef getAbsorptionCoeffRange(MemorySegment mem, int offset) {
+      return hasAbsorptionCoeffRange(mem, offset) ? Rangef.toObject(mem, offset + 83) : null;
+   }
+
+   @Nullable
+   public static Rangef getRoofDistanceRange(MemorySegment mem) {
+      return getRoofDistanceRange(mem, 0);
+   }
+
+   @Nullable
+   public static Rangef getRoofDistanceRange(MemorySegment mem, int offset) {
+      return hasRoofDistanceRange(mem, offset) ? Rangef.toObject(mem, offset + 91) : null;
+   }
+
+   @Nullable
+   public static AmbienceFXPhysicalMaterial[] getSurfacePhysicalMaterials(MemorySegment mem) {
+      return getSurfacePhysicalMaterials(mem, 0);
+   }
+
+   @Nullable
+   public static AmbienceFXPhysicalMaterial[] getSurfacePhysicalMaterials(MemorySegment mem, int offset) {
+      if (!hasSurfacePhysicalMaterials(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 129, 137, "SurfacePhysicalMaterials");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("SurfacePhysicalMaterials", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("SurfacePhysicalMaterials", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 13L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("SurfacePhysicalMaterials", off + lenOffset + len * 13, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      AmbienceFXPhysicalMaterial[] data = new AmbienceFXPhysicalMaterial[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = AmbienceFXPhysicalMaterial.toObject(mem, off + i * 13);
+      }
+
+      return data;
+   }
+
+   public static boolean getSurfacePhysicalMaterialsMatchAny(MemorySegment mem) {
+      return getSurfacePhysicalMaterialsMatchAny(mem, 0);
+   }
+
+   public static boolean getSurfacePhysicalMaterialsMatchAny(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 99);
+   }
+
+   @Nullable
+   public static AmbienceFXPhysicalMaterial[] getExteriorRoofPhysicalMaterials(MemorySegment mem) {
+      return getExteriorRoofPhysicalMaterials(mem, 0);
+   }
+
+   @Nullable
+   public static AmbienceFXPhysicalMaterial[] getExteriorRoofPhysicalMaterials(MemorySegment mem, int offset) {
+      if (!hasExteriorRoofPhysicalMaterials(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 133, 137, "ExteriorRoofPhysicalMaterials");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("ExteriorRoofPhysicalMaterials", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("ExteriorRoofPhysicalMaterials", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 13L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ExteriorRoofPhysicalMaterials", off + lenOffset + len * 13, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      AmbienceFXPhysicalMaterial[] data = new AmbienceFXPhysicalMaterial[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = AmbienceFXPhysicalMaterial.toObject(mem, off + i * 13);
+      }
+
+      return data;
+   }
+
+   public static boolean getExteriorRoofPhysicalMaterialsMatchAny(MemorySegment mem) {
+      return getExteriorRoofPhysicalMaterialsMatchAny(mem, 0);
+   }
+
+   public static boolean getExteriorRoofPhysicalMaterialsMatchAny(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 100);
+   }
+
+   public static boolean hasAltitude(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasWalls(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasSunLightLevel(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasTorchLightLevel(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasGlobalLightLevel(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 16) != 0;
+   }
+
+   public static boolean hasDayTime(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 32) != 0;
+   }
+
+   public static boolean hasSpaceScaleRange(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 64) != 0;
+   }
+
+   public static boolean hasSpaceScaleMinRange(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 128) != 0;
+   }
+
+   public static boolean hasSpaceScaleMaxRange(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasEscapedRayPercentRange(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasReflectionCoeffRange(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasAbsorptionCoeffRange(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasRoofDistanceRange(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 16) != 0;
+   }
+
+   public static boolean hasEnvironmentIndices(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 32) != 0;
+   }
+
+   public static boolean hasWeatherIndices(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 64) != 0;
+   }
+
+   public static boolean hasFluidFXIndices(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 128) != 0;
+   }
+
+   public static boolean hasSurroundingBlockSoundSets(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 2);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasSpace(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 2);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasShelter(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 2);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasSurfaces(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 2);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasSurfacePhysicalMaterials(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 2);
+      return (b & 16) != 0;
+   }
+
+   public static boolean hasExteriorRoofPhysicalMaterials(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 2);
+      return (b & 32) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static AmbienceFXConditions toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AmbienceFXConditions toObject(MemorySegment mem, int offset) {
+      if (offset + 137 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AmbienceFXConditions", offset + 137, (int)mem.byteSize());
+      }
+
+      int[] environmentIndices = null;
+      if (hasEnvironmentIndices(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 101, 137, "EnvironmentIndices");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("EnvironmentIndices", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("EnvironmentIndices", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 4L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("EnvironmentIndices", off + lenOffset + len * 4, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         environmentIndices = new int[len];
+         MemorySegment.copy(mem, PacketIO.PROTO_INT, off, environmentIndices, 0, len);
+      }
+
+      int[] weatherIndices = null;
+      if (hasWeatherIndices(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 105, 137, "WeatherIndices");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("WeatherIndices", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("WeatherIndices", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 4L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("WeatherIndices", off + lenOffset + len * 4, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         weatherIndices = new int[len];
+         MemorySegment.copy(mem, PacketIO.PROTO_INT, off, weatherIndices, 0, len);
+      }
+
+      int[] fluidFXIndices = null;
+      if (hasFluidFXIndices(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 109, 137, "FluidFXIndices");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("FluidFXIndices", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("FluidFXIndices", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 4L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("FluidFXIndices", off + lenOffset + len * 4, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         fluidFXIndices = new int[len];
+         MemorySegment.copy(mem, PacketIO.PROTO_INT, off, fluidFXIndices, 0, len);
+      }
+
+      AmbienceFXBlockSoundSet[] surroundingBlockSoundSets = null;
+      if (hasSurroundingBlockSoundSets(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 113, 137, "SurroundingBlockSoundSets");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("SurroundingBlockSoundSets", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("SurroundingBlockSoundSets", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 13L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("SurroundingBlockSoundSets", off + lenOffset + len * 13, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         surroundingBlockSoundSets = new AmbienceFXBlockSoundSet[len];
+
+         for (int i = 0; i < len; i++) {
+            surroundingBlockSoundSets[i] = AmbienceFXBlockSoundSet.toObject(mem, off + i * 13);
+         }
+      }
+
+      SpaceSize[] space = null;
+      if (hasSpace(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 117, 137, "Space");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Space", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Space", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 1L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Space", off + lenOffset + len * 1, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         space = new SpaceSize[len];
+
+         for (int i = 0; i < len; i++) {
+            space[i] = SpaceSize.fromValue(mem.get(PacketIO.PROTO_BYTE, off + i * 1));
+         }
+      }
+
+      ShelterType[] shelter = null;
+      if (hasShelter(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 121, 137, "Shelter");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Shelter", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Shelter", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 1L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Shelter", off + lenOffset + len * 1, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         shelter = new ShelterType[len];
+
+         for (int i = 0; i < len; i++) {
+            shelter[i] = ShelterType.fromValue(mem.get(PacketIO.PROTO_BYTE, off + i * 1));
+         }
+      }
+
+      SurfaceType[] surfaces = null;
+      if (hasSurfaces(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 125, 137, "Surfaces");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Surfaces", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Surfaces", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 1L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Surfaces", off + lenOffset + len * 1, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         surfaces = new SurfaceType[len];
+
+         for (int i = 0; i < len; i++) {
+            surfaces[i] = SurfaceType.fromValue(mem.get(PacketIO.PROTO_BYTE, off + i * 1));
+         }
+      }
+
+      AmbienceFXPhysicalMaterial[] surfacePhysicalMaterials = null;
+      if (hasSurfacePhysicalMaterials(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 129, 137, "SurfacePhysicalMaterials");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("SurfacePhysicalMaterials", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("SurfacePhysicalMaterials", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 13L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("SurfacePhysicalMaterials", off + lenOffset + len * 13, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         surfacePhysicalMaterials = new AmbienceFXPhysicalMaterial[len];
+
+         for (int i = 0; i < len; i++) {
+            surfacePhysicalMaterials[i] = AmbienceFXPhysicalMaterial.toObject(mem, off + i * 13);
+         }
+      }
+
+      AmbienceFXPhysicalMaterial[] exteriorRoofPhysicalMaterials = null;
+      if (hasExteriorRoofPhysicalMaterials(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 133, 137, "ExteriorRoofPhysicalMaterials");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("ExteriorRoofPhysicalMaterials", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("ExteriorRoofPhysicalMaterials", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 13L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("ExteriorRoofPhysicalMaterials", off + lenOffset + len * 13, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         exteriorRoofPhysicalMaterials = new AmbienceFXPhysicalMaterial[len];
+
+         for (int i = 0; i < len; i++) {
+            exteriorRoofPhysicalMaterials[i] = AmbienceFXPhysicalMaterial.toObject(mem, off + i * 13);
+         }
+      }
+
+      return new AmbienceFXConditions(
+         mem.get(PacketIO.PROTO_BOOL, offset + 3),
+         environmentIndices,
+         weatherIndices,
+         fluidFXIndices,
+         mem.get(PacketIO.PROTO_INT, offset + 4),
+         mem.get(PacketIO.PROTO_INT, offset + 8),
+         surroundingBlockSoundSets,
+         hasAltitude(mem, offset) ? Range.toObject(mem, offset + 12) : null,
+         hasWalls(mem, offset) ? Rangeb.toObject(mem, offset + 20) : null,
+         mem.get(PacketIO.PROTO_BOOL, offset + 22),
+         mem.get(PacketIO.PROTO_INT, offset + 23),
+         mem.get(PacketIO.PROTO_BOOL, offset + 27),
+         hasSunLightLevel(mem, offset) ? Rangeb.toObject(mem, offset + 28) : null,
+         hasTorchLightLevel(mem, offset) ? Rangeb.toObject(mem, offset + 30) : null,
+         hasGlobalLightLevel(mem, offset) ? Rangeb.toObject(mem, offset + 32) : null,
+         hasDayTime(mem, offset) ? Rangef.toObject(mem, offset + 34) : null,
+         space,
+         shelter,
+         surfaces,
+         RoofState.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 42)),
+         hasSpaceScaleRange(mem, offset) ? Rangef.toObject(mem, offset + 43) : null,
+         hasSpaceScaleMinRange(mem, offset) ? Rangef.toObject(mem, offset + 51) : null,
+         hasSpaceScaleMaxRange(mem, offset) ? Rangef.toObject(mem, offset + 59) : null,
+         hasEscapedRayPercentRange(mem, offset) ? Rangef.toObject(mem, offset + 67) : null,
+         hasReflectionCoeffRange(mem, offset) ? Rangef.toObject(mem, offset + 75) : null,
+         hasAbsorptionCoeffRange(mem, offset) ? Rangef.toObject(mem, offset + 83) : null,
+         hasRoofDistanceRange(mem, offset) ? Rangef.toObject(mem, offset + 91) : null,
+         surfacePhysicalMaterials,
+         mem.get(PacketIO.PROTO_BOOL, offset + 99),
+         exteriorRoofPhysicalMaterials,
+         mem.get(PacketIO.PROTO_BOOL, offset + 100)
+      );
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte[] nullBits = new byte[3];
@@ -991,6 +1907,337 @@ public class AmbienceFXConditions {
       } else {
          buf.setIntLE(exteriorRoofPhysicalMaterialsOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.altitude != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.walls != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.sunLightLevel != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.torchLightLevel != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.globalLightLevel != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.dayTime != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
+      if (this.spaceScaleRange != null) {
+         nullBits = (byte)(nullBits | 64);
+      }
+
+      if (this.spaceScaleMinRange != null) {
+         nullBits = (byte)(nullBits | 128);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      nullBits = 0;
+      if (this.spaceScaleMaxRange != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.escapedRayPercentRange != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.reflectionCoeffRange != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.absorptionCoeffRange != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.roofDistanceRange != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.environmentIndices != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
+      if (this.weatherIndices != null) {
+         nullBits = (byte)(nullBits | 64);
+      }
+
+      if (this.fluidFXIndices != null) {
+         nullBits = (byte)(nullBits | 128);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, nullBits);
+      nullBits = 0;
+      if (this.surroundingBlockSoundSets != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.space != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.shelter != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.surfaces != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.surfacePhysicalMaterials != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.exteriorRoofPhysicalMaterials != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 2, nullBits);
+      mem.set(PacketIO.PROTO_BOOL, offset + 3, this.never);
+      mem.set(PacketIO.PROTO_INT, offset + 4, this.environmentTagPatternIndex);
+      mem.set(PacketIO.PROTO_INT, offset + 8, this.weatherTagPatternIndex);
+      if (this.altitude != null) {
+         this.altitude.serialize(mem, offset + 12);
+      } else {
+         mem.asSlice(offset + 12, 8L).fill((byte)0);
+      }
+
+      if (this.walls != null) {
+         this.walls.serialize(mem, offset + 20);
+      } else {
+         mem.asSlice(offset + 20, 2L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_BOOL, offset + 22, this.roof);
+      mem.set(PacketIO.PROTO_INT, offset + 23, this.roofMaterialTagPatternIndex);
+      mem.set(PacketIO.PROTO_BOOL, offset + 27, this.floor);
+      if (this.sunLightLevel != null) {
+         this.sunLightLevel.serialize(mem, offset + 28);
+      } else {
+         mem.asSlice(offset + 28, 2L).fill((byte)0);
+      }
+
+      if (this.torchLightLevel != null) {
+         this.torchLightLevel.serialize(mem, offset + 30);
+      } else {
+         mem.asSlice(offset + 30, 2L).fill((byte)0);
+      }
+
+      if (this.globalLightLevel != null) {
+         this.globalLightLevel.serialize(mem, offset + 32);
+      } else {
+         mem.asSlice(offset + 32, 2L).fill((byte)0);
+      }
+
+      if (this.dayTime != null) {
+         this.dayTime.serialize(mem, offset + 34);
+      } else {
+         mem.asSlice(offset + 34, 8L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 42, (byte)this.roofState.getValue());
+      if (this.spaceScaleRange != null) {
+         this.spaceScaleRange.serialize(mem, offset + 43);
+      } else {
+         mem.asSlice(offset + 43, 8L).fill((byte)0);
+      }
+
+      if (this.spaceScaleMinRange != null) {
+         this.spaceScaleMinRange.serialize(mem, offset + 51);
+      } else {
+         mem.asSlice(offset + 51, 8L).fill((byte)0);
+      }
+
+      if (this.spaceScaleMaxRange != null) {
+         this.spaceScaleMaxRange.serialize(mem, offset + 59);
+      } else {
+         mem.asSlice(offset + 59, 8L).fill((byte)0);
+      }
+
+      if (this.escapedRayPercentRange != null) {
+         this.escapedRayPercentRange.serialize(mem, offset + 67);
+      } else {
+         mem.asSlice(offset + 67, 8L).fill((byte)0);
+      }
+
+      if (this.reflectionCoeffRange != null) {
+         this.reflectionCoeffRange.serialize(mem, offset + 75);
+      } else {
+         mem.asSlice(offset + 75, 8L).fill((byte)0);
+      }
+
+      if (this.absorptionCoeffRange != null) {
+         this.absorptionCoeffRange.serialize(mem, offset + 83);
+      } else {
+         mem.asSlice(offset + 83, 8L).fill((byte)0);
+      }
+
+      if (this.roofDistanceRange != null) {
+         this.roofDistanceRange.serialize(mem, offset + 91);
+      } else {
+         mem.asSlice(offset + 91, 8L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_BOOL, offset + 99, this.surfacePhysicalMaterialsMatchAny);
+      mem.set(PacketIO.PROTO_BOOL, offset + 100, this.exteriorRoofPhysicalMaterialsMatchAny);
+      int varOffset = offset + 137;
+      if (this.environmentIndices != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 101, varOffset - offset - 137);
+         if (this.environmentIndices.length > 4096000) {
+            throw ProtocolException.arrayTooLong("EnvironmentIndices", this.environmentIndices.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.environmentIndices.length);
+         MemorySegment.copy(this.environmentIndices, 0, mem, PacketIO.PROTO_INT, varOffset, this.environmentIndices.length);
+         varOffset += this.environmentIndices.length * 4;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 101, -1);
+      }
+
+      if (this.weatherIndices != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 105, varOffset - offset - 137);
+         if (this.weatherIndices.length > 4096000) {
+            throw ProtocolException.arrayTooLong("WeatherIndices", this.weatherIndices.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.weatherIndices.length);
+         MemorySegment.copy(this.weatherIndices, 0, mem, PacketIO.PROTO_INT, varOffset, this.weatherIndices.length);
+         varOffset += this.weatherIndices.length * 4;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 105, -1);
+      }
+
+      if (this.fluidFXIndices != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 109, varOffset - offset - 137);
+         if (this.fluidFXIndices.length > 4096000) {
+            throw ProtocolException.arrayTooLong("FluidFXIndices", this.fluidFXIndices.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.fluidFXIndices.length);
+         MemorySegment.copy(this.fluidFXIndices, 0, mem, PacketIO.PROTO_INT, varOffset, this.fluidFXIndices.length);
+         varOffset += this.fluidFXIndices.length * 4;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 109, -1);
+      }
+
+      if (this.surroundingBlockSoundSets != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 113, varOffset - offset - 137);
+         if (this.surroundingBlockSoundSets.length > 4096000) {
+            throw ProtocolException.arrayTooLong("SurroundingBlockSoundSets", this.surroundingBlockSoundSets.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.surroundingBlockSoundSets.length);
+         int surroundingBlockSoundSetsValueOffset = 0;
+
+         for (int i = 0; i < this.surroundingBlockSoundSets.length; i++) {
+            surroundingBlockSoundSetsValueOffset += this.surroundingBlockSoundSets[i].serialize(mem, varOffset + surroundingBlockSoundSetsValueOffset);
+         }
+
+         varOffset += surroundingBlockSoundSetsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 113, -1);
+      }
+
+      if (this.space != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 117, varOffset - offset - 137);
+         if (this.space.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Space", this.space.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.space.length);
+
+         for (int i = 0; i < this.space.length; i++) {
+            mem.set(PacketIO.PROTO_BYTE, varOffset + i * 1, (byte)this.space[i].getValue());
+         }
+
+         varOffset += this.space.length * 1;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 117, -1);
+      }
+
+      if (this.shelter != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 121, varOffset - offset - 137);
+         if (this.shelter.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Shelter", this.shelter.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.shelter.length);
+
+         for (int i = 0; i < this.shelter.length; i++) {
+            mem.set(PacketIO.PROTO_BYTE, varOffset + i * 1, (byte)this.shelter[i].getValue());
+         }
+
+         varOffset += this.shelter.length * 1;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 121, -1);
+      }
+
+      if (this.surfaces != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 125, varOffset - offset - 137);
+         if (this.surfaces.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Surfaces", this.surfaces.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.surfaces.length);
+
+         for (int i = 0; i < this.surfaces.length; i++) {
+            mem.set(PacketIO.PROTO_BYTE, varOffset + i * 1, (byte)this.surfaces[i].getValue());
+         }
+
+         varOffset += this.surfaces.length * 1;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 125, -1);
+      }
+
+      if (this.surfacePhysicalMaterials != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 129, varOffset - offset - 137);
+         if (this.surfacePhysicalMaterials.length > 4096000) {
+            throw ProtocolException.arrayTooLong("SurfacePhysicalMaterials", this.surfacePhysicalMaterials.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.surfacePhysicalMaterials.length);
+         int surfacePhysicalMaterialsValueOffset = 0;
+
+         for (int i = 0; i < this.surfacePhysicalMaterials.length; i++) {
+            surfacePhysicalMaterialsValueOffset += this.surfacePhysicalMaterials[i].serialize(mem, varOffset + surfacePhysicalMaterialsValueOffset);
+         }
+
+         varOffset += surfacePhysicalMaterialsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 129, -1);
+      }
+
+      if (this.exteriorRoofPhysicalMaterials != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 133, varOffset - offset - 137);
+         if (this.exteriorRoofPhysicalMaterials.length > 4096000) {
+            throw ProtocolException.arrayTooLong("ExteriorRoofPhysicalMaterials", this.exteriorRoofPhysicalMaterials.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.exteriorRoofPhysicalMaterials.length);
+         int exteriorRoofPhysicalMaterialsValueOffset = 0;
+
+         for (int i = 0; i < this.exteriorRoofPhysicalMaterials.length; i++) {
+            exteriorRoofPhysicalMaterialsValueOffset += this.exteriorRoofPhysicalMaterials[i]
+               .serialize(mem, varOffset + exteriorRoofPhysicalMaterialsValueOffset);
+         }
+
+         varOffset += exteriorRoofPhysicalMaterialsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 133, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

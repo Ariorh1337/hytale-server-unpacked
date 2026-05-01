@@ -3,11 +3,13 @@ package com.hypixel.hytale.protocol.packets.interface_;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import com.hypixel.hytale.protocol.packets.buildertools.ClipboardEntityChange;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -245,6 +247,284 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 43L;
+   }
+
+   @Nullable
+   public static EditorSelection getSelection(MemorySegment mem) {
+      return getSelection(mem, 0);
+   }
+
+   @Nullable
+   public static EditorSelection getSelection(MemorySegment mem, int offset) {
+      return hasSelection(mem, offset) ? EditorSelection.toObject(mem, offset + 1) : null;
+   }
+
+   @Nullable
+   public static BlockChange[] getBlocksChange(MemorySegment mem) {
+      return getBlocksChange(mem, 0);
+   }
+
+   @Nullable
+   public static BlockChange[] getBlocksChange(MemorySegment mem, int offset) {
+      if (!hasBlocksChange(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 31, 43, "BlocksChange");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("BlocksChange", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("BlocksChange", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 17L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BlocksChange", off + lenOffset + len * 17, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      BlockChange[] data = new BlockChange[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = BlockChange.toObject(mem, off + i * 17);
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static FluidChange[] getFluidsChange(MemorySegment mem) {
+      return getFluidsChange(mem, 0);
+   }
+
+   @Nullable
+   public static FluidChange[] getFluidsChange(MemorySegment mem, int offset) {
+      if (!hasFluidsChange(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 35, 43, "FluidsChange");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("FluidsChange", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("FluidsChange", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 17L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("FluidsChange", off + lenOffset + len * 17, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      FluidChange[] data = new FluidChange[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = FluidChange.toObject(mem, off + i * 17);
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static ClipboardEntityChange[] getEntityChanges(MemorySegment mem) {
+      return getEntityChanges(mem, 0);
+   }
+
+   @Nullable
+   public static ClipboardEntityChange[] getEntityChanges(MemorySegment mem, int offset) {
+      if (!hasEntityChanges(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 39, 43, "EntityChanges");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("EntityChanges", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("EntityChanges", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("EntityChanges", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      ClipboardEntityChange[] data = new ClipboardEntityChange[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = ClipboardEntityChange.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   public static int getBlocksCount(MemorySegment mem) {
+      return getBlocksCount(mem, 0);
+   }
+
+   public static int getBlocksCount(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 25);
+   }
+
+   public static boolean getAdvancedPreview(MemorySegment mem) {
+      return getAdvancedPreview(mem, 0);
+   }
+
+   public static boolean getAdvancedPreview(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 29);
+   }
+
+   public static boolean getSkipPreviewRebuild(MemorySegment mem) {
+      return getSkipPreviewRebuild(mem, 0);
+   }
+
+   public static boolean getSkipPreviewRebuild(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 30);
+   }
+
+   public static boolean hasSelection(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasBlocksChange(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasFluidsChange(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasEntityChanges(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static EditorBlocksChange toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static EditorBlocksChange toObject(MemorySegment mem, int offset) {
+      if (offset + 43 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("EditorBlocksChange", offset + 43, (int)mem.byteSize());
+      }
+
+      BlockChange[] blocksChange = null;
+      if (hasBlocksChange(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 31, 43, "BlocksChange");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("BlocksChange", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("BlocksChange", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 17L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("BlocksChange", off + lenOffset + len * 17, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         blocksChange = new BlockChange[len];
+
+         for (int i = 0; i < len; i++) {
+            blocksChange[i] = BlockChange.toObject(mem, off + i * 17);
+         }
+      }
+
+      FluidChange[] fluidsChange = null;
+      if (hasFluidsChange(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 35, 43, "FluidsChange");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("FluidsChange", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("FluidsChange", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 17L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("FluidsChange", off + lenOffset + len * 17, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         fluidsChange = new FluidChange[len];
+
+         for (int i = 0; i < len; i++) {
+            fluidsChange[i] = FluidChange.toObject(mem, off + i * 17);
+         }
+      }
+
+      ClipboardEntityChange[] entityChanges = null;
+      if (hasEntityChanges(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 39, 43, "EntityChanges");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("EntityChanges", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("EntityChanges", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("EntityChanges", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         entityChanges = new ClipboardEntityChange[len];
+
+         for (int i = 0; i < len; i++) {
+            entityChanges[i] = ClipboardEntityChange.toObject(mem, off);
+            off += entityChanges[i].computeSize();
+         }
+      }
+
+      return new EditorBlocksChange(
+         hasSelection(mem, offset) ? EditorSelection.toObject(mem, offset + 1) : null,
+         blocksChange,
+         fluidsChange,
+         entityChanges,
+         mem.get(PacketIO.PROTO_INT, offset + 25),
+         mem.get(PacketIO.PROTO_BOOL, offset + 29),
+         mem.get(PacketIO.PROTO_BOOL, offset + 30)
+      );
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -326,6 +606,93 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
       } else {
          buf.setIntLE(entityChangesOffsetSlot, -1);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.selection != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.blocksChange != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.fluidsChange != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.entityChanges != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      if (this.selection != null) {
+         this.selection.serialize(mem, offset + 1);
+      } else {
+         mem.asSlice(offset + 1, 24L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_INT, offset + 25, this.blocksCount);
+      mem.set(PacketIO.PROTO_BOOL, offset + 29, this.advancedPreview);
+      mem.set(PacketIO.PROTO_BOOL, offset + 30, this.skipPreviewRebuild);
+      int varOffset = offset + 43;
+      if (this.blocksChange != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 31, varOffset - offset - 43);
+         if (this.blocksChange.length > 4096000) {
+            throw ProtocolException.arrayTooLong("BlocksChange", this.blocksChange.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.blocksChange.length);
+         int blocksChangeValueOffset = 0;
+
+         for (int i = 0; i < this.blocksChange.length; i++) {
+            blocksChangeValueOffset += this.blocksChange[i].serialize(mem, varOffset + blocksChangeValueOffset);
+         }
+
+         varOffset += blocksChangeValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 31, -1);
+      }
+
+      if (this.fluidsChange != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 35, varOffset - offset - 43);
+         if (this.fluidsChange.length > 4096000) {
+            throw ProtocolException.arrayTooLong("FluidsChange", this.fluidsChange.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.fluidsChange.length);
+         int fluidsChangeValueOffset = 0;
+
+         for (int i = 0; i < this.fluidsChange.length; i++) {
+            fluidsChangeValueOffset += this.fluidsChange[i].serialize(mem, varOffset + fluidsChangeValueOffset);
+         }
+
+         varOffset += fluidsChangeValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 35, -1);
+      }
+
+      if (this.entityChanges != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 39, varOffset - offset - 43);
+         if (this.entityChanges.length > 4096000) {
+            throw ProtocolException.arrayTooLong("EntityChanges", this.entityChanges.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.entityChanges.length);
+         int entityChangesValueOffset = 0;
+
+         for (int i = 0; i < this.entityChanges.length; i++) {
+            entityChangesValueOffset += this.entityChanges[i].serialize(mem, varOffset + entityChangesValueOffset);
+         }
+
+         varOffset += entityChangesValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 39, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

@@ -1,9 +1,11 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -258,6 +260,344 @@ public class InteractionRules {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 33L;
+   }
+
+   @Nullable
+   public static InteractionType[] getBlockedBy(MemorySegment mem) {
+      return getBlockedBy(mem, 0);
+   }
+
+   @Nullable
+   public static InteractionType[] getBlockedBy(MemorySegment mem, int offset) {
+      if (!hasBlockedBy(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 17, 33, "BlockedBy");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("BlockedBy", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("BlockedBy", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 1L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BlockedBy", off + lenOffset + len * 1, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      InteractionType[] data = new InteractionType[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = InteractionType.fromValue(mem.get(PacketIO.PROTO_BYTE, off + i * 1));
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static InteractionType[] getBlocking(MemorySegment mem) {
+      return getBlocking(mem, 0);
+   }
+
+   @Nullable
+   public static InteractionType[] getBlocking(MemorySegment mem, int offset) {
+      if (!hasBlocking(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 21, 33, "Blocking");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Blocking", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Blocking", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 1L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Blocking", off + lenOffset + len * 1, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      InteractionType[] data = new InteractionType[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = InteractionType.fromValue(mem.get(PacketIO.PROTO_BYTE, off + i * 1));
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static InteractionType[] getInterruptedBy(MemorySegment mem) {
+      return getInterruptedBy(mem, 0);
+   }
+
+   @Nullable
+   public static InteractionType[] getInterruptedBy(MemorySegment mem, int offset) {
+      if (!hasInterruptedBy(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 25, 33, "InterruptedBy");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("InterruptedBy", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("InterruptedBy", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 1L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("InterruptedBy", off + lenOffset + len * 1, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      InteractionType[] data = new InteractionType[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = InteractionType.fromValue(mem.get(PacketIO.PROTO_BYTE, off + i * 1));
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static InteractionType[] getInterrupting(MemorySegment mem) {
+      return getInterrupting(mem, 0);
+   }
+
+   @Nullable
+   public static InteractionType[] getInterrupting(MemorySegment mem, int offset) {
+      if (!hasInterrupting(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 29, 33, "Interrupting");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Interrupting", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Interrupting", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 1L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Interrupting", off + lenOffset + len * 1, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      InteractionType[] data = new InteractionType[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = InteractionType.fromValue(mem.get(PacketIO.PROTO_BYTE, off + i * 1));
+      }
+
+      return data;
+   }
+
+   public static int getBlockedByBypassIndex(MemorySegment mem) {
+      return getBlockedByBypassIndex(mem, 0);
+   }
+
+   public static int getBlockedByBypassIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   public static int getBlockingBypassIndex(MemorySegment mem) {
+      return getBlockingBypassIndex(mem, 0);
+   }
+
+   public static int getBlockingBypassIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 5);
+   }
+
+   public static int getInterruptedByBypassIndex(MemorySegment mem) {
+      return getInterruptedByBypassIndex(mem, 0);
+   }
+
+   public static int getInterruptedByBypassIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 9);
+   }
+
+   public static int getInterruptingBypassIndex(MemorySegment mem) {
+      return getInterruptingBypassIndex(mem, 0);
+   }
+
+   public static int getInterruptingBypassIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 13);
+   }
+
+   public static boolean hasBlockedBy(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasBlocking(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasInterruptedBy(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasInterrupting(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static InteractionRules toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static InteractionRules toObject(MemorySegment mem, int offset) {
+      if (offset + 33 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("InteractionRules", offset + 33, (int)mem.byteSize());
+      }
+
+      InteractionType[] blockedBy = null;
+      if (hasBlockedBy(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 17, 33, "BlockedBy");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("BlockedBy", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("BlockedBy", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 1L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("BlockedBy", off + lenOffset + len * 1, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         blockedBy = new InteractionType[len];
+
+         for (int i = 0; i < len; i++) {
+            blockedBy[i] = InteractionType.fromValue(mem.get(PacketIO.PROTO_BYTE, off + i * 1));
+         }
+      }
+
+      InteractionType[] blocking = null;
+      if (hasBlocking(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 21, 33, "Blocking");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Blocking", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Blocking", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 1L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Blocking", off + lenOffset + len * 1, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         blocking = new InteractionType[len];
+
+         for (int i = 0; i < len; i++) {
+            blocking[i] = InteractionType.fromValue(mem.get(PacketIO.PROTO_BYTE, off + i * 1));
+         }
+      }
+
+      InteractionType[] interruptedBy = null;
+      if (hasInterruptedBy(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 25, 33, "InterruptedBy");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("InterruptedBy", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("InterruptedBy", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 1L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("InterruptedBy", off + lenOffset + len * 1, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         interruptedBy = new InteractionType[len];
+
+         for (int i = 0; i < len; i++) {
+            interruptedBy[i] = InteractionType.fromValue(mem.get(PacketIO.PROTO_BYTE, off + i * 1));
+         }
+      }
+
+      InteractionType[] interrupting = null;
+      if (hasInterrupting(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 29, 33, "Interrupting");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Interrupting", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Interrupting", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 1L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Interrupting", off + lenOffset + len * 1, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         interrupting = new InteractionType[len];
+
+         for (int i = 0; i < len; i++) {
+            interrupting[i] = InteractionType.fromValue(mem.get(PacketIO.PROTO_BYTE, off + i * 1));
+         }
+      }
+
+      return new InteractionRules(
+         blockedBy,
+         blocking,
+         interruptedBy,
+         interrupting,
+         mem.get(PacketIO.PROTO_INT, offset + 1),
+         mem.get(PacketIO.PROTO_INT, offset + 5),
+         mem.get(PacketIO.PROTO_INT, offset + 9),
+         mem.get(PacketIO.PROTO_INT, offset + 13)
+      );
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -350,6 +690,101 @@ public class InteractionRules {
       } else {
          buf.setIntLE(interruptingOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.blockedBy != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.blocking != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.interruptedBy != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.interrupting != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.blockedByBypassIndex);
+      mem.set(PacketIO.PROTO_INT, offset + 5, this.blockingBypassIndex);
+      mem.set(PacketIO.PROTO_INT, offset + 9, this.interruptedByBypassIndex);
+      mem.set(PacketIO.PROTO_INT, offset + 13, this.interruptingBypassIndex);
+      int varOffset = offset + 33;
+      if (this.blockedBy != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 17, varOffset - offset - 33);
+         if (this.blockedBy.length > 4096000) {
+            throw ProtocolException.arrayTooLong("BlockedBy", this.blockedBy.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.blockedBy.length);
+
+         for (int i = 0; i < this.blockedBy.length; i++) {
+            mem.set(PacketIO.PROTO_BYTE, varOffset + i * 1, (byte)this.blockedBy[i].getValue());
+         }
+
+         varOffset += this.blockedBy.length * 1;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 17, -1);
+      }
+
+      if (this.blocking != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 21, varOffset - offset - 33);
+         if (this.blocking.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Blocking", this.blocking.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.blocking.length);
+
+         for (int i = 0; i < this.blocking.length; i++) {
+            mem.set(PacketIO.PROTO_BYTE, varOffset + i * 1, (byte)this.blocking[i].getValue());
+         }
+
+         varOffset += this.blocking.length * 1;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 21, -1);
+      }
+
+      if (this.interruptedBy != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 25, varOffset - offset - 33);
+         if (this.interruptedBy.length > 4096000) {
+            throw ProtocolException.arrayTooLong("InterruptedBy", this.interruptedBy.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.interruptedBy.length);
+
+         for (int i = 0; i < this.interruptedBy.length; i++) {
+            mem.set(PacketIO.PROTO_BYTE, varOffset + i * 1, (byte)this.interruptedBy[i].getValue());
+         }
+
+         varOffset += this.interruptedBy.length * 1;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 25, -1);
+      }
+
+      if (this.interrupting != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 29, varOffset - offset - 33);
+         if (this.interrupting.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Interrupting", this.interrupting.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.interrupting.length);
+
+         for (int i = 0; i < this.interrupting.length; i++) {
+            mem.set(PacketIO.PROTO_BYTE, varOffset + i * 1, (byte)this.interrupting[i].getValue());
+         }
+
+         varOffset += this.interrupting.length * 1;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 29, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

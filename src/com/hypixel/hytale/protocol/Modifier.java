@@ -1,8 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -50,10 +52,61 @@ public class Modifier {
       return 6;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 6L;
+   }
+
+   public static ModifierTarget getTarget(MemorySegment mem) {
+      return getTarget(mem, 0);
+   }
+
+   public static ModifierTarget getTarget(MemorySegment mem, int offset) {
+      return ModifierTarget.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 0));
+   }
+
+   public static CalculationType getCalculationType(MemorySegment mem) {
+      return getCalculationType(mem, 0);
+   }
+
+   public static CalculationType getCalculationType(MemorySegment mem, int offset) {
+      return CalculationType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1));
+   }
+
+   public static float getAmount(MemorySegment mem) {
+      return getAmount(mem, 0);
+   }
+
+   public static float getAmount(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 2);
+   }
+
+   public static Modifier toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static Modifier toObject(MemorySegment mem, int offset) {
+      if (offset + 6 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Modifier", offset + 6, (int)mem.byteSize());
+      } else {
+         return new Modifier(
+            ModifierTarget.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 0)),
+            CalculationType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1)),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 2)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeByte(this.target.getValue());
       buf.writeByte(this.calculationType.getValue());
       buf.writeFloatLE(this.amount);
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, (byte)this.target.getValue());
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.calculationType.getValue());
+      mem.set(PacketIO.PROTO_FLOAT, offset + 2, this.amount);
+      return 6;
    }
 
    public int computeSize() {

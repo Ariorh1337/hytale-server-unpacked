@@ -4,9 +4,11 @@ import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.SavedMovementStates;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -62,6 +64,37 @@ public class SetMovementStates implements Packet, ToClientPacket {
       return 2;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 2L;
+   }
+
+   @Nullable
+   public static SavedMovementStates getMovementStates(MemorySegment mem) {
+      return getMovementStates(mem, 0);
+   }
+
+   @Nullable
+   public static SavedMovementStates getMovementStates(MemorySegment mem, int offset) {
+      return hasMovementStates(mem, offset) ? SavedMovementStates.toObject(mem, offset + 1) : null;
+   }
+
+   public static boolean hasMovementStates(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static SetMovementStates toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static SetMovementStates toObject(MemorySegment mem, int offset) {
+      if (offset + 2 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("SetMovementStates", offset + 2, (int)mem.byteSize());
+      } else {
+         return new SetMovementStates(hasMovementStates(mem, offset) ? SavedMovementStates.toObject(mem, offset + 1) : null);
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -75,6 +108,23 @@ public class SetMovementStates implements Packet, ToClientPacket {
       } else {
          buf.writeZero(1);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.movementStates != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      if (this.movementStates != null) {
+         this.movementStates.serialize(mem, offset + 1);
+      } else {
+         mem.asSlice(offset + 1, 1L).fill((byte)0);
+      }
+
+      return 2;
    }
 
    @Override

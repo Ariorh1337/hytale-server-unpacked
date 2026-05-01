@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -153,6 +154,118 @@ public class ModelDisplay {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 45L;
+   }
+
+   @Nullable
+   public static String getNode(MemorySegment mem) {
+      return getNode(mem, 0);
+   }
+
+   @Nullable
+   public static String getNode(MemorySegment mem, int offset) {
+      return hasNode(mem, offset)
+         ? PacketIO.readVarString("Node", mem, offset + getValidatedOffset(mem, offset, 37, 45, "Node"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getAttachTo(MemorySegment mem) {
+      return getAttachTo(mem, 0);
+   }
+
+   @Nullable
+   public static String getAttachTo(MemorySegment mem, int offset) {
+      return hasAttachTo(mem, offset)
+         ? PacketIO.readVarString("AttachTo", mem, offset + getValidatedOffset(mem, offset, 41, 45, "AttachTo"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static Vector3fc getTranslation(MemorySegment mem) {
+      return getTranslation(mem, 0);
+   }
+
+   @Nullable
+   public static Vector3fc getTranslation(MemorySegment mem, int offset) {
+      return hasTranslation(mem, offset) ? PacketIO.readVector3f(mem, offset + 1) : null;
+   }
+
+   @Nullable
+   public static Vector3fc getRotation(MemorySegment mem) {
+      return getRotation(mem, 0);
+   }
+
+   @Nullable
+   public static Vector3fc getRotation(MemorySegment mem, int offset) {
+      return hasRotation(mem, offset) ? PacketIO.readVector3f(mem, offset + 13) : null;
+   }
+
+   @Nullable
+   public static Vector3fc getScale(MemorySegment mem) {
+      return getScale(mem, 0);
+   }
+
+   @Nullable
+   public static Vector3fc getScale(MemorySegment mem, int offset) {
+      return hasScale(mem, offset) ? PacketIO.readVector3f(mem, offset + 25) : null;
+   }
+
+   public static boolean hasTranslation(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasRotation(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasScale(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasNode(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasAttachTo(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 16) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static ModelDisplay toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ModelDisplay toObject(MemorySegment mem, int offset) {
+      if (offset + 45 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ModelDisplay", offset + 45, (int)mem.byteSize());
+      } else {
+         return new ModelDisplay(
+            hasNode(mem, offset) ? PacketIO.readVarString("Node", mem, offset + getValidatedOffset(mem, offset, 37, 45, "Node"), 4096000, PacketIO.UTF8) : null,
+            hasAttachTo(mem, offset)
+               ? PacketIO.readVarString("AttachTo", mem, offset + getValidatedOffset(mem, offset, 41, 45, "AttachTo"), 4096000, PacketIO.UTF8)
+               : null,
+            hasTranslation(mem, offset) ? PacketIO.readVector3f(mem, offset + 1) : null,
+            hasRotation(mem, offset) ? PacketIO.readVector3f(mem, offset + 13) : null,
+            hasScale(mem, offset) ? PacketIO.readVector3f(mem, offset + 25) : null
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -213,6 +326,65 @@ public class ModelDisplay {
       } else {
          buf.setIntLE(attachToOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.translation != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.rotation != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.scale != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.node != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.attachTo != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      if (this.translation != null) {
+         PacketIO.writeVector3f(mem, offset + 1, this.translation);
+      } else {
+         mem.asSlice(offset + 1, 12L).fill((byte)0);
+      }
+
+      if (this.rotation != null) {
+         PacketIO.writeVector3f(mem, offset + 13, this.rotation);
+      } else {
+         mem.asSlice(offset + 13, 12L).fill((byte)0);
+      }
+
+      if (this.scale != null) {
+         PacketIO.writeVector3f(mem, offset + 25, this.scale);
+      } else {
+         mem.asSlice(offset + 25, 12L).fill((byte)0);
+      }
+
+      int varOffset = offset + 45;
+      if (this.node != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 37, varOffset - offset - 45);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.node, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 37, -1);
+      }
+
+      if (this.attachTo != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 41, varOffset - offset - 45);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.attachTo, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 41, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

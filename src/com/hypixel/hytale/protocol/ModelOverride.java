@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -199,6 +200,145 @@ public class ModelOverride {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 13L;
+   }
+
+   @Nullable
+   public static String getModel(MemorySegment mem) {
+      return getModel(mem, 0);
+   }
+
+   @Nullable
+   public static String getModel(MemorySegment mem, int offset) {
+      return hasModel(mem, offset)
+         ? PacketIO.readVarString("Model", mem, offset + getValidatedOffset(mem, offset, 1, 13, "Model"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getTexture(MemorySegment mem) {
+      return getTexture(mem, 0);
+   }
+
+   @Nullable
+   public static String getTexture(MemorySegment mem, int offset) {
+      return hasTexture(mem, offset)
+         ? PacketIO.readVarString("Texture", mem, offset + getValidatedOffset(mem, offset, 5, 13, "Texture"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static Map<String, AnimationSet> getAnimationSets(MemorySegment mem) {
+      return getAnimationSets(mem, 0);
+   }
+
+   @Nullable
+   public static Map<String, AnimationSet> getAnimationSets(MemorySegment mem, int offset) {
+      if (!hasAnimationSets(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 9, 13, "AnimationSets");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("AnimationSets", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("AnimationSets", len, 4096000);
+      }
+
+      Map<String, AnimationSet> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         long keyPacked = VarInt.getWithLength(mem, off);
+         int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+         String key = PacketIO.readVarString("key", mem, off, 16384000, PacketIO.UTF8);
+         off += nkey;
+         AnimationSet value = AnimationSet.toObject(mem, off);
+         off += value.computeSize();
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("AnimationSets", key);
+         }
+      }
+
+      return data;
+   }
+
+   public static boolean hasModel(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasTexture(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasAnimationSets(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static ModelOverride toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ModelOverride toObject(MemorySegment mem, int offset) {
+      if (offset + 13 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ModelOverride", offset + 13, (int)mem.byteSize());
+      }
+
+      Map<String, AnimationSet> animationSets = null;
+      if (hasAnimationSets(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 9, 13, "AnimationSets");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("AnimationSets", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("AnimationSets", len, 4096000);
+         }
+
+         animationSets = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            long keyPacked = VarInt.getWithLength(mem, off);
+            int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+            String key = PacketIO.readVarString("key", mem, off, 16384000, PacketIO.UTF8);
+            off += nkey;
+            AnimationSet value = AnimationSet.toObject(mem, off);
+            off += value.computeSize();
+            if (animationSets.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("AnimationSets", key);
+            }
+         }
+      }
+
+      return new ModelOverride(
+         hasModel(mem, offset) ? PacketIO.readVarString("Model", mem, offset + getValidatedOffset(mem, offset, 1, 13, "Model"), 4096000, PacketIO.UTF8) : null,
+         hasTexture(mem, offset)
+            ? PacketIO.readVarString("Texture", mem, offset + getValidatedOffset(mem, offset, 5, 13, "Texture"), 4096000, PacketIO.UTF8)
+            : null,
+         animationSets
+      );
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -251,6 +391,55 @@ public class ModelOverride {
       } else {
          buf.setIntLE(animationSetsOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.model != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.texture != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.animationSets != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 13;
+      if (this.model != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 1, varOffset - offset - 13);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.model, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 1, -1);
+      }
+
+      if (this.texture != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 5, varOffset - offset - 13);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.texture, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 5, -1);
+      }
+
+      if (this.animationSets != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 9, varOffset - offset - 13);
+         if (this.animationSets.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("AnimationSets", this.animationSets.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.animationSets.size());
+
+         for (Entry<String, AnimationSet> e : this.animationSets.entrySet()) {
+            varOffset += PacketIO.writeVarString(mem, varOffset, e.getKey(), 16384000);
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 9, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

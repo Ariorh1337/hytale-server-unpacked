@@ -196,12 +196,12 @@ public class BarterPage extends InteractiveCustomUIPage<BarterPage.BarterEventDa
                               if (remainder != null && !remainder.isEmpty()) {
                                  int addedQty = outputStack.getQuantity() - remainder.getQuantity();
                                  if (addedQty > 0) {
-                                    playerComponent.notifyPickupItem(playerEntityRef, outputStack.withQuantity(addedQty), null, store);
+                                    Player.notifyPickupItem(playerEntityRef, outputStack.withQuantity(addedQty), null, store);
                                  }
 
                                  ItemUtils.dropItem(playerEntityRef, remainder, store);
                               } else {
-                                 playerComponent.notifyPickupItem(playerEntityRef, outputStack, null, store);
+                                 Player.notifyPickupItem(playerEntityRef, outputStack, null, store);
                               }
 
                               barterState.executeTrade(this.shopAsset, tradeIndex, quantity, gameTime);

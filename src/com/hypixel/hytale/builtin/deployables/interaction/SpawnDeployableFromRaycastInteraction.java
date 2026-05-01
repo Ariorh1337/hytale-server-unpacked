@@ -12,7 +12,6 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Rotation3f;
-import com.hypixel.hytale.protocol.Direction;
 import com.hypixel.hytale.protocol.Interaction;
 import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionSyncData;
@@ -34,7 +33,6 @@ import it.unimi.dsi.fastutil.objects.Object2FloatOpenHashMap;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.joml.Vector3d;
-import org.joml.Vector3fc;
 
 public class SpawnDeployableFromRaycastInteraction extends SimpleInstantInteraction {
    @Nonnull
@@ -91,33 +89,36 @@ public class SpawnDeployableFromRaycastInteraction extends SimpleInstantInteract
 
    @Override
    protected void firstRun(@Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
-      Ref<EntityStore> entityRef = context.getOwningEntity();
-      Store<EntityStore> store = entityRef.getStore();
       CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
       assert commandBuffer != null;
-      InteractionSyncData clientState = context.getClientState();
-      assert clientState != null;
       if (!this.canAfford(context.getEntity(), commandBuffer)) {
          context.getState().state = InteractionState.Failed;
       } else {
-         Position raycastHit = clientState.raycastHit;
-         if (raycastHit == null) {
-            TransformComponent transformComponent = store.getComponent(entityRef, TransformComponent.getComponentType());
-            assert transformComponent != null;
-            Vector3d position = transformComponent.getPosition();
-            raycastHit = new Position((float)position.x, (float)position.y, (float)position.z);
-         }
+         InteractionSyncData clientState = context.getClientState();
+         assert clientState != null;
+         Ref<EntityStore> owningEntityRef = context.getOwningEntity();
+         if (owningEntityRef != null) {
+            Store<EntityStore> store = commandBuffer.getStore();
+            Position raycastHit = clientState.raycastHit;
+            if (raycastHit == null) {
+               TransformComponent transformComponent = store.getComponent(owningEntityRef, TransformComponent.getComponentType());
+               assert transformComponent != null;
+               Vector3d position = transformComponent.getPosition();
+               raycastHit = new Position((float)position.x, (float)position.y, (float)position.z);
+            }
 
-         Vector3fc raycastNormal = clientState.raycastNormal;
-         float correctedRaycastDistance = clientState.raycastDistance;
-         Vector3d spawnPosition = new Vector3d(raycastHit.x, raycastHit.y, raycastHit.z);
-         Rotation3f norm = new Rotation3f(raycastNormal.x(), raycastNormal.y(), raycastNormal.z());
-         if (correctedRaycastDistance > 0.0F
-            && correctedRaycastDistance <= this.maxPlacementDistance
-            && (this.config.getAllowPlaceOnWalls() || isSurface(norm))) {
-            Direction attackerRot = clientState.attackerRot;
-            Rotation3f rot = new Rotation3f(0.0F, attackerRot.yaw, 0.0F);
-            DeployablesUtils.spawnDeployable(commandBuffer, store, this.config, entityRef, spawnPosition, rot, "UP");
+            if (clientState.raycastNormal != null) {
+               float correctedRayCastDistance = clientState.raycastDistance;
+               Vector3d spawnPosition = new Vector3d(raycastHit.x, raycastHit.y, raycastHit.z);
+               Rotation3f rotationNormal = new Rotation3f(clientState.raycastNormal.x(), clientState.raycastNormal.y(), clientState.raycastNormal.z());
+               if (correctedRayCastDistance > 0.0F
+                  && correctedRayCastDistance <= this.maxPlacementDistance
+                  && (this.config.getAllowPlaceOnWalls() || isSurface(rotationNormal))) {
+                  float attackerRot = clientState.attackerRot != null ? clientState.attackerRot.yaw : 0.0F;
+                  Rotation3f rot = new Rotation3f(0.0F, attackerRot, 0.0F);
+                  DeployablesUtils.spawnDeployable(commandBuffer, store, this.config, owningEntityRef, spawnPosition, rot, "UP");
+               }
+            }
          }
       }
    }

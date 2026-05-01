@@ -4,6 +4,7 @@ import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -64,6 +65,75 @@ public class RaycastSelector extends Selector {
       return 23;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 23L;
+   }
+
+   @Nullable
+   public static Vector3fc getOffset(MemorySegment mem) {
+      return getOffset(mem, 0);
+   }
+
+   @Nullable
+   public static Vector3fc getOffset(MemorySegment mem, int offset) {
+      return hasOffset(mem, offset) ? PacketIO.readVector3f(mem, offset + 1) : null;
+   }
+
+   public static int getDistance(MemorySegment mem) {
+      return getDistance(mem, 0);
+   }
+
+   public static int getDistance(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 13);
+   }
+
+   public static int getBlockTagIndex(MemorySegment mem) {
+      return getBlockTagIndex(mem, 0);
+   }
+
+   public static int getBlockTagIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 17);
+   }
+
+   public static boolean getIgnoreFluids(MemorySegment mem) {
+      return getIgnoreFluids(mem, 0);
+   }
+
+   public static boolean getIgnoreFluids(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 21);
+   }
+
+   public static boolean getIgnoreEmptyCollisionMaterial(MemorySegment mem) {
+      return getIgnoreEmptyCollisionMaterial(mem, 0);
+   }
+
+   public static boolean getIgnoreEmptyCollisionMaterial(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 22);
+   }
+
+   public static boolean hasOffset(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static RaycastSelector toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static RaycastSelector toObject(MemorySegment mem, int offset) {
+      if (offset + 23 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("RaycastSelector", offset + 23, (int)mem.byteSize());
+      } else {
+         return new RaycastSelector(
+            hasOffset(mem, offset) ? PacketIO.readVector3f(mem, offset + 1) : null,
+            mem.get(PacketIO.PROTO_INT, offset + 13),
+            mem.get(PacketIO.PROTO_INT, offset + 17),
+            mem.get(PacketIO.PROTO_BOOL, offset + 21),
+            mem.get(PacketIO.PROTO_BOOL, offset + 22)
+         );
+      }
+   }
+
    @Override
    public int serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -84,6 +154,27 @@ public class RaycastSelector extends Selector {
       buf.writeByte(this.ignoreFluids ? 1 : 0);
       buf.writeByte(this.ignoreEmptyCollisionMaterial ? 1 : 0);
       return buf.writerIndex() - startPos;
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.offset != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      if (this.offset != null) {
+         PacketIO.writeVector3f(mem, offset + 1, this.offset);
+      } else {
+         mem.asSlice(offset + 1, 12L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_INT, offset + 13, this.distance);
+      mem.set(PacketIO.PROTO_INT, offset + 17, this.blockTagIndex);
+      mem.set(PacketIO.PROTO_BOOL, offset + 21, this.ignoreFluids);
+      mem.set(PacketIO.PROTO_BOOL, offset + 22, this.ignoreEmptyCollisionMaterial);
+      return 23;
    }
 
    @Override

@@ -10,6 +10,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -193,6 +194,107 @@ public class Notification implements Packet, ToClientPacket {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 18L;
+   }
+
+   @Nullable
+   public static FormattedMessage getMessage(MemorySegment mem) {
+      return getMessage(mem, 0);
+   }
+
+   @Nullable
+   public static FormattedMessage getMessage(MemorySegment mem, int offset) {
+      return hasMessage(mem, offset) ? FormattedMessage.toObject(mem, offset + getValidatedOffset(mem, offset, 2, 18, "Message")) : null;
+   }
+
+   @Nullable
+   public static FormattedMessage getSecondaryMessage(MemorySegment mem) {
+      return getSecondaryMessage(mem, 0);
+   }
+
+   @Nullable
+   public static FormattedMessage getSecondaryMessage(MemorySegment mem, int offset) {
+      return hasSecondaryMessage(mem, offset) ? FormattedMessage.toObject(mem, offset + getValidatedOffset(mem, offset, 6, 18, "SecondaryMessage")) : null;
+   }
+
+   @Nullable
+   public static String getIcon(MemorySegment mem) {
+      return getIcon(mem, 0);
+   }
+
+   @Nullable
+   public static String getIcon(MemorySegment mem, int offset) {
+      return hasIcon(mem, offset)
+         ? PacketIO.readVarString("Icon", mem, offset + getValidatedOffset(mem, offset, 10, 18, "Icon"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static ItemWithAllMetadata getItem(MemorySegment mem) {
+      return getItem(mem, 0);
+   }
+
+   @Nullable
+   public static ItemWithAllMetadata getItem(MemorySegment mem, int offset) {
+      return hasItem(mem, offset) ? ItemWithAllMetadata.toObject(mem, offset + getValidatedOffset(mem, offset, 14, 18, "Item")) : null;
+   }
+
+   public static NotificationStyle getStyle(MemorySegment mem) {
+      return getStyle(mem, 0);
+   }
+
+   public static NotificationStyle getStyle(MemorySegment mem, int offset) {
+      return NotificationStyle.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1));
+   }
+
+   public static boolean hasMessage(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasSecondaryMessage(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasIcon(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasItem(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static Notification toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static Notification toObject(MemorySegment mem, int offset) {
+      if (offset + 18 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Notification", offset + 18, (int)mem.byteSize());
+      } else {
+         return new Notification(
+            hasMessage(mem, offset) ? FormattedMessage.toObject(mem, offset + getValidatedOffset(mem, offset, 2, 18, "Message")) : null,
+            hasSecondaryMessage(mem, offset) ? FormattedMessage.toObject(mem, offset + getValidatedOffset(mem, offset, 6, 18, "SecondaryMessage")) : null,
+            hasIcon(mem, offset) ? PacketIO.readVarString("Icon", mem, offset + getValidatedOffset(mem, offset, 10, 18, "Icon"), 4096000, PacketIO.UTF8) : null,
+            hasItem(mem, offset) ? ItemWithAllMetadata.toObject(mem, offset + getValidatedOffset(mem, offset, 14, 18, "Item")) : null,
+            NotificationStyle.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1))
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -251,6 +353,59 @@ public class Notification implements Packet, ToClientPacket {
       } else {
          buf.setIntLE(itemOffsetSlot, -1);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.message != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.secondaryMessage != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.icon != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.item != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.style.getValue());
+      int varOffset = offset + 18;
+      if (this.message != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 2, varOffset - offset - 18);
+         varOffset += this.message.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 2, -1);
+      }
+
+      if (this.secondaryMessage != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 6, varOffset - offset - 18);
+         varOffset += this.secondaryMessage.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 6, -1);
+      }
+
+      if (this.icon != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 10, varOffset - offset - 18);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.icon, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 10, -1);
+      }
+
+      if (this.item != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 14, varOffset - offset - 18);
+         varOffset += this.item.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 14, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

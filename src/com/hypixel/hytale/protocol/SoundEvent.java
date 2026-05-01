@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -191,6 +192,209 @@ public class SoundEvent {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 46L;
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem) {
+      return getId(mem, 0);
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem, int offset) {
+      return hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 38, 46, "Id"), 4096000, PacketIO.UTF8) : null;
+   }
+
+   public static float getVolume(MemorySegment mem) {
+      return getVolume(mem, 0);
+   }
+
+   public static float getVolume(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 1);
+   }
+
+   public static float getPitch(MemorySegment mem) {
+      return getPitch(mem, 0);
+   }
+
+   public static float getPitch(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 5);
+   }
+
+   public static float getMusicDuckingVolume(MemorySegment mem) {
+      return getMusicDuckingVolume(mem, 0);
+   }
+
+   public static float getMusicDuckingVolume(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 9);
+   }
+
+   public static float getAmbientDuckingVolume(MemorySegment mem) {
+      return getAmbientDuckingVolume(mem, 0);
+   }
+
+   public static float getAmbientDuckingVolume(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 13);
+   }
+
+   public static int getMaxInstance(MemorySegment mem) {
+      return getMaxInstance(mem, 0);
+   }
+
+   public static int getMaxInstance(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 17);
+   }
+
+   public static boolean getPreventSoundInterruption(MemorySegment mem) {
+      return getPreventSoundInterruption(mem, 0);
+   }
+
+   public static boolean getPreventSoundInterruption(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 21);
+   }
+
+   public static float getStartAttenuationDistance(MemorySegment mem) {
+      return getStartAttenuationDistance(mem, 0);
+   }
+
+   public static float getStartAttenuationDistance(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 22);
+   }
+
+   public static float getMaxDistance(MemorySegment mem) {
+      return getMaxDistance(mem, 0);
+   }
+
+   public static float getMaxDistance(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 26);
+   }
+
+   public static float getSpatialBlend(MemorySegment mem) {
+      return getSpatialBlend(mem, 0);
+   }
+
+   public static float getSpatialBlend(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 30);
+   }
+
+   @Nullable
+   public static SoundEventLayer[] getLayers(MemorySegment mem) {
+      return getLayers(mem, 0);
+   }
+
+   @Nullable
+   public static SoundEventLayer[] getLayers(MemorySegment mem, int offset) {
+      if (!hasLayers(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 42, 46, "Layers");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Layers", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Layers", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Layers", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      SoundEventLayer[] data = new SoundEventLayer[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = SoundEventLayer.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   public static int getAudioCategory(MemorySegment mem) {
+      return getAudioCategory(mem, 0);
+   }
+
+   public static int getAudioCategory(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 34);
+   }
+
+   public static boolean hasId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasLayers(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static SoundEvent toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static SoundEvent toObject(MemorySegment mem, int offset) {
+      if (offset + 46 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("SoundEvent", offset + 46, (int)mem.byteSize());
+      }
+
+      SoundEventLayer[] layers = null;
+      if (hasLayers(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 42, 46, "Layers");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Layers", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Layers", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Layers", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         layers = new SoundEventLayer[len];
+
+         for (int i = 0; i < len; i++) {
+            layers[i] = SoundEventLayer.toObject(mem, off);
+            off += layers[i].computeSize();
+         }
+      }
+
+      return new SoundEvent(
+         hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 38, 46, "Id"), 4096000, PacketIO.UTF8) : null,
+         mem.get(PacketIO.PROTO_FLOAT, offset + 1),
+         mem.get(PacketIO.PROTO_FLOAT, offset + 5),
+         mem.get(PacketIO.PROTO_FLOAT, offset + 9),
+         mem.get(PacketIO.PROTO_FLOAT, offset + 13),
+         mem.get(PacketIO.PROTO_INT, offset + 17),
+         mem.get(PacketIO.PROTO_BOOL, offset + 21),
+         mem.get(PacketIO.PROTO_FLOAT, offset + 22),
+         mem.get(PacketIO.PROTO_FLOAT, offset + 26),
+         mem.get(PacketIO.PROTO_FLOAT, offset + 30),
+         layers,
+         mem.get(PacketIO.PROTO_INT, offset + 34)
+      );
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -239,6 +443,56 @@ public class SoundEvent {
       } else {
          buf.setIntLE(layersOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.id != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.layers != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 1, this.volume);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 5, this.pitch);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 9, this.musicDuckingVolume);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 13, this.ambientDuckingVolume);
+      mem.set(PacketIO.PROTO_INT, offset + 17, this.maxInstance);
+      mem.set(PacketIO.PROTO_BOOL, offset + 21, this.preventSoundInterruption);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 22, this.startAttenuationDistance);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 26, this.maxDistance);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 30, this.spatialBlend);
+      mem.set(PacketIO.PROTO_INT, offset + 34, this.audioCategory);
+      int varOffset = offset + 46;
+      if (this.id != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 38, varOffset - offset - 46);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.id, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 38, -1);
+      }
+
+      if (this.layers != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 42, varOffset - offset - 46);
+         if (this.layers.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Layers", this.layers.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.layers.length);
+         int layersValueOffset = 0;
+
+         for (int i = 0; i < this.layers.length; i++) {
+            layersValueOffset += this.layers[i].serialize(mem, varOffset + layersValueOffset);
+         }
+
+         varOffset += layersValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 42, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

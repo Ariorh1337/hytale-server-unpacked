@@ -7,6 +7,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -264,6 +265,217 @@ public class MapMarker {
       }
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 58L;
+   }
+
+   public static String getId(MemorySegment mem) {
+      return getId(mem, 0);
+   }
+
+   public static String getId(MemorySegment mem, int offset) {
+      return PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 38, 58, "Id"), 4096000, PacketIO.UTF8);
+   }
+
+   @Nullable
+   public static FormattedMessage getName(MemorySegment mem) {
+      return getName(mem, 0);
+   }
+
+   @Nullable
+   public static FormattedMessage getName(MemorySegment mem, int offset) {
+      return hasName(mem, offset) ? FormattedMessage.toObject(mem, offset + getValidatedOffset(mem, offset, 42, 58, "Name")) : null;
+   }
+
+   public static String getMarkerImage(MemorySegment mem) {
+      return getMarkerImage(mem, 0);
+   }
+
+   public static String getMarkerImage(MemorySegment mem, int offset) {
+      return PacketIO.readVarString("MarkerImage", mem, offset + getValidatedOffset(mem, offset, 46, 58, "MarkerImage"), 4096000, PacketIO.UTF8);
+   }
+
+   public static Transform getTransform(MemorySegment mem) {
+      return getTransform(mem, 0);
+   }
+
+   public static Transform getTransform(MemorySegment mem, int offset) {
+      return Transform.toObject(mem, offset + 1);
+   }
+
+   @Nullable
+   public static ContextMenuItem[] getContextMenuItems(MemorySegment mem) {
+      return getContextMenuItems(mem, 0);
+   }
+
+   @Nullable
+   public static ContextMenuItem[] getContextMenuItems(MemorySegment mem, int offset) {
+      if (!hasContextMenuItems(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 50, 58, "ContextMenuItems");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("ContextMenuItems", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("ContextMenuItems", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ContextMenuItems", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      ContextMenuItem[] data = new ContextMenuItem[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = ContextMenuItem.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static MapMarkerComponent[] getComponents(MemorySegment mem) {
+      return getComponents(mem, 0);
+   }
+
+   @Nullable
+   public static MapMarkerComponent[] getComponents(MemorySegment mem, int offset) {
+      if (!hasComponents(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 54, 58, "Components");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Components", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Components", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Components", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      MapMarkerComponent[] data = new MapMarkerComponent[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = MapMarkerComponent.toObject(mem, off);
+         off += data[i].computeSizeWithTypeId();
+      }
+
+      return data;
+   }
+
+   public static boolean hasName(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasContextMenuItems(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasComponents(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static MapMarker toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static MapMarker toObject(MemorySegment mem, int offset) {
+      if (offset + 58 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("MapMarker", offset + 58, (int)mem.byteSize());
+      }
+
+      ContextMenuItem[] contextMenuItems = null;
+      if (hasContextMenuItems(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 50, 58, "ContextMenuItems");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("ContextMenuItems", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("ContextMenuItems", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("ContextMenuItems", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         contextMenuItems = new ContextMenuItem[len];
+
+         for (int i = 0; i < len; i++) {
+            contextMenuItems[i] = ContextMenuItem.toObject(mem, off);
+            off += contextMenuItems[i].computeSize();
+         }
+      }
+
+      MapMarkerComponent[] components = null;
+      if (hasComponents(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 54, 58, "Components");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Components", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Components", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Components", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         components = new MapMarkerComponent[len];
+
+         for (int i = 0; i < len; i++) {
+            components[i] = MapMarkerComponent.toObject(mem, off);
+            off += components[i].computeSizeWithTypeId();
+         }
+      }
+
+      return new MapMarker(
+         PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 38, 58, "Id"), 4096000, PacketIO.UTF8),
+         hasName(mem, offset) ? FormattedMessage.toObject(mem, offset + getValidatedOffset(mem, offset, 42, 58, "Name")) : null,
+         PacketIO.readVarString("MarkerImage", mem, offset + getValidatedOffset(mem, offset, 46, 58, "MarkerImage"), 4096000, PacketIO.UTF8),
+         Transform.toObject(mem, offset + 1),
+         contextMenuItems,
+         components
+      );
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -332,6 +544,73 @@ public class MapMarker {
       } else {
          buf.setIntLE(componentsOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.name != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.contextMenuItems != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.components != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      this.transform.serialize(mem, offset + 1);
+      int varOffset = offset + 58;
+      mem.set(PacketIO.PROTO_INT, offset + 38, varOffset - offset - 58);
+      varOffset += PacketIO.writeVarString(mem, varOffset, this.id, 4096000);
+      if (this.name != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 42, varOffset - offset - 58);
+         varOffset += this.name.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 42, -1);
+      }
+
+      mem.set(PacketIO.PROTO_INT, offset + 46, varOffset - offset - 58);
+      varOffset += PacketIO.writeVarString(mem, varOffset, this.markerImage, 4096000);
+      if (this.contextMenuItems != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 50, varOffset - offset - 58);
+         if (this.contextMenuItems.length > 4096000) {
+            throw ProtocolException.arrayTooLong("ContextMenuItems", this.contextMenuItems.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.contextMenuItems.length);
+         int contextMenuItemsValueOffset = 0;
+
+         for (int i = 0; i < this.contextMenuItems.length; i++) {
+            contextMenuItemsValueOffset += this.contextMenuItems[i].serialize(mem, varOffset + contextMenuItemsValueOffset);
+         }
+
+         varOffset += contextMenuItemsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 50, -1);
+      }
+
+      if (this.components != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 54, varOffset - offset - 58);
+         if (this.components.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Components", this.components.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.components.length);
+         int componentsValueOffset = 0;
+
+         for (int i = 0; i < this.components.length; i++) {
+            componentsValueOffset += this.components[i].serializeWithTypeId(mem, varOffset + componentsValueOffset);
+         }
+
+         varOffset += componentsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 54, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

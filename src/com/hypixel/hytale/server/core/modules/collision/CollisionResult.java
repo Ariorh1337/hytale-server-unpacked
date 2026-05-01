@@ -51,7 +51,7 @@ public class CollisionResult implements BoxBlockIterator.BoxIterationConsumer {
    private final MovingBoxBoxCollisionEvaluator movingBoxBoxCollision;
    @Nonnull
    private final BoxBlockIntersectionEvaluator boxBlockIntersection;
-   public List<Entity> collisionEntities;
+   public List<Ref<EntityStore>> collisionEntities;
    private boolean continueAfterCollision = true;
    private boolean haveNoCollision = true;
    private HytaleLogger logger;
@@ -90,11 +90,11 @@ public class CollisionResult implements BoxBlockIterator.BoxIterationConsumer {
       return this.collisionConfig;
    }
 
-   public List<Entity> getCollisionEntities() {
+   public List<Ref<EntityStore>> getCollisionEntities() {
       return this.collisionEntities;
    }
 
-   public void setCollisionEntities(List<Entity> collisionEntities) {
+   public void setCollisionEntities(List<Ref<EntityStore>> collisionEntities) {
       this.collisionEntities = collisionEntities;
    }
 

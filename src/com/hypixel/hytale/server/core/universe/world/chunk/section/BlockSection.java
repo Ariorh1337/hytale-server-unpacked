@@ -639,6 +639,8 @@ public class BlockSection implements Component<ChunkStore> {
                      this.tickingBlocksCount++;
                      this.tickingBlocks.set(index, true);
                   }
+               case SLEEP:
+               case IGNORED:
             }
          } finally {
             this.chunkSectionLock.unlockWrite(writeStamp);

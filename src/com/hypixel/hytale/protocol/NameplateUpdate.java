@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -58,11 +59,42 @@ public class NameplateUpdate extends ComponentUpdate {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 0L;
+   }
+
+   public static String getText(MemorySegment mem) {
+      return getText(mem, 0);
+   }
+
+   public static String getText(MemorySegment mem, int offset) {
+      return PacketIO.readVarString("Text", mem, offset + 0, 4096000, PacketIO.UTF8);
+   }
+
+   public static NameplateUpdate toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static NameplateUpdate toObject(MemorySegment mem, int offset) {
+      if (offset + 0 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("NameplateUpdate", offset + 0, (int)mem.byteSize());
+      } else {
+         return new NameplateUpdate(PacketIO.readVarString("Text", mem, offset + 0, 4096000, PacketIO.UTF8));
+      }
+   }
+
    @Override
    public int serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       PacketIO.writeVarString(buf, this.text, 4096000);
       return buf.writerIndex() - startPos;
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      int varOffset = offset + 0;
+      varOffset += PacketIO.writeVarString(mem, varOffset, this.text, 4096000);
+      return varOffset - offset;
    }
 
    @Override

@@ -3,8 +3,10 @@ package com.hypixel.hytale.protocol.packets.setup;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import javax.annotation.Nonnull;
 
 public class SetupFinalize implements Packet, ToServerPacket {
@@ -35,8 +37,29 @@ public class SetupFinalize implements Packet, ToServerPacket {
       return 0;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 0L;
+   }
+
+   public static SetupFinalize toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static SetupFinalize toObject(MemorySegment mem, int offset) {
+      if (offset + 0 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("SetupFinalize", offset + 0, (int)mem.byteSize());
+      } else {
+         return new SetupFinalize();
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      return 0;
    }
 
    @Override

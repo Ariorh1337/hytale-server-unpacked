@@ -87,7 +87,9 @@ public class BlockPlaceUtils {
       @Nonnull Ref<ChunkStore> chunkReference,
       @Nonnull ComponentAccessor<ChunkStore> chunkStore,
       @Nonnull ComponentAccessor<EntityStore> entityStore,
-      boolean quickReplace
+      boolean quickReplace,
+      boolean quickRetype,
+      boolean noPhysics
    ) {
       if (blockPosition.y() >= 0 && blockPosition.y() < 320) {
          Ref<ChunkStore> targetChunkReference = chunkReference;
@@ -143,7 +145,7 @@ public class BlockPlaceUtils {
                blockTypeKey = itemStack.getBlockKey();
             }
 
-            if (validateBlockToPlace(blockTypeKey, playerRefComponent)) {
+            if (quickReplace || validateBlockToPlace(blockTypeKey, playerRefComponent)) {
                assert blockTypeKey != null;
                BlockType blockTypeAsset = BlockType.getAssetMap().getAsset(blockTypeKey);
                if (blockTypeAsset != null) {
@@ -166,7 +168,9 @@ public class BlockPlaceUtils {
                      chunkReference,
                      chunkStore,
                      entityStore,
-                     quickReplace
+                     quickReplace,
+                     quickRetype,
+                     noPhysics
                   );
                   if (success) {
                      onPlaceBlockSuccess(itemStack, worldChunkComponent, targetBlockPosition, blockTypeAsset, targetRotation);
@@ -310,7 +314,9 @@ public class BlockPlaceUtils {
       @Nonnull Ref<ChunkStore> chunkReference,
       @Nonnull ComponentAccessor<ChunkStore> chunkStore,
       @Nonnull ComponentAccessor<EntityStore> entityStore,
-      boolean quickReplace
+      boolean quickReplace,
+      boolean quickRetype,
+      boolean noPhysics
    ) {
       WorldConfig worldConfig = entityStore.getExternalData().getWorld().getGameplayConfig().getWorldConfig();
       if (!worldConfig.isBlockPlacementAllowed()) {
@@ -335,6 +341,8 @@ public class BlockPlaceUtils {
       BlockType blockType = BlockType.getAssetMap().getAsset(blockTypeKey);
       int rotationIndex = rotation.index();
       if (quickReplace
+         || quickRetype
+         || noPhysics
          || blockType != null && worldChunkComponent.testPlaceBlock(blockPosition.x(), blockPosition.y(), blockPosition.z(), blockType, rotationIndex)) {
          BlockBoundingBoxes hitBoxType = BlockBoundingBoxes.getAssetMap().getAsset(blockType.getHitboxTypeIndex());
          if (hitBoxType != null) {
@@ -353,7 +361,7 @@ public class BlockPlaceUtils {
             return false;
          }
 
-         if (playerComponent != null && !playerComponent.isOverrideBlockPlacementRestrictions() && blockType.canBePlacedAsDeco()) {
+         if (playerComponent != null && (noPhysics || !playerComponent.isOverrideBlockPlacementRestrictions() && blockType.canBePlacedAsDeco())) {
             ChunkColumn chunkColumnComponent = chunkStore.getComponent(chunkReference, ChunkColumn.getComponentType());
             assert chunkColumnComponent != null;
             Ref<ChunkStore> sectionRef = chunkColumnComponent.getSection(ChunkUtil.chunkCoordinate(blockPosition.y));

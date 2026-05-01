@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -272,6 +273,242 @@ public class BuilderToolArg {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 53L;
+   }
+
+   public static boolean getRequired(MemorySegment mem) {
+      return getRequired(mem, 0);
+   }
+
+   public static boolean getRequired(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 2);
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem) {
+      return getId(mem, 0);
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem, int offset) {
+      return hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 33, 53, "Id"), 4096000, PacketIO.UTF8) : null;
+   }
+
+   public static BuilderToolArgType getArgType(MemorySegment mem) {
+      return getArgType(mem, 0);
+   }
+
+   public static BuilderToolArgType getArgType(MemorySegment mem, int offset) {
+      return BuilderToolArgType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 3));
+   }
+
+   @Nullable
+   public static BuilderToolBoolArg getBoolArg(MemorySegment mem) {
+      return getBoolArg(mem, 0);
+   }
+
+   @Nullable
+   public static BuilderToolBoolArg getBoolArg(MemorySegment mem, int offset) {
+      return hasBoolArg(mem, offset) ? BuilderToolBoolArg.toObject(mem, offset + 4) : null;
+   }
+
+   @Nullable
+   public static BuilderToolFloatArg getFloatArg(MemorySegment mem) {
+      return getFloatArg(mem, 0);
+   }
+
+   @Nullable
+   public static BuilderToolFloatArg getFloatArg(MemorySegment mem, int offset) {
+      return hasFloatArg(mem, offset) ? BuilderToolFloatArg.toObject(mem, offset + 5) : null;
+   }
+
+   @Nullable
+   public static BuilderToolIntArg getIntArg(MemorySegment mem) {
+      return getIntArg(mem, 0);
+   }
+
+   @Nullable
+   public static BuilderToolIntArg getIntArg(MemorySegment mem, int offset) {
+      return hasIntArg(mem, offset) ? BuilderToolIntArg.toObject(mem, offset + 17) : null;
+   }
+
+   @Nullable
+   public static BuilderToolStringArg getStringArg(MemorySegment mem) {
+      return getStringArg(mem, 0);
+   }
+
+   @Nullable
+   public static BuilderToolStringArg getStringArg(MemorySegment mem, int offset) {
+      return hasStringArg(mem, offset) ? BuilderToolStringArg.toObject(mem, offset + getValidatedOffset(mem, offset, 37, 53, "StringArg")) : null;
+   }
+
+   @Nullable
+   public static BuilderToolBlockArg getBlockArg(MemorySegment mem) {
+      return getBlockArg(mem, 0);
+   }
+
+   @Nullable
+   public static BuilderToolBlockArg getBlockArg(MemorySegment mem, int offset) {
+      return hasBlockArg(mem, offset) ? BuilderToolBlockArg.toObject(mem, offset + getValidatedOffset(mem, offset, 41, 53, "BlockArg")) : null;
+   }
+
+   @Nullable
+   public static BuilderToolMaskArg getMaskArg(MemorySegment mem) {
+      return getMaskArg(mem, 0);
+   }
+
+   @Nullable
+   public static BuilderToolMaskArg getMaskArg(MemorySegment mem, int offset) {
+      return hasMaskArg(mem, offset) ? BuilderToolMaskArg.toObject(mem, offset + getValidatedOffset(mem, offset, 45, 53, "MaskArg")) : null;
+   }
+
+   @Nullable
+   public static BuilderToolBrushShapeArg getBrushShapeArg(MemorySegment mem) {
+      return getBrushShapeArg(mem, 0);
+   }
+
+   @Nullable
+   public static BuilderToolBrushShapeArg getBrushShapeArg(MemorySegment mem, int offset) {
+      return hasBrushShapeArg(mem, offset) ? BuilderToolBrushShapeArg.toObject(mem, offset + 29) : null;
+   }
+
+   @Nullable
+   public static BuilderToolBrushOriginArg getBrushOriginArg(MemorySegment mem) {
+      return getBrushOriginArg(mem, 0);
+   }
+
+   @Nullable
+   public static BuilderToolBrushOriginArg getBrushOriginArg(MemorySegment mem, int offset) {
+      return hasBrushOriginArg(mem, offset) ? BuilderToolBrushOriginArg.toObject(mem, offset + 30) : null;
+   }
+
+   @Nullable
+   public static BuilderToolBrushAxisArg getBrushAxisArg(MemorySegment mem) {
+      return getBrushAxisArg(mem, 0);
+   }
+
+   @Nullable
+   public static BuilderToolBrushAxisArg getBrushAxisArg(MemorySegment mem, int offset) {
+      return hasBrushAxisArg(mem, offset) ? BuilderToolBrushAxisArg.toObject(mem, offset + 31) : null;
+   }
+
+   @Nullable
+   public static BuilderToolRotationArg getRotationArg(MemorySegment mem) {
+      return getRotationArg(mem, 0);
+   }
+
+   @Nullable
+   public static BuilderToolRotationArg getRotationArg(MemorySegment mem, int offset) {
+      return hasRotationArg(mem, offset) ? BuilderToolRotationArg.toObject(mem, offset + 32) : null;
+   }
+
+   @Nullable
+   public static BuilderToolOptionArg getOptionArg(MemorySegment mem) {
+      return getOptionArg(mem, 0);
+   }
+
+   @Nullable
+   public static BuilderToolOptionArg getOptionArg(MemorySegment mem, int offset) {
+      return hasOptionArg(mem, offset) ? BuilderToolOptionArg.toObject(mem, offset + getValidatedOffset(mem, offset, 49, 53, "OptionArg")) : null;
+   }
+
+   public static boolean hasBoolArg(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasFloatArg(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasIntArg(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasBrushShapeArg(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasBrushOriginArg(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 16) != 0;
+   }
+
+   public static boolean hasBrushAxisArg(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 32) != 0;
+   }
+
+   public static boolean hasRotationArg(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 64) != 0;
+   }
+
+   public static boolean hasId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 128) != 0;
+   }
+
+   public static boolean hasStringArg(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasBlockArg(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasMaskArg(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasOptionArg(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 8) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static BuilderToolArg toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static BuilderToolArg toObject(MemorySegment mem, int offset) {
+      if (offset + 53 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BuilderToolArg", offset + 53, (int)mem.byteSize());
+      } else {
+         return new BuilderToolArg(
+            mem.get(PacketIO.PROTO_BOOL, offset + 2),
+            hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 33, 53, "Id"), 4096000, PacketIO.UTF8) : null,
+            BuilderToolArgType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 3)),
+            hasBoolArg(mem, offset) ? BuilderToolBoolArg.toObject(mem, offset + 4) : null,
+            hasFloatArg(mem, offset) ? BuilderToolFloatArg.toObject(mem, offset + 5) : null,
+            hasIntArg(mem, offset) ? BuilderToolIntArg.toObject(mem, offset + 17) : null,
+            hasStringArg(mem, offset) ? BuilderToolStringArg.toObject(mem, offset + getValidatedOffset(mem, offset, 37, 53, "StringArg")) : null,
+            hasBlockArg(mem, offset) ? BuilderToolBlockArg.toObject(mem, offset + getValidatedOffset(mem, offset, 41, 53, "BlockArg")) : null,
+            hasMaskArg(mem, offset) ? BuilderToolMaskArg.toObject(mem, offset + getValidatedOffset(mem, offset, 45, 53, "MaskArg")) : null,
+            hasBrushShapeArg(mem, offset) ? BuilderToolBrushShapeArg.toObject(mem, offset + 29) : null,
+            hasBrushOriginArg(mem, offset) ? BuilderToolBrushOriginArg.toObject(mem, offset + 30) : null,
+            hasBrushAxisArg(mem, offset) ? BuilderToolBrushAxisArg.toObject(mem, offset + 31) : null,
+            hasRotationArg(mem, offset) ? BuilderToolRotationArg.toObject(mem, offset + 32) : null,
+            hasOptionArg(mem, offset) ? BuilderToolOptionArg.toObject(mem, offset + getValidatedOffset(mem, offset, 49, 53, "OptionArg")) : null
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte[] nullBits = new byte[2];
@@ -413,6 +650,142 @@ public class BuilderToolArg {
       } else {
          buf.setIntLE(optionArgOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.boolArg != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.floatArg != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.intArg != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.brushShapeArg != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.brushOriginArg != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.brushAxisArg != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
+      if (this.rotationArg != null) {
+         nullBits = (byte)(nullBits | 64);
+      }
+
+      if (this.id != null) {
+         nullBits = (byte)(nullBits | 128);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      nullBits = 0;
+      if (this.stringArg != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.blockArg != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.maskArg != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.optionArg != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, nullBits);
+      mem.set(PacketIO.PROTO_BOOL, offset + 2, this.required);
+      mem.set(PacketIO.PROTO_BYTE, offset + 3, (byte)this.argType.getValue());
+      if (this.boolArg != null) {
+         this.boolArg.serialize(mem, offset + 4);
+      } else {
+         mem.asSlice(offset + 4, 1L).fill((byte)0);
+      }
+
+      if (this.floatArg != null) {
+         this.floatArg.serialize(mem, offset + 5);
+      } else {
+         mem.asSlice(offset + 5, 12L).fill((byte)0);
+      }
+
+      if (this.intArg != null) {
+         this.intArg.serialize(mem, offset + 17);
+      } else {
+         mem.asSlice(offset + 17, 12L).fill((byte)0);
+      }
+
+      if (this.brushShapeArg != null) {
+         this.brushShapeArg.serialize(mem, offset + 29);
+      } else {
+         mem.asSlice(offset + 29, 1L).fill((byte)0);
+      }
+
+      if (this.brushOriginArg != null) {
+         this.brushOriginArg.serialize(mem, offset + 30);
+      } else {
+         mem.asSlice(offset + 30, 1L).fill((byte)0);
+      }
+
+      if (this.brushAxisArg != null) {
+         this.brushAxisArg.serialize(mem, offset + 31);
+      } else {
+         mem.asSlice(offset + 31, 1L).fill((byte)0);
+      }
+
+      if (this.rotationArg != null) {
+         this.rotationArg.serialize(mem, offset + 32);
+      } else {
+         mem.asSlice(offset + 32, 1L).fill((byte)0);
+      }
+
+      int varOffset = offset + 53;
+      if (this.id != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 33, varOffset - offset - 53);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.id, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 33, -1);
+      }
+
+      if (this.stringArg != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 37, varOffset - offset - 53);
+         varOffset += this.stringArg.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 37, -1);
+      }
+
+      if (this.blockArg != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 41, varOffset - offset - 53);
+         varOffset += this.blockArg.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 41, -1);
+      }
+
+      if (this.maskArg != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 45, varOffset - offset - 53);
+         varOffset += this.maskArg.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 45, -1);
+      }
+
+      if (this.optionArg != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 49, varOffset - offset - 53);
+         varOffset += this.optionArg.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 49, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

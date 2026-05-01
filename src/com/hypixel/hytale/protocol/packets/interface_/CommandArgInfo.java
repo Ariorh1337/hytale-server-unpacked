@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -214,6 +215,117 @@ public class CommandArgInfo {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 21L;
+   }
+
+   @Nullable
+   public static String getName(MemorySegment mem) {
+      return getName(mem, 0);
+   }
+
+   @Nullable
+   public static String getName(MemorySegment mem, int offset) {
+      return hasName(mem, offset) ? PacketIO.readVarString("Name", mem, offset + getValidatedOffset(mem, offset, 5, 21, "Name"), 4096000, PacketIO.UTF8) : null;
+   }
+
+   @Nullable
+   public static String getArgTypeId(MemorySegment mem) {
+      return getArgTypeId(mem, 0);
+   }
+
+   @Nullable
+   public static String getArgTypeId(MemorySegment mem, int offset) {
+      return hasArgTypeId(mem, offset)
+         ? PacketIO.readVarString("ArgTypeId", mem, offset + getValidatedOffset(mem, offset, 9, 21, "ArgTypeId"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getArgTypeName(MemorySegment mem) {
+      return getArgTypeName(mem, 0);
+   }
+
+   @Nullable
+   public static String getArgTypeName(MemorySegment mem, int offset) {
+      return hasArgTypeName(mem, offset)
+         ? PacketIO.readVarString("ArgTypeName", mem, offset + getValidatedOffset(mem, offset, 13, 21, "ArgTypeName"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static int getValueCount(MemorySegment mem) {
+      return getValueCount(mem, 0);
+   }
+
+   public static int getValueCount(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   @Nullable
+   public static String getDescription(MemorySegment mem) {
+      return getDescription(mem, 0);
+   }
+
+   @Nullable
+   public static String getDescription(MemorySegment mem, int offset) {
+      return hasDescription(mem, offset)
+         ? PacketIO.readVarString("Description", mem, offset + getValidatedOffset(mem, offset, 17, 21, "Description"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static boolean hasName(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasArgTypeId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasArgTypeName(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasDescription(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static CommandArgInfo toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static CommandArgInfo toObject(MemorySegment mem, int offset) {
+      if (offset + 21 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("CommandArgInfo", offset + 21, (int)mem.byteSize());
+      } else {
+         return new CommandArgInfo(
+            hasName(mem, offset) ? PacketIO.readVarString("Name", mem, offset + getValidatedOffset(mem, offset, 5, 21, "Name"), 4096000, PacketIO.UTF8) : null,
+            hasArgTypeId(mem, offset)
+               ? PacketIO.readVarString("ArgTypeId", mem, offset + getValidatedOffset(mem, offset, 9, 21, "ArgTypeId"), 4096000, PacketIO.UTF8)
+               : null,
+            hasArgTypeName(mem, offset)
+               ? PacketIO.readVarString("ArgTypeName", mem, offset + getValidatedOffset(mem, offset, 13, 21, "ArgTypeName"), 4096000, PacketIO.UTF8)
+               : null,
+            mem.get(PacketIO.PROTO_INT, offset + 1),
+            hasDescription(mem, offset)
+               ? PacketIO.readVarString("Description", mem, offset + getValidatedOffset(mem, offset, 17, 21, "Description"), 4096000, PacketIO.UTF8)
+               : null
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -271,6 +383,58 @@ public class CommandArgInfo {
       } else {
          buf.setIntLE(descriptionOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.name != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.argTypeId != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.argTypeName != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.description != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.valueCount);
+      int varOffset = offset + 21;
+      if (this.name != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 5, varOffset - offset - 21);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.name, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 5, -1);
+      }
+
+      if (this.argTypeId != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 9, varOffset - offset - 21);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.argTypeId, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 9, -1);
+      }
+
+      if (this.argTypeName != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 13, varOffset - offset - 21);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.argTypeName, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 13, -1);
+      }
+
+      if (this.description != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 17, varOffset - offset - 21);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.description, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 17, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

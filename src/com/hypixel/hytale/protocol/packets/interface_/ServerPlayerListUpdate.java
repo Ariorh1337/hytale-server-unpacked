@@ -4,6 +4,7 @@ import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import java.util.UUID;
 import javax.annotation.Nonnull;
@@ -48,9 +49,47 @@ public class ServerPlayerListUpdate {
       return 32;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 32L;
+   }
+
+   public static UUID getUuid(MemorySegment mem) {
+      return getUuid(mem, 0);
+   }
+
+   public static UUID getUuid(MemorySegment mem, int offset) {
+      return PacketIO.readUUID(mem, offset + 0);
+   }
+
+   public static UUID getWorldUuid(MemorySegment mem) {
+      return getWorldUuid(mem, 0);
+   }
+
+   public static UUID getWorldUuid(MemorySegment mem, int offset) {
+      return PacketIO.readUUID(mem, offset + 16);
+   }
+
+   public static ServerPlayerListUpdate toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ServerPlayerListUpdate toObject(MemorySegment mem, int offset) {
+      if (offset + 32 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ServerPlayerListUpdate", offset + 32, (int)mem.byteSize());
+      } else {
+         return new ServerPlayerListUpdate(PacketIO.readUUID(mem, offset + 0), PacketIO.readUUID(mem, offset + 16));
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       PacketIO.writeUUID(buf, this.uuid);
       PacketIO.writeUUID(buf, this.worldUuid);
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      PacketIO.writeUUID(mem, offset + 0, this.uuid);
+      PacketIO.writeUUID(mem, offset + 16, this.worldUuid);
+      return 32;
    }
 
    public int computeSize() {

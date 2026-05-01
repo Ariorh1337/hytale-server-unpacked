@@ -73,4 +73,6 @@ public interface ChannelConnection {
    void closeApplicationConnection(@Nonnull QuicApplicationErrorCode var1);
 
    void closeApplicationConnection(@Nonnull QuicApplicationErrorCode var1, @Nonnull String var2);
+
+   void updateStreamPriority(int var1, boolean var2);
 }

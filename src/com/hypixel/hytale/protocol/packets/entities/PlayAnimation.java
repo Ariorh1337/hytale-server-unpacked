@@ -9,6 +9,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -151,6 +152,90 @@ public class PlayAnimation implements Packet, ToClientPacket {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 14L;
+   }
+
+   public static int getEntityId(MemorySegment mem) {
+      return getEntityId(mem, 0);
+   }
+
+   public static int getEntityId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   @Nullable
+   public static String getItemAnimationsId(MemorySegment mem) {
+      return getItemAnimationsId(mem, 0);
+   }
+
+   @Nullable
+   public static String getItemAnimationsId(MemorySegment mem, int offset) {
+      return hasItemAnimationsId(mem, offset)
+         ? PacketIO.readVarString("ItemAnimationsId", mem, offset + getValidatedOffset(mem, offset, 6, 14, "ItemAnimationsId"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getAnimationId(MemorySegment mem) {
+      return getAnimationId(mem, 0);
+   }
+
+   @Nullable
+   public static String getAnimationId(MemorySegment mem, int offset) {
+      return hasAnimationId(mem, offset)
+         ? PacketIO.readVarString("AnimationId", mem, offset + getValidatedOffset(mem, offset, 10, 14, "AnimationId"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static AnimationSlot getSlot(MemorySegment mem) {
+      return getSlot(mem, 0);
+   }
+
+   public static AnimationSlot getSlot(MemorySegment mem, int offset) {
+      return AnimationSlot.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 5));
+   }
+
+   public static boolean hasItemAnimationsId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasAnimationId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static PlayAnimation toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static PlayAnimation toObject(MemorySegment mem, int offset) {
+      if (offset + 14 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("PlayAnimation", offset + 14, (int)mem.byteSize());
+      } else {
+         return new PlayAnimation(
+            mem.get(PacketIO.PROTO_INT, offset + 1),
+            hasItemAnimationsId(mem, offset)
+               ? PacketIO.readVarString("ItemAnimationsId", mem, offset + getValidatedOffset(mem, offset, 6, 14, "ItemAnimationsId"), 4096000, PacketIO.UTF8)
+               : null,
+            hasAnimationId(mem, offset)
+               ? PacketIO.readVarString("AnimationId", mem, offset + getValidatedOffset(mem, offset, 10, 14, "AnimationId"), 4096000, PacketIO.UTF8)
+               : null,
+            AnimationSlot.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 5))
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -184,6 +269,38 @@ public class PlayAnimation implements Packet, ToClientPacket {
       } else {
          buf.setIntLE(animationIdOffsetSlot, -1);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.itemAnimationsId != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.animationId != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.entityId);
+      mem.set(PacketIO.PROTO_BYTE, offset + 5, (byte)this.slot.getValue());
+      int varOffset = offset + 14;
+      if (this.itemAnimationsId != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 6, varOffset - offset - 14);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.itemAnimationsId, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 6, -1);
+      }
+
+      if (this.animationId != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 10, varOffset - offset - 14);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.animationId, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 10, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

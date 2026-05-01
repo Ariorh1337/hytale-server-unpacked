@@ -136,7 +136,7 @@ public class NPCSpawnCommand extends AbstractPlayerCommand {
       Vector3d posOffset = this.posOffsetArg.provided(context) ? this.parseVector3d(context, this.posOffsetArg.get(context)) : null;
       Rotation3f headRotation = this.headRotationArg.provided(context) ? this.parseVector3f(context, this.headRotationArg.get(context)) : null;
       boolean randomRotation = false;
-      Rotation3f rotation = playerHeadRotation;
+      Rotation3f rotation = new Rotation3f(0.0F, playerHeadRotation.y(), 0.0F);
       if (this.bodyRotationArg.provided(context)) {
          rotation = this.parseVector3f(context, this.bodyRotationArg.get(context));
       } else if (this.randomRotationArg.get(context)) {
@@ -235,7 +235,7 @@ public class NPCSpawnCommand extends AbstractPlayerCommand {
                      position.y = position.y - model.getBoundingBox().min.y;
                   } else {
                      position = new Vector3d(playerPosition);
-                     position.y = Math.floor(position.y + playerBoundingBox.min.y + 0.01) - model.getBoundingBox().min.y;
+                     position.y = position.y + playerBoundingBox.min.y + 0.01 - model.getBoundingBox().min.y;
                   }
 
                   if (posOffset != null) {

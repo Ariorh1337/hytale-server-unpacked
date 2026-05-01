@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 
@@ -99,6 +100,82 @@ public class TriggerVolumeToolGroupCreate implements Packet, ToServerPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 0L;
+   }
+
+   public static String[] getVolumeIds(MemorySegment mem) {
+      return getVolumeIds(mem, 0);
+   }
+
+   public static String[] getVolumeIds(MemorySegment mem, int offset) {
+      int off = offset + 0;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("VolumeIds", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("VolumeIds", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("VolumeIds", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      String[] data = new String[len];
+
+      for (int i = 0; i < len; i++) {
+         long sp = VarInt.getWithLength(mem, off);
+         int n = (int)sp + (int)(sp >>> 32);
+         data[i] = PacketIO.readVarString("VolumeIds", mem, off, 16384000, PacketIO.UTF8);
+         off += n;
+      }
+
+      return data;
+   }
+
+   public static TriggerVolumeToolGroupCreate toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static TriggerVolumeToolGroupCreate toObject(MemorySegment mem, int offset) {
+      if (offset + 0 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("TriggerVolumeToolGroupCreate", offset + 0, (int)mem.byteSize());
+      }
+
+      int off = offset + 0;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("VolumeIds", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("VolumeIds", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("VolumeIds", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      String[] volumeIds = new String[len];
+
+      for (int i = 0; i < len; i++) {
+         long sp = VarInt.getWithLength(mem, off);
+         int n = (int)sp + (int)(sp >>> 32);
+         volumeIds[i] = PacketIO.readVarString("VolumeIds", mem, off, 16384000, PacketIO.UTF8);
+         off += n;
+      }
+
+      return new TriggerVolumeToolGroupCreate(volumeIds);
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       if (this.volumeIds.length > 4096000) {
@@ -110,6 +187,24 @@ public class TriggerVolumeToolGroupCreate implements Packet, ToServerPacket {
       for (String item : this.volumeIds) {
          PacketIO.writeVarString(buf, item, 4096000);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      int varOffset = offset + 0;
+      if (this.volumeIds.length > 4096000) {
+         throw ProtocolException.arrayTooLong("VolumeIds", this.volumeIds.length, 4096000);
+      }
+
+      varOffset += VarInt.set(mem, varOffset, this.volumeIds.length);
+      int volumeIdsValueOffset = 0;
+
+      for (int i = 0; i < this.volumeIds.length; i++) {
+         volumeIdsValueOffset += PacketIO.writeVarString(mem, varOffset + volumeIdsValueOffset, this.volumeIds[i], 16384000);
+      }
+
+      varOffset += volumeIdsValueOffset;
+      return varOffset - offset;
    }
 
    @Override

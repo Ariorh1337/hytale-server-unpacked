@@ -4,6 +4,7 @@ import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -104,6 +105,80 @@ public class CameraSettings {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 21L;
+   }
+
+   @Nullable
+   public static Vector3fc getPositionOffset(MemorySegment mem) {
+      return getPositionOffset(mem, 0);
+   }
+
+   @Nullable
+   public static Vector3fc getPositionOffset(MemorySegment mem, int offset) {
+      return hasPositionOffset(mem, offset) ? PacketIO.readVector3f(mem, offset + 1) : null;
+   }
+
+   @Nullable
+   public static CameraAxis getYaw(MemorySegment mem) {
+      return getYaw(mem, 0);
+   }
+
+   @Nullable
+   public static CameraAxis getYaw(MemorySegment mem, int offset) {
+      return hasYaw(mem, offset) ? CameraAxis.toObject(mem, offset + getValidatedOffset(mem, offset, 13, 21, "Yaw")) : null;
+   }
+
+   @Nullable
+   public static CameraAxis getPitch(MemorySegment mem) {
+      return getPitch(mem, 0);
+   }
+
+   @Nullable
+   public static CameraAxis getPitch(MemorySegment mem, int offset) {
+      return hasPitch(mem, offset) ? CameraAxis.toObject(mem, offset + getValidatedOffset(mem, offset, 17, 21, "Pitch")) : null;
+   }
+
+   public static boolean hasPositionOffset(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasYaw(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasPitch(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static CameraSettings toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static CameraSettings toObject(MemorySegment mem, int offset) {
+      if (offset + 21 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("CameraSettings", offset + 21, (int)mem.byteSize());
+      } else {
+         return new CameraSettings(
+            hasPositionOffset(mem, offset) ? PacketIO.readVector3f(mem, offset + 1) : null,
+            hasYaw(mem, offset) ? CameraAxis.toObject(mem, offset + getValidatedOffset(mem, offset, 13, 21, "Yaw")) : null,
+            hasPitch(mem, offset) ? CameraAxis.toObject(mem, offset + getValidatedOffset(mem, offset, 17, 21, "Pitch")) : null
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -144,6 +219,45 @@ public class CameraSettings {
       } else {
          buf.setIntLE(pitchOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.positionOffset != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.yaw != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.pitch != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      if (this.positionOffset != null) {
+         PacketIO.writeVector3f(mem, offset + 1, this.positionOffset);
+      } else {
+         mem.asSlice(offset + 1, 12L).fill((byte)0);
+      }
+
+      int varOffset = offset + 21;
+      if (this.yaw != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 13, varOffset - offset - 21);
+         varOffset += this.yaw.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 13, -1);
+      }
+
+      if (this.pitch != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 17, varOffset - offset - 21);
+         varOffset += this.pitch.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 17, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

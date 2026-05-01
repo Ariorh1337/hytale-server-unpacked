@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -71,6 +72,39 @@ public class InteractableUpdate extends ComponentUpdate {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 1L;
+   }
+
+   @Nullable
+   public static String getInteractionHint(MemorySegment mem) {
+      return getInteractionHint(mem, 0);
+   }
+
+   @Nullable
+   public static String getInteractionHint(MemorySegment mem, int offset) {
+      return hasInteractionHint(mem, offset) ? PacketIO.readVarString("InteractionHint", mem, offset + 1, 4096000, PacketIO.UTF8) : null;
+   }
+
+   public static boolean hasInteractionHint(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static InteractableUpdate toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static InteractableUpdate toObject(MemorySegment mem, int offset) {
+      if (offset + 1 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("InteractableUpdate", offset + 1, (int)mem.byteSize());
+      } else {
+         return new InteractableUpdate(
+            hasInteractionHint(mem, offset) ? PacketIO.readVarString("InteractionHint", mem, offset + 1, 4096000, PacketIO.UTF8) : null
+         );
+      }
+   }
+
    @Override
    public int serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -85,6 +119,22 @@ public class InteractableUpdate extends ComponentUpdate {
       }
 
       return buf.writerIndex() - startPos;
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.interactionHint != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 1;
+      if (this.interactionHint != null) {
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.interactionHint, 4096000);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

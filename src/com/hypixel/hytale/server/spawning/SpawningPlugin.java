@@ -379,7 +379,7 @@ public class SpawningPlugin extends JavaPlugin {
       DefaultAssetMap<String, ModelAsset> modelAssetMap = ModelAsset.getAssetMap();
       ModelAsset modelAsset = modelAssetMap.getAsset(spawnMarkerModelId);
       if (modelAsset == null) {
-         this.getLogger().at(Level.SEVERE).log("Spawn marker model %s does not exist");
+         this.getLogger().at(Level.SEVERE).log("Spawn marker model %s does not exist", spawnMarkerModelId);
          modelAsset = modelAssetMap.getAsset("NPC_Spawn_Marker");
          if (modelAsset == null) {
             throw new IllegalStateException(String.format("Default spawn marker '%s' not found", "NPC_Spawn_Marker"));

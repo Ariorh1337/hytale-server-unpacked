@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -115,6 +116,96 @@ public class ServerTags implements Packet, ToClientPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 1L;
+   }
+
+   @Nullable
+   public static Map<String, Integer> getTags(MemorySegment mem) {
+      return getTags(mem, 0);
+   }
+
+   @Nullable
+   public static Map<String, Integer> getTags(MemorySegment mem, int offset) {
+      if (!hasTags(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + 1;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Tags", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("Tags", len, 4096000);
+      }
+
+      Map<String, Integer> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         long keyPacked = VarInt.getWithLength(mem, off);
+         int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+         String key = PacketIO.readVarString("key", mem, off, 16384000, PacketIO.UTF8);
+         off += nkey;
+         int value = mem.get(PacketIO.PROTO_INT, off);
+         off += 4;
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("Tags", key);
+         }
+      }
+
+      return data;
+   }
+
+   public static boolean hasTags(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static ServerTags toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ServerTags toObject(MemorySegment mem, int offset) {
+      if (offset + 1 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ServerTags", offset + 1, (int)mem.byteSize());
+      }
+
+      Map<String, Integer> tags = null;
+      if (hasTags(mem, offset)) {
+         int off = offset + 1;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Tags", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Tags", len, 4096000);
+         }
+
+         tags = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            long keyPacked = VarInt.getWithLength(mem, off);
+            int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+            String key = PacketIO.readVarString("key", mem, off, 16384000, PacketIO.UTF8);
+            off += nkey;
+            int value = mem.get(PacketIO.PROTO_INT, off);
+            off += 4;
+            if (tags.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("Tags", key);
+            }
+         }
+      }
+
+      return new ServerTags(tags);
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -135,6 +226,32 @@ public class ServerTags implements Packet, ToClientPacket {
             buf.writeIntLE(e.getValue());
          }
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.tags != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 1;
+      if (this.tags != null) {
+         if (this.tags.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Tags", this.tags.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.tags.size());
+
+         for (Entry<String, Integer> e : this.tags.entrySet()) {
+            varOffset += PacketIO.writeVarString(mem, varOffset, e.getKey(), 16384000);
+            mem.set(PacketIO.PROTO_INT, varOffset, e.getValue());
+            varOffset += 4;
+         }
+      }
+
+      return varOffset - offset;
    }
 
    @Override

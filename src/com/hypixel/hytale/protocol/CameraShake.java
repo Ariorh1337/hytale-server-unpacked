@@ -1,8 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -81,6 +83,50 @@ public class CameraShake {
       }
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 8L;
+   }
+
+   public static CameraShakeConfig getFirstPerson(MemorySegment mem) {
+      return getFirstPerson(mem, 0);
+   }
+
+   public static CameraShakeConfig getFirstPerson(MemorySegment mem, int offset) {
+      return CameraShakeConfig.toObject(mem, offset + getValidatedOffset(mem, offset, 0, 8, "FirstPerson"));
+   }
+
+   public static CameraShakeConfig getThirdPerson(MemorySegment mem) {
+      return getThirdPerson(mem, 0);
+   }
+
+   public static CameraShakeConfig getThirdPerson(MemorySegment mem, int offset) {
+      return CameraShakeConfig.toObject(mem, offset + getValidatedOffset(mem, offset, 4, 8, "ThirdPerson"));
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static CameraShake toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static CameraShake toObject(MemorySegment mem, int offset) {
+      if (offset + 8 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("CameraShake", offset + 8, (int)mem.byteSize());
+      } else {
+         return new CameraShake(
+            CameraShakeConfig.toObject(mem, offset + getValidatedOffset(mem, offset, 0, 8, "FirstPerson")),
+            CameraShakeConfig.toObject(mem, offset + getValidatedOffset(mem, offset, 4, 8, "ThirdPerson"))
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       int firstPersonOffsetSlot = buf.writerIndex();
@@ -92,6 +138,15 @@ public class CameraShake {
       this.firstPerson.serialize(buf);
       buf.setIntLE(thirdPersonOffsetSlot, buf.writerIndex() - varBlockStart);
       this.thirdPerson.serialize(buf);
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      int varOffset = offset + 8;
+      mem.set(PacketIO.PROTO_INT, offset + 0, varOffset - offset - 8);
+      varOffset += this.firstPerson.serialize(mem, varOffset);
+      mem.set(PacketIO.PROTO_INT, offset + 4, varOffset - offset - 8);
+      varOffset += this.thirdPerson.serialize(mem, varOffset);
+      return varOffset - offset;
    }
 
    public int computeSize() {

@@ -48,30 +48,22 @@ public class TeleportToPlayerCommand extends AbstractPlayerCommand {
          assert headRotationComponent != null;
          Vector3d pos = new Vector3d(transformComponent.getPosition());
          Rotation3f rotation = new Rotation3f(headRotationComponent.getRotation());
-         targetWorld.execute(
-            () -> {
-               TransformComponent targetTransformComponent = targetStore.getComponent(targetRef, TransformComponent.getComponentType());
-               assert targetTransformComponent != null;
-               HeadRotation targetHeadRotationComponent = targetStore.getComponent(targetRef, HeadRotation.getComponentType());
-               assert targetHeadRotationComponent != null;
-               Vector3d targetPosition = new Vector3d(targetTransformComponent.getPosition());
-               Rotation3f targetHeadRotation = new Rotation3f(targetHeadRotationComponent.getRotation());
-               Transform targetTransform = new Transform(targetPosition, targetHeadRotation);
-               world.execute(
-                  () -> {
-                     Teleport teleportComponent = Teleport.createForPlayer(targetWorld, targetTransform);
-                     store.addComponent(ref, Teleport.getComponentType(), teleportComponent);
-                     PlayerRef targetPlayerRefComponent = targetStore.getComponent(targetRef, PlayerRef.getComponentType());
-                     assert targetPlayerRefComponent != null;
-                     context.sendMessage(
-                        Message.translation("server.commands.teleport.teleportedToPlayer").param("toName", targetPlayerRefComponent.getUsername())
-                     );
-                     store.ensureAndGetComponent(ref, TeleportHistory.getComponentType())
-                        .append(world, pos, rotation, "Teleport to " + targetPlayerRefComponent.getUsername());
-                  }
-               );
-            }
-         );
+         targetWorld.execute(() -> {
+            TransformComponent targetTransformComponent = targetStore.getComponent(targetRef, TransformComponent.getComponentType());
+            assert targetTransformComponent != null;
+            HeadRotation targetHeadRotationComponent = targetStore.getComponent(targetRef, HeadRotation.getComponentType());
+            assert targetHeadRotationComponent != null;
+            Vector3d targetPosition = new Vector3d(targetTransformComponent.getPosition());
+            Rotation3f targetHeadRotation = new Rotation3f(targetHeadRotationComponent.getRotation());
+            Transform targetTransform = new Transform(targetPosition, targetHeadRotation);
+            String targetUsername = targetPlayerRef.getUsername();
+            world.execute(() -> {
+               Teleport teleportComponent = Teleport.createForPlayer(targetWorld, targetTransform);
+               store.addComponent(ref, Teleport.getComponentType(), teleportComponent);
+               context.sendMessage(Message.translation("server.commands.teleport.teleportedToPlayer").param("toName", targetUsername));
+               store.ensureAndGetComponent(ref, TeleportHistory.getComponentType()).append(world, pos, rotation, "Teleport to " + targetUsername);
+            });
+         });
       } else {
          context.sendMessage(MESSAGE_COMMANDS_ERRORS_TARGET_NOT_IN_WORLD);
       }

@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -583,6 +584,607 @@ public class CommandSuggestionsResponse implements Packet, ToClientPacket {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 49L;
+   }
+
+   public static int getStartPosition(MemorySegment mem) {
+      return getStartPosition(mem, 0);
+   }
+
+   public static int getStartPosition(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   public static int getLength(MemorySegment mem) {
+      return getLength(mem, 0);
+   }
+
+   public static int getLength(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 5);
+   }
+
+   @Nullable
+   public static String[] getSuggestions(MemorySegment mem) {
+      return getSuggestions(mem, 0);
+   }
+
+   @Nullable
+   public static String[] getSuggestions(MemorySegment mem, int offset) {
+      if (!hasSuggestions(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 17, 49, "Suggestions");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Suggestions", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Suggestions", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Suggestions", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      String[] data = new String[len];
+
+      for (int i = 0; i < len; i++) {
+         long sp = VarInt.getWithLength(mem, off);
+         int n = (int)sp + (int)(sp >>> 32);
+         data[i] = PacketIO.readVarString("Suggestions", mem, off, 16384000, PacketIO.UTF8);
+         off += n;
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static boolean[] getContinuations(MemorySegment mem) {
+      return getContinuations(mem, 0);
+   }
+
+   @Nullable
+   public static boolean[] getContinuations(MemorySegment mem, int offset) {
+      if (!hasContinuations(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 21, 49, "Continuations");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Continuations", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Continuations", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 1L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Continuations", off + lenOffset + len * 1, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      boolean[] data = new boolean[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = mem.get(PacketIO.PROTO_BOOL, off + i);
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static String getUsageText(MemorySegment mem) {
+      return getUsageText(mem, 0);
+   }
+
+   @Nullable
+   public static String getUsageText(MemorySegment mem, int offset) {
+      return hasUsageText(mem, offset)
+         ? PacketIO.readVarString("UsageText", mem, offset + getValidatedOffset(mem, offset, 25, 49, "UsageText"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static int getCurrentArgStart(MemorySegment mem) {
+      return getCurrentArgStart(mem, 0);
+   }
+
+   public static int getCurrentArgStart(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 9);
+   }
+
+   public static int getCurrentArgLength(MemorySegment mem) {
+      return getCurrentArgLength(mem, 0);
+   }
+
+   public static int getCurrentArgLength(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 13);
+   }
+
+   @Nullable
+   public static String[] getVariantPatterns(MemorySegment mem) {
+      return getVariantPatterns(mem, 0);
+   }
+
+   @Nullable
+   public static String[] getVariantPatterns(MemorySegment mem, int offset) {
+      if (!hasVariantPatterns(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 29, 49, "VariantPatterns");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("VariantPatterns", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("VariantPatterns", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("VariantPatterns", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      String[] data = new String[len];
+
+      for (int i = 0; i < len; i++) {
+         long sp = VarInt.getWithLength(mem, off);
+         int n = (int)sp + (int)(sp >>> 32);
+         data[i] = PacketIO.readVarString("VariantPatterns", mem, off, 16384000, PacketIO.UTF8);
+         off += n;
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static String[] getSubcommands(MemorySegment mem) {
+      return getSubcommands(mem, 0);
+   }
+
+   @Nullable
+   public static String[] getSubcommands(MemorySegment mem, int offset) {
+      if (!hasSubcommands(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 33, 49, "Subcommands");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Subcommands", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Subcommands", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Subcommands", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      String[] data = new String[len];
+
+      for (int i = 0; i < len; i++) {
+         long sp = VarInt.getWithLength(mem, off);
+         int n = (int)sp + (int)(sp >>> 32);
+         data[i] = PacketIO.readVarString("Subcommands", mem, off, 16384000, PacketIO.UTF8);
+         off += n;
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static String[] getSubcommandHints(MemorySegment mem) {
+      return getSubcommandHints(mem, 0);
+   }
+
+   @Nullable
+   public static String[] getSubcommandHints(MemorySegment mem, int offset) {
+      if (!hasSubcommandHints(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 37, 49, "SubcommandHints");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("SubcommandHints", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("SubcommandHints", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("SubcommandHints", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      String[] data = new String[len];
+
+      for (int i = 0; i < len; i++) {
+         long sp = VarInt.getWithLength(mem, off);
+         int n = (int)sp + (int)(sp >>> 32);
+         data[i] = PacketIO.readVarString("SubcommandHints", mem, off, 16384000, PacketIO.UTF8);
+         off += n;
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static String[] getOptionalArgs(MemorySegment mem) {
+      return getOptionalArgs(mem, 0);
+   }
+
+   @Nullable
+   public static String[] getOptionalArgs(MemorySegment mem, int offset) {
+      if (!hasOptionalArgs(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 41, 49, "OptionalArgs");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("OptionalArgs", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("OptionalArgs", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("OptionalArgs", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      String[] data = new String[len];
+
+      for (int i = 0; i < len; i++) {
+         long sp = VarInt.getWithLength(mem, off);
+         int n = (int)sp + (int)(sp >>> 32);
+         data[i] = PacketIO.readVarString("OptionalArgs", mem, off, 16384000, PacketIO.UTF8);
+         off += n;
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static String[] getOptionalArgHints(MemorySegment mem) {
+      return getOptionalArgHints(mem, 0);
+   }
+
+   @Nullable
+   public static String[] getOptionalArgHints(MemorySegment mem, int offset) {
+      if (!hasOptionalArgHints(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 45, 49, "OptionalArgHints");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("OptionalArgHints", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("OptionalArgHints", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("OptionalArgHints", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      String[] data = new String[len];
+
+      for (int i = 0; i < len; i++) {
+         long sp = VarInt.getWithLength(mem, off);
+         int n = (int)sp + (int)(sp >>> 32);
+         data[i] = PacketIO.readVarString("OptionalArgHints", mem, off, 16384000, PacketIO.UTF8);
+         off += n;
+      }
+
+      return data;
+   }
+
+   public static boolean hasSuggestions(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasContinuations(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasUsageText(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasVariantPatterns(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasSubcommands(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 16) != 0;
+   }
+
+   public static boolean hasSubcommandHints(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 32) != 0;
+   }
+
+   public static boolean hasOptionalArgs(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 64) != 0;
+   }
+
+   public static boolean hasOptionalArgHints(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 128) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static CommandSuggestionsResponse toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static CommandSuggestionsResponse toObject(MemorySegment mem, int offset) {
+      if (offset + 49 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("CommandSuggestionsResponse", offset + 49, (int)mem.byteSize());
+      }
+
+      String[] suggestions = null;
+      if (hasSuggestions(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 17, 49, "Suggestions");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Suggestions", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Suggestions", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Suggestions", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         suggestions = new String[len];
+
+         for (int i = 0; i < len; i++) {
+            long sp = VarInt.getWithLength(mem, off);
+            int n = (int)sp + (int)(sp >>> 32);
+            suggestions[i] = PacketIO.readVarString("Suggestions", mem, off, 16384000, PacketIO.UTF8);
+            off += n;
+         }
+      }
+
+      boolean[] continuations = null;
+      if (hasContinuations(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 21, 49, "Continuations");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Continuations", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Continuations", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 1L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Continuations", off + lenOffset + len * 1, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         continuations = new boolean[len];
+
+         for (int i = 0; i < len; i++) {
+            continuations[i] = mem.get(PacketIO.PROTO_BOOL, off + i);
+         }
+      }
+
+      String[] variantPatterns = null;
+      if (hasVariantPatterns(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 29, 49, "VariantPatterns");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("VariantPatterns", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("VariantPatterns", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("VariantPatterns", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         variantPatterns = new String[len];
+
+         for (int i = 0; i < len; i++) {
+            long sp = VarInt.getWithLength(mem, off);
+            int n = (int)sp + (int)(sp >>> 32);
+            variantPatterns[i] = PacketIO.readVarString("VariantPatterns", mem, off, 16384000, PacketIO.UTF8);
+            off += n;
+         }
+      }
+
+      String[] subcommands = null;
+      if (hasSubcommands(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 33, 49, "Subcommands");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Subcommands", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Subcommands", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Subcommands", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         subcommands = new String[len];
+
+         for (int i = 0; i < len; i++) {
+            long sp = VarInt.getWithLength(mem, off);
+            int n = (int)sp + (int)(sp >>> 32);
+            subcommands[i] = PacketIO.readVarString("Subcommands", mem, off, 16384000, PacketIO.UTF8);
+            off += n;
+         }
+      }
+
+      String[] subcommandHints = null;
+      if (hasSubcommandHints(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 37, 49, "SubcommandHints");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("SubcommandHints", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("SubcommandHints", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("SubcommandHints", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         subcommandHints = new String[len];
+
+         for (int i = 0; i < len; i++) {
+            long sp = VarInt.getWithLength(mem, off);
+            int n = (int)sp + (int)(sp >>> 32);
+            subcommandHints[i] = PacketIO.readVarString("SubcommandHints", mem, off, 16384000, PacketIO.UTF8);
+            off += n;
+         }
+      }
+
+      String[] optionalArgs = null;
+      if (hasOptionalArgs(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 41, 49, "OptionalArgs");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("OptionalArgs", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("OptionalArgs", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("OptionalArgs", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         optionalArgs = new String[len];
+
+         for (int i = 0; i < len; i++) {
+            long sp = VarInt.getWithLength(mem, off);
+            int n = (int)sp + (int)(sp >>> 32);
+            optionalArgs[i] = PacketIO.readVarString("OptionalArgs", mem, off, 16384000, PacketIO.UTF8);
+            off += n;
+         }
+      }
+
+      String[] optionalArgHints = null;
+      if (hasOptionalArgHints(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 45, 49, "OptionalArgHints");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("OptionalArgHints", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("OptionalArgHints", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("OptionalArgHints", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         optionalArgHints = new String[len];
+
+         for (int i = 0; i < len; i++) {
+            long sp = VarInt.getWithLength(mem, off);
+            int n = (int)sp + (int)(sp >>> 32);
+            optionalArgHints[i] = PacketIO.readVarString("OptionalArgHints", mem, off, 16384000, PacketIO.UTF8);
+            off += n;
+         }
+      }
+
+      return new CommandSuggestionsResponse(
+         mem.get(PacketIO.PROTO_INT, offset + 1),
+         mem.get(PacketIO.PROTO_INT, offset + 5),
+         suggestions,
+         continuations,
+         hasUsageText(mem, offset)
+            ? PacketIO.readVarString("UsageText", mem, offset + getValidatedOffset(mem, offset, 25, 49, "UsageText"), 4096000, PacketIO.UTF8)
+            : null,
+         mem.get(PacketIO.PROTO_INT, offset + 9),
+         mem.get(PacketIO.PROTO_INT, offset + 13),
+         variantPatterns,
+         subcommands,
+         subcommandHints,
+         optionalArgs,
+         optionalArgHints
+      );
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -752,6 +1354,182 @@ public class CommandSuggestionsResponse implements Packet, ToClientPacket {
       } else {
          buf.setIntLE(optionalArgHintsOffsetSlot, -1);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.suggestions != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.continuations != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.usageText != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.variantPatterns != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.subcommands != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.subcommandHints != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
+      if (this.optionalArgs != null) {
+         nullBits = (byte)(nullBits | 64);
+      }
+
+      if (this.optionalArgHints != null) {
+         nullBits = (byte)(nullBits | 128);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.startPosition);
+      mem.set(PacketIO.PROTO_INT, offset + 5, this.length);
+      mem.set(PacketIO.PROTO_INT, offset + 9, this.currentArgStart);
+      mem.set(PacketIO.PROTO_INT, offset + 13, this.currentArgLength);
+      int varOffset = offset + 49;
+      if (this.suggestions != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 17, varOffset - offset - 49);
+         if (this.suggestions.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Suggestions", this.suggestions.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.suggestions.length);
+         int suggestionsValueOffset = 0;
+
+         for (int i = 0; i < this.suggestions.length; i++) {
+            suggestionsValueOffset += PacketIO.writeVarString(mem, varOffset + suggestionsValueOffset, this.suggestions[i], 16384000);
+         }
+
+         varOffset += suggestionsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 17, -1);
+      }
+
+      if (this.continuations != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 21, varOffset - offset - 49);
+         if (this.continuations.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Continuations", this.continuations.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.continuations.length);
+
+         for (int i = 0; i < this.continuations.length; i++) {
+            mem.set(PacketIO.PROTO_BOOL, varOffset + i, this.continuations[i]);
+         }
+
+         varOffset += this.continuations.length;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 21, -1);
+      }
+
+      if (this.usageText != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 25, varOffset - offset - 49);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.usageText, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 25, -1);
+      }
+
+      if (this.variantPatterns != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 29, varOffset - offset - 49);
+         if (this.variantPatterns.length > 4096000) {
+            throw ProtocolException.arrayTooLong("VariantPatterns", this.variantPatterns.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.variantPatterns.length);
+         int variantPatternsValueOffset = 0;
+
+         for (int i = 0; i < this.variantPatterns.length; i++) {
+            variantPatternsValueOffset += PacketIO.writeVarString(mem, varOffset + variantPatternsValueOffset, this.variantPatterns[i], 16384000);
+         }
+
+         varOffset += variantPatternsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 29, -1);
+      }
+
+      if (this.subcommands != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 33, varOffset - offset - 49);
+         if (this.subcommands.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Subcommands", this.subcommands.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.subcommands.length);
+         int subcommandsValueOffset = 0;
+
+         for (int i = 0; i < this.subcommands.length; i++) {
+            subcommandsValueOffset += PacketIO.writeVarString(mem, varOffset + subcommandsValueOffset, this.subcommands[i], 16384000);
+         }
+
+         varOffset += subcommandsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 33, -1);
+      }
+
+      if (this.subcommandHints != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 37, varOffset - offset - 49);
+         if (this.subcommandHints.length > 4096000) {
+            throw ProtocolException.arrayTooLong("SubcommandHints", this.subcommandHints.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.subcommandHints.length);
+         int subcommandHintsValueOffset = 0;
+
+         for (int i = 0; i < this.subcommandHints.length; i++) {
+            subcommandHintsValueOffset += PacketIO.writeVarString(mem, varOffset + subcommandHintsValueOffset, this.subcommandHints[i], 16384000);
+         }
+
+         varOffset += subcommandHintsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 37, -1);
+      }
+
+      if (this.optionalArgs != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 41, varOffset - offset - 49);
+         if (this.optionalArgs.length > 4096000) {
+            throw ProtocolException.arrayTooLong("OptionalArgs", this.optionalArgs.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.optionalArgs.length);
+         int optionalArgsValueOffset = 0;
+
+         for (int i = 0; i < this.optionalArgs.length; i++) {
+            optionalArgsValueOffset += PacketIO.writeVarString(mem, varOffset + optionalArgsValueOffset, this.optionalArgs[i], 16384000);
+         }
+
+         varOffset += optionalArgsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 41, -1);
+      }
+
+      if (this.optionalArgHints != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 45, varOffset - offset - 49);
+         if (this.optionalArgHints.length > 4096000) {
+            throw ProtocolException.arrayTooLong("OptionalArgHints", this.optionalArgHints.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.optionalArgHints.length);
+         int optionalArgHintsValueOffset = 0;
+
+         for (int i = 0; i < this.optionalArgHints.length; i++) {
+            optionalArgHintsValueOffset += PacketIO.writeVarString(mem, varOffset + optionalArgHintsValueOffset, this.optionalArgHints[i], 16384000);
+         }
+
+         varOffset += optionalArgHintsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 45, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

@@ -1,9 +1,11 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -83,6 +85,100 @@ public class ItemTool {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 5L;
+   }
+
+   @Nullable
+   public static ItemToolSpec[] getSpecs(MemorySegment mem) {
+      return getSpecs(mem, 0);
+   }
+
+   @Nullable
+   public static ItemToolSpec[] getSpecs(MemorySegment mem, int offset) {
+      if (!hasSpecs(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + 5;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Specs", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Specs", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Specs", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      ItemToolSpec[] data = new ItemToolSpec[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = ItemToolSpec.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   public static float getSpeed(MemorySegment mem) {
+      return getSpeed(mem, 0);
+   }
+
+   public static float getSpeed(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 1);
+   }
+
+   public static boolean hasSpecs(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static ItemTool toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ItemTool toObject(MemorySegment mem, int offset) {
+      if (offset + 5 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ItemTool", offset + 5, (int)mem.byteSize());
+      }
+
+      ItemToolSpec[] specs = null;
+      if (hasSpecs(mem, offset)) {
+         int off = offset + 5;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Specs", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Specs", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Specs", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         specs = new ItemToolSpec[len];
+
+         for (int i = 0; i < len; i++) {
+            specs[i] = ItemToolSpec.toObject(mem, off);
+            off += specs[i].computeSize();
+         }
+      }
+
+      return new ItemTool(specs, mem.get(PacketIO.PROTO_FLOAT, offset + 1));
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
       if (this.specs != null) {
@@ -102,6 +198,33 @@ public class ItemTool {
             item.serialize(buf);
          }
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.specs != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 1, this.speed);
+      int varOffset = offset + 5;
+      if (this.specs != null) {
+         if (this.specs.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Specs", this.specs.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.specs.length);
+         int specsValueOffset = 0;
+
+         for (int i = 0; i < this.specs.length; i++) {
+            specsValueOffset += this.specs[i].serialize(mem, varOffset + specsValueOffset);
+         }
+
+         varOffset += specsValueOffset;
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

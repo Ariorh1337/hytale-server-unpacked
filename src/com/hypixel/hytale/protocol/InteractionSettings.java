@@ -1,8 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -40,8 +42,37 @@ public class InteractionSettings {
       return 1;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 1L;
+   }
+
+   public static boolean getAllowSkipOnClick(MemorySegment mem) {
+      return getAllowSkipOnClick(mem, 0);
+   }
+
+   public static boolean getAllowSkipOnClick(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 0);
+   }
+
+   public static InteractionSettings toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static InteractionSettings toObject(MemorySegment mem, int offset) {
+      if (offset + 1 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("InteractionSettings", offset + 1, (int)mem.byteSize());
+      } else {
+         return new InteractionSettings(mem.get(PacketIO.PROTO_BOOL, offset + 0));
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeByte(this.allowSkipOnClick ? 1 : 0);
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_BOOL, offset + 0, this.allowSkipOnClick);
+      return 1;
    }
 
    public int computeSize() {

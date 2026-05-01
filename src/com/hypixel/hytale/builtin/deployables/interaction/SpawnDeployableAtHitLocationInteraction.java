@@ -18,7 +18,6 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Sim
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 import org.joml.Vector3d;
-import org.joml.Vector3fc;
 
 public class SpawnDeployableAtHitLocationInteraction extends SimpleInstantInteraction {
    @Nonnull
@@ -41,20 +40,19 @@ public class SpawnDeployableAtHitLocationInteraction extends SimpleInstantIntera
       InteractionChain contextChain = context.getChain();
       assert contextChain != null;
       InteractionChainData chainData = contextChain.getChainData();
-      Vector3fc hitLocation = chainData.hitLocation;
-      if (hitLocation != null) {
+      if (chainData.hitLocation != null && chainData.hitNormal != null) {
+         Ref<EntityStore> owningEntityRef = context.getOwningEntity();
+         Ref<EntityStore> deployerRef = owningEntityRef != null ? owningEntityRef : context.getEntity();
          CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
          assert commandBuffer != null;
          Store<EntityStore> store = commandBuffer.getStore();
-         Vector3fc hitNormal = chainData.hitNormal;
-         Vector3d hitNormalVec = new Vector3d(hitNormal.x(), hitNormal.y(), hitNormal.z());
-         Ref<EntityStore> deployerRef = context.getOwningEntity() != null ? context.getOwningEntity() : context.getEntity();
+         Vector3d hitNormalVec = new Vector3d(chainData.hitNormal.x(), chainData.hitNormal.y(), chainData.hitNormal.z());
          DeployablesUtils.spawnDeployable(
             commandBuffer,
             store,
             this.config,
             deployerRef,
-            new Vector3d(hitLocation.x(), hitLocation.y(), hitLocation.z()),
+            new Vector3d(chainData.hitLocation.x(), chainData.hitLocation.y(), chainData.hitLocation.z()),
             MathUtil.getRotationForHitNormal(hitNormalVec),
             MathUtil.getNameForHitNormal(hitNormalVec)
          );

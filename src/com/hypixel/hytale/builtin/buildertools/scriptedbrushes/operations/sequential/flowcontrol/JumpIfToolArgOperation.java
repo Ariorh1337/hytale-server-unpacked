@@ -81,6 +81,7 @@ public class JumpIfToolArgOperation extends SequenceBrushOperation {
                         break;
                      case NotEquals:
                         shouldJump = boolValue != expectedValue;
+                     case Contains:
                   }
                } else if (argValue instanceof String stringValue) {
                   switch (this.comparisonTypeArg) {

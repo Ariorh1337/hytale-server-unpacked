@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -185,6 +186,170 @@ public class EntityStatUpdate {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 21L;
+   }
+
+   public static EntityStatOp getOp(MemorySegment mem) {
+      return getOp(mem, 0);
+   }
+
+   public static EntityStatOp getOp(MemorySegment mem, int offset) {
+      return EntityStatOp.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1));
+   }
+
+   public static boolean getPredictable(MemorySegment mem) {
+      return getPredictable(mem, 0);
+   }
+
+   public static boolean getPredictable(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 2);
+   }
+
+   public static float getValue(MemorySegment mem) {
+      return getValue(mem, 0);
+   }
+
+   public static float getValue(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 3);
+   }
+
+   @Nullable
+   public static Map<String, Modifier> getModifiers(MemorySegment mem) {
+      return getModifiers(mem, 0);
+   }
+
+   @Nullable
+   public static Map<String, Modifier> getModifiers(MemorySegment mem, int offset) {
+      if (!hasModifiers(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 13, 21, "Modifiers");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Modifiers", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("Modifiers", len, 4096000);
+      }
+
+      Map<String, Modifier> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         long keyPacked = VarInt.getWithLength(mem, off);
+         int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+         String key = PacketIO.readVarString("key", mem, off, 16384000, PacketIO.UTF8);
+         off += nkey;
+         Modifier value = Modifier.toObject(mem, off);
+         off += value.computeSize();
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("Modifiers", key);
+         }
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static String getModifierKey(MemorySegment mem) {
+      return getModifierKey(mem, 0);
+   }
+
+   @Nullable
+   public static String getModifierKey(MemorySegment mem, int offset) {
+      return hasModifierKey(mem, offset)
+         ? PacketIO.readVarString("ModifierKey", mem, offset + getValidatedOffset(mem, offset, 17, 21, "ModifierKey"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static Modifier getModifier(MemorySegment mem) {
+      return getModifier(mem, 0);
+   }
+
+   @Nullable
+   public static Modifier getModifier(MemorySegment mem, int offset) {
+      return hasModifier(mem, offset) ? Modifier.toObject(mem, offset + 7) : null;
+   }
+
+   public static boolean hasModifier(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasModifiers(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasModifierKey(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static EntityStatUpdate toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static EntityStatUpdate toObject(MemorySegment mem, int offset) {
+      if (offset + 21 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("EntityStatUpdate", offset + 21, (int)mem.byteSize());
+      }
+
+      Map<String, Modifier> modifiers = null;
+      if (hasModifiers(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 13, 21, "Modifiers");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Modifiers", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Modifiers", len, 4096000);
+         }
+
+         modifiers = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            long keyPacked = VarInt.getWithLength(mem, off);
+            int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+            String key = PacketIO.readVarString("key", mem, off, 16384000, PacketIO.UTF8);
+            off += nkey;
+            Modifier value = Modifier.toObject(mem, off);
+            off += value.computeSize();
+            if (modifiers.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("Modifiers", key);
+            }
+         }
+      }
+
+      return new EntityStatUpdate(
+         EntityStatOp.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1)),
+         mem.get(PacketIO.PROTO_BOOL, offset + 2),
+         mem.get(PacketIO.PROTO_FLOAT, offset + 3),
+         modifiers,
+         hasModifierKey(mem, offset)
+            ? PacketIO.readVarString("ModifierKey", mem, offset + getValidatedOffset(mem, offset, 17, 21, "ModifierKey"), 4096000, PacketIO.UTF8)
+            : null,
+         hasModifier(mem, offset) ? Modifier.toObject(mem, offset + 7) : null
+      );
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -237,6 +402,57 @@ public class EntityStatUpdate {
       } else {
          buf.setIntLE(modifierKeyOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.modifier != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.modifiers != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.modifierKey != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.op.getValue());
+      mem.set(PacketIO.PROTO_BOOL, offset + 2, this.predictable);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 3, this.value);
+      if (this.modifier != null) {
+         this.modifier.serialize(mem, offset + 7);
+      } else {
+         mem.asSlice(offset + 7, 6L).fill((byte)0);
+      }
+
+      int varOffset = offset + 21;
+      if (this.modifiers != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 13, varOffset - offset - 21);
+         if (this.modifiers.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Modifiers", this.modifiers.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.modifiers.size());
+
+         for (Entry<String, Modifier> e : this.modifiers.entrySet()) {
+            varOffset += PacketIO.writeVarString(mem, varOffset, e.getKey(), 16384000);
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 13, -1);
+      }
+
+      if (this.modifierKey != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 17, varOffset - offset - 21);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.modifierKey, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 17, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

@@ -4,9 +4,11 @@ import com.hypixel.hytale.protocol.InstantData;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -78,6 +80,75 @@ public class Ping implements Packet, ToClientPacket {
       return 29;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 29L;
+   }
+
+   public static int getId(MemorySegment mem) {
+      return getId(mem, 0);
+   }
+
+   public static int getId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   @Nullable
+   public static InstantData getTime(MemorySegment mem) {
+      return getTime(mem, 0);
+   }
+
+   @Nullable
+   public static InstantData getTime(MemorySegment mem, int offset) {
+      return hasTime(mem, offset) ? InstantData.toObject(mem, offset + 5) : null;
+   }
+
+   public static int getLastPingValueRaw(MemorySegment mem) {
+      return getLastPingValueRaw(mem, 0);
+   }
+
+   public static int getLastPingValueRaw(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 17);
+   }
+
+   public static int getLastPingValueDirect(MemorySegment mem) {
+      return getLastPingValueDirect(mem, 0);
+   }
+
+   public static int getLastPingValueDirect(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 21);
+   }
+
+   public static int getLastPingValueTick(MemorySegment mem) {
+      return getLastPingValueTick(mem, 0);
+   }
+
+   public static int getLastPingValueTick(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 25);
+   }
+
+   public static boolean hasTime(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static Ping toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static Ping toObject(MemorySegment mem, int offset) {
+      if (offset + 29 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Ping", offset + 29, (int)mem.byteSize());
+      } else {
+         return new Ping(
+            mem.get(PacketIO.PROTO_INT, offset + 1),
+            hasTime(mem, offset) ? InstantData.toObject(mem, offset + 5) : null,
+            mem.get(PacketIO.PROTO_INT, offset + 17),
+            mem.get(PacketIO.PROTO_INT, offset + 21),
+            mem.get(PacketIO.PROTO_INT, offset + 25)
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -96,6 +167,27 @@ public class Ping implements Packet, ToClientPacket {
       buf.writeIntLE(this.lastPingValueRaw);
       buf.writeIntLE(this.lastPingValueDirect);
       buf.writeIntLE(this.lastPingValueTick);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.time != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.id);
+      if (this.time != null) {
+         this.time.serialize(mem, offset + 5);
+      } else {
+         mem.asSlice(offset + 5, 12L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_INT, offset + 17, this.lastPingValueRaw);
+      mem.set(PacketIO.PROTO_INT, offset + 21, this.lastPingValueDirect);
+      mem.set(PacketIO.PROTO_INT, offset + 25, this.lastPingValueTick);
+      return 29;
    }
 
    @Override

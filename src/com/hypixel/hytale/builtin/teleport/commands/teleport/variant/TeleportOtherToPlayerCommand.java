@@ -71,6 +71,8 @@ public class TeleportOtherToPlayerCommand extends CommandBase {
                            Vector3d targetPosition = new Vector3d(targetTransformComponent.getPosition());
                            Rotation3f targetHeadRotation = new Rotation3f(targetHeadRotationComponent.getRotation());
                            Transform targetTransform = new Transform(targetPosition, targetHeadRotation);
+                           String targetUsername = targetPlayerRef.getUsername();
+                           String sourceUsername = playerToTpRef.getUsername();
                            sourceWorld.execute(
                               () -> {
                                  if (!sourceRef.isValid()) {
@@ -80,22 +82,13 @@ public class TeleportOtherToPlayerCommand extends CommandBase {
                                  } else {
                                     Teleport teleportComponent = Teleport.createForPlayer(targetWorld, targetTransform);
                                     sourceStore.addComponent(sourceRef, Teleport.getComponentType(), teleportComponent);
-                                    PlayerRef sourcePlayerRefComponent = sourceStore.getComponent(sourceRef, PlayerRef.getComponentType());
-                                    assert sourcePlayerRefComponent != null;
-                                    PlayerRef targetPlayerRefComponent = targetStore.getComponent(targetRef, PlayerRef.getComponentType());
-                                    assert targetPlayerRefComponent != null;
                                     context.sendMessage(
                                        Message.translation("server.commands.teleport.teleportedOtherToPlayer")
-                                          .param("targetName", sourcePlayerRefComponent.getUsername())
-                                          .param("toName", targetPlayerRefComponent.getUsername())
+                                          .param("targetName", sourceUsername)
+                                          .param("toName", targetUsername)
                                     );
                                     sourceStore.ensureAndGetComponent(sourceRef, TeleportHistory.getComponentType())
-                                       .append(
-                                          sourceWorld,
-                                          pos,
-                                          rotation,
-                                          "Teleport to " + targetPlayerRefComponent.getUsername() + " by " + context.sender().getUsername()
-                                       );
+                                       .append(sourceWorld, pos, rotation, "Teleport to " + targetUsername + " by " + context.sender().getUsername());
                                  }
                               }
                            );

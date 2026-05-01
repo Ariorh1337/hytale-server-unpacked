@@ -10,7 +10,7 @@ import org.joml.Vector3d;
 public class SphereShape extends TriggerVolumeShape {
    @Nonnull
    public static final BuilderCodec<SphereShape> CODEC = BuilderCodec.builder(SphereShape.class, SphereShape::new, BASE_CODEC)
-      .append(new KeyedCodec<>("Center", Vector3dUtil.AS_ARRAY_CODEC), (s, v) -> s.center = v, s -> s.center)
+      .append(new KeyedCodec<>("Center", Vector3dUtil.CODEC), (s, v) -> s.center = v, s -> s.center)
       .add()
       .append(new KeyedCodec<>("Radius", Codec.DOUBLE), (s, v) -> s.radius = v, s -> s.radius)
       .add()
@@ -51,6 +51,11 @@ public class SphereShape extends TriggerVolumeShape {
       double cz = origin.z() + this.center.z();
       outMin.set(cx - this.radius, cy - this.radius, cz - this.radius);
       outMax.set(cx + this.radius, cy + this.radius, cz + this.radius);
+   }
+
+   @Nonnull
+   public SphereShape copy() {
+      return new SphereShape(new Vector3d(this.center), this.radius);
    }
 
    @Nonnull

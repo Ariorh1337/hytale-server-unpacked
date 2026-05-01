@@ -12,6 +12,7 @@ public class EntityContactData {
    protected double collisionEnd;
    @Nullable
    protected Ref<EntityStore> entityReference;
+   @Nullable
    protected String collisionDetailName;
 
    @Nonnull
@@ -32,11 +33,12 @@ public class EntityContactData {
       return this.entityReference;
    }
 
+   @Nullable
    public String getCollisionDetailName() {
       return this.collisionDetailName;
    }
 
-   public void assign(@Nonnull Vector3d position, double start, double end, Ref<EntityStore> entity, String collisionDetailName) {
+   public void assign(@Nonnull Vector3d position, double start, double end, Ref<EntityStore> entity, @Nullable String collisionDetailName) {
       this.collisionPoint.set(position);
       this.collisionStart = start;
       this.collisionEnd = end;

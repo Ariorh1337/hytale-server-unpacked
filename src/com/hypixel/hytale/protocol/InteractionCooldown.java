@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -149,6 +150,150 @@ public class InteractionCooldown {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 16L;
+   }
+
+   @Nullable
+   public static String getCooldownId(MemorySegment mem) {
+      return getCooldownId(mem, 0);
+   }
+
+   @Nullable
+   public static String getCooldownId(MemorySegment mem, int offset) {
+      return hasCooldownId(mem, offset)
+         ? PacketIO.readVarString("CooldownId", mem, offset + getValidatedOffset(mem, offset, 8, 16, "CooldownId"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static float getCooldown(MemorySegment mem) {
+      return getCooldown(mem, 0);
+   }
+
+   public static float getCooldown(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 1);
+   }
+
+   public static boolean getClickBypass(MemorySegment mem) {
+      return getClickBypass(mem, 0);
+   }
+
+   public static boolean getClickBypass(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 5);
+   }
+
+   @Nullable
+   public static float[] getChargeTimes(MemorySegment mem) {
+      return getChargeTimes(mem, 0);
+   }
+
+   @Nullable
+   public static float[] getChargeTimes(MemorySegment mem, int offset) {
+      if (!hasChargeTimes(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 12, 16, "ChargeTimes");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("ChargeTimes", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("ChargeTimes", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 4L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ChargeTimes", off + lenOffset + len * 4, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      float[] data = new float[len];
+      MemorySegment.copy(mem, PacketIO.PROTO_FLOAT, off, data, 0, len);
+      return data;
+   }
+
+   public static boolean getSkipCooldownReset(MemorySegment mem) {
+      return getSkipCooldownReset(mem, 0);
+   }
+
+   public static boolean getSkipCooldownReset(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 6);
+   }
+
+   public static boolean getInterruptRecharge(MemorySegment mem) {
+      return getInterruptRecharge(mem, 0);
+   }
+
+   public static boolean getInterruptRecharge(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 7);
+   }
+
+   public static boolean hasCooldownId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasChargeTimes(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static InteractionCooldown toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static InteractionCooldown toObject(MemorySegment mem, int offset) {
+      if (offset + 16 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("InteractionCooldown", offset + 16, (int)mem.byteSize());
+      }
+
+      float[] chargeTimes = null;
+      if (hasChargeTimes(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 12, 16, "ChargeTimes");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("ChargeTimes", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("ChargeTimes", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 4L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("ChargeTimes", off + lenOffset + len * 4, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         chargeTimes = new float[len];
+         MemorySegment.copy(mem, PacketIO.PROTO_FLOAT, off, chargeTimes, 0, len);
+      }
+
+      return new InteractionCooldown(
+         hasCooldownId(mem, offset)
+            ? PacketIO.readVarString("CooldownId", mem, offset + getValidatedOffset(mem, offset, 8, 16, "CooldownId"), 4096000, PacketIO.UTF8)
+            : null,
+         mem.get(PacketIO.PROTO_FLOAT, offset + 1),
+         mem.get(PacketIO.PROTO_BOOL, offset + 5),
+         chargeTimes,
+         mem.get(PacketIO.PROTO_BOOL, offset + 6),
+         mem.get(PacketIO.PROTO_BOOL, offset + 7)
+      );
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -191,6 +336,45 @@ public class InteractionCooldown {
       } else {
          buf.setIntLE(chargeTimesOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.cooldownId != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.chargeTimes != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 1, this.cooldown);
+      mem.set(PacketIO.PROTO_BOOL, offset + 5, this.clickBypass);
+      mem.set(PacketIO.PROTO_BOOL, offset + 6, this.skipCooldownReset);
+      mem.set(PacketIO.PROTO_BOOL, offset + 7, this.interruptRecharge);
+      int varOffset = offset + 16;
+      if (this.cooldownId != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 8, varOffset - offset - 16);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.cooldownId, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 8, -1);
+      }
+
+      if (this.chargeTimes != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 12, varOffset - offset - 16);
+         if (this.chargeTimes.length > 4096000) {
+            throw ProtocolException.arrayTooLong("ChargeTimes", this.chargeTimes.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.chargeTimes.length);
+         MemorySegment.copy(this.chargeTimes, 0, mem, PacketIO.PROTO_FLOAT, varOffset, this.chargeTimes.length);
+         varOffset += this.chargeTimes.length * 4;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 12, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

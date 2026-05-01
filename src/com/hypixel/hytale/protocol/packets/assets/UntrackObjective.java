@@ -7,6 +7,7 @@ import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import java.util.UUID;
 import javax.annotation.Nonnull;
@@ -58,9 +59,39 @@ public class UntrackObjective implements Packet, ToClientPacket {
       return 16;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 16L;
+   }
+
+   public static UUID getObjectiveUuid(MemorySegment mem) {
+      return getObjectiveUuid(mem, 0);
+   }
+
+   public static UUID getObjectiveUuid(MemorySegment mem, int offset) {
+      return PacketIO.readUUID(mem, offset + 0);
+   }
+
+   public static UntrackObjective toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UntrackObjective toObject(MemorySegment mem, int offset) {
+      if (offset + 16 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("UntrackObjective", offset + 16, (int)mem.byteSize());
+      } else {
+         return new UntrackObjective(PacketIO.readUUID(mem, offset + 0));
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       PacketIO.writeUUID(buf, this.objectiveUuid);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      PacketIO.writeUUID(mem, offset + 0, this.objectiveUuid);
+      return 16;
    }
 
    @Override

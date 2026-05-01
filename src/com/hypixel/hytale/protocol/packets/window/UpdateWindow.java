@@ -10,6 +10,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -159,6 +160,93 @@ public class UpdateWindow implements Packet, ToClientPacket {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 17L;
+   }
+
+   public static int getId(MemorySegment mem) {
+      return getId(mem, 0);
+   }
+
+   public static int getId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   @Nullable
+   public static String getWindowData(MemorySegment mem) {
+      return getWindowData(mem, 0);
+   }
+
+   @Nullable
+   public static String getWindowData(MemorySegment mem, int offset) {
+      return hasWindowData(mem, offset)
+         ? PacketIO.readVarString("WindowData", mem, offset + getValidatedOffset(mem, offset, 5, 17, "WindowData"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static InventorySection getInventory(MemorySegment mem) {
+      return getInventory(mem, 0);
+   }
+
+   @Nullable
+   public static InventorySection getInventory(MemorySegment mem, int offset) {
+      return hasInventory(mem, offset) ? InventorySection.toObject(mem, offset + getValidatedOffset(mem, offset, 9, 17, "Inventory")) : null;
+   }
+
+   @Nullable
+   public static ExtraResources getExtraResources(MemorySegment mem) {
+      return getExtraResources(mem, 0);
+   }
+
+   @Nullable
+   public static ExtraResources getExtraResources(MemorySegment mem, int offset) {
+      return hasExtraResources(mem, offset) ? ExtraResources.toObject(mem, offset + getValidatedOffset(mem, offset, 13, 17, "ExtraResources")) : null;
+   }
+
+   public static boolean hasWindowData(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasInventory(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasExtraResources(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static UpdateWindow toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UpdateWindow toObject(MemorySegment mem, int offset) {
+      if (offset + 17 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("UpdateWindow", offset + 17, (int)mem.byteSize());
+      } else {
+         return new UpdateWindow(
+            mem.get(PacketIO.PROTO_INT, offset + 1),
+            hasWindowData(mem, offset)
+               ? PacketIO.readVarString("WindowData", mem, offset + getValidatedOffset(mem, offset, 5, 17, "WindowData"), 4096000, PacketIO.UTF8)
+               : null,
+            hasInventory(mem, offset) ? InventorySection.toObject(mem, offset + getValidatedOffset(mem, offset, 9, 17, "Inventory")) : null,
+            hasExtraResources(mem, offset) ? ExtraResources.toObject(mem, offset + getValidatedOffset(mem, offset, 13, 17, "ExtraResources")) : null
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -204,6 +292,48 @@ public class UpdateWindow implements Packet, ToClientPacket {
       } else {
          buf.setIntLE(extraResourcesOffsetSlot, -1);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.windowData != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.inventory != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.extraResources != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.id);
+      int varOffset = offset + 17;
+      if (this.windowData != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 5, varOffset - offset - 17);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.windowData, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 5, -1);
+      }
+
+      if (this.inventory != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 9, varOffset - offset - 17);
+         varOffset += this.inventory.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 9, -1);
+      }
+
+      if (this.extraResources != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 13, varOffset - offset - 17);
+         varOffset += this.extraResources.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 13, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

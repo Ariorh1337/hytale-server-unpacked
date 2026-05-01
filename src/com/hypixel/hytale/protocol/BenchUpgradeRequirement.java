@@ -1,9 +1,11 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -83,6 +85,100 @@ public class BenchUpgradeRequirement {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 9L;
+   }
+
+   @Nullable
+   public static MaterialQuantity[] getMaterial(MemorySegment mem) {
+      return getMaterial(mem, 0);
+   }
+
+   @Nullable
+   public static MaterialQuantity[] getMaterial(MemorySegment mem, int offset) {
+      if (!hasMaterial(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + 9;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Material", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Material", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Material", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      MaterialQuantity[] data = new MaterialQuantity[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = MaterialQuantity.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   public static double getTimeSeconds(MemorySegment mem) {
+      return getTimeSeconds(mem, 0);
+   }
+
+   public static double getTimeSeconds(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_DOUBLE, offset + 1);
+   }
+
+   public static boolean hasMaterial(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static BenchUpgradeRequirement toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static BenchUpgradeRequirement toObject(MemorySegment mem, int offset) {
+      if (offset + 9 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BenchUpgradeRequirement", offset + 9, (int)mem.byteSize());
+      }
+
+      MaterialQuantity[] material = null;
+      if (hasMaterial(mem, offset)) {
+         int off = offset + 9;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Material", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Material", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Material", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         material = new MaterialQuantity[len];
+
+         for (int i = 0; i < len; i++) {
+            material[i] = MaterialQuantity.toObject(mem, off);
+            off += material[i].computeSize();
+         }
+      }
+
+      return new BenchUpgradeRequirement(material, mem.get(PacketIO.PROTO_DOUBLE, offset + 1));
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
       if (this.material != null) {
@@ -102,6 +198,33 @@ public class BenchUpgradeRequirement {
             item.serialize(buf);
          }
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.material != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_DOUBLE, offset + 1, this.timeSeconds);
+      int varOffset = offset + 9;
+      if (this.material != null) {
+         if (this.material.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Material", this.material.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.material.length);
+         int materialValueOffset = 0;
+
+         for (int i = 0; i < this.material.length; i++) {
+            materialValueOffset += this.material[i].serialize(mem, varOffset + materialValueOffset);
+         }
+
+         varOffset += materialValueOffset;
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

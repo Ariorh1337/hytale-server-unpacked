@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -226,6 +227,217 @@ public class CustomPage implements Packet, ToClientPacket {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 16L;
+   }
+
+   @Nullable
+   public static String getKey(MemorySegment mem) {
+      return getKey(mem, 0);
+   }
+
+   @Nullable
+   public static String getKey(MemorySegment mem, int offset) {
+      return hasKey(mem, offset) ? PacketIO.readVarString("Key", mem, offset + getValidatedOffset(mem, offset, 4, 16, "Key"), 4096000, PacketIO.UTF8) : null;
+   }
+
+   public static boolean getIsInitial(MemorySegment mem) {
+      return getIsInitial(mem, 0);
+   }
+
+   public static boolean getIsInitial(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 1);
+   }
+
+   public static boolean getClear(MemorySegment mem) {
+      return getClear(mem, 0);
+   }
+
+   public static boolean getClear(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 2);
+   }
+
+   public static CustomPageLifetime getLifetime(MemorySegment mem) {
+      return getLifetime(mem, 0);
+   }
+
+   public static CustomPageLifetime getLifetime(MemorySegment mem, int offset) {
+      return CustomPageLifetime.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 3));
+   }
+
+   @Nullable
+   public static CustomUICommand[] getCommands(MemorySegment mem) {
+      return getCommands(mem, 0);
+   }
+
+   @Nullable
+   public static CustomUICommand[] getCommands(MemorySegment mem, int offset) {
+      if (!hasCommands(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 8, 16, "Commands");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Commands", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Commands", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Commands", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      CustomUICommand[] data = new CustomUICommand[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = CustomUICommand.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static CustomUIEventBinding[] getEventBindings(MemorySegment mem) {
+      return getEventBindings(mem, 0);
+   }
+
+   @Nullable
+   public static CustomUIEventBinding[] getEventBindings(MemorySegment mem, int offset) {
+      if (!hasEventBindings(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 12, 16, "EventBindings");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("EventBindings", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("EventBindings", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("EventBindings", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      CustomUIEventBinding[] data = new CustomUIEventBinding[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = CustomUIEventBinding.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   public static boolean hasKey(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasCommands(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasEventBindings(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static CustomPage toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static CustomPage toObject(MemorySegment mem, int offset) {
+      if (offset + 16 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("CustomPage", offset + 16, (int)mem.byteSize());
+      }
+
+      CustomUICommand[] commands = null;
+      if (hasCommands(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 8, 16, "Commands");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Commands", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Commands", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Commands", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         commands = new CustomUICommand[len];
+
+         for (int i = 0; i < len; i++) {
+            commands[i] = CustomUICommand.toObject(mem, off);
+            off += commands[i].computeSize();
+         }
+      }
+
+      CustomUIEventBinding[] eventBindings = null;
+      if (hasEventBindings(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 12, 16, "EventBindings");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("EventBindings", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("EventBindings", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("EventBindings", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         eventBindings = new CustomUIEventBinding[len];
+
+         for (int i = 0; i < len; i++) {
+            eventBindings[i] = CustomUIEventBinding.toObject(mem, off);
+            off += eventBindings[i].computeSize();
+         }
+      }
+
+      return new CustomPage(
+         hasKey(mem, offset) ? PacketIO.readVarString("Key", mem, offset + getValidatedOffset(mem, offset, 4, 16, "Key"), 4096000, PacketIO.UTF8) : null,
+         mem.get(PacketIO.PROTO_BOOL, offset + 1),
+         mem.get(PacketIO.PROTO_BOOL, offset + 2),
+         CustomPageLifetime.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 3)),
+         commands,
+         eventBindings
+      );
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -289,6 +501,72 @@ public class CustomPage implements Packet, ToClientPacket {
       } else {
          buf.setIntLE(eventBindingsOffsetSlot, -1);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.key != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.commands != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.eventBindings != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BOOL, offset + 1, this.isInitial);
+      mem.set(PacketIO.PROTO_BOOL, offset + 2, this.clear);
+      mem.set(PacketIO.PROTO_BYTE, offset + 3, (byte)this.lifetime.getValue());
+      int varOffset = offset + 16;
+      if (this.key != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 4, varOffset - offset - 16);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.key, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 4, -1);
+      }
+
+      if (this.commands != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 8, varOffset - offset - 16);
+         if (this.commands.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Commands", this.commands.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.commands.length);
+         int commandsValueOffset = 0;
+
+         for (int i = 0; i < this.commands.length; i++) {
+            commandsValueOffset += this.commands[i].serialize(mem, varOffset + commandsValueOffset);
+         }
+
+         varOffset += commandsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 8, -1);
+      }
+
+      if (this.eventBindings != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 12, varOffset - offset - 16);
+         if (this.eventBindings.length > 4096000) {
+            throw ProtocolException.arrayTooLong("EventBindings", this.eventBindings.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.eventBindings.length);
+         int eventBindingsValueOffset = 0;
+
+         for (int i = 0; i < this.eventBindings.length; i++) {
+            eventBindingsValueOffset += this.eventBindings[i].serialize(mem, varOffset + eventBindingsValueOffset);
+         }
+
+         varOffset += eventBindingsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 12, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

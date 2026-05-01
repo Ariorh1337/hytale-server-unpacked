@@ -69,7 +69,6 @@ public class VectorUtil {
       return nearestPoint.add(p0);
    }
 
-   @Nonnull
    public static void nearestPointOnLine3d(
       @Nonnull Vector3d point,
       @Nonnull Vector3d p0,

@@ -47,6 +47,8 @@ import javax.annotation.Nullable;
 
 public class CreativeHubPlugin extends JavaPlugin {
    @Nonnull
+   private static final String[] InstanceTemplatePathPrefixes = new String[]{"Defaults/", "Regions/", "Dungeons/", "Portals/", "Gyms/"};
+   @Nonnull
    private static final Message MESSAGE_HUB_RETURN_HINT = Message.translation("server.creativehub.portal.returnHint");
    private static CreativeHubPlugin instance;
    @Nonnull
@@ -71,7 +73,8 @@ public class CreativeHubPlugin extends JavaPlugin {
          }
 
          try {
-            World hub = InstancesPlugin.get().spawnInstance(hubConfig.getStartupInstance(), parentWorld, returnPoint).join();
+            String startupInstance = resolveHubStartupInstance(hubConfig.getStartupInstance());
+            World hub = InstancesPlugin.get().spawnInstance(startupInstance, parentWorld, returnPoint).join();
             hub.getWorldConfig().setDeleteOnRemove(true);
             return hub;
          } catch (Exception e) {
@@ -79,6 +82,35 @@ public class CreativeHubPlugin extends JavaPlugin {
             throw new RuntimeException("Failed to spawn hub instance", e);
          }
       });
+   }
+
+   @Nonnull
+   private static String resolveHubStartupInstance(@Nonnull String configured) {
+      if (InstancesPlugin.doesInstanceAssetExist(configured)) {
+         return configured;
+      } else {
+         return configured.indexOf(47) < 0 && InstancesPlugin.doesInstanceAssetExist("Defaults/" + configured) ? "Defaults/" + configured : configured;
+      }
+   }
+
+   @Nonnull
+   private static String resolveInstanceTemplateAssetName(@Nonnull String configured) {
+      if (InstancesPlugin.doesInstanceAssetExist(configured)) {
+         return configured;
+      }
+
+      if (configured.indexOf(47) >= 0) {
+         return configured;
+      }
+
+      for (String prefix : InstanceTemplatePathPrefixes) {
+         String candidate = prefix + configured;
+         if (InstancesPlugin.doesInstanceAssetExist(candidate)) {
+            return candidate;
+         }
+      }
+
+      return configured;
    }
 
    @Nullable
@@ -105,7 +137,8 @@ public class CreativeHubPlugin extends JavaPlugin {
          return universe.loadWorld(permanentWorldName);
       }
 
-      Path assetPath = InstancesPlugin.getInstanceAssetPath(instanceAssetName);
+      String resolvedTemplate = resolveInstanceTemplateAssetName(instanceAssetName);
+      Path assetPath = InstancesPlugin.getInstanceAssetPath(resolvedTemplate);
       Path worldPath = universe.validateWorldPath(permanentWorldName);
       return WorldConfig.load(assetPath.resolve("instance.bson"))
          .thenApplyAsync(
@@ -124,7 +157,7 @@ public class CreativeHubPlugin extends JavaPlugin {
 
                   config.markChanged();
                   long start = System.nanoTime();
-                  this.getLogger().at(Level.INFO).log("Copying instance template %s to permanent world %s", instanceAssetName, permanentWorldName);
+                  this.getLogger().at(Level.INFO).log("Copying instance template %s to permanent world %s", resolvedTemplate, permanentWorldName);
 
                   try (Stream<Path> files = Files.walk(assetPath, FileUtil.DEFAULT_WALK_TREE_OPTIONS_ARRAY)) {
                      files.forEach(SneakyThrow.sneakyConsumer(filePath -> {
@@ -144,7 +177,7 @@ public class CreativeHubPlugin extends JavaPlugin {
                      .at(Level.INFO)
                      .log(
                         "Completed copying instance template %s to permanent world %s in %s",
-                        instanceAssetName,
+                        resolvedTemplate,
                         permanentWorldName,
                         FormatUtil.nanosToString(System.nanoTime() - start)
                      );

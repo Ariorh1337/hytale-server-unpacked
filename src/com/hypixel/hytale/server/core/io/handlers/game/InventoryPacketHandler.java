@@ -283,7 +283,8 @@ public class InventoryPacketHandler implements SubPacketHandler {
                            }
                            break;
                         case PutInHotbarOrWindow:
-                           playerComponent.giveItem(itemStack, ref, store);
+                           Player.giveItem(itemStack, ref, store);
+                        case PutInHotbarOrBackpack:
                      }
                   }
                }

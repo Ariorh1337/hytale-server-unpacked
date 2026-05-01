@@ -11,6 +11,7 @@ import com.hypixel.hytale.protocol.packets.interface_.BlockChange;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import java.util.LinkedList;
@@ -41,6 +42,8 @@ public class PrototypePlayerBuilderToolSettings {
    private PrototypePlayerBuilderToolSettings.FluidChange[] fluidChangesForPlaySelectionToolPasteMode = null;
    @Nullable
    private PrototypePlayerBuilderToolSettings.EntityChange[] entityChangesForPlaySelectionToolPasteMode = null;
+   @Nullable
+   private Holder<ChunkStore>[] blockHoldersForPasteMode = null;
    @Nullable
    private String prototypeItemId;
    @Nullable
@@ -79,6 +82,7 @@ public class PrototypePlayerBuilderToolSettings {
          this.blockChangesForPlaySelectionToolPasteMode = null;
          this.fluidChangesForPlaySelectionToolPasteMode = null;
          this.entityChangesForPlaySelectionToolPasteMode = null;
+         this.blockHoldersForPasteMode = null;
          this.blockChangeOffsetOrigin = null;
       }
    }
@@ -124,6 +128,15 @@ public class PrototypePlayerBuilderToolSettings {
    @Nullable
    public PrototypePlayerBuilderToolSettings.EntityChange[] getEntityChangesForPlaySelectionToolPasteMode() {
       return this.entityChangesForPlaySelectionToolPasteMode;
+   }
+
+   public void setBlockHoldersForPasteMode(@Nullable Holder<ChunkStore>[] holders) {
+      this.blockHoldersForPasteMode = holders;
+   }
+
+   @Nullable
+   public Holder<ChunkStore>[] getBlockHoldersForPasteMode() {
+      return this.blockHoldersForPasteMode;
    }
 
    public void setBlockChangeOffsetOrigin(@Nullable Vector3i blockChangeOffsetOrigin) {
@@ -206,10 +219,6 @@ public class PrototypePlayerBuilderToolSettings {
 
    public void setBrushConfig(BrushConfig brushConfig) {
       this.brushConfig = brushConfig;
-   }
-
-   public boolean isShouldShowEditorSettings() {
-      return this.shouldShowEditorSettings;
    }
 
    public void setShouldShowEditorSettings(boolean shouldShowEditorSettings) {

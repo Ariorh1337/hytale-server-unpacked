@@ -1,9 +1,11 @@
 package com.hypixel.hytale.protocol.packets.worldmap;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -145,6 +147,179 @@ public class MapImage {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 18L;
+   }
+
+   public static int getWidth(MemorySegment mem) {
+      return getWidth(mem, 0);
+   }
+
+   public static int getWidth(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   public static int getHeight(MemorySegment mem) {
+      return getHeight(mem, 0);
+   }
+
+   public static int getHeight(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 5);
+   }
+
+   @Nullable
+   public static int[] getPalette(MemorySegment mem) {
+      return getPalette(mem, 0);
+   }
+
+   @Nullable
+   public static int[] getPalette(MemorySegment mem, int offset) {
+      if (!hasPalette(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 10, 18, "Palette");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Palette", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Palette", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 4L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Palette", off + lenOffset + len * 4, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      int[] data = new int[len];
+      MemorySegment.copy(mem, PacketIO.PROTO_INT, off, data, 0, len);
+      return data;
+   }
+
+   public static byte getBitsPerIndex(MemorySegment mem) {
+      return getBitsPerIndex(mem, 0);
+   }
+
+   public static byte getBitsPerIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BYTE, offset + 9);
+   }
+
+   @Nullable
+   public static byte[] getPackedIndices(MemorySegment mem) {
+      return getPackedIndices(mem, 0);
+   }
+
+   @Nullable
+   public static byte[] getPackedIndices(MemorySegment mem, int offset) {
+      if (!hasPackedIndices(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 14, 18, "PackedIndices");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("PackedIndices", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("PackedIndices", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 1L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("PackedIndices", off + lenOffset + len * 1, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      byte[] data = new byte[len];
+      MemorySegment.copy(mem, PacketIO.PROTO_BYTE, off, data, 0, len);
+      return data;
+   }
+
+   public static boolean hasPalette(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasPackedIndices(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static MapImage toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static MapImage toObject(MemorySegment mem, int offset) {
+      if (offset + 18 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("MapImage", offset + 18, (int)mem.byteSize());
+      }
+
+      int[] palette = null;
+      if (hasPalette(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 10, 18, "Palette");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Palette", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Palette", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 4L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Palette", off + lenOffset + len * 4, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         palette = new int[len];
+         MemorySegment.copy(mem, PacketIO.PROTO_INT, off, palette, 0, len);
+      }
+
+      byte[] packedIndices = null;
+      if (hasPackedIndices(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 14, 18, "PackedIndices");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("PackedIndices", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("PackedIndices", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 1L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("PackedIndices", off + lenOffset + len * 1, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         packedIndices = new byte[len];
+         MemorySegment.copy(mem, PacketIO.PROTO_BYTE, off, packedIndices, 0, len);
+      }
+
+      return new MapImage(
+         mem.get(PacketIO.PROTO_INT, offset + 1), mem.get(PacketIO.PROTO_INT, offset + 5), palette, mem.get(PacketIO.PROTO_BYTE, offset + 9), packedIndices
+      );
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -194,6 +369,50 @@ public class MapImage {
       } else {
          buf.setIntLE(packedIndicesOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.palette != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.packedIndices != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.width);
+      mem.set(PacketIO.PROTO_INT, offset + 5, this.height);
+      mem.set(PacketIO.PROTO_BYTE, offset + 9, this.bitsPerIndex);
+      int varOffset = offset + 18;
+      if (this.palette != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 10, varOffset - offset - 18);
+         if (this.palette.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Palette", this.palette.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.palette.length);
+         MemorySegment.copy(this.palette, 0, mem, PacketIO.PROTO_INT, varOffset, this.palette.length);
+         varOffset += this.palette.length * 4;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 10, -1);
+      }
+
+      if (this.packedIndices != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 14, varOffset - offset - 18);
+         if (this.packedIndices.length > 4096000) {
+            throw ProtocolException.arrayTooLong("PackedIndices", this.packedIndices.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.packedIndices.length);
+         MemorySegment.copy(this.packedIndices, 0, mem, PacketIO.PROTO_BYTE, varOffset, this.packedIndices.length);
+         varOffset += this.packedIndices.length * 1;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 14, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

@@ -1,9 +1,11 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -179,6 +181,220 @@ public class ItemUtility {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 11L;
+   }
+
+   public static boolean getUsable(MemorySegment mem) {
+      return getUsable(mem, 0);
+   }
+
+   public static boolean getUsable(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 1);
+   }
+
+   public static boolean getCompatible(MemorySegment mem) {
+      return getCompatible(mem, 0);
+   }
+
+   public static boolean getCompatible(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 2);
+   }
+
+   @Nullable
+   public static int[] getEntityStatsToClear(MemorySegment mem) {
+      return getEntityStatsToClear(mem, 0);
+   }
+
+   @Nullable
+   public static int[] getEntityStatsToClear(MemorySegment mem, int offset) {
+      if (!hasEntityStatsToClear(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 3, 11, "EntityStatsToClear");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("EntityStatsToClear", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("EntityStatsToClear", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 4L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("EntityStatsToClear", off + lenOffset + len * 4, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      int[] data = new int[len];
+      MemorySegment.copy(mem, PacketIO.PROTO_INT, off, data, 0, len);
+      return data;
+   }
+
+   @Nullable
+   public static Map<Integer, Modifier[]> getStatModifiers(MemorySegment mem) {
+      return getStatModifiers(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Integer, Modifier[]> getStatModifiers(MemorySegment mem, int offset) {
+      if (!hasStatModifiers(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 7, 11, "StatModifiers");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("StatModifiers", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("StatModifiers", len, 4096000);
+      }
+
+      Map<Integer, Modifier[]> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         int key = mem.get(PacketIO.PROTO_INT, off);
+         off += 4;
+         long valuePacked = VarInt.getWithLength(mem, off);
+         int valueLen = (int)valuePacked;
+         int valueVarLen = (int)(valuePacked >>> 32);
+         if (valueLen < 0) {
+            throw ProtocolException.negativeLength("value", valueLen);
+         }
+
+         if (valueLen > 64) {
+            throw ProtocolException.arrayTooLong("value", valueLen, 64);
+         }
+
+         if (off + valueVarLen + valueLen * 6L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("value", off + valueVarLen + valueLen * 6, (int)mem.byteSize());
+         }
+
+         off += valueVarLen;
+         Modifier[] value = new Modifier[valueLen];
+
+         for (int valueIdx = 0; valueIdx < valueLen; valueIdx++) {
+            value[valueIdx] = Modifier.toObject(mem, off);
+            off += value[valueIdx].computeSize();
+         }
+
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("StatModifiers", key);
+         }
+      }
+
+      return data;
+   }
+
+   public static boolean hasEntityStatsToClear(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasStatModifiers(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static ItemUtility toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ItemUtility toObject(MemorySegment mem, int offset) {
+      if (offset + 11 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ItemUtility", offset + 11, (int)mem.byteSize());
+      }
+
+      int[] entityStatsToClear = null;
+      if (hasEntityStatsToClear(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 3, 11, "EntityStatsToClear");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("EntityStatsToClear", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("EntityStatsToClear", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 4L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("EntityStatsToClear", off + lenOffset + len * 4, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         entityStatsToClear = new int[len];
+         MemorySegment.copy(mem, PacketIO.PROTO_INT, off, entityStatsToClear, 0, len);
+      }
+
+      Map<Integer, Modifier[]> statModifiers = null;
+      if (hasStatModifiers(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 7, 11, "StatModifiers");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("StatModifiers", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("StatModifiers", len, 4096000);
+         }
+
+         statModifiers = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            int key = mem.get(PacketIO.PROTO_INT, off);
+            off += 4;
+            long valuePacked = VarInt.getWithLength(mem, off);
+            int valueLen = (int)valuePacked;
+            int valueVarLen = (int)(valuePacked >>> 32);
+            if (valueLen < 0) {
+               throw ProtocolException.negativeLength("value", valueLen);
+            }
+
+            if (valueLen > 64) {
+               throw ProtocolException.arrayTooLong("value", valueLen, 64);
+            }
+
+            if (off + valueVarLen + valueLen * 6L > mem.byteSize()) {
+               throw ProtocolException.bufferTooSmall("value", off + valueVarLen + valueLen * 6, (int)mem.byteSize());
+            }
+
+            off += valueVarLen;
+            Modifier[] value = new Modifier[valueLen];
+
+            for (int valueIdx = 0; valueIdx < valueLen; valueIdx++) {
+               value[valueIdx] = Modifier.toObject(mem, off);
+               off += value[valueIdx].computeSize();
+            }
+
+            if (statModifiers.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("StatModifiers", key);
+            }
+         }
+      }
+
+      return new ItemUtility(mem.get(PacketIO.PROTO_BOOL, offset + 1), mem.get(PacketIO.PROTO_BOOL, offset + 2), entityStatsToClear, statModifiers);
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -232,6 +448,57 @@ public class ItemUtility {
       } else {
          buf.setIntLE(statModifiersOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.entityStatsToClear != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.statModifiers != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BOOL, offset + 1, this.usable);
+      mem.set(PacketIO.PROTO_BOOL, offset + 2, this.compatible);
+      int varOffset = offset + 11;
+      if (this.entityStatsToClear != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 3, varOffset - offset - 11);
+         if (this.entityStatsToClear.length > 4096000) {
+            throw ProtocolException.arrayTooLong("EntityStatsToClear", this.entityStatsToClear.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.entityStatsToClear.length);
+         MemorySegment.copy(this.entityStatsToClear, 0, mem, PacketIO.PROTO_INT, varOffset, this.entityStatsToClear.length);
+         varOffset += this.entityStatsToClear.length * 4;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 3, -1);
+      }
+
+      if (this.statModifiers != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 7, varOffset - offset - 11);
+         if (this.statModifiers.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("StatModifiers", this.statModifiers.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.statModifiers.size());
+
+         for (Entry<Integer, Modifier[]> e : this.statModifiers.entrySet()) {
+            mem.set(PacketIO.PROTO_INT, varOffset, e.getKey());
+            varOffset += 4;
+            varOffset += VarInt.set(mem, varOffset, e.getValue().length);
+
+            for (Modifier arrItem : e.getValue()) {
+               varOffset += arrItem.serialize(mem, varOffset);
+            }
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 7, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

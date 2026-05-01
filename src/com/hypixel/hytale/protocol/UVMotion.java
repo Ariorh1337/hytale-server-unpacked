@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -104,6 +105,93 @@ public class UVMotion {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 19L;
+   }
+
+   @Nullable
+   public static String getTexture(MemorySegment mem) {
+      return getTexture(mem, 0);
+   }
+
+   @Nullable
+   public static String getTexture(MemorySegment mem, int offset) {
+      return hasTexture(mem, offset) ? PacketIO.readVarString("Texture", mem, offset + 19, 4096000, PacketIO.UTF8) : null;
+   }
+
+   public static boolean getAddRandomUVOffset(MemorySegment mem) {
+      return getAddRandomUVOffset(mem, 0);
+   }
+
+   public static boolean getAddRandomUVOffset(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 1);
+   }
+
+   public static float getSpeedX(MemorySegment mem) {
+      return getSpeedX(mem, 0);
+   }
+
+   public static float getSpeedX(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 2);
+   }
+
+   public static float getSpeedY(MemorySegment mem) {
+      return getSpeedY(mem, 0);
+   }
+
+   public static float getSpeedY(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 6);
+   }
+
+   public static float getScale(MemorySegment mem) {
+      return getScale(mem, 0);
+   }
+
+   public static float getScale(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 10);
+   }
+
+   public static float getStrength(MemorySegment mem) {
+      return getStrength(mem, 0);
+   }
+
+   public static float getStrength(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 14);
+   }
+
+   public static UVMotionCurveType getStrengthCurveType(MemorySegment mem) {
+      return getStrengthCurveType(mem, 0);
+   }
+
+   public static UVMotionCurveType getStrengthCurveType(MemorySegment mem, int offset) {
+      return UVMotionCurveType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 18));
+   }
+
+   public static boolean hasTexture(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static UVMotion toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UVMotion toObject(MemorySegment mem, int offset) {
+      if (offset + 19 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("UVMotion", offset + 19, (int)mem.byteSize());
+      } else {
+         return new UVMotion(
+            hasTexture(mem, offset) ? PacketIO.readVarString("Texture", mem, offset + 19, 4096000, PacketIO.UTF8) : null,
+            mem.get(PacketIO.PROTO_BOOL, offset + 1),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 2),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 6),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 10),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 14),
+            UVMotionCurveType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 18))
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
       if (this.texture != null) {
@@ -120,6 +208,27 @@ public class UVMotion {
       if (this.texture != null) {
          PacketIO.writeVarString(buf, this.texture, 4096000);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.texture != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BOOL, offset + 1, this.addRandomUVOffset);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 2, this.speedX);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 6, this.speedY);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 10, this.scale);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 14, this.strength);
+      mem.set(PacketIO.PROTO_BYTE, offset + 18, (byte)this.strengthCurveType.getValue());
+      int varOffset = offset + 19;
+      if (this.texture != null) {
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.texture, 4096000);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

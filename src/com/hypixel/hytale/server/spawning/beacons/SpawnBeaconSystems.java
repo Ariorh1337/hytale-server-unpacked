@@ -748,12 +748,10 @@ public class SpawnBeaconSystems {
 
          Ref<EntityStore> playerRef = spawnJob.getPlayer();
          assert playerRef != null;
-         Player playerComponent = store.getComponent(spawnJob.getPlayer(), this.playerComponentType);
-         assert playerComponent != null;
          Ref<EntityStore> ownerRef = spawnController.getOwnerRef();
          LegacySpawnBeaconEntity legacySpawnBeaconComponent = store.getComponent(ownerRef, LegacySpawnBeaconEntity.getComponentType());
          assert legacySpawnBeaconComponent != null;
-         legacySpawnBeaconComponent.notifySpawn(playerComponent, npcReference, store);
+         legacySpawnBeaconComponent.notifySpawn(playerRef, npcReference, store);
       }
 
       private static void postSpawn(

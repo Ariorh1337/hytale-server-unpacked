@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -206,6 +207,190 @@ public class AssetEditorAssetListUpdate implements Packet, ToClientPacket {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 13L;
+   }
+
+   @Nullable
+   public static String getPack(MemorySegment mem) {
+      return getPack(mem, 0);
+   }
+
+   @Nullable
+   public static String getPack(MemorySegment mem, int offset) {
+      return hasPack(mem, offset) ? PacketIO.readVarString("Pack", mem, offset + getValidatedOffset(mem, offset, 1, 13, "Pack"), 4096000, PacketIO.UTF8) : null;
+   }
+
+   @Nullable
+   public static AssetEditorFileEntry[] getAdditions(MemorySegment mem) {
+      return getAdditions(mem, 0);
+   }
+
+   @Nullable
+   public static AssetEditorFileEntry[] getAdditions(MemorySegment mem, int offset) {
+      if (!hasAdditions(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 5, 13, "Additions");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Additions", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Additions", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Additions", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      AssetEditorFileEntry[] data = new AssetEditorFileEntry[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = AssetEditorFileEntry.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static AssetEditorFileEntry[] getDeletions(MemorySegment mem) {
+      return getDeletions(mem, 0);
+   }
+
+   @Nullable
+   public static AssetEditorFileEntry[] getDeletions(MemorySegment mem, int offset) {
+      if (!hasDeletions(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 9, 13, "Deletions");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Deletions", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Deletions", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Deletions", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      AssetEditorFileEntry[] data = new AssetEditorFileEntry[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = AssetEditorFileEntry.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   public static boolean hasPack(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasAdditions(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasDeletions(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static AssetEditorAssetListUpdate toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AssetEditorAssetListUpdate toObject(MemorySegment mem, int offset) {
+      if (offset + 13 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AssetEditorAssetListUpdate", offset + 13, (int)mem.byteSize());
+      }
+
+      AssetEditorFileEntry[] additions = null;
+      if (hasAdditions(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 5, 13, "Additions");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Additions", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Additions", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Additions", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         additions = new AssetEditorFileEntry[len];
+
+         for (int i = 0; i < len; i++) {
+            additions[i] = AssetEditorFileEntry.toObject(mem, off);
+            off += additions[i].computeSize();
+         }
+      }
+
+      AssetEditorFileEntry[] deletions = null;
+      if (hasDeletions(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 9, 13, "Deletions");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Deletions", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Deletions", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Deletions", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         deletions = new AssetEditorFileEntry[len];
+
+         for (int i = 0; i < len; i++) {
+            deletions[i] = AssetEditorFileEntry.toObject(mem, off);
+            off += deletions[i].computeSize();
+         }
+      }
+
+      return new AssetEditorAssetListUpdate(
+         hasPack(mem, offset) ? PacketIO.readVarString("Pack", mem, offset + getValidatedOffset(mem, offset, 1, 13, "Pack"), 4096000, PacketIO.UTF8) : null,
+         additions,
+         deletions
+      );
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -266,6 +451,69 @@ public class AssetEditorAssetListUpdate implements Packet, ToClientPacket {
       } else {
          buf.setIntLE(deletionsOffsetSlot, -1);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.pack != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.additions != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.deletions != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 13;
+      if (this.pack != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 1, varOffset - offset - 13);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.pack, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 1, -1);
+      }
+
+      if (this.additions != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 5, varOffset - offset - 13);
+         if (this.additions.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Additions", this.additions.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.additions.length);
+         int additionsValueOffset = 0;
+
+         for (int i = 0; i < this.additions.length; i++) {
+            additionsValueOffset += this.additions[i].serialize(mem, varOffset + additionsValueOffset);
+         }
+
+         varOffset += additionsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 5, -1);
+      }
+
+      if (this.deletions != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 9, varOffset - offset - 13);
+         if (this.deletions.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Deletions", this.deletions.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.deletions.length);
+         int deletionsValueOffset = 0;
+
+         for (int i = 0; i < this.deletions.length; i++) {
+            deletionsValueOffset += this.deletions[i].serialize(mem, varOffset + deletionsValueOffset);
+         }
+
+         varOffset += deletionsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 9, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

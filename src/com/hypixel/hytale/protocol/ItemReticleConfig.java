@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -269,6 +270,263 @@ public class ItemReticleConfig {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 17L;
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem) {
+      return getId(mem, 0);
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem, int offset) {
+      return hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 1, 17, "Id"), 4096000, PacketIO.UTF8) : null;
+   }
+
+   @Nullable
+   public static String[] getBase(MemorySegment mem) {
+      return getBase(mem, 0);
+   }
+
+   @Nullable
+   public static String[] getBase(MemorySegment mem, int offset) {
+      if (!hasBase(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 5, 17, "Base");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Base", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Base", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Base", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      String[] data = new String[len];
+
+      for (int i = 0; i < len; i++) {
+         long sp = VarInt.getWithLength(mem, off);
+         int n = (int)sp + (int)(sp >>> 32);
+         data[i] = PacketIO.readVarString("Base", mem, off, 16384000, PacketIO.UTF8);
+         off += n;
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static Map<Integer, ItemReticle> getServerEvents(MemorySegment mem) {
+      return getServerEvents(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Integer, ItemReticle> getServerEvents(MemorySegment mem, int offset) {
+      if (!hasServerEvents(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 9, 17, "ServerEvents");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("ServerEvents", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("ServerEvents", len, 4096000);
+      }
+
+      Map<Integer, ItemReticle> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         int key = mem.get(PacketIO.PROTO_INT, off);
+         off += 4;
+         ItemReticle value = ItemReticle.toObject(mem, off);
+         off += value.computeSize();
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("ServerEvents", key);
+         }
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static Map<ItemReticleClientEvent, ItemReticle> getClientEvents(MemorySegment mem) {
+      return getClientEvents(mem, 0);
+   }
+
+   @Nullable
+   public static Map<ItemReticleClientEvent, ItemReticle> getClientEvents(MemorySegment mem, int offset) {
+      if (!hasClientEvents(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 13, 17, "ClientEvents");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("ClientEvents", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("ClientEvents", len, 4096000);
+      }
+
+      Map<ItemReticleClientEvent, ItemReticle> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         ItemReticleClientEvent key = ItemReticleClientEvent.fromValue(mem.get(PacketIO.PROTO_BYTE, off));
+         ItemReticle value = ItemReticle.toObject(mem, ++off);
+         off += value.computeSize();
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("ClientEvents", key);
+         }
+      }
+
+      return data;
+   }
+
+   public static boolean hasId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasBase(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasServerEvents(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasClientEvents(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static ItemReticleConfig toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ItemReticleConfig toObject(MemorySegment mem, int offset) {
+      if (offset + 17 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ItemReticleConfig", offset + 17, (int)mem.byteSize());
+      }
+
+      String[] base = null;
+      if (hasBase(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 5, 17, "Base");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Base", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Base", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Base", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         base = new String[len];
+
+         for (int i = 0; i < len; i++) {
+            long sp = VarInt.getWithLength(mem, off);
+            int n = (int)sp + (int)(sp >>> 32);
+            base[i] = PacketIO.readVarString("Base", mem, off, 16384000, PacketIO.UTF8);
+            off += n;
+         }
+      }
+
+      Map<Integer, ItemReticle> serverEvents = null;
+      if (hasServerEvents(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 9, 17, "ServerEvents");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("ServerEvents", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("ServerEvents", len, 4096000);
+         }
+
+         serverEvents = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            int key = mem.get(PacketIO.PROTO_INT, off);
+            off += 4;
+            ItemReticle value = ItemReticle.toObject(mem, off);
+            off += value.computeSize();
+            if (serverEvents.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("ServerEvents", key);
+            }
+         }
+      }
+
+      Map<ItemReticleClientEvent, ItemReticle> clientEvents = null;
+      if (hasClientEvents(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 13, 17, "ClientEvents");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("ClientEvents", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("ClientEvents", len, 4096000);
+         }
+
+         clientEvents = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            ItemReticleClientEvent key = ItemReticleClientEvent.fromValue(mem.get(PacketIO.PROTO_BYTE, off));
+            ItemReticle value = ItemReticle.toObject(mem, ++off);
+            off += value.computeSize();
+            if (clientEvents.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("ClientEvents", key);
+            }
+         }
+      }
+
+      return new ItemReticleConfig(
+         hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 1, 17, "Id"), 4096000, PacketIO.UTF8) : null,
+         base,
+         serverEvents,
+         clientEvents
+      );
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -351,6 +609,87 @@ public class ItemReticleConfig {
       } else {
          buf.setIntLE(clientEventsOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.id != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.base != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.serverEvents != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.clientEvents != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 17;
+      if (this.id != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 1, varOffset - offset - 17);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.id, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 1, -1);
+      }
+
+      if (this.base != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 5, varOffset - offset - 17);
+         if (this.base.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Base", this.base.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.base.length);
+         int baseValueOffset = 0;
+
+         for (int i = 0; i < this.base.length; i++) {
+            baseValueOffset += PacketIO.writeVarString(mem, varOffset + baseValueOffset, this.base[i], 16384000);
+         }
+
+         varOffset += baseValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 5, -1);
+      }
+
+      if (this.serverEvents != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 9, varOffset - offset - 17);
+         if (this.serverEvents.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("ServerEvents", this.serverEvents.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.serverEvents.size());
+
+         for (Entry<Integer, ItemReticle> e : this.serverEvents.entrySet()) {
+            mem.set(PacketIO.PROTO_INT, varOffset, e.getKey());
+            varOffset += 4;
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 9, -1);
+      }
+
+      if (this.clientEvents != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 13, varOffset - offset - 17);
+         if (this.clientEvents.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("ClientEvents", this.clientEvents.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.clientEvents.size());
+
+         for (Entry<ItemReticleClientEvent, ItemReticle> e : this.clientEvents.entrySet()) {
+            mem.set(PacketIO.PROTO_BYTE, varOffset, (byte)e.getKey().getValue());
+            varOffset = ++varOffset + e.getValue().serialize(mem, varOffset);
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 13, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

@@ -3,9 +3,11 @@ package com.hypixel.hytale.protocol.packets.buildertools;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -59,10 +61,49 @@ public class BuilderToolSetNPCDebug implements Packet, ToServerPacket {
       return 5;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 5L;
+   }
+
+   public static int getEntityId(MemorySegment mem) {
+      return getEntityId(mem, 0);
+   }
+
+   public static int getEntityId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 0);
+   }
+
+   public static boolean getEnabled(MemorySegment mem) {
+      return getEnabled(mem, 0);
+   }
+
+   public static boolean getEnabled(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 4);
+   }
+
+   public static BuilderToolSetNPCDebug toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static BuilderToolSetNPCDebug toObject(MemorySegment mem, int offset) {
+      if (offset + 5 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BuilderToolSetNPCDebug", offset + 5, (int)mem.byteSize());
+      } else {
+         return new BuilderToolSetNPCDebug(mem.get(PacketIO.PROTO_INT, offset + 0), mem.get(PacketIO.PROTO_BOOL, offset + 4));
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeIntLE(this.entityId);
       buf.writeByte(this.enabled ? 1 : 0);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_INT, offset + 0, this.entityId);
+      mem.set(PacketIO.PROTO_BOOL, offset + 4, this.enabled);
+      return 5;
    }
 
    @Override

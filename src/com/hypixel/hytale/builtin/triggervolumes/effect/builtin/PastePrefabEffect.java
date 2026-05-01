@@ -37,7 +37,7 @@ public class PastePrefabEffect extends TriggerEffect {
       .add()
       .append(new KeyedCodec<>("Prefab", Codec.STRING, false), (e, v) -> e.prefabRelPath = v, e -> e.prefabRelPath)
       .add()
-      .append(new KeyedCodec<>("Position", Vector3dUtil.AS_ARRAY_CODEC, false), (e, v) -> e.position = v, e -> e.position)
+      .append(new KeyedCodec<>("Position", Vector3dUtil.CODEC, false), (e, v) -> e.position = v, e -> e.position)
       .add()
       .append(new KeyedCodec<>("AtVolumeOrigin", Codec.BOOLEAN, false), (e, v) -> e.atVolumeOrigin = v, e -> e.atVolumeOrigin)
       .add()

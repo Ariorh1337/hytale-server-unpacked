@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -134,6 +135,90 @@ public class HeightDeltaIconComponent extends MapMarkerComponent {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 17L;
+   }
+
+   public static int getUpDelta(MemorySegment mem) {
+      return getUpDelta(mem, 0);
+   }
+
+   public static int getUpDelta(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   @Nullable
+   public static String getUpImage(MemorySegment mem) {
+      return getUpImage(mem, 0);
+   }
+
+   @Nullable
+   public static String getUpImage(MemorySegment mem, int offset) {
+      return hasUpImage(mem, offset)
+         ? PacketIO.readVarString("UpImage", mem, offset + getValidatedOffset(mem, offset, 9, 17, "UpImage"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static int getDownDelta(MemorySegment mem) {
+      return getDownDelta(mem, 0);
+   }
+
+   public static int getDownDelta(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 5);
+   }
+
+   @Nullable
+   public static String getDownImage(MemorySegment mem) {
+      return getDownImage(mem, 0);
+   }
+
+   @Nullable
+   public static String getDownImage(MemorySegment mem, int offset) {
+      return hasDownImage(mem, offset)
+         ? PacketIO.readVarString("DownImage", mem, offset + getValidatedOffset(mem, offset, 13, 17, "DownImage"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static boolean hasUpImage(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasDownImage(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static HeightDeltaIconComponent toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static HeightDeltaIconComponent toObject(MemorySegment mem, int offset) {
+      if (offset + 17 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("HeightDeltaIconComponent", offset + 17, (int)mem.byteSize());
+      } else {
+         return new HeightDeltaIconComponent(
+            mem.get(PacketIO.PROTO_INT, offset + 1),
+            hasUpImage(mem, offset)
+               ? PacketIO.readVarString("UpImage", mem, offset + getValidatedOffset(mem, offset, 9, 17, "UpImage"), 4096000, PacketIO.UTF8)
+               : null,
+            mem.get(PacketIO.PROTO_INT, offset + 5),
+            hasDownImage(mem, offset)
+               ? PacketIO.readVarString("DownImage", mem, offset + getValidatedOffset(mem, offset, 13, 17, "DownImage"), 4096000, PacketIO.UTF8)
+               : null
+         );
+      }
+   }
+
    @Override
    public int serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -169,6 +254,38 @@ public class HeightDeltaIconComponent extends MapMarkerComponent {
       }
 
       return buf.writerIndex() - startPos;
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.upImage != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.downImage != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.upDelta);
+      mem.set(PacketIO.PROTO_INT, offset + 5, this.downDelta);
+      int varOffset = offset + 17;
+      if (this.upImage != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 9, varOffset - offset - 17);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.upImage, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 9, -1);
+      }
+
+      if (this.downImage != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 13, varOffset - offset - 17);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.downImage, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 13, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

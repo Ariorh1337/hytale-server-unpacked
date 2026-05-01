@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -304,6 +305,426 @@ public class InteractionSyncData {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 165L;
+   }
+
+   public static InteractionState getState(MemorySegment mem) {
+      return getState(mem, 0);
+   }
+
+   public static InteractionState getState(MemorySegment mem, int offset) {
+      return InteractionState.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 2));
+   }
+
+   public static float getProgress(MemorySegment mem) {
+      return getProgress(mem, 0);
+   }
+
+   public static float getProgress(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 3);
+   }
+
+   public static int getOperationCounter(MemorySegment mem) {
+      return getOperationCounter(mem, 0);
+   }
+
+   public static int getOperationCounter(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 7);
+   }
+
+   public static int getRootInteraction(MemorySegment mem) {
+      return getRootInteraction(mem, 0);
+   }
+
+   public static int getRootInteraction(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 11);
+   }
+
+   public static int getTotalForks(MemorySegment mem) {
+      return getTotalForks(mem, 0);
+   }
+
+   public static int getTotalForks(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 15);
+   }
+
+   public static int getEntityId(MemorySegment mem) {
+      return getEntityId(mem, 0);
+   }
+
+   public static int getEntityId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 19);
+   }
+
+   public static int getEnteredRootInteraction(MemorySegment mem) {
+      return getEnteredRootInteraction(mem, 0);
+   }
+
+   public static int getEnteredRootInteraction(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 23);
+   }
+
+   @Nullable
+   public static BlockPosition getBlockPosition(MemorySegment mem) {
+      return getBlockPosition(mem, 0);
+   }
+
+   @Nullable
+   public static BlockPosition getBlockPosition(MemorySegment mem, int offset) {
+      return hasBlockPosition(mem, offset) ? BlockPosition.toObject(mem, offset + 27) : null;
+   }
+
+   public static BlockFace getBlockFace(MemorySegment mem) {
+      return getBlockFace(mem, 0);
+   }
+
+   public static BlockFace getBlockFace(MemorySegment mem, int offset) {
+      return BlockFace.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 39));
+   }
+
+   @Nullable
+   public static BlockRotation getBlockRotation(MemorySegment mem) {
+      return getBlockRotation(mem, 0);
+   }
+
+   @Nullable
+   public static BlockRotation getBlockRotation(MemorySegment mem, int offset) {
+      return hasBlockRotation(mem, offset) ? BlockRotation.toObject(mem, offset + 40) : null;
+   }
+
+   public static int getPlacedBlockId(MemorySegment mem) {
+      return getPlacedBlockId(mem, 0);
+   }
+
+   public static int getPlacedBlockId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 43);
+   }
+
+   public static float getChargeValue(MemorySegment mem) {
+      return getChargeValue(mem, 0);
+   }
+
+   public static float getChargeValue(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 47);
+   }
+
+   @Nullable
+   public static Map<InteractionType, Integer> getForkCounts(MemorySegment mem) {
+      return getForkCounts(mem, 0);
+   }
+
+   @Nullable
+   public static Map<InteractionType, Integer> getForkCounts(MemorySegment mem, int offset) {
+      if (!hasForkCounts(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 157, 165, "ForkCounts");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("ForkCounts", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("ForkCounts", len, 4096000);
+      }
+
+      Map<InteractionType, Integer> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         InteractionType key = InteractionType.fromValue(mem.get(PacketIO.PROTO_BYTE, off));
+         int value = mem.get(PacketIO.PROTO_INT, ++off);
+         off += 4;
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("ForkCounts", key);
+         }
+      }
+
+      return data;
+   }
+
+   public static int getChainingIndex(MemorySegment mem) {
+      return getChainingIndex(mem, 0);
+   }
+
+   public static int getChainingIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 51);
+   }
+
+   public static int getFlagIndex(MemorySegment mem) {
+      return getFlagIndex(mem, 0);
+   }
+
+   public static int getFlagIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 55);
+   }
+
+   @Nullable
+   public static SelectedHitEntity[] getHitEntities(MemorySegment mem) {
+      return getHitEntities(mem, 0);
+   }
+
+   @Nullable
+   public static SelectedHitEntity[] getHitEntities(MemorySegment mem, int offset) {
+      if (!hasHitEntities(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 161, 165, "HitEntities");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("HitEntities", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("HitEntities", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 53L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("HitEntities", off + lenOffset + len * 53, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      SelectedHitEntity[] data = new SelectedHitEntity[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = SelectedHitEntity.toObject(mem, off + i * 53);
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static Position getAttackerPos(MemorySegment mem) {
+      return getAttackerPos(mem, 0);
+   }
+
+   @Nullable
+   public static Position getAttackerPos(MemorySegment mem, int offset) {
+      return hasAttackerPos(mem, offset) ? Position.toObject(mem, offset + 59) : null;
+   }
+
+   @Nullable
+   public static Direction getAttackerRot(MemorySegment mem) {
+      return getAttackerRot(mem, 0);
+   }
+
+   @Nullable
+   public static Direction getAttackerRot(MemorySegment mem, int offset) {
+      return hasAttackerRot(mem, offset) ? Direction.toObject(mem, offset + 83) : null;
+   }
+
+   @Nullable
+   public static Position getRaycastHit(MemorySegment mem) {
+      return getRaycastHit(mem, 0);
+   }
+
+   @Nullable
+   public static Position getRaycastHit(MemorySegment mem, int offset) {
+      return hasRaycastHit(mem, offset) ? Position.toObject(mem, offset + 95) : null;
+   }
+
+   public static float getRaycastDistance(MemorySegment mem) {
+      return getRaycastDistance(mem, 0);
+   }
+
+   public static float getRaycastDistance(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 119);
+   }
+
+   @Nullable
+   public static Vector3fc getRaycastNormal(MemorySegment mem) {
+      return getRaycastNormal(mem, 0);
+   }
+
+   @Nullable
+   public static Vector3fc getRaycastNormal(MemorySegment mem, int offset) {
+      return hasRaycastNormal(mem, offset) ? PacketIO.readVector3f(mem, offset + 123) : null;
+   }
+
+   public static MovementDirection getMovementDirection(MemorySegment mem) {
+      return getMovementDirection(mem, 0);
+   }
+
+   public static MovementDirection getMovementDirection(MemorySegment mem, int offset) {
+      return MovementDirection.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 135));
+   }
+
+   public static ApplyForceState getApplyForceState(MemorySegment mem) {
+      return getApplyForceState(mem, 0);
+   }
+
+   public static ApplyForceState getApplyForceState(MemorySegment mem, int offset) {
+      return ApplyForceState.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 136));
+   }
+
+   public static int getNextLabel(MemorySegment mem) {
+      return getNextLabel(mem, 0);
+   }
+
+   public static int getNextLabel(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 137);
+   }
+
+   @Nullable
+   public static UUID getGeneratedUUID(MemorySegment mem) {
+      return getGeneratedUUID(mem, 0);
+   }
+
+   @Nullable
+   public static UUID getGeneratedUUID(MemorySegment mem, int offset) {
+      return hasGeneratedUUID(mem, offset) ? PacketIO.readUUID(mem, offset + 141) : null;
+   }
+
+   public static boolean hasBlockPosition(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasBlockRotation(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasAttackerPos(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasAttackerRot(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasRaycastHit(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 16) != 0;
+   }
+
+   public static boolean hasRaycastNormal(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 32) != 0;
+   }
+
+   public static boolean hasGeneratedUUID(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 64) != 0;
+   }
+
+   public static boolean hasForkCounts(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 128) != 0;
+   }
+
+   public static boolean hasHitEntities(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 1) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static InteractionSyncData toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static InteractionSyncData toObject(MemorySegment mem, int offset) {
+      if (offset + 165 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("InteractionSyncData", offset + 165, (int)mem.byteSize());
+      }
+
+      Map<InteractionType, Integer> forkCounts = null;
+      if (hasForkCounts(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 157, 165, "ForkCounts");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("ForkCounts", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("ForkCounts", len, 4096000);
+         }
+
+         forkCounts = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            InteractionType key = InteractionType.fromValue(mem.get(PacketIO.PROTO_BYTE, off));
+            int value = mem.get(PacketIO.PROTO_INT, ++off);
+            off += 4;
+            if (forkCounts.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("ForkCounts", key);
+            }
+         }
+      }
+
+      SelectedHitEntity[] hitEntities = null;
+      if (hasHitEntities(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 161, 165, "HitEntities");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("HitEntities", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("HitEntities", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 53L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("HitEntities", off + lenOffset + len * 53, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         hitEntities = new SelectedHitEntity[len];
+
+         for (int i = 0; i < len; i++) {
+            hitEntities[i] = SelectedHitEntity.toObject(mem, off + i * 53);
+         }
+      }
+
+      return new InteractionSyncData(
+         InteractionState.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 2)),
+         mem.get(PacketIO.PROTO_FLOAT, offset + 3),
+         mem.get(PacketIO.PROTO_INT, offset + 7),
+         mem.get(PacketIO.PROTO_INT, offset + 11),
+         mem.get(PacketIO.PROTO_INT, offset + 15),
+         mem.get(PacketIO.PROTO_INT, offset + 19),
+         mem.get(PacketIO.PROTO_INT, offset + 23),
+         hasBlockPosition(mem, offset) ? BlockPosition.toObject(mem, offset + 27) : null,
+         BlockFace.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 39)),
+         hasBlockRotation(mem, offset) ? BlockRotation.toObject(mem, offset + 40) : null,
+         mem.get(PacketIO.PROTO_INT, offset + 43),
+         mem.get(PacketIO.PROTO_FLOAT, offset + 47),
+         forkCounts,
+         mem.get(PacketIO.PROTO_INT, offset + 51),
+         mem.get(PacketIO.PROTO_INT, offset + 55),
+         hitEntities,
+         hasAttackerPos(mem, offset) ? Position.toObject(mem, offset + 59) : null,
+         hasAttackerRot(mem, offset) ? Direction.toObject(mem, offset + 83) : null,
+         hasRaycastHit(mem, offset) ? Position.toObject(mem, offset + 95) : null,
+         mem.get(PacketIO.PROTO_FLOAT, offset + 119),
+         hasRaycastNormal(mem, offset) ? PacketIO.readVector3f(mem, offset + 123) : null,
+         MovementDirection.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 135)),
+         ApplyForceState.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 136)),
+         mem.get(PacketIO.PROTO_INT, offset + 137),
+         hasGeneratedUUID(mem, offset) ? PacketIO.readUUID(mem, offset + 141) : null
+      );
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte[] nullBits = new byte[2];
@@ -437,6 +858,144 @@ public class InteractionSyncData {
       } else {
          buf.setIntLE(hitEntitiesOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.blockPosition != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.blockRotation != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.attackerPos != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.attackerRot != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.raycastHit != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.raycastNormal != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
+      if (this.generatedUUID != null) {
+         nullBits = (byte)(nullBits | 64);
+      }
+
+      if (this.forkCounts != null) {
+         nullBits = (byte)(nullBits | 128);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      nullBits = 0;
+      if (this.hitEntities != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, nullBits);
+      mem.set(PacketIO.PROTO_BYTE, offset + 2, (byte)this.state.getValue());
+      mem.set(PacketIO.PROTO_FLOAT, offset + 3, this.progress);
+      mem.set(PacketIO.PROTO_INT, offset + 7, this.operationCounter);
+      mem.set(PacketIO.PROTO_INT, offset + 11, this.rootInteraction);
+      mem.set(PacketIO.PROTO_INT, offset + 15, this.totalForks);
+      mem.set(PacketIO.PROTO_INT, offset + 19, this.entityId);
+      mem.set(PacketIO.PROTO_INT, offset + 23, this.enteredRootInteraction);
+      if (this.blockPosition != null) {
+         this.blockPosition.serialize(mem, offset + 27);
+      } else {
+         mem.asSlice(offset + 27, 12L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 39, (byte)this.blockFace.getValue());
+      if (this.blockRotation != null) {
+         this.blockRotation.serialize(mem, offset + 40);
+      } else {
+         mem.asSlice(offset + 40, 3L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_INT, offset + 43, this.placedBlockId);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 47, this.chargeValue);
+      mem.set(PacketIO.PROTO_INT, offset + 51, this.chainingIndex);
+      mem.set(PacketIO.PROTO_INT, offset + 55, this.flagIndex);
+      if (this.attackerPos != null) {
+         this.attackerPos.serialize(mem, offset + 59);
+      } else {
+         mem.asSlice(offset + 59, 24L).fill((byte)0);
+      }
+
+      if (this.attackerRot != null) {
+         this.attackerRot.serialize(mem, offset + 83);
+      } else {
+         mem.asSlice(offset + 83, 12L).fill((byte)0);
+      }
+
+      if (this.raycastHit != null) {
+         this.raycastHit.serialize(mem, offset + 95);
+      } else {
+         mem.asSlice(offset + 95, 24L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_FLOAT, offset + 119, this.raycastDistance);
+      if (this.raycastNormal != null) {
+         PacketIO.writeVector3f(mem, offset + 123, this.raycastNormal);
+      } else {
+         mem.asSlice(offset + 123, 12L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 135, (byte)this.movementDirection.getValue());
+      mem.set(PacketIO.PROTO_BYTE, offset + 136, (byte)this.applyForceState.getValue());
+      mem.set(PacketIO.PROTO_INT, offset + 137, this.nextLabel);
+      if (this.generatedUUID != null) {
+         PacketIO.writeUUID(mem, offset + 141, this.generatedUUID);
+      } else {
+         mem.asSlice(offset + 141, 16L).fill((byte)0);
+      }
+
+      int varOffset = offset + 165;
+      if (this.forkCounts != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 157, varOffset - offset - 165);
+         if (this.forkCounts.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("ForkCounts", this.forkCounts.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.forkCounts.size());
+
+         for (Entry<InteractionType, Integer> e : this.forkCounts.entrySet()) {
+            mem.set(PacketIO.PROTO_BYTE, varOffset, (byte)e.getKey().getValue());
+            mem.set(PacketIO.PROTO_INT, ++varOffset, e.getValue());
+            varOffset += 4;
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 157, -1);
+      }
+
+      if (this.hitEntities != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 161, varOffset - offset - 165);
+         if (this.hitEntities.length > 4096000) {
+            throw ProtocolException.arrayTooLong("HitEntities", this.hitEntities.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.hitEntities.length);
+         int hitEntitiesValueOffset = 0;
+
+         for (int i = 0; i < this.hitEntities.length; i++) {
+            hitEntitiesValueOffset += this.hitEntities[i].serialize(mem, varOffset + hitEntitiesValueOffset);
+         }
+
+         varOffset += hitEntitiesValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 161, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

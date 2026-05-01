@@ -497,7 +497,6 @@ public class WorldMapManager extends TickingThread {
          });
       }
 
-      @Nullable
       private static void removeMarkerFromData(@Nonnull PlayerConfigData data, @Nonnull String worldName, @Nonnull String markerId) {
          PlayerWorldData perWorldData = data.getPerWorldData(worldName);
          ArrayList<? extends UserMapMarker> playerMarkers = new ArrayList<>(perWorldData.getUserMapMarkers());

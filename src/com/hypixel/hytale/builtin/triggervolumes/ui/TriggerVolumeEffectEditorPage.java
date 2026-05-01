@@ -52,7 +52,6 @@ import java.util.Map.Entry;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.bson.BsonArray;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonDouble;
@@ -220,13 +219,34 @@ public class TriggerVolumeEffectEditorPage extends InteractiveCustomUIPage<Trigg
       ObjectArrayList<DropdownEntryInfo> entries = new ObjectArrayList<>();
 
       for (String typeId : typeIds) {
-         entries.add(new DropdownEntryInfo(LocalizableString.fromString(typeId), typeId));
+         entries.add(new DropdownEntryInfo(LocalizableString.fromString(humanizeTypeId(typeId)), typeId));
       }
 
       cmd.set("#AddEffectDropdown.Entries", entries);
       if (!typeIds.isEmpty()) {
          cmd.set("#AddEffectDropdown.Value", typeIds.getFirst());
       }
+   }
+
+   @Nonnull
+   private static String humanizeTypeId(@Nonnull String id) {
+      if (id.isEmpty()) {
+         return id;
+      }
+
+      StringBuilder sb = new StringBuilder(id.length() + 4);
+      sb.append(id.charAt(0));
+
+      for (int i = 1; i < id.length(); i++) {
+         char c = id.charAt(i);
+         if (Character.isUpperCase(c) && !Character.isUpperCase(id.charAt(i - 1))) {
+            sb.append(' ');
+         }
+
+         sb.append(c);
+      }
+
+      return sb.toString();
    }
 
    private void buildEffectList(@Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder evt) {
@@ -289,7 +309,8 @@ public class TriggerVolumeEffectEditorPage extends InteractiveCustomUIPage<Trigg
    private void appendSelectableEffectRow(@Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder evt, int listChildIndex, int effectIndex) {
       TriggerEffect effect = this.workingEffects.get(effectIndex);
       String typeId = getTypeId(effect);
-      String label = effectIndex + 1 + ". " + typeId;
+      String eventStr = effect.getEventType() != null ? effect.getEventType().name() : "?";
+      String label = effectIndex + 1 + ". " + humanizeTypeId(typeId) + " (" + eventStr + ")";
       String selector = "#EffectListContainer[" + listChildIndex + "]";
       boolean selected = effectIndex == this.selectedEffectIndex;
       cmd.appendInline("#EffectListContainer", effectListButton(label, selected));
@@ -367,7 +388,7 @@ public class TriggerVolumeEffectEditorPage extends InteractiveCustomUIPage<Trigg
       }
 
       if (childCodec == Codec.FLOAT) {
-         String val = bsonValue instanceof BsonDouble bd ? String.valueOf((float)bd.getValue()) : "0";
+         String val = bsonValue instanceof BsonDouble bd ? String.valueOf((float)bd.getValue()) : "0.0";
          return this.addNumberRow(cmd, evt, row, typeId, key, val, 2);
       }
 
@@ -381,14 +402,14 @@ public class TriggerVolumeEffectEditorPage extends InteractiveCustomUIPage<Trigg
          return this.addNumberRow(cmd, evt, row, typeId, key, val, 0);
       }
 
-      if (childCodec == Vector3dUtil.AS_ARRAY_CODEC) {
+      if (childCodec == Vector3dUtil.CODEC) {
          double x = 0.0;
          double y = 0.0;
          double z = 0.0;
-         if (bsonValue instanceof BsonArray arr && arr.size() >= 3) {
-            x = arr.get(0).asDouble().getValue();
-            y = arr.get(1).asDouble().getValue();
-            z = arr.get(2).asDouble().getValue();
+         if (bsonValue instanceof BsonDocument doc) {
+            x = doc.get("X", new BsonDouble(0.0)).asDouble().getValue();
+            y = doc.get("Y", new BsonDouble(0.0)).asDouble().getValue();
+            z = doc.get("Z", new BsonDouble(0.0)).asDouble().getValue();
          }
 
          return this.addVec3Row(cmd, evt, row, typeId, key, x, y, z);
@@ -749,12 +770,12 @@ public class TriggerVolumeEffectEditorPage extends InteractiveCustomUIPage<Trigg
          return new BsonInt64(0L);
       } else if (childCodec == Codec.STRING) {
          return new BsonString("");
-      } else if (childCodec == Vector3dUtil.AS_ARRAY_CODEC) {
-         BsonArray arr = new BsonArray();
-         arr.add(new BsonDouble(0.0));
-         arr.add(new BsonDouble(0.0));
-         arr.add(new BsonDouble(0.0));
-         return arr;
+      } else if (childCodec == Vector3dUtil.CODEC) {
+         BsonDocument doc = new BsonDocument();
+         doc.put("X", new BsonDouble(0.0));
+         doc.put("Y", new BsonDouble(0.0));
+         doc.put("Z", new BsonDouble(0.0));
+         return doc;
       } else {
          return null;
       }
@@ -781,6 +802,8 @@ public class TriggerVolumeEffectEditorPage extends InteractiveCustomUIPage<Trigg
                   effect.setEventType(TriggerEventType.valueOf(data.paramValue));
                } catch (IllegalArgumentException var12) {
                }
+
+               this.rebuildAll();
             } else if ("Interval".equals(key)) {
                if (data.paramNumericValue != null) {
                   effect.setInterval(data.paramNumericValue.floatValue());
@@ -799,12 +822,12 @@ public class TriggerVolumeEffectEditorPage extends InteractiveCustomUIPage<Trigg
                      Codec childCodec = field.getCodec().getChildCodec();
                      ExtraInfo extraInfo = ExtraInfo.THREAD_LOCAL.get();
                      if (data.vecX != null && data.vecY != null && data.vecZ != null) {
-                        BsonArray arr = new BsonArray();
-                        arr.add(new BsonDouble(data.vecX));
-                        arr.add(new BsonDouble(data.vecY));
-                        arr.add(new BsonDouble(data.vecZ));
+                        BsonDocument vecDoc = new BsonDocument();
+                        vecDoc.put("X", new BsonDouble(data.vecX));
+                        vecDoc.put("Y", new BsonDouble(data.vecY));
+                        vecDoc.put("Z", new BsonDouble(data.vecZ));
                         BsonDocument doc = new BsonDocument();
-                        doc.put(key, arr);
+                        doc.put(key, vecDoc);
                         field.decode(doc, effect, extraInfo);
                      } else if (data.paramBool != null && childCodec == Codec.BOOLEAN) {
                         BsonDocument doc = new BsonDocument();
@@ -847,6 +870,11 @@ public class TriggerVolumeEffectEditorPage extends InteractiveCustomUIPage<Trigg
    }
 
    private void saveEffectsToVolumes() {
+      this.commitWorkingEffects();
+      this.playerRef.sendMessage(Message.translation("server.customUI.triggerVolumeEffectEditor.saved"));
+   }
+
+   private void commitWorkingEffects() {
       if (this.groupEditMode) {
          GroupEntry g = this.manager.getGroup(this.groupId);
          if (g != null) {
@@ -863,8 +891,6 @@ public class TriggerVolumeEffectEditorPage extends InteractiveCustomUIPage<Trigg
          this.volumeEntry.setEffectAssetRef(null);
          this.manager.notifyViewersAdd(this.volumeEntry);
       }
-
-      this.playerRef.sendMessage(Message.translation("server.customUI.triggerVolumeEffectEditor.saved"));
    }
 
    private void onEditGroup(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
@@ -996,6 +1022,7 @@ public class TriggerVolumeEffectEditorPage extends InteractiveCustomUIPage<Trigg
                this.workingEffects.clear();
                this.workingEffects.addAll(Arrays.asList(effectAsset.getEffects()));
                this.selectedEffectIndex = this.workingEffects.isEmpty() ? -1 : 0;
+               this.commitWorkingEffects();
                this.playerRef.sendMessage(Message.translation("server.customUI.triggerVolumeEffectEditor.presetLoaded").param("name", data.presetId));
                UICommandBuilder cmd = new UICommandBuilder();
                cmd.set("#PresetLoadPage.Visible", false);

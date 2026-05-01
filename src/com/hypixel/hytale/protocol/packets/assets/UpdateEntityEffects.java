@@ -5,10 +5,12 @@ import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.UpdateType;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -110,6 +112,108 @@ public class UpdateEntityEffects implements Packet, ToClientPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 6L;
+   }
+
+   public static UpdateType getType(MemorySegment mem) {
+      return getType(mem, 0);
+   }
+
+   public static UpdateType getType(MemorySegment mem, int offset) {
+      return UpdateType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1));
+   }
+
+   public static int getMaxId(MemorySegment mem) {
+      return getMaxId(mem, 0);
+   }
+
+   public static int getMaxId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 2);
+   }
+
+   @Nullable
+   public static Map<Integer, EntityEffect> getEntityEffects(MemorySegment mem) {
+      return getEntityEffects(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Integer, EntityEffect> getEntityEffects(MemorySegment mem, int offset) {
+      if (!hasEntityEffects(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + 6;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("EntityEffects", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("EntityEffects", len, 4096000);
+      }
+
+      Map<Integer, EntityEffect> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         int key = mem.get(PacketIO.PROTO_INT, off);
+         off += 4;
+         EntityEffect value = EntityEffect.toObject(mem, off);
+         off += value.computeSize();
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("EntityEffects", key);
+         }
+      }
+
+      return data;
+   }
+
+   public static boolean hasEntityEffects(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static UpdateEntityEffects toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UpdateEntityEffects toObject(MemorySegment mem, int offset) {
+      if (offset + 6 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("UpdateEntityEffects", offset + 6, (int)mem.byteSize());
+      }
+
+      Map<Integer, EntityEffect> entityEffects = null;
+      if (hasEntityEffects(mem, offset)) {
+         int off = offset + 6;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("EntityEffects", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("EntityEffects", len, 4096000);
+         }
+
+         entityEffects = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            int key = mem.get(PacketIO.PROTO_INT, off);
+            off += 4;
+            EntityEffect value = EntityEffect.toObject(mem, off);
+            off += value.computeSize();
+            if (entityEffects.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("EntityEffects", key);
+            }
+         }
+      }
+
+      return new UpdateEntityEffects(UpdateType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1)), mem.get(PacketIO.PROTO_INT, offset + 2), entityEffects);
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -132,6 +236,34 @@ public class UpdateEntityEffects implements Packet, ToClientPacket {
             e.getValue().serialize(buf);
          }
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.entityEffects != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.type.getValue());
+      mem.set(PacketIO.PROTO_INT, offset + 2, this.maxId);
+      int varOffset = offset + 6;
+      if (this.entityEffects != null) {
+         if (this.entityEffects.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("EntityEffects", this.entityEffects.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.entityEffects.size());
+
+         for (Entry<Integer, EntityEffect> e : this.entityEffects.entrySet()) {
+            mem.set(PacketIO.PROTO_INT, varOffset, e.getKey());
+            varOffset += 4;
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      }
+
+      return varOffset - offset;
    }
 
    @Override

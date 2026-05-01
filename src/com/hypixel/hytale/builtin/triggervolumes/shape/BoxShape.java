@@ -9,9 +9,9 @@ import org.joml.Vector3d;
 public class BoxShape extends TriggerVolumeShape {
    @Nonnull
    public static final BuilderCodec<BoxShape> CODEC = BuilderCodec.builder(BoxShape.class, BoxShape::new, BASE_CODEC)
-      .append(new KeyedCodec<>("Min", Vector3dUtil.AS_ARRAY_CODEC), (s, v) -> s.min = v, s -> s.min)
+      .append(new KeyedCodec<>("Min", Vector3dUtil.CODEC), (s, v) -> s.min = v, s -> s.min)
       .add()
-      .append(new KeyedCodec<>("Max", Vector3dUtil.AS_ARRAY_CODEC), (s, v) -> s.max = v, s -> s.max)
+      .append(new KeyedCodec<>("Max", Vector3dUtil.CODEC), (s, v) -> s.max = v, s -> s.max)
       .add()
       .afterDecode(BoxShape::computeDerived)
       .build();
@@ -64,6 +64,11 @@ public class BoxShape extends TriggerVolumeShape {
    public void getWorldAABB(@Nonnull Vector3d origin, @Nonnull Vector3d outMin, @Nonnull Vector3d outMax) {
       outMin.set(origin).add(this.min);
       outMax.set(origin).add(this.max);
+   }
+
+   @Nonnull
+   public BoxShape copy() {
+      return new BoxShape(new Vector3d(this.min), new Vector3d(this.max));
    }
 
    @Nonnull

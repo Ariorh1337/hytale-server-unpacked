@@ -1,8 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -56,12 +58,83 @@ public class ChargingDelay {
       return 20;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 20L;
+   }
+
+   public static float getMinDelay(MemorySegment mem) {
+      return getMinDelay(mem, 0);
+   }
+
+   public static float getMinDelay(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 0);
+   }
+
+   public static float getMaxDelay(MemorySegment mem) {
+      return getMaxDelay(mem, 0);
+   }
+
+   public static float getMaxDelay(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 4);
+   }
+
+   public static float getMaxTotalDelay(MemorySegment mem) {
+      return getMaxTotalDelay(mem, 0);
+   }
+
+   public static float getMaxTotalDelay(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 8);
+   }
+
+   public static float getMinHealth(MemorySegment mem) {
+      return getMinHealth(mem, 0);
+   }
+
+   public static float getMinHealth(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 12);
+   }
+
+   public static float getMaxHealth(MemorySegment mem) {
+      return getMaxHealth(mem, 0);
+   }
+
+   public static float getMaxHealth(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 16);
+   }
+
+   public static ChargingDelay toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ChargingDelay toObject(MemorySegment mem, int offset) {
+      if (offset + 20 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ChargingDelay", offset + 20, (int)mem.byteSize());
+      } else {
+         return new ChargingDelay(
+            mem.get(PacketIO.PROTO_FLOAT, offset + 0),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 4),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 8),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 12),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 16)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeFloatLE(this.minDelay);
       buf.writeFloatLE(this.maxDelay);
       buf.writeFloatLE(this.maxTotalDelay);
       buf.writeFloatLE(this.minHealth);
       buf.writeFloatLE(this.maxHealth);
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_FLOAT, offset + 0, this.minDelay);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 4, this.maxDelay);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 8, this.maxTotalDelay);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 12, this.minHealth);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 16, this.maxHealth);
+      return 20;
    }
 
    public int computeSize() {

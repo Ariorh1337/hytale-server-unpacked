@@ -4,6 +4,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import javax.annotation.Nonnull;
 
 public abstract class UIDataValue {
@@ -31,6 +32,35 @@ public abstract class UIDataValue {
          case 13 -> UILongDataValue.deserialize(buf, offset + typeIdLen);
          case 14 -> UIULongDataValue.deserialize(buf, offset + typeIdLen);
          case 15 -> UIDoubleDataValue.deserialize(buf, offset + typeIdLen);
+         default -> throw ProtocolException.unknownPolymorphicType("UIDataValue", typeId);
+      };
+   }
+
+   public static UIDataValue toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UIDataValue toObject(MemorySegment mem, int offset) {
+      int typeId = VarInt.get(mem, offset);
+      int typeIdLen = VarInt.size(typeId);
+
+      return switch (typeId) {
+         case 0 -> UIStringDataValue.toObject(mem, offset + typeIdLen);
+         case 1 -> UIFloatDataValue.toObject(mem, offset + typeIdLen);
+         case 2 -> UIIntDataValue.toObject(mem, offset + typeIdLen);
+         case 3 -> UIBoolDataValue.toObject(mem, offset + typeIdLen);
+         case 4 -> UICommandDataValue.toObject(mem, offset + typeIdLen);
+         case 5 -> UIObjectDataValue.toObject(mem, offset + typeIdLen);
+         case 6 -> UIEnumDataValue.toObject(mem, offset + typeIdLen);
+         case 7 -> UIListDataValue.toObject(mem, offset + typeIdLen);
+         case 8 -> UIByteDataValue.toObject(mem, offset + typeIdLen);
+         case 9 -> UISByteDataValue.toObject(mem, offset + typeIdLen);
+         case 10 -> UIShortDataValue.toObject(mem, offset + typeIdLen);
+         case 11 -> UIUShortDataValue.toObject(mem, offset + typeIdLen);
+         case 12 -> UIUIntDataValue.toObject(mem, offset + typeIdLen);
+         case 13 -> UILongDataValue.toObject(mem, offset + typeIdLen);
+         case 14 -> UIULongDataValue.toObject(mem, offset + typeIdLen);
+         case 15 -> UIDoubleDataValue.toObject(mem, offset + typeIdLen);
          default -> throw ProtocolException.unknownPolymorphicType("UIDataValue", typeId);
       };
    }
@@ -100,6 +130,8 @@ public abstract class UIDataValue {
 
    public abstract int serialize(@Nonnull ByteBuf var1);
 
+   public abstract int serialize(@Nonnull MemorySegment var1, int var2);
+
    public abstract int computeSize();
 
    public int serializeWithTypeId(@Nonnull ByteBuf buf) {
@@ -107,6 +139,11 @@ public abstract class UIDataValue {
       VarInt.write(buf, this.getTypeId());
       this.serialize(buf);
       return buf.writerIndex() - startPos;
+   }
+
+   public int serializeWithTypeId(@Nonnull MemorySegment mem, int offset) {
+      int len = VarInt.set(mem, offset, this.getTypeId());
+      return len + this.serialize(mem, offset + len);
    }
 
    public int computeSizeWithTypeId() {

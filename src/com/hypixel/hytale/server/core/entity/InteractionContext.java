@@ -203,7 +203,7 @@ public class InteractionContext {
       return this.runningForEntity;
    }
 
-   @Nonnull
+   @Nullable
    public Ref<EntityStore> getOwningEntity() {
       return this.owningEntity;
    }

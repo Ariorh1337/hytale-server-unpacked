@@ -13,7 +13,6 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
 import com.hypixel.hytale.server.core.entity.entities.player.windows.MaterialContainerWindow;
-import com.hypixel.hytale.server.core.entity.entities.player.windows.WindowManager;
 import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -26,11 +25,6 @@ import org.joml.Vector3d;
 public class SimpleCraftingWindow extends CraftingWindow implements MaterialContainerWindow {
    public SimpleCraftingWindow(int x, int y, int z, int rotationIndex, @Nonnull BlockType blockType, @Nonnull BenchBlock benchBlock) {
       super(WindowType.BasicCrafting, x, y, z, rotationIndex, blockType, benchBlock);
-   }
-
-   @Override
-   public void init(@Nonnull PlayerRef playerRef, @Nonnull WindowManager manager) {
-      super.init(playerRef, manager);
    }
 
    @Override

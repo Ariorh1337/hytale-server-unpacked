@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -187,6 +188,191 @@ public class FluidFX {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 69L;
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem) {
+      return getId(mem, 0);
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem, int offset) {
+      return hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 61, 69, "Id"), 4096000, PacketIO.UTF8) : null;
+   }
+
+   public static ShaderType getShader(MemorySegment mem) {
+      return getShader(mem, 0);
+   }
+
+   public static ShaderType getShader(MemorySegment mem, int offset) {
+      return ShaderType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1));
+   }
+
+   public static FluidFog getFogMode(MemorySegment mem) {
+      return getFogMode(mem, 0);
+   }
+
+   public static FluidFog getFogMode(MemorySegment mem, int offset) {
+      return FluidFog.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 2));
+   }
+
+   @Nullable
+   public static Color getFogColor(MemorySegment mem) {
+      return getFogColor(mem, 0);
+   }
+
+   @Nullable
+   public static Color getFogColor(MemorySegment mem, int offset) {
+      return hasFogColor(mem, offset) ? Color.toObject(mem, offset + 3) : null;
+   }
+
+   @Nullable
+   public static NearFar getFogDistance(MemorySegment mem) {
+      return getFogDistance(mem, 0);
+   }
+
+   @Nullable
+   public static NearFar getFogDistance(MemorySegment mem, int offset) {
+      return hasFogDistance(mem, offset) ? NearFar.toObject(mem, offset + 6) : null;
+   }
+
+   public static float getFogDepthStart(MemorySegment mem) {
+      return getFogDepthStart(mem, 0);
+   }
+
+   public static float getFogDepthStart(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 14);
+   }
+
+   public static float getFogDepthFalloff(MemorySegment mem) {
+      return getFogDepthFalloff(mem, 0);
+   }
+
+   public static float getFogDepthFalloff(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 18);
+   }
+
+   @Nullable
+   public static Color getColorFilter(MemorySegment mem) {
+      return getColorFilter(mem, 0);
+   }
+
+   @Nullable
+   public static Color getColorFilter(MemorySegment mem, int offset) {
+      return hasColorFilter(mem, offset) ? Color.toObject(mem, offset + 22) : null;
+   }
+
+   public static float getColorSaturation(MemorySegment mem) {
+      return getColorSaturation(mem, 0);
+   }
+
+   public static float getColorSaturation(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 25);
+   }
+
+   public static float getDistortionAmplitude(MemorySegment mem) {
+      return getDistortionAmplitude(mem, 0);
+   }
+
+   public static float getDistortionAmplitude(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 29);
+   }
+
+   public static float getDistortionFrequency(MemorySegment mem) {
+      return getDistortionFrequency(mem, 0);
+   }
+
+   public static float getDistortionFrequency(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 33);
+   }
+
+   @Nullable
+   public static FluidParticle getParticle(MemorySegment mem) {
+      return getParticle(mem, 0);
+   }
+
+   @Nullable
+   public static FluidParticle getParticle(MemorySegment mem, int offset) {
+      return hasParticle(mem, offset) ? FluidParticle.toObject(mem, offset + getValidatedOffset(mem, offset, 65, 69, "Particle")) : null;
+   }
+
+   @Nullable
+   public static FluidFXMovementSettings getMovementSettings(MemorySegment mem) {
+      return getMovementSettings(mem, 0);
+   }
+
+   @Nullable
+   public static FluidFXMovementSettings getMovementSettings(MemorySegment mem, int offset) {
+      return hasMovementSettings(mem, offset) ? FluidFXMovementSettings.toObject(mem, offset + 37) : null;
+   }
+
+   public static boolean hasFogColor(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasFogDistance(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasColorFilter(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasMovementSettings(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 16) != 0;
+   }
+
+   public static boolean hasParticle(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 32) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static FluidFX toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static FluidFX toObject(MemorySegment mem, int offset) {
+      if (offset + 69 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("FluidFX", offset + 69, (int)mem.byteSize());
+      } else {
+         return new FluidFX(
+            hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 61, 69, "Id"), 4096000, PacketIO.UTF8) : null,
+            ShaderType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1)),
+            FluidFog.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 2)),
+            hasFogColor(mem, offset) ? Color.toObject(mem, offset + 3) : null,
+            hasFogDistance(mem, offset) ? NearFar.toObject(mem, offset + 6) : null,
+            mem.get(PacketIO.PROTO_FLOAT, offset + 14),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 18),
+            hasColorFilter(mem, offset) ? Color.toObject(mem, offset + 22) : null,
+            mem.get(PacketIO.PROTO_FLOAT, offset + 25),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 29),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 33),
+            hasParticle(mem, offset) ? FluidParticle.toObject(mem, offset + getValidatedOffset(mem, offset, 65, 69, "Particle")) : null,
+            hasMovementSettings(mem, offset) ? FluidFXMovementSettings.toObject(mem, offset + 37) : null
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -264,6 +450,82 @@ public class FluidFX {
       } else {
          buf.setIntLE(particleOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.fogColor != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.fogDistance != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.colorFilter != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.movementSettings != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.id != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.particle != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.shader.getValue());
+      mem.set(PacketIO.PROTO_BYTE, offset + 2, (byte)this.fogMode.getValue());
+      if (this.fogColor != null) {
+         this.fogColor.serialize(mem, offset + 3);
+      } else {
+         mem.asSlice(offset + 3, 3L).fill((byte)0);
+      }
+
+      if (this.fogDistance != null) {
+         this.fogDistance.serialize(mem, offset + 6);
+      } else {
+         mem.asSlice(offset + 6, 8L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_FLOAT, offset + 14, this.fogDepthStart);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 18, this.fogDepthFalloff);
+      if (this.colorFilter != null) {
+         this.colorFilter.serialize(mem, offset + 22);
+      } else {
+         mem.asSlice(offset + 22, 3L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_FLOAT, offset + 25, this.colorSaturation);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 29, this.distortionAmplitude);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 33, this.distortionFrequency);
+      if (this.movementSettings != null) {
+         this.movementSettings.serialize(mem, offset + 37);
+      } else {
+         mem.asSlice(offset + 37, 24L).fill((byte)0);
+      }
+
+      int varOffset = offset + 69;
+      if (this.id != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 61, varOffset - offset - 69);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.id, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 61, -1);
+      }
+
+      if (this.particle != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 65, varOffset - offset - 69);
+         varOffset += this.particle.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 65, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -232,6 +233,189 @@ public class TriggerVolumeDisplayEntry {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 69L;
+   }
+
+   public static TriggerVolumeShapeType getShapeType(MemorySegment mem) {
+      return getShapeType(mem, 0);
+   }
+
+   public static TriggerVolumeShapeType getShapeType(MemorySegment mem, int offset) {
+      return TriggerVolumeShapeType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1));
+   }
+
+   public static Vector3fc getPosition(MemorySegment mem) {
+      return getPosition(mem, 0);
+   }
+
+   public static Vector3fc getPosition(MemorySegment mem, int offset) {
+      return PacketIO.readVector3f(mem, offset + 2);
+   }
+
+   public static Vector3fc getDimensions(MemorySegment mem) {
+      return getDimensions(mem, 0);
+   }
+
+   public static Vector3fc getDimensions(MemorySegment mem, int offset) {
+      return PacketIO.readVector3f(mem, offset + 14);
+   }
+
+   public static Vector3fc getColor(MemorySegment mem) {
+      return getColor(mem, 0);
+   }
+
+   public static Vector3fc getColor(MemorySegment mem, int offset) {
+      return PacketIO.readVector3f(mem, offset + 26);
+   }
+
+   public static float getOpacity(MemorySegment mem) {
+      return getOpacity(mem, 0);
+   }
+
+   public static float getOpacity(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 38);
+   }
+
+   @Nullable
+   public static String getName(MemorySegment mem) {
+      return getName(mem, 0);
+   }
+
+   @Nullable
+   public static String getName(MemorySegment mem, int offset) {
+      return hasName(mem, offset)
+         ? PacketIO.readVarString("Name", mem, offset + getValidatedOffset(mem, offset, 57, 69, "Name"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getGroupId(MemorySegment mem) {
+      return getGroupId(mem, 0);
+   }
+
+   @Nullable
+   public static String getGroupId(MemorySegment mem, int offset) {
+      return hasGroupId(mem, offset)
+         ? PacketIO.readVarString("GroupId", mem, offset + getValidatedOffset(mem, offset, 61, 69, "GroupId"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static int getGroupColor(MemorySegment mem) {
+      return getGroupColor(mem, 0);
+   }
+
+   public static int getGroupColor(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 42);
+   }
+
+   @Nullable
+   public static String getEffectAssetRef(MemorySegment mem) {
+      return getEffectAssetRef(mem, 0);
+   }
+
+   @Nullable
+   public static String getEffectAssetRef(MemorySegment mem, int offset) {
+      return hasEffectAssetRef(mem, offset)
+         ? PacketIO.readVarString("EffectAssetRef", mem, offset + getValidatedOffset(mem, offset, 65, 69, "EffectAssetRef"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static byte getTargetTypes(MemorySegment mem) {
+      return getTargetTypes(mem, 0);
+   }
+
+   public static byte getTargetTypes(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BYTE, offset + 46);
+   }
+
+   public static boolean getKeepLoaded(MemorySegment mem) {
+      return getKeepLoaded(mem, 0);
+   }
+
+   public static boolean getKeepLoaded(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 47);
+   }
+
+   public static float getCooldown(MemorySegment mem) {
+      return getCooldown(mem, 0);
+   }
+
+   public static float getCooldown(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 48);
+   }
+
+   public static byte getCooldownMode(MemorySegment mem) {
+      return getCooldownMode(mem, 0);
+   }
+
+   public static byte getCooldownMode(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BYTE, offset + 52);
+   }
+
+   public static float getActivationDelay(MemorySegment mem) {
+      return getActivationDelay(mem, 0);
+   }
+
+   public static float getActivationDelay(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 53);
+   }
+
+   public static boolean hasName(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasGroupId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasEffectAssetRef(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static TriggerVolumeDisplayEntry toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static TriggerVolumeDisplayEntry toObject(MemorySegment mem, int offset) {
+      if (offset + 69 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("TriggerVolumeDisplayEntry", offset + 69, (int)mem.byteSize());
+      } else {
+         return new TriggerVolumeDisplayEntry(
+            TriggerVolumeShapeType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1)),
+            PacketIO.readVector3f(mem, offset + 2),
+            PacketIO.readVector3f(mem, offset + 14),
+            PacketIO.readVector3f(mem, offset + 26),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 38),
+            hasName(mem, offset) ? PacketIO.readVarString("Name", mem, offset + getValidatedOffset(mem, offset, 57, 69, "Name"), 4096000, PacketIO.UTF8) : null,
+            hasGroupId(mem, offset)
+               ? PacketIO.readVarString("GroupId", mem, offset + getValidatedOffset(mem, offset, 61, 69, "GroupId"), 4096000, PacketIO.UTF8)
+               : null,
+            mem.get(PacketIO.PROTO_INT, offset + 42),
+            hasEffectAssetRef(mem, offset)
+               ? PacketIO.readVarString("EffectAssetRef", mem, offset + getValidatedOffset(mem, offset, 65, 69, "EffectAssetRef"), 4096000, PacketIO.UTF8)
+               : null,
+            mem.get(PacketIO.PROTO_BYTE, offset + 46),
+            mem.get(PacketIO.PROTO_BOOL, offset + 47),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 48),
+            mem.get(PacketIO.PROTO_BYTE, offset + 52),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 53)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -286,6 +470,57 @@ public class TriggerVolumeDisplayEntry {
       } else {
          buf.setIntLE(effectAssetRefOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.name != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.groupId != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.effectAssetRef != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.shapeType.getValue());
+      PacketIO.writeVector3f(mem, offset + 2, this.position);
+      PacketIO.writeVector3f(mem, offset + 14, this.dimensions);
+      PacketIO.writeVector3f(mem, offset + 26, this.color);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 38, this.opacity);
+      mem.set(PacketIO.PROTO_INT, offset + 42, this.groupColor);
+      mem.set(PacketIO.PROTO_BYTE, offset + 46, this.targetTypes);
+      mem.set(PacketIO.PROTO_BOOL, offset + 47, this.keepLoaded);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 48, this.cooldown);
+      mem.set(PacketIO.PROTO_BYTE, offset + 52, this.cooldownMode);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 53, this.activationDelay);
+      int varOffset = offset + 69;
+      if (this.name != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 57, varOffset - offset - 69);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.name, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 57, -1);
+      }
+
+      if (this.groupId != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 61, varOffset - offset - 69);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.groupId, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 61, -1);
+      }
+
+      if (this.effectAssetRef != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 65, varOffset - offset - 69);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.effectAssetRef, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 65, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

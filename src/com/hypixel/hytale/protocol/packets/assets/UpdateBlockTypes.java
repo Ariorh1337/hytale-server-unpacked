@@ -5,10 +5,12 @@ import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.UpdateType;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -134,6 +136,148 @@ public class UpdateBlockTypes implements Packet, ToClientPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 10L;
+   }
+
+   public static UpdateType getType(MemorySegment mem) {
+      return getType(mem, 0);
+   }
+
+   public static UpdateType getType(MemorySegment mem, int offset) {
+      return UpdateType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1));
+   }
+
+   public static int getMaxId(MemorySegment mem) {
+      return getMaxId(mem, 0);
+   }
+
+   public static int getMaxId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 2);
+   }
+
+   @Nullable
+   public static Map<Integer, BlockType> getBlockTypes(MemorySegment mem) {
+      return getBlockTypes(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Integer, BlockType> getBlockTypes(MemorySegment mem, int offset) {
+      if (!hasBlockTypes(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + 10;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("BlockTypes", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("BlockTypes", len, 4096000);
+      }
+
+      Map<Integer, BlockType> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         int key = mem.get(PacketIO.PROTO_INT, off);
+         off += 4;
+         BlockType value = BlockType.toObject(mem, off);
+         off += value.computeSize();
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("BlockTypes", key);
+         }
+      }
+
+      return data;
+   }
+
+   public static boolean getUpdateBlockTextures(MemorySegment mem) {
+      return getUpdateBlockTextures(mem, 0);
+   }
+
+   public static boolean getUpdateBlockTextures(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 6);
+   }
+
+   public static boolean getUpdateModelTextures(MemorySegment mem) {
+      return getUpdateModelTextures(mem, 0);
+   }
+
+   public static boolean getUpdateModelTextures(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 7);
+   }
+
+   public static boolean getUpdateModels(MemorySegment mem) {
+      return getUpdateModels(mem, 0);
+   }
+
+   public static boolean getUpdateModels(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 8);
+   }
+
+   public static boolean getUpdateMapGeometry(MemorySegment mem) {
+      return getUpdateMapGeometry(mem, 0);
+   }
+
+   public static boolean getUpdateMapGeometry(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 9);
+   }
+
+   public static boolean hasBlockTypes(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static UpdateBlockTypes toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UpdateBlockTypes toObject(MemorySegment mem, int offset) {
+      if (offset + 10 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("UpdateBlockTypes", offset + 10, (int)mem.byteSize());
+      }
+
+      Map<Integer, BlockType> blockTypes = null;
+      if (hasBlockTypes(mem, offset)) {
+         int off = offset + 10;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("BlockTypes", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("BlockTypes", len, 4096000);
+         }
+
+         blockTypes = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            int key = mem.get(PacketIO.PROTO_INT, off);
+            off += 4;
+            BlockType value = BlockType.toObject(mem, off);
+            off += value.computeSize();
+            if (blockTypes.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("BlockTypes", key);
+            }
+         }
+      }
+
+      return new UpdateBlockTypes(
+         UpdateType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1)),
+         mem.get(PacketIO.PROTO_INT, offset + 2),
+         blockTypes,
+         mem.get(PacketIO.PROTO_BOOL, offset + 6),
+         mem.get(PacketIO.PROTO_BOOL, offset + 7),
+         mem.get(PacketIO.PROTO_BOOL, offset + 8),
+         mem.get(PacketIO.PROTO_BOOL, offset + 9)
+      );
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -160,6 +304,38 @@ public class UpdateBlockTypes implements Packet, ToClientPacket {
             e.getValue().serialize(buf);
          }
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.blockTypes != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.type.getValue());
+      mem.set(PacketIO.PROTO_INT, offset + 2, this.maxId);
+      mem.set(PacketIO.PROTO_BOOL, offset + 6, this.updateBlockTextures);
+      mem.set(PacketIO.PROTO_BOOL, offset + 7, this.updateModelTextures);
+      mem.set(PacketIO.PROTO_BOOL, offset + 8, this.updateModels);
+      mem.set(PacketIO.PROTO_BOOL, offset + 9, this.updateMapGeometry);
+      int varOffset = offset + 10;
+      if (this.blockTypes != null) {
+         if (this.blockTypes.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("BlockTypes", this.blockTypes.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.blockTypes.size());
+
+         for (Entry<Integer, BlockType> e : this.blockTypes.entrySet()) {
+            mem.set(PacketIO.PROTO_INT, varOffset, e.getKey());
+            varOffset += 4;
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      }
+
+      return varOffset - offset;
    }
 
    @Override

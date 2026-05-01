@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -83,6 +84,64 @@ public class ItemEntityConfig {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 5L;
+   }
+
+   @Nullable
+   public static String getParticleSystemId(MemorySegment mem) {
+      return getParticleSystemId(mem, 0);
+   }
+
+   @Nullable
+   public static String getParticleSystemId(MemorySegment mem, int offset) {
+      return hasParticleSystemId(mem, offset) ? PacketIO.readVarString("ParticleSystemId", mem, offset + 5, 4096000, PacketIO.UTF8) : null;
+   }
+
+   @Nullable
+   public static Color getParticleColor(MemorySegment mem) {
+      return getParticleColor(mem, 0);
+   }
+
+   @Nullable
+   public static Color getParticleColor(MemorySegment mem, int offset) {
+      return hasParticleColor(mem, offset) ? Color.toObject(mem, offset + 1) : null;
+   }
+
+   public static boolean getShowItemParticles(MemorySegment mem) {
+      return getShowItemParticles(mem, 0);
+   }
+
+   public static boolean getShowItemParticles(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 4);
+   }
+
+   public static boolean hasParticleColor(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasParticleSystemId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static ItemEntityConfig toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ItemEntityConfig toObject(MemorySegment mem, int offset) {
+      if (offset + 5 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ItemEntityConfig", offset + 5, (int)mem.byteSize());
+      } else {
+         return new ItemEntityConfig(
+            hasParticleSystemId(mem, offset) ? PacketIO.readVarString("ParticleSystemId", mem, offset + 5, 4096000, PacketIO.UTF8) : null,
+            hasParticleColor(mem, offset) ? Color.toObject(mem, offset + 1) : null,
+            mem.get(PacketIO.PROTO_BOOL, offset + 4)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
       if (this.particleColor != null) {
@@ -104,6 +163,32 @@ public class ItemEntityConfig {
       if (this.particleSystemId != null) {
          PacketIO.writeVarString(buf, this.particleSystemId, 4096000);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.particleColor != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.particleSystemId != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      if (this.particleColor != null) {
+         this.particleColor.serialize(mem, offset + 1);
+      } else {
+         mem.asSlice(offset + 1, 3L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_BOOL, offset + 4, this.showItemParticles);
+      int varOffset = offset + 5;
+      if (this.particleSystemId != null) {
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.particleSystemId, 4096000);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

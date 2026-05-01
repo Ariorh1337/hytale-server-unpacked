@@ -9,6 +9,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -238,6 +239,175 @@ public class Connect implements Packet, ToServerPacket {
       }
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 46L;
+   }
+
+   public static int getProtocolCrc(MemorySegment mem) {
+      return getProtocolCrc(mem, 0);
+   }
+
+   public static int getProtocolCrc(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   public static int getProtocolBuildNumber(MemorySegment mem) {
+      return getProtocolBuildNumber(mem, 0);
+   }
+
+   public static int getProtocolBuildNumber(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 5);
+   }
+
+   public static String getClientVersion(MemorySegment mem) {
+      return getClientVersion(mem, 0);
+   }
+
+   public static String getClientVersion(MemorySegment mem, int offset) {
+      return PacketIO.readFixedAsciiString(mem, offset + 9, 20);
+   }
+
+   public static ClientType getClientType(MemorySegment mem) {
+      return getClientType(mem, 0);
+   }
+
+   public static ClientType getClientType(MemorySegment mem, int offset) {
+      return ClientType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 29));
+   }
+
+   @Nullable
+   public static String getIdentityToken(MemorySegment mem) {
+      return getIdentityToken(mem, 0);
+   }
+
+   @Nullable
+   public static String getIdentityToken(MemorySegment mem, int offset) {
+      return hasIdentityToken(mem, offset)
+         ? PacketIO.readVarString("IdentityToken", mem, offset + getValidatedOffset(mem, offset, 30, 46, "IdentityToken"), 8192, PacketIO.UTF8)
+         : null;
+   }
+
+   public static String getLanguage(MemorySegment mem) {
+      return getLanguage(mem, 0);
+   }
+
+   public static String getLanguage(MemorySegment mem, int offset) {
+      return PacketIO.readValidatedAsciiString("Language", mem, offset + getValidatedOffset(mem, offset, 34, 46, "Language"), 16);
+   }
+
+   @Nullable
+   public static byte[] getReferralData(MemorySegment mem) {
+      return getReferralData(mem, 0);
+   }
+
+   @Nullable
+   public static byte[] getReferralData(MemorySegment mem, int offset) {
+      if (!hasReferralData(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 38, 46, "ReferralData");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("ReferralData", len);
+      }
+
+      if (len > 4096) {
+         throw ProtocolException.arrayTooLong("ReferralData", len, 4096);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 1L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ReferralData", off + lenOffset + len * 1, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      byte[] data = new byte[len];
+      MemorySegment.copy(mem, PacketIO.PROTO_BYTE, off, data, 0, len);
+      return data;
+   }
+
+   @Nullable
+   public static HostAddress getReferralSource(MemorySegment mem) {
+      return getReferralSource(mem, 0);
+   }
+
+   @Nullable
+   public static HostAddress getReferralSource(MemorySegment mem, int offset) {
+      return hasReferralSource(mem, offset) ? HostAddress.toObject(mem, offset + getValidatedOffset(mem, offset, 42, 46, "ReferralSource")) : null;
+   }
+
+   public static boolean hasIdentityToken(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasReferralData(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasReferralSource(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static Connect toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static Connect toObject(MemorySegment mem, int offset) {
+      if (offset + 46 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Connect", offset + 46, (int)mem.byteSize());
+      }
+
+      byte[] referralData = null;
+      if (hasReferralData(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 38, 46, "ReferralData");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("ReferralData", len);
+         }
+
+         if (len > 4096) {
+            throw ProtocolException.arrayTooLong("ReferralData", len, 4096);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 1L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("ReferralData", off + lenOffset + len * 1, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         referralData = new byte[len];
+         MemorySegment.copy(mem, PacketIO.PROTO_BYTE, off, referralData, 0, len);
+      }
+
+      return new Connect(
+         mem.get(PacketIO.PROTO_INT, offset + 1),
+         mem.get(PacketIO.PROTO_INT, offset + 5),
+         PacketIO.readFixedAsciiString(mem, offset + 9, 20),
+         ClientType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 29)),
+         hasIdentityToken(mem, offset)
+            ? PacketIO.readVarString("IdentityToken", mem, offset + getValidatedOffset(mem, offset, 30, 46, "IdentityToken"), 8192, PacketIO.UTF8)
+            : null,
+         PacketIO.readValidatedAsciiString("Language", mem, offset + getValidatedOffset(mem, offset, 34, 46, "Language"), 16),
+         referralData,
+         hasReferralSource(mem, offset) ? HostAddress.toObject(mem, offset + getValidatedOffset(mem, offset, 42, 46, "ReferralSource")) : null
+      );
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -298,6 +468,59 @@ public class Connect implements Packet, ToServerPacket {
       } else {
          buf.setIntLE(referralSourceOffsetSlot, -1);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.identityToken != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.referralData != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.referralSource != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.protocolCrc);
+      mem.set(PacketIO.PROTO_INT, offset + 5, this.protocolBuildNumber);
+      PacketIO.writeFixedAsciiString(mem, offset + 9, this.clientVersion, 20);
+      mem.set(PacketIO.PROTO_BYTE, offset + 29, (byte)this.clientType.getValue());
+      int varOffset = offset + 46;
+      if (this.identityToken != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 30, varOffset - offset - 46);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.identityToken, 8192);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 30, -1);
+      }
+
+      mem.set(PacketIO.PROTO_INT, offset + 34, varOffset - offset - 46);
+      varOffset += PacketIO.writeVarAsciiString(mem, varOffset, this.language, 16);
+      if (this.referralData != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 38, varOffset - offset - 46);
+         if (this.referralData.length > 4096) {
+            throw ProtocolException.arrayTooLong("ReferralData", this.referralData.length, 4096);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.referralData.length);
+         MemorySegment.copy(this.referralData, 0, mem, PacketIO.PROTO_BYTE, varOffset, this.referralData.length);
+         varOffset += this.referralData.length * 1;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 38, -1);
+      }
+
+      if (this.referralSource != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 42, varOffset - offset - 46);
+         varOffset += this.referralSource.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 42, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

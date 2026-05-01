@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -205,6 +206,202 @@ public class Trail {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 69L;
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem) {
+      return getId(mem, 0);
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem, int offset) {
+      return hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 61, 69, "Id"), 4096000, PacketIO.UTF8) : null;
+   }
+
+   @Nullable
+   public static String getTexture(MemorySegment mem) {
+      return getTexture(mem, 0);
+   }
+
+   @Nullable
+   public static String getTexture(MemorySegment mem, int offset) {
+      return hasTexture(mem, offset)
+         ? PacketIO.readVarString("Texture", mem, offset + getValidatedOffset(mem, offset, 65, 69, "Texture"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static int getLifeSpan(MemorySegment mem) {
+      return getLifeSpan(mem, 0);
+   }
+
+   public static int getLifeSpan(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   public static float getRoll(MemorySegment mem) {
+      return getRoll(mem, 0);
+   }
+
+   public static float getRoll(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 5);
+   }
+
+   @Nullable
+   public static Edge getStart(MemorySegment mem) {
+      return getStart(mem, 0);
+   }
+
+   @Nullable
+   public static Edge getStart(MemorySegment mem, int offset) {
+      return hasStart(mem, offset) ? Edge.toObject(mem, offset + 9) : null;
+   }
+
+   @Nullable
+   public static Edge getEnd(MemorySegment mem) {
+      return getEnd(mem, 0);
+   }
+
+   @Nullable
+   public static Edge getEnd(MemorySegment mem, int offset) {
+      return hasEnd(mem, offset) ? Edge.toObject(mem, offset + 18) : null;
+   }
+
+   public static float getLightInfluence(MemorySegment mem) {
+      return getLightInfluence(mem, 0);
+   }
+
+   public static float getLightInfluence(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 27);
+   }
+
+   public static FXRenderMode getRenderMode(MemorySegment mem) {
+      return getRenderMode(mem, 0);
+   }
+
+   public static FXRenderMode getRenderMode(MemorySegment mem, int offset) {
+      return FXRenderMode.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 31));
+   }
+
+   @Nullable
+   public static IntersectionHighlight getIntersectionHighlight(MemorySegment mem) {
+      return getIntersectionHighlight(mem, 0);
+   }
+
+   @Nullable
+   public static IntersectionHighlight getIntersectionHighlight(MemorySegment mem, int offset) {
+      return hasIntersectionHighlight(mem, offset) ? IntersectionHighlight.toObject(mem, offset + 32) : null;
+   }
+
+   public static boolean getSmooth(MemorySegment mem) {
+      return getSmooth(mem, 0);
+   }
+
+   public static boolean getSmooth(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 40);
+   }
+
+   @Nullable
+   public static Vector2i getFrameSize(MemorySegment mem) {
+      return getFrameSize(mem, 0);
+   }
+
+   @Nullable
+   public static Vector2i getFrameSize(MemorySegment mem, int offset) {
+      return hasFrameSize(mem, offset) ? Vector2i.toObject(mem, offset + 41) : null;
+   }
+
+   @Nullable
+   public static Range getFrameRange(MemorySegment mem) {
+      return getFrameRange(mem, 0);
+   }
+
+   @Nullable
+   public static Range getFrameRange(MemorySegment mem, int offset) {
+      return hasFrameRange(mem, offset) ? Range.toObject(mem, offset + 49) : null;
+   }
+
+   public static int getFrameLifeSpan(MemorySegment mem) {
+      return getFrameLifeSpan(mem, 0);
+   }
+
+   public static int getFrameLifeSpan(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 57);
+   }
+
+   public static boolean hasStart(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasEnd(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasIntersectionHighlight(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasFrameSize(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasFrameRange(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 16) != 0;
+   }
+
+   public static boolean hasId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 32) != 0;
+   }
+
+   public static boolean hasTexture(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 64) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static Trail toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static Trail toObject(MemorySegment mem, int offset) {
+      if (offset + 69 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Trail", offset + 69, (int)mem.byteSize());
+      } else {
+         return new Trail(
+            hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 61, 69, "Id"), 4096000, PacketIO.UTF8) : null,
+            hasTexture(mem, offset)
+               ? PacketIO.readVarString("Texture", mem, offset + getValidatedOffset(mem, offset, 65, 69, "Texture"), 4096000, PacketIO.UTF8)
+               : null,
+            mem.get(PacketIO.PROTO_INT, offset + 1),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 5),
+            hasStart(mem, offset) ? Edge.toObject(mem, offset + 9) : null,
+            hasEnd(mem, offset) ? Edge.toObject(mem, offset + 18) : null,
+            mem.get(PacketIO.PROTO_FLOAT, offset + 27),
+            FXRenderMode.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 31)),
+            hasIntersectionHighlight(mem, offset) ? IntersectionHighlight.toObject(mem, offset + 32) : null,
+            mem.get(PacketIO.PROTO_BOOL, offset + 40),
+            hasFrameSize(mem, offset) ? Vector2i.toObject(mem, offset + 41) : null,
+            hasFrameRange(mem, offset) ? Range.toObject(mem, offset + 49) : null,
+            mem.get(PacketIO.PROTO_INT, offset + 57)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -291,6 +488,91 @@ public class Trail {
       } else {
          buf.setIntLE(textureOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.start != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.end != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.intersectionHighlight != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.frameSize != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.frameRange != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.id != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
+      if (this.texture != null) {
+         nullBits = (byte)(nullBits | 64);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.lifeSpan);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 5, this.roll);
+      if (this.start != null) {
+         this.start.serialize(mem, offset + 9);
+      } else {
+         mem.asSlice(offset + 9, 9L).fill((byte)0);
+      }
+
+      if (this.end != null) {
+         this.end.serialize(mem, offset + 18);
+      } else {
+         mem.asSlice(offset + 18, 9L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_FLOAT, offset + 27, this.lightInfluence);
+      mem.set(PacketIO.PROTO_BYTE, offset + 31, (byte)this.renderMode.getValue());
+      if (this.intersectionHighlight != null) {
+         this.intersectionHighlight.serialize(mem, offset + 32);
+      } else {
+         mem.asSlice(offset + 32, 8L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_BOOL, offset + 40, this.smooth);
+      if (this.frameSize != null) {
+         this.frameSize.serialize(mem, offset + 41);
+      } else {
+         mem.asSlice(offset + 41, 8L).fill((byte)0);
+      }
+
+      if (this.frameRange != null) {
+         this.frameRange.serialize(mem, offset + 49);
+      } else {
+         mem.asSlice(offset + 49, 8L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_INT, offset + 57, this.frameLifeSpan);
+      int varOffset = offset + 69;
+      if (this.id != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 61, varOffset - offset - 69);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.id, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 61, -1);
+      }
+
+      if (this.texture != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 65, varOffset - offset - 69);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.texture, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 65, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

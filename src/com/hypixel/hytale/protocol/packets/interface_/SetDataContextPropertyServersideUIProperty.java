@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -96,6 +97,50 @@ public class SetDataContextPropertyServersideUIProperty extends ServersideUIComm
       }
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 8L;
+   }
+
+   public static String getProperty(MemorySegment mem) {
+      return getProperty(mem, 0);
+   }
+
+   public static String getProperty(MemorySegment mem, int offset) {
+      return PacketIO.readVarString("Property", mem, offset + getValidatedOffset(mem, offset, 0, 8, "Property"), 4096000, PacketIO.UTF8);
+   }
+
+   public static UIDataValue getValue(MemorySegment mem) {
+      return getValue(mem, 0);
+   }
+
+   public static UIDataValue getValue(MemorySegment mem, int offset) {
+      return UIDataValue.toObject(mem, offset + getValidatedOffset(mem, offset, 4, 8, "Value"));
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static SetDataContextPropertyServersideUIProperty toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static SetDataContextPropertyServersideUIProperty toObject(MemorySegment mem, int offset) {
+      if (offset + 8 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("SetDataContextPropertyServersideUIProperty", offset + 8, (int)mem.byteSize());
+      } else {
+         return new SetDataContextPropertyServersideUIProperty(
+            PacketIO.readVarString("Property", mem, offset + getValidatedOffset(mem, offset, 0, 8, "Property"), 4096000, PacketIO.UTF8),
+            UIDataValue.toObject(mem, offset + getValidatedOffset(mem, offset, 4, 8, "Value"))
+         );
+      }
+   }
+
    @Override
    public int serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -109,6 +154,16 @@ public class SetDataContextPropertyServersideUIProperty extends ServersideUIComm
       buf.setIntLE(valueOffsetSlot, buf.writerIndex() - varBlockStart);
       this.value.serializeWithTypeId(buf);
       return buf.writerIndex() - startPos;
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      int varOffset = offset + 8;
+      mem.set(PacketIO.PROTO_INT, offset + 0, varOffset - offset - 8);
+      varOffset += PacketIO.writeVarString(mem, varOffset, this.property, 4096000);
+      mem.set(PacketIO.PROTO_INT, offset + 4, varOffset - offset - 8);
+      varOffset += this.value.serializeWithTypeId(mem, varOffset);
+      return varOffset - offset;
    }
 
    @Override

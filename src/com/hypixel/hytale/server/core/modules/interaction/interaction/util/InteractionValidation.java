@@ -2,12 +2,14 @@ package com.hypixel.hytale.server.core.modules.interaction.interaction.util;
 
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.modules.entity.player.PlayerSettings;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.InteractionConfiguration;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
@@ -18,12 +20,25 @@ import org.joml.Vector3i;
 public class InteractionValidation {
    private static final float MAX_INTERACTION_DISTANCE_BUFFER = 2.0F;
    private static final float EXTENDED_CREATIVE_BLOCK_INTERACTION_DISTANCE = 10.0F;
+   private static final float MIN_CREATIVE_BLOCK_INTERACTION_DISTANCE = 0.0F;
+   private static final float MAX_CREATIVE_BLOCK_INTERACTION_DISTANCE = 128.0F;
 
-   private static float getPlayerInteractionDistanceSq(@Nonnull GameMode gameMode, @Nullable ItemStack heldItem) {
+   private static float getPlayerInteractionDistanceSq(
+      @Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nullable ItemStack heldItem
+   ) {
+      Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
+      GameMode gameMode = playerComponent.getGameMode();
       InteractionConfiguration interactionConfig = heldItem != null ? heldItem.getItem().getInteractionConfig() : InteractionConfiguration.DEFAULT;
       float maxDistance = interactionConfig.getUseDistance(gameMode);
       if (gameMode == GameMode.Creative) {
-         maxDistance = Math.max(maxDistance, 10.0F);
+         float creativeDistance = 10.0F;
+         PlayerSettings settingsComponent = componentAccessor.getComponent(ref, PlayerSettings.getComponentType());
+         if (settingsComponent != null) {
+            int clientCreativeDistance = settingsComponent.creativeSettings().creativeInteractionDistance();
+            creativeDistance = MathUtil.clamp(clientCreativeDistance, 0.0F, 128.0F);
+         }
+
+         maxDistance = Math.max(maxDistance, creativeDistance);
       }
 
       maxDistance += 2.0F;
@@ -56,7 +71,7 @@ public class InteractionValidation {
          return false;
       }
 
-      float maxDistanceSq = getPlayerInteractionDistanceSq(playerComponent.getGameMode(), heldItem);
+      float maxDistanceSq = getPlayerInteractionDistanceSq(ref, componentAccessor, heldItem);
       float eyeHeight = getEyeHeight(ref, componentAccessor);
       Vector3d position = transformComponent.getPosition();
       Vector3d targetPosition = targetTransformComponent.getPosition();
@@ -82,7 +97,7 @@ public class InteractionValidation {
          return false;
       }
 
-      float maxDistanceSq = getPlayerInteractionDistanceSq(playerComponent.getGameMode(), heldItem);
+      float maxDistanceSq = getPlayerInteractionDistanceSq(ref, componentAccessor, heldItem);
       float eyeHeight = getEyeHeight(ref, componentAccessor);
       Vector3d position = transformComponent.getPosition();
       double dx = blockX + 0.5 - position.x();

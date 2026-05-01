@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -66,9 +67,48 @@ public class HostAddress {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 2L;
+   }
+
+   public static String getHost(MemorySegment mem) {
+      return getHost(mem, 0);
+   }
+
+   public static String getHost(MemorySegment mem, int offset) {
+      return PacketIO.readVarString("Host", mem, offset + 2, 256, PacketIO.UTF8);
+   }
+
+   public static short getPort(MemorySegment mem) {
+      return getPort(mem, 0);
+   }
+
+   public static short getPort(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_SHORT, offset + 0);
+   }
+
+   public static HostAddress toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static HostAddress toObject(MemorySegment mem, int offset) {
+      if (offset + 2 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("HostAddress", offset + 2, (int)mem.byteSize());
+      } else {
+         return new HostAddress(PacketIO.readVarString("Host", mem, offset + 2, 256, PacketIO.UTF8), mem.get(PacketIO.PROTO_SHORT, offset + 0));
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeShortLE(this.port);
       PacketIO.writeVarString(buf, this.host, 256);
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_SHORT, offset + 0, this.port);
+      int varOffset = offset + 2;
+      varOffset += PacketIO.writeVarString(mem, varOffset, this.host, 256);
+      return varOffset - offset;
    }
 
    public int computeSize() {

@@ -5,9 +5,11 @@ import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.SmartMoveType;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -67,10 +69,50 @@ public class SmartGiveCreativeItem implements Packet, ToServerPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 1L;
+   }
+
+   public static ItemQuantity getItem(MemorySegment mem) {
+      return getItem(mem, 0);
+   }
+
+   public static ItemQuantity getItem(MemorySegment mem, int offset) {
+      return ItemQuantity.toObject(mem, offset + 1);
+   }
+
+   public static SmartMoveType getMoveType(MemorySegment mem) {
+      return getMoveType(mem, 0);
+   }
+
+   public static SmartMoveType getMoveType(MemorySegment mem, int offset) {
+      return SmartMoveType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 0));
+   }
+
+   public static SmartGiveCreativeItem toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static SmartGiveCreativeItem toObject(MemorySegment mem, int offset) {
+      if (offset + 1 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("SmartGiveCreativeItem", offset + 1, (int)mem.byteSize());
+      } else {
+         return new SmartGiveCreativeItem(ItemQuantity.toObject(mem, offset + 1), SmartMoveType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 0)));
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeByte(this.moveType.getValue());
       this.item.serialize(buf);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, (byte)this.moveType.getValue());
+      int varOffset = offset + 1;
+      varOffset += this.item.serialize(mem, varOffset);
+      return varOffset - offset;
    }
 
    @Override

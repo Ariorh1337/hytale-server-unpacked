@@ -1,11 +1,16 @@
 package com.hypixel.hytale.server.core.modules.item;
 
+import com.hypixel.hytale.assetstore.event.LoadedAssetsEvent;
 import com.hypixel.hytale.codec.lookup.Priority;
 import com.hypixel.hytale.common.plugin.PluginManifest;
+import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemCategory;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemDrop;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemDropList;
+import com.hypixel.hytale.server.core.asset.type.item.config.ItemWeapon;
+import com.hypixel.hytale.server.core.asset.type.item.config.damageData.DamageBreakdown;
+import com.hypixel.hytale.server.core.asset.type.item.config.damageData.WeaponDamageDataCollector;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.EmptyItemContainer;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
@@ -17,6 +22,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -38,6 +44,29 @@ public class ItemModule extends JavaPlugin {
       this.getCommandRegistry().registerCommand(new SpawnItemCommand());
       ItemContainer.CODEC.register(Priority.DEFAULT, "Simple", SimpleItemContainer.class, SimpleItemContainer.CODEC);
       ItemContainer.CODEC.register("Empty", EmptyItemContainer.class, EmptyItemContainer.CODEC);
+      this.getEventRegistry().register(LoadedAssetsEvent.class, Item.class, this::computeWeaponData);
+   }
+
+   private void computeWeaponData(@Nonnull LoadedAssetsEvent<String, Item, ?> event) {
+      int weapons = 0;
+      int withData = 0;
+
+      for (Item item : event.getLoadedAssets().values()) {
+         if (item.getWeapon() != null) {
+            weapons++;
+            ItemWeapon weapon = item.unshareWeapon();
+            DamageBreakdown basicDamageBreakdown = WeaponDamageDataCollector.calculate(item, InteractionType.Primary);
+            weapon.setBasicDamageBreakdown(basicDamageBreakdown);
+            DamageBreakdown ultDamageBreakdown = WeaponDamageDataCollector.calculate(item, InteractionType.Ability1);
+            weapon.setUltimateDamageBreakdown(ultDamageBreakdown);
+            item.invalidatePacketCache();
+            if (!basicDamageBreakdown.entries().isEmpty()) {
+               withData++;
+            }
+         }
+      }
+
+      this.getLogger().at(Level.INFO).log("Computed damage data for %d of %d weapon items", (int)withData, (int)weapons);
    }
 
    @Nonnull

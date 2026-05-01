@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -94,6 +95,57 @@ public class CommandSuggestionsRequest implements Packet, ToServerPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 9L;
+   }
+
+   @Nullable
+   public static String getCommand(MemorySegment mem) {
+      return getCommand(mem, 0);
+   }
+
+   @Nullable
+   public static String getCommand(MemorySegment mem, int offset) {
+      return hasCommand(mem, offset) ? PacketIO.readVarString("Command", mem, offset + 9, 4096000, PacketIO.UTF8) : null;
+   }
+
+   public static int getCursorPosition(MemorySegment mem) {
+      return getCursorPosition(mem, 0);
+   }
+
+   public static int getCursorPosition(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   public static int getSelectedVariant(MemorySegment mem) {
+      return getSelectedVariant(mem, 0);
+   }
+
+   public static int getSelectedVariant(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 5);
+   }
+
+   public static boolean hasCommand(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static CommandSuggestionsRequest toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static CommandSuggestionsRequest toObject(MemorySegment mem, int offset) {
+      if (offset + 9 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("CommandSuggestionsRequest", offset + 9, (int)mem.byteSize());
+      } else {
+         return new CommandSuggestionsRequest(
+            hasCommand(mem, offset) ? PacketIO.readVarString("Command", mem, offset + 9, 4096000, PacketIO.UTF8) : null,
+            mem.get(PacketIO.PROTO_INT, offset + 1),
+            mem.get(PacketIO.PROTO_INT, offset + 5)
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -107,6 +159,24 @@ public class CommandSuggestionsRequest implements Packet, ToServerPacket {
       if (this.command != null) {
          PacketIO.writeVarString(buf, this.command, 4096000);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.command != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.cursorPosition);
+      mem.set(PacketIO.PROTO_INT, offset + 5, this.selectedVariant);
+      int varOffset = offset + 9;
+      if (this.command != null) {
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.command, 4096000);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

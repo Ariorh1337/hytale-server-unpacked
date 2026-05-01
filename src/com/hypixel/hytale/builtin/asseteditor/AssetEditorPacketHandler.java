@@ -213,7 +213,7 @@ public class AssetEditorPacketHandler extends GenericPacketHandler {
             LOGGER.at(Level.INFO).log("%s is fetching asset %s:%s, from opened tab: %s", this.editorClient.getUsername(), pack, path, packet.isFromOpenedTab);
             AssetEditorPlugin.get().handleFetchAsset(this.editorClient, new AssetPath(packet.path.pack, Path.of(packet.path.path)), packet.token);
          } else {
-            LOGGER.at(Level.SEVERE).log("%s is fetching json asset with null pack or path");
+            LOGGER.at(Level.SEVERE).log("%s is fetching json asset with null pack or path", this.editorClient.getUsername());
          }
       }
    }
@@ -230,7 +230,7 @@ public class AssetEditorPacketHandler extends GenericPacketHandler {
                   this.editorClient, new AssetPath(packet.path.pack, Path.of(packet.path.path)), packet.isFromOpenedTab, packet.token
                );
          } else {
-            LOGGER.at(Level.SEVERE).log("%s is fetching json asset with null pack or path");
+            LOGGER.at(Level.SEVERE).log("%s is fetching json asset with null pack or path", this.editorClient.getUsername());
          }
       }
    }
@@ -351,7 +351,7 @@ public class AssetEditorPacketHandler extends GenericPacketHandler {
 
    public void handle(@Nonnull AssetEditorRenameDirectory packet) {
       if (!this.lacksPermission(packet.token)) {
-         LOGGER.at(Level.INFO).log("%s is renaming directory %s to $s", this.editorClient.getUsername(), packet.path, packet.newPath);
+         LOGGER.at(Level.INFO).log("%s is renaming directory %s to %s", this.editorClient.getUsername(), packet.path, packet.newPath);
          AssetEditorPlugin.get().handleRenameDirectory(this.editorClient, new AssetPath(packet.path), new AssetPath(packet.newPath), packet.token);
       }
    }

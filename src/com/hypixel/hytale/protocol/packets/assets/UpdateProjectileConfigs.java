@@ -10,6 +10,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -206,6 +207,187 @@ public class UpdateProjectileConfigs implements Packet, ToClientPacket {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 10L;
+   }
+
+   public static UpdateType getType(MemorySegment mem) {
+      return getType(mem, 0);
+   }
+
+   public static UpdateType getType(MemorySegment mem, int offset) {
+      return UpdateType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1));
+   }
+
+   @Nullable
+   public static Map<String, ProjectileConfig> getConfigs(MemorySegment mem) {
+      return getConfigs(mem, 0);
+   }
+
+   @Nullable
+   public static Map<String, ProjectileConfig> getConfigs(MemorySegment mem, int offset) {
+      if (!hasConfigs(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 2, 10, "Configs");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Configs", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("Configs", len, 4096000);
+      }
+
+      Map<String, ProjectileConfig> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         long keyPacked = VarInt.getWithLength(mem, off);
+         int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+         String key = PacketIO.readVarString("key", mem, off, 16384000, PacketIO.UTF8);
+         off += nkey;
+         ProjectileConfig value = ProjectileConfig.toObject(mem, off);
+         off += value.computeSize();
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("Configs", key);
+         }
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static String[] getRemovedConfigs(MemorySegment mem) {
+      return getRemovedConfigs(mem, 0);
+   }
+
+   @Nullable
+   public static String[] getRemovedConfigs(MemorySegment mem, int offset) {
+      if (!hasRemovedConfigs(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 6, 10, "RemovedConfigs");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("RemovedConfigs", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("RemovedConfigs", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("RemovedConfigs", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      String[] data = new String[len];
+
+      for (int i = 0; i < len; i++) {
+         long sp = VarInt.getWithLength(mem, off);
+         int n = (int)sp + (int)(sp >>> 32);
+         data[i] = PacketIO.readVarString("RemovedConfigs", mem, off, 16384000, PacketIO.UTF8);
+         off += n;
+      }
+
+      return data;
+   }
+
+   public static boolean hasConfigs(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasRemovedConfigs(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static UpdateProjectileConfigs toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UpdateProjectileConfigs toObject(MemorySegment mem, int offset) {
+      if (offset + 10 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("UpdateProjectileConfigs", offset + 10, (int)mem.byteSize());
+      }
+
+      Map<String, ProjectileConfig> configs = null;
+      if (hasConfigs(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 2, 10, "Configs");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Configs", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Configs", len, 4096000);
+         }
+
+         configs = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            long keyPacked = VarInt.getWithLength(mem, off);
+            int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+            String key = PacketIO.readVarString("key", mem, off, 16384000, PacketIO.UTF8);
+            off += nkey;
+            ProjectileConfig value = ProjectileConfig.toObject(mem, off);
+            off += value.computeSize();
+            if (configs.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("Configs", key);
+            }
+         }
+      }
+
+      String[] removedConfigs = null;
+      if (hasRemovedConfigs(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 6, 10, "RemovedConfigs");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("RemovedConfigs", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("RemovedConfigs", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("RemovedConfigs", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         removedConfigs = new String[len];
+
+         for (int i = 0; i < len; i++) {
+            long sp = VarInt.getWithLength(mem, off);
+            int n = (int)sp + (int)(sp >>> 32);
+            removedConfigs[i] = PacketIO.readVarString("RemovedConfigs", mem, off, 16384000, PacketIO.UTF8);
+            off += n;
+         }
+      }
+
+      return new UpdateProjectileConfigs(UpdateType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1)), configs, removedConfigs);
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -255,6 +437,57 @@ public class UpdateProjectileConfigs implements Packet, ToClientPacket {
       } else {
          buf.setIntLE(removedConfigsOffsetSlot, -1);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.configs != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.removedConfigs != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.type.getValue());
+      int varOffset = offset + 10;
+      if (this.configs != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 2, varOffset - offset - 10);
+         if (this.configs.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Configs", this.configs.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.configs.size());
+
+         for (Entry<String, ProjectileConfig> e : this.configs.entrySet()) {
+            varOffset += PacketIO.writeVarString(mem, varOffset, e.getKey(), 16384000);
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 2, -1);
+      }
+
+      if (this.removedConfigs != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 6, varOffset - offset - 10);
+         if (this.removedConfigs.length > 4096000) {
+            throw ProtocolException.arrayTooLong("RemovedConfigs", this.removedConfigs.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.removedConfigs.length);
+         int removedConfigsValueOffset = 0;
+
+         for (int i = 0; i < this.removedConfigs.length; i++) {
+            removedConfigsValueOffset += PacketIO.writeVarString(mem, varOffset + removedConfigsValueOffset, this.removedConfigs[i], 16384000);
+         }
+
+         varOffset += removedConfigsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 6, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

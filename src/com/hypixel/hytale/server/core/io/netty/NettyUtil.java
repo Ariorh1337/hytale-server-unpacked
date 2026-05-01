@@ -450,6 +450,13 @@ public class NettyUtil {
       }
 
       @Override
+      public void updateStreamPriority(int urgency, boolean incremental) {
+         if (this.channel instanceof QuicStreamChannel quicStreamChannel) {
+            quicStreamChannel.updatePriority(new QuicStreamPriority(urgency, incremental));
+         }
+      }
+
+      @Override
       public void initTimeoutContext(@Nonnull String stage, @Nonnull String identifier) {
          NettyUtil.TimeoutContext.init(this.channel, stage, identifier);
       }

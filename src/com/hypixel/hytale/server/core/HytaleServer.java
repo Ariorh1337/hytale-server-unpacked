@@ -279,8 +279,9 @@ public class HytaleServer {
          }
 
          AssetRegistryLoader.init();
+         PluginManifest[] plugins = Constants.BOOTSTRAP ? Constants.BOOTSTRAP_PLUGINS : Constants.CORE_PLUGINS;
 
-         for (PluginManifest manifest : Constants.CORE_PLUGINS) {
+         for (PluginManifest manifest : plugins) {
             this.pluginManager.registerCorePlugin(manifest);
          }
 
@@ -337,21 +338,23 @@ public class HytaleServer {
                return;
             }
 
-            LoadAssetEvent loadAssetEvent = get()
-               .getEventBus()
-               .<Void, LoadAssetEvent>dispatchFor(LoadAssetEvent.class)
-               .dispatch(new LoadAssetEvent(this.bootStart));
-            if (this.isShuttingDown()) {
-               return;
-            }
+            if (!Constants.BOOTSTRAP) {
+               LoadAssetEvent loadAssetEvent = get()
+                  .getEventBus()
+                  .<Void, LoadAssetEvent>dispatchFor(LoadAssetEvent.class)
+                  .dispatch(new LoadAssetEvent(this.bootStart));
+               if (this.isShuttingDown()) {
+                  return;
+               }
 
-            if (loadAssetEvent.isShouldShutdown()) {
-               List<String> reasons = loadAssetEvent.getReasons();
-               String join = String.join("\n", reasons);
-               LOGGER.at(Level.SEVERE).log("Asset validation FAILED with %d reason(s):\n%s", reasons.size(), join);
-               Message reasonMessage = Message.translation("client.disconnection.shutdownReason.validateError.detail").param("detail", join);
-               this.shutdownServer(ShutdownReason.VALIDATE_ERROR.withMessage(reasonMessage));
-               return;
+               if (loadAssetEvent.isShouldShutdown()) {
+                  List<String> reasons = loadAssetEvent.getReasons();
+                  String join = String.join("\n", reasons);
+                  LOGGER.at(Level.SEVERE).log("Asset validation FAILED with %d reason(s):\n%s", reasons.size(), join);
+                  Message reasonMessage = Message.translation("client.disconnection.shutdownReason.validateError.detail").param("detail", join);
+                  this.shutdownServer(ShutdownReason.VALIDATE_ERROR.withMessage(reasonMessage));
+                  return;
+               }
             }
 
             if (Options.getOptionSet().has(Options.SHUTDOWN_AFTER_VALIDATE)) {
@@ -415,9 +418,12 @@ public class HytaleServer {
                   LOGGER.at(Level.SEVERE).withCause(e).log("Failed to save server config!");
                }
             }, 1L, 1L, TimeUnit.MINUTES);
-            LOGGER.at(Level.INFO).log("Getting Hytale Universe ready...");
-            Universe.get().getUniverseReady().join();
-            LOGGER.at(Level.INFO).log("Universe ready!");
+            if (!Constants.BOOTSTRAP) {
+               LOGGER.at(Level.INFO).log("Getting Hytale Universe ready...");
+               Universe.get().getUniverseReady().join();
+               LOGGER.at(Level.INFO).log("Universe ready!");
+            }
+
             List<String> tags = new ObjectArrayList<>();
             if (Constants.SINGLEPLAYER) {
                tags.add("Singleplayer");
@@ -430,7 +436,10 @@ public class HytaleServer {
             }
 
             this.booted.set(true);
-            ServerManager.get().waitForBindComplete();
+            if (!Constants.BOOTSTRAP) {
+               ServerManager.get().waitForBindComplete();
+            }
+
             this.eventBus.dispatch(BootEvent.class);
             List<String> bootCommands = Options.getOptionSet().valuesOf(Options.BOOT_COMMAND);
             if (!bootCommands.isEmpty()) {

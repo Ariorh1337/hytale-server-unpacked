@@ -16,6 +16,7 @@ import com.hypixel.hytale.server.core.io.handlers.SubPacketHandler;
 import com.hypixel.hytale.server.core.io.handlers.game.GamePacketHandler;
 import com.hypixel.hytale.server.core.io.handlers.game.InventoryPacketHandler;
 import com.hypixel.hytale.server.core.io.transport.QUICTransport;
+import com.hypixel.hytale.server.core.io.transport.QuicheTransport;
 import com.hypixel.hytale.server.core.io.transport.Transport;
 import com.hypixel.hytale.server.core.io.transport.TransportType;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
@@ -68,7 +69,7 @@ public class ServerManager extends JavaPlugin {
    public ServerManager(@Nonnull JavaPluginInit init) {
       super(init);
       instance = this;
-      if (!Options.getOptionSet().has(Options.BARE)) {
+      if (!Options.isBare()) {
          this.init();
       }
    }
@@ -76,15 +77,13 @@ public class ServerManager extends JavaPlugin {
    public void init() {
       this.registerFuture = CompletableFutureUtil._catch(CompletableFuture.runAsync(SneakyThrow.sneakyRunnable(() -> {
          long start = System.nanoTime();
-         switch ((TransportType)Options.getOptionSet().valuesOf(Options.TRANSPORT).getFirst()) {
-            case QUIC:
-               this.transport = new QUICTransport();
-               this.getLogger().at(Level.INFO).log("Took %s to setup transport!", FormatUtil.nanosToString(System.nanoTime() - start));
-               this.registerFuture = null;
-               return;
-            default:
-               throw new MatchException(null, null);
-         }
+
+         this.transport = switch ((TransportType)Options.getOptionSet().valuesOf(Options.TRANSPORT).getFirst()) {
+            case QUIC -> new QUICTransport();
+            case QUICHE -> new QuicheTransport();
+         };
+         this.getLogger().at(Level.INFO).log("Took %s to setup transport!", FormatUtil.nanosToString(System.nanoTime() - start));
+         this.registerFuture = null;
       })));
    }
 
@@ -105,7 +104,7 @@ public class ServerManager extends JavaPlugin {
 
          if (!HytaleServer.get().isShuttingDown()) {
             label40:
-            if (Options.getOptionSet().has(Options.MIGRATIONS) || Options.getOptionSet().has(Options.BARE)) {
+            if (Options.getOptionSet().has(Options.MIGRATIONS) || Options.isBare()) {
                this.bootFuture = null;
             } else if (Constants.SINGLEPLAYER) {
                try {
@@ -164,7 +163,7 @@ public class ServerManager extends JavaPlugin {
    }
 
    public boolean bind(@Nonnull InetSocketAddress address) {
-      if (address.getAddress().isAnyLocalAddress() && this.transport.getType() == TransportType.QUIC) {
+      if (address.getAddress().isAnyLocalAddress()) {
          ServerListener channelIpv6 = this.bind0(new InetSocketAddress(NetworkUtil.ANY_IPV6_ADDRESS, address.getPort()));
          if (channelIpv6 != null) {
             this.listeners.add(channelIpv6);

@@ -90,7 +90,7 @@ public class TriggerVolumeSnapshot implements SelectionSnapshot<TriggerVolumeSna
          entry.getId(),
          entry.getWorldName(),
          new Vector3d(entry.getPosition()),
-         entry.getShape(),
+         entry.getShape().copy(),
          new ArrayList<>(entry.getEffects()),
          EnumSet.copyOf(entry.getTargetTypes()),
          entry.isEnabled(),

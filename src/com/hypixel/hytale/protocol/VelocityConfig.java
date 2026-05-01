@@ -1,8 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -63,6 +65,77 @@ public class VelocityConfig {
       return 21;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 21L;
+   }
+
+   public static float getGroundResistance(MemorySegment mem) {
+      return getGroundResistance(mem, 0);
+   }
+
+   public static float getGroundResistance(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 0);
+   }
+
+   public static float getGroundResistanceMax(MemorySegment mem) {
+      return getGroundResistanceMax(mem, 0);
+   }
+
+   public static float getGroundResistanceMax(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 4);
+   }
+
+   public static float getAirResistance(MemorySegment mem) {
+      return getAirResistance(mem, 0);
+   }
+
+   public static float getAirResistance(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 8);
+   }
+
+   public static float getAirResistanceMax(MemorySegment mem) {
+      return getAirResistanceMax(mem, 0);
+   }
+
+   public static float getAirResistanceMax(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 12);
+   }
+
+   public static float getThreshold(MemorySegment mem) {
+      return getThreshold(mem, 0);
+   }
+
+   public static float getThreshold(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 16);
+   }
+
+   public static VelocityThresholdStyle getStyle(MemorySegment mem) {
+      return getStyle(mem, 0);
+   }
+
+   public static VelocityThresholdStyle getStyle(MemorySegment mem, int offset) {
+      return VelocityThresholdStyle.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 20));
+   }
+
+   public static VelocityConfig toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static VelocityConfig toObject(MemorySegment mem, int offset) {
+      if (offset + 21 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("VelocityConfig", offset + 21, (int)mem.byteSize());
+      } else {
+         return new VelocityConfig(
+            mem.get(PacketIO.PROTO_FLOAT, offset + 0),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 4),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 8),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 12),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 16),
+            VelocityThresholdStyle.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 20))
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeFloatLE(this.groundResistance);
       buf.writeFloatLE(this.groundResistanceMax);
@@ -70,6 +143,16 @@ public class VelocityConfig {
       buf.writeFloatLE(this.airResistanceMax);
       buf.writeFloatLE(this.threshold);
       buf.writeByte(this.style.getValue());
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_FLOAT, offset + 0, this.groundResistance);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 4, this.groundResistanceMax);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 8, this.airResistance);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 12, this.airResistanceMax);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 16, this.threshold);
+      mem.set(PacketIO.PROTO_BYTE, offset + 20, (byte)this.style.getValue());
+      return 21;
    }
 
    public int computeSize() {

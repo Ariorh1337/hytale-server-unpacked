@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -138,6 +139,121 @@ public class BlockFaceSupport {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 9L;
+   }
+
+   @Nullable
+   public static String getFaceType(MemorySegment mem) {
+      return getFaceType(mem, 0);
+   }
+
+   @Nullable
+   public static String getFaceType(MemorySegment mem, int offset) {
+      return hasFaceType(mem, offset)
+         ? PacketIO.readVarString("FaceType", mem, offset + getValidatedOffset(mem, offset, 1, 9, "FaceType"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static Vector3i[] getFiller(MemorySegment mem) {
+      return getFiller(mem, 0);
+   }
+
+   @Nullable
+   public static Vector3i[] getFiller(MemorySegment mem, int offset) {
+      if (!hasFiller(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 5, 9, "Filler");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Filler", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Filler", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 12L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Filler", off + lenOffset + len * 12, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      Vector3i[] data = new Vector3i[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = Vector3i.toObject(mem, off + i * 12);
+      }
+
+      return data;
+   }
+
+   public static boolean hasFaceType(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasFiller(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static BlockFaceSupport toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static BlockFaceSupport toObject(MemorySegment mem, int offset) {
+      if (offset + 9 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BlockFaceSupport", offset + 9, (int)mem.byteSize());
+      }
+
+      Vector3i[] filler = null;
+      if (hasFiller(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 5, 9, "Filler");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Filler", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Filler", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 12L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Filler", off + lenOffset + len * 12, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         filler = new Vector3i[len];
+
+         for (int i = 0; i < len; i++) {
+            filler[i] = Vector3i.toObject(mem, off + i * 12);
+         }
+      }
+
+      return new BlockFaceSupport(
+         hasFaceType(mem, offset)
+            ? PacketIO.readVarString("FaceType", mem, offset + getValidatedOffset(mem, offset, 1, 9, "FaceType"), 4096000, PacketIO.UTF8)
+            : null,
+         filler
+      );
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -176,6 +292,46 @@ public class BlockFaceSupport {
       } else {
          buf.setIntLE(fillerOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.faceType != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.filler != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 9;
+      if (this.faceType != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 1, varOffset - offset - 9);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.faceType, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 1, -1);
+      }
+
+      if (this.filler != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 5, varOffset - offset - 9);
+         if (this.filler.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Filler", this.filler.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.filler.length);
+         int fillerValueOffset = 0;
+
+         for (int i = 0; i < this.filler.length; i++) {
+            fillerValueOffset += this.filler[i].serialize(mem, varOffset + fillerValueOffset);
+         }
+
+         varOffset += fillerValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 5, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

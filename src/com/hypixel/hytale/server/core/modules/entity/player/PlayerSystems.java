@@ -70,6 +70,7 @@ import com.hypixel.hytale.server.core.modules.entity.component.Intangible;
 import com.hypixel.hytale.server.core.modules.entity.component.Interactable;
 import com.hypixel.hytale.server.core.modules.entity.component.Invulnerable;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.PersistentDisplayName;
 import com.hypixel.hytale.server.core.modules.entity.component.RespondToHit;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.damage.DeathComponent;
@@ -334,7 +335,7 @@ public class PlayerSystems {
          assert playerRefComponent != null;
          MovementManager movementManagerComponent = commandBuffer.getComponent(ref, MovementManager.getComponentType());
          assert movementManagerComponent != null;
-         if (commandBuffer.getComponent(ref, DisplayNameComponent.getComponentType()) == null) {
+         if (commandBuffer.getComponent(ref, PersistentDisplayName.getComponentType()) == null) {
             Message displayName = Message.raw(playerRefComponent.getUsername());
             commandBuffer.putComponent(ref, DisplayNameComponent.getComponentType(), new DisplayNameComponent(displayName));
          }

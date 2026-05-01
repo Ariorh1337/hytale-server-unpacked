@@ -1,8 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -51,10 +53,61 @@ public class BlockRotation {
       return 3;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 3L;
+   }
+
+   public static Rotation getRotationYaw(MemorySegment mem) {
+      return getRotationYaw(mem, 0);
+   }
+
+   public static Rotation getRotationYaw(MemorySegment mem, int offset) {
+      return Rotation.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 0));
+   }
+
+   public static Rotation getRotationPitch(MemorySegment mem) {
+      return getRotationPitch(mem, 0);
+   }
+
+   public static Rotation getRotationPitch(MemorySegment mem, int offset) {
+      return Rotation.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1));
+   }
+
+   public static Rotation getRotationRoll(MemorySegment mem) {
+      return getRotationRoll(mem, 0);
+   }
+
+   public static Rotation getRotationRoll(MemorySegment mem, int offset) {
+      return Rotation.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 2));
+   }
+
+   public static BlockRotation toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static BlockRotation toObject(MemorySegment mem, int offset) {
+      if (offset + 3 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BlockRotation", offset + 3, (int)mem.byteSize());
+      } else {
+         return new BlockRotation(
+            Rotation.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 0)),
+            Rotation.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1)),
+            Rotation.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 2))
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeByte(this.rotationYaw.getValue());
       buf.writeByte(this.rotationPitch.getValue());
       buf.writeByte(this.rotationRoll.getValue());
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, (byte)this.rotationYaw.getValue());
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.rotationPitch.getValue());
+      mem.set(PacketIO.PROTO_BYTE, offset + 2, (byte)this.rotationRoll.getValue());
+      return 3;
    }
 
    public int computeSize() {

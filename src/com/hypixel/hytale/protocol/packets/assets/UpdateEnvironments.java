@@ -5,10 +5,12 @@ import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.UpdateType;
 import com.hypixel.hytale.protocol.WorldEnvironment;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -114,6 +116,121 @@ public class UpdateEnvironments implements Packet, ToClientPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 7L;
+   }
+
+   public static UpdateType getType(MemorySegment mem) {
+      return getType(mem, 0);
+   }
+
+   public static UpdateType getType(MemorySegment mem, int offset) {
+      return UpdateType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1));
+   }
+
+   public static int getMaxId(MemorySegment mem) {
+      return getMaxId(mem, 0);
+   }
+
+   public static int getMaxId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 2);
+   }
+
+   @Nullable
+   public static Map<Integer, WorldEnvironment> getEnvironments(MemorySegment mem) {
+      return getEnvironments(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Integer, WorldEnvironment> getEnvironments(MemorySegment mem, int offset) {
+      if (!hasEnvironments(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + 7;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Environments", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("Environments", len, 4096000);
+      }
+
+      Map<Integer, WorldEnvironment> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         int key = mem.get(PacketIO.PROTO_INT, off);
+         off += 4;
+         WorldEnvironment value = WorldEnvironment.toObject(mem, off);
+         off += value.computeSize();
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("Environments", key);
+         }
+      }
+
+      return data;
+   }
+
+   public static boolean getRebuildMapGeometry(MemorySegment mem) {
+      return getRebuildMapGeometry(mem, 0);
+   }
+
+   public static boolean getRebuildMapGeometry(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 6);
+   }
+
+   public static boolean hasEnvironments(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static UpdateEnvironments toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UpdateEnvironments toObject(MemorySegment mem, int offset) {
+      if (offset + 7 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("UpdateEnvironments", offset + 7, (int)mem.byteSize());
+      }
+
+      Map<Integer, WorldEnvironment> environments = null;
+      if (hasEnvironments(mem, offset)) {
+         int off = offset + 7;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Environments", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Environments", len, 4096000);
+         }
+
+         environments = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            int key = mem.get(PacketIO.PROTO_INT, off);
+            off += 4;
+            WorldEnvironment value = WorldEnvironment.toObject(mem, off);
+            off += value.computeSize();
+            if (environments.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("Environments", key);
+            }
+         }
+      }
+
+      return new UpdateEnvironments(
+         UpdateType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1)),
+         mem.get(PacketIO.PROTO_INT, offset + 2),
+         environments,
+         mem.get(PacketIO.PROTO_BOOL, offset + 6)
+      );
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -137,6 +254,35 @@ public class UpdateEnvironments implements Packet, ToClientPacket {
             e.getValue().serialize(buf);
          }
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.environments != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.type.getValue());
+      mem.set(PacketIO.PROTO_INT, offset + 2, this.maxId);
+      mem.set(PacketIO.PROTO_BOOL, offset + 6, this.rebuildMapGeometry);
+      int varOffset = offset + 7;
+      if (this.environments != null) {
+         if (this.environments.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Environments", this.environments.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.environments.size());
+
+         for (Entry<Integer, WorldEnvironment> e : this.environments.entrySet()) {
+            mem.set(PacketIO.PROTO_INT, varOffset, e.getKey());
+            varOffset += 4;
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      }
+
+      return varOffset - offset;
    }
 
    @Override

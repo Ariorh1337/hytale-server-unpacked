@@ -1,8 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -99,6 +101,73 @@ public class ConnectedBlockRuleSet {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 10L;
+   }
+
+   public static ConnectedBlockRuleSetType getType(MemorySegment mem) {
+      return getType(mem, 0);
+   }
+
+   public static ConnectedBlockRuleSetType getType(MemorySegment mem, int offset) {
+      return ConnectedBlockRuleSetType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1));
+   }
+
+   @Nullable
+   public static StairConnectedBlockRuleSet getStair(MemorySegment mem) {
+      return getStair(mem, 0);
+   }
+
+   @Nullable
+   public static StairConnectedBlockRuleSet getStair(MemorySegment mem, int offset) {
+      return hasStair(mem, offset) ? StairConnectedBlockRuleSet.toObject(mem, offset + getValidatedOffset(mem, offset, 2, 10, "Stair")) : null;
+   }
+
+   @Nullable
+   public static RoofConnectedBlockRuleSet getRoof(MemorySegment mem) {
+      return getRoof(mem, 0);
+   }
+
+   @Nullable
+   public static RoofConnectedBlockRuleSet getRoof(MemorySegment mem, int offset) {
+      return hasRoof(mem, offset) ? RoofConnectedBlockRuleSet.toObject(mem, offset + getValidatedOffset(mem, offset, 6, 10, "Roof")) : null;
+   }
+
+   public static boolean hasStair(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasRoof(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static ConnectedBlockRuleSet toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ConnectedBlockRuleSet toObject(MemorySegment mem, int offset) {
+      if (offset + 10 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ConnectedBlockRuleSet", offset + 10, (int)mem.byteSize());
+      } else {
+         return new ConnectedBlockRuleSet(
+            ConnectedBlockRuleSetType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1)),
+            hasStair(mem, offset) ? StairConnectedBlockRuleSet.toObject(mem, offset + getValidatedOffset(mem, offset, 2, 10, "Stair")) : null,
+            hasRoof(mem, offset) ? RoofConnectedBlockRuleSet.toObject(mem, offset + getValidatedOffset(mem, offset, 6, 10, "Roof")) : null
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -130,6 +199,36 @@ public class ConnectedBlockRuleSet {
       } else {
          buf.setIntLE(roofOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.stair != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.roof != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.type.getValue());
+      int varOffset = offset + 10;
+      if (this.stair != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 2, varOffset - offset - 10);
+         varOffset += this.stair.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 2, -1);
+      }
+
+      if (this.roof != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 6, varOffset - offset - 10);
+         varOffset += this.roof.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 6, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

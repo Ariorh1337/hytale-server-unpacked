@@ -13,6 +13,7 @@ import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredAr
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.prefab.selection.mask.BlockFilter;
 import com.hypixel.hytale.server.core.prefab.selection.mask.BlockMask;
 import com.hypixel.hytale.server.core.prefab.selection.mask.BlockPattern;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -59,8 +60,11 @@ public class ReplaceCommand extends AbstractPlayerCommand {
          if (fromMask != null && fromMask.hasInvalidBlocks()) {
             context.sendMessage(Message.translation("server.builderTools.invalidBlockType").param("key", fromMask.toString()));
          } else {
+            BlockFilter notEmptyFilter = new BlockFilter(BlockFilter.FilterType.TargetBlock, new String[]{"Empty"}, true);
+            BlockMask notEmptyMask = new BlockMask(new BlockFilter[]{notEmptyFilter});
+            BlockMask replaceMask = fromMask != null ? fromMask : notEmptyMask;
             String toValue = toPattern.toString();
-            String fromValue = fromMask != null ? fromMask.toString() : null;
+            String fromValue = replaceMask.toString();
             Material fromMaterial = fromValue != null ? Material.fromKey(fromValue) : null;
             Material toMaterial = Material.fromPattern(toPattern, ThreadLocalRandom.current());
             if (toMaterial.isFluid()) {
@@ -75,11 +79,8 @@ public class ReplaceCommand extends AbstractPlayerCommand {
             } else if (fromMaterial != null && fromMaterial.isFluid()) {
                BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> s.replace(r, fromMaterial, toMaterial, componentAccessor));
                context.sendMessage(Message.translation("server.builderTools.replace.replacementBlockDone").param("from", fromValue).param("to", toValue));
-            } else if (fromMask == null) {
-               BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> s.replace(r, null, toPattern, componentAccessor));
-               context.sendMessage(Message.translation("server.builderTools.replace.replacementAllDone").param("to", toValue));
             } else {
-               BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> s.replace(r, fromMask, toPattern, componentAccessor));
+               BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> s.replace(r, replaceMask, toPattern, componentAccessor));
                context.sendMessage(Message.translation("server.builderTools.replace.replacementBlockDone").param("from", fromValue).param("to", toValue));
             }
          }

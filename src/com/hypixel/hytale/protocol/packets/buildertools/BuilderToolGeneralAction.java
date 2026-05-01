@@ -3,9 +3,11 @@ package com.hypixel.hytale.protocol.packets.buildertools;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -56,9 +58,39 @@ public class BuilderToolGeneralAction implements Packet, ToServerPacket {
       return 1;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 1L;
+   }
+
+   public static BuilderToolAction getAction(MemorySegment mem) {
+      return getAction(mem, 0);
+   }
+
+   public static BuilderToolAction getAction(MemorySegment mem, int offset) {
+      return BuilderToolAction.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 0));
+   }
+
+   public static BuilderToolGeneralAction toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static BuilderToolGeneralAction toObject(MemorySegment mem, int offset) {
+      if (offset + 1 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BuilderToolGeneralAction", offset + 1, (int)mem.byteSize());
+      } else {
+         return new BuilderToolGeneralAction(BuilderToolAction.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 0)));
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeByte(this.action.getValue());
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, (byte)this.action.getValue());
+      return 1;
    }
 
    @Override

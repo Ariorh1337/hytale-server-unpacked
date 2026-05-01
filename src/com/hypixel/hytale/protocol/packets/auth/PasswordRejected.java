@@ -3,10 +3,12 @@ package com.hypixel.hytale.protocol.packets.auth;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -95,6 +97,91 @@ public class PasswordRejected implements Packet, ToClientPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 5L;
+   }
+
+   @Nullable
+   public static byte[] getNewChallenge(MemorySegment mem) {
+      return getNewChallenge(mem, 0);
+   }
+
+   @Nullable
+   public static byte[] getNewChallenge(MemorySegment mem, int offset) {
+      if (!hasNewChallenge(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + 5;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("NewChallenge", len);
+      }
+
+      if (len > 64) {
+         throw ProtocolException.arrayTooLong("NewChallenge", len, 64);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 1L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("NewChallenge", off + lenOffset + len * 1, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      byte[] data = new byte[len];
+      MemorySegment.copy(mem, PacketIO.PROTO_BYTE, off, data, 0, len);
+      return data;
+   }
+
+   public static int getAttemptsRemaining(MemorySegment mem) {
+      return getAttemptsRemaining(mem, 0);
+   }
+
+   public static int getAttemptsRemaining(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   public static boolean hasNewChallenge(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static PasswordRejected toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static PasswordRejected toObject(MemorySegment mem, int offset) {
+      if (offset + 5 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("PasswordRejected", offset + 5, (int)mem.byteSize());
+      }
+
+      byte[] newChallenge = null;
+      if (hasNewChallenge(mem, offset)) {
+         int off = offset + 5;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("NewChallenge", len);
+         }
+
+         if (len > 64) {
+            throw ProtocolException.arrayTooLong("NewChallenge", len, 64);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 1L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("NewChallenge", off + lenOffset + len * 1, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         newChallenge = new byte[len];
+         MemorySegment.copy(mem, PacketIO.PROTO_BYTE, off, newChallenge, 0, len);
+      }
+
+      return new PasswordRejected(newChallenge, mem.get(PacketIO.PROTO_INT, offset + 1));
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -115,6 +202,29 @@ public class PasswordRejected implements Packet, ToClientPacket {
             buf.writeByte(item);
          }
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.newChallenge != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.attemptsRemaining);
+      int varOffset = offset + 5;
+      if (this.newChallenge != null) {
+         if (this.newChallenge.length > 64) {
+            throw ProtocolException.arrayTooLong("NewChallenge", this.newChallenge.length, 64);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.newChallenge.length);
+         MemorySegment.copy(this.newChallenge, 0, mem, PacketIO.PROTO_BYTE, varOffset, this.newChallenge.length);
+         varOffset += this.newChallenge.length * 1;
+      }
+
+      return varOffset - offset;
    }
 
    @Override

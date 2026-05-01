@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -153,6 +154,127 @@ public class BuilderToolOptionArg {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 9L;
+   }
+
+   @Nullable
+   public static String getDefault(MemorySegment mem) {
+      return getDefault(mem, 0);
+   }
+
+   @Nullable
+   public static String getDefault(MemorySegment mem, int offset) {
+      return hasDefault(mem, offset)
+         ? PacketIO.readVarString("Default", mem, offset + getValidatedOffset(mem, offset, 1, 9, "Default"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String[] getOptions(MemorySegment mem) {
+      return getOptions(mem, 0);
+   }
+
+   @Nullable
+   public static String[] getOptions(MemorySegment mem, int offset) {
+      if (!hasOptions(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 5, 9, "Options");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Options", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Options", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Options", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      String[] data = new String[len];
+
+      for (int i = 0; i < len; i++) {
+         long sp = VarInt.getWithLength(mem, off);
+         int n = (int)sp + (int)(sp >>> 32);
+         data[i] = PacketIO.readVarString("Options", mem, off, 16384000, PacketIO.UTF8);
+         off += n;
+      }
+
+      return data;
+   }
+
+   public static boolean hasDefault(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasOptions(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static BuilderToolOptionArg toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static BuilderToolOptionArg toObject(MemorySegment mem, int offset) {
+      if (offset + 9 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BuilderToolOptionArg", offset + 9, (int)mem.byteSize());
+      }
+
+      String[] options = null;
+      if (hasOptions(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 5, 9, "Options");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Options", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Options", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Options", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         options = new String[len];
+
+         for (int i = 0; i < len; i++) {
+            long sp = VarInt.getWithLength(mem, off);
+            int n = (int)sp + (int)(sp >>> 32);
+            options[i] = PacketIO.readVarString("Options", mem, off, 16384000, PacketIO.UTF8);
+            off += n;
+         }
+      }
+
+      return new BuilderToolOptionArg(
+         hasDefault(mem, offset)
+            ? PacketIO.readVarString("Default", mem, offset + getValidatedOffset(mem, offset, 1, 9, "Default"), 4096000, PacketIO.UTF8)
+            : null,
+         options
+      );
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -191,6 +313,46 @@ public class BuilderToolOptionArg {
       } else {
          buf.setIntLE(optionsOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.defaultValue != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.options != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 9;
+      if (this.defaultValue != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 1, varOffset - offset - 9);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.defaultValue, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 1, -1);
+      }
+
+      if (this.options != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 5, varOffset - offset - 9);
+         if (this.options.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Options", this.options.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.options.length);
+         int optionsValueOffset = 0;
+
+         for (int i = 0; i < this.options.length; i++) {
+            optionsValueOffset += PacketIO.writeVarString(mem, varOffset + optionsValueOffset, this.options[i], 16384000);
+         }
+
+         varOffset += optionsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 5, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

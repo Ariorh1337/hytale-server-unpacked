@@ -198,7 +198,7 @@ public class RawJsonReader implements AutoCloseable {
          long haveSkipped = 0L;
 
          while (haveSkipped < skip) {
-            long charsInBuffer = this.bufferSize - this.bufferIndex;
+            long charsInBuffer = (long)this.bufferSize - this.bufferIndex;
             long charsToSkip = skip - haveSkipped;
             if (charsToSkip <= charsInBuffer) {
                this.bufferIndex = (int)(this.bufferIndex + charsToSkip);

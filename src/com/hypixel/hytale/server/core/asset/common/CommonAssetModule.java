@@ -668,9 +668,6 @@ public class CommonAssetModule extends JavaPlugin {
                      CommonAssetModule.this.getLogger().at(Level.INFO).log("File Modified: %s", path);
                      createdOrModifiedFilesToLoad.add(path);
                   }
-                  break;
-               default:
-                  throw new IllegalArgumentException("Unknown eventKind " + eventKind);
             }
          }
 

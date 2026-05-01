@@ -3,9 +3,11 @@ package com.hypixel.hytale.protocol.packets.world;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -75,6 +77,77 @@ public class ServerSetBlock implements Packet, ToClientPacket {
       return 19;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 19L;
+   }
+
+   public static int getX(MemorySegment mem) {
+      return getX(mem, 0);
+   }
+
+   public static int getX(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 0);
+   }
+
+   public static int getY(MemorySegment mem) {
+      return getY(mem, 0);
+   }
+
+   public static int getY(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 4);
+   }
+
+   public static int getZ(MemorySegment mem) {
+      return getZ(mem, 0);
+   }
+
+   public static int getZ(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 8);
+   }
+
+   public static int getBlockId(MemorySegment mem) {
+      return getBlockId(mem, 0);
+   }
+
+   public static int getBlockId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 12);
+   }
+
+   public static short getFiller(MemorySegment mem) {
+      return getFiller(mem, 0);
+   }
+
+   public static short getFiller(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_SHORT, offset + 16);
+   }
+
+   public static byte getRotation(MemorySegment mem) {
+      return getRotation(mem, 0);
+   }
+
+   public static byte getRotation(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BYTE, offset + 18);
+   }
+
+   public static ServerSetBlock toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ServerSetBlock toObject(MemorySegment mem, int offset) {
+      if (offset + 19 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ServerSetBlock", offset + 19, (int)mem.byteSize());
+      } else {
+         return new ServerSetBlock(
+            mem.get(PacketIO.PROTO_INT, offset + 0),
+            mem.get(PacketIO.PROTO_INT, offset + 4),
+            mem.get(PacketIO.PROTO_INT, offset + 8),
+            mem.get(PacketIO.PROTO_INT, offset + 12),
+            mem.get(PacketIO.PROTO_SHORT, offset + 16),
+            mem.get(PacketIO.PROTO_BYTE, offset + 18)
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeIntLE(this.x);
@@ -83,6 +156,17 @@ public class ServerSetBlock implements Packet, ToClientPacket {
       buf.writeIntLE(this.blockId);
       buf.writeShortLE(this.filler);
       buf.writeByte(this.rotation);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_INT, offset + 0, this.x);
+      mem.set(PacketIO.PROTO_INT, offset + 4, this.y);
+      mem.set(PacketIO.PROTO_INT, offset + 8, this.z);
+      mem.set(PacketIO.PROTO_INT, offset + 12, this.blockId);
+      mem.set(PacketIO.PROTO_SHORT, offset + 16, this.filler);
+      mem.set(PacketIO.PROTO_BYTE, offset + 18, this.rotation);
+      return 19;
    }
 
    @Override

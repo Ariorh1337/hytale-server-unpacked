@@ -74,9 +74,4 @@ public class SetMemoriesCapacityInteraction extends SimpleInstantInteraction {
    public WaitForDataFrom getWaitForDataFrom() {
       return WaitForDataFrom.Server;
    }
-
-   @Override
-   public String toString() {
-      return super.toString();
-   }
 }

@@ -51,7 +51,6 @@ public class InventoryUtils {
          case Hotbar -> InventoryComponent.getCombined(componentAccessor, ref, InventoryComponent.HOTBAR_STORAGE_BACKPACK);
          case Storage -> InventoryComponent.getCombined(componentAccessor, ref, InventoryComponent.STORAGE_HOTBAR_BACKPACK);
          case Backpack -> InventoryComponent.getCombined(componentAccessor, ref, InventoryComponent.BACKPACK_STORAGE_HOTBAR);
-         default -> InventoryComponent.getCombined(componentAccessor, ref, InventoryComponent.HOTBAR_STORAGE_BACKPACK);
       };
    }
 

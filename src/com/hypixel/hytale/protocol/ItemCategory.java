@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -292,6 +293,244 @@ public class ItemCategory {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 26L;
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem) {
+      return getId(mem, 0);
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem, int offset) {
+      return hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 6, 26, "Id"), 4096000, PacketIO.UTF8) : null;
+   }
+
+   @Nullable
+   public static String getName(MemorySegment mem) {
+      return getName(mem, 0);
+   }
+
+   @Nullable
+   public static String getName(MemorySegment mem, int offset) {
+      return hasName(mem, offset)
+         ? PacketIO.readVarString("Name", mem, offset + getValidatedOffset(mem, offset, 10, 26, "Name"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getIcon(MemorySegment mem) {
+      return getIcon(mem, 0);
+   }
+
+   @Nullable
+   public static String getIcon(MemorySegment mem, int offset) {
+      return hasIcon(mem, offset)
+         ? PacketIO.readVarString("Icon", mem, offset + getValidatedOffset(mem, offset, 14, 26, "Icon"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static int getOrder(MemorySegment mem) {
+      return getOrder(mem, 0);
+   }
+
+   public static int getOrder(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   public static ItemGridInfoDisplayMode getInfoDisplayMode(MemorySegment mem) {
+      return getInfoDisplayMode(mem, 0);
+   }
+
+   public static ItemGridInfoDisplayMode getInfoDisplayMode(MemorySegment mem, int offset) {
+      return ItemGridInfoDisplayMode.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 5));
+   }
+
+   @Nullable
+   public static ItemCategory[] getChildren(MemorySegment mem) {
+      return getChildren(mem, 0);
+   }
+
+   @Nullable
+   public static ItemCategory[] getChildren(MemorySegment mem, int offset) {
+      if (!hasChildren(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 18, 26, "Children");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Children", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Children", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Children", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      ItemCategory[] data = new ItemCategory[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static SubCategoryDefinition[] getSubCategories(MemorySegment mem) {
+      return getSubCategories(mem, 0);
+   }
+
+   @Nullable
+   public static SubCategoryDefinition[] getSubCategories(MemorySegment mem, int offset) {
+      if (!hasSubCategories(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 22, 26, "SubCategories");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("SubCategories", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("SubCategories", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("SubCategories", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      SubCategoryDefinition[] data = new SubCategoryDefinition[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = SubCategoryDefinition.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   public static boolean hasId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasName(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasIcon(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasChildren(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasSubCategories(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 16) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static ItemCategory toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ItemCategory toObject(MemorySegment mem, int offset) {
+      if (offset + 26 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ItemCategory", offset + 26, (int)mem.byteSize());
+      }
+
+      ItemCategory[] children = null;
+      if (hasChildren(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 18, 26, "Children");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Children", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Children", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Children", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         children = new ItemCategory[len];
+
+         for (int i = 0; i < len; i++) {
+            children[i] = toObject(mem, off);
+            off += children[i].computeSize();
+         }
+      }
+
+      SubCategoryDefinition[] subCategories = null;
+      if (hasSubCategories(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 22, 26, "SubCategories");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("SubCategories", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("SubCategories", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("SubCategories", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         subCategories = new SubCategoryDefinition[len];
+
+         for (int i = 0; i < len; i++) {
+            subCategories[i] = SubCategoryDefinition.toObject(mem, off);
+            off += subCategories[i].computeSize();
+         }
+      }
+
+      return new ItemCategory(
+         hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 6, 26, "Id"), 4096000, PacketIO.UTF8) : null,
+         hasName(mem, offset) ? PacketIO.readVarString("Name", mem, offset + getValidatedOffset(mem, offset, 10, 26, "Name"), 4096000, PacketIO.UTF8) : null,
+         hasIcon(mem, offset) ? PacketIO.readVarString("Icon", mem, offset + getValidatedOffset(mem, offset, 14, 26, "Icon"), 4096000, PacketIO.UTF8) : null,
+         mem.get(PacketIO.PROTO_INT, offset + 1),
+         ItemGridInfoDisplayMode.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 5)),
+         children,
+         subCategories
+      );
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -379,6 +618,92 @@ public class ItemCategory {
       } else {
          buf.setIntLE(subCategoriesOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.id != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.name != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.icon != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.children != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.subCategories != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.order);
+      mem.set(PacketIO.PROTO_BYTE, offset + 5, (byte)this.infoDisplayMode.getValue());
+      int varOffset = offset + 26;
+      if (this.id != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 6, varOffset - offset - 26);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.id, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 6, -1);
+      }
+
+      if (this.name != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 10, varOffset - offset - 26);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.name, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 10, -1);
+      }
+
+      if (this.icon != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 14, varOffset - offset - 26);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.icon, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 14, -1);
+      }
+
+      if (this.children != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 18, varOffset - offset - 26);
+         if (this.children.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Children", this.children.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.children.length);
+         int childrenValueOffset = 0;
+
+         for (int i = 0; i < this.children.length; i++) {
+            childrenValueOffset += this.children[i].serialize(mem, varOffset + childrenValueOffset);
+         }
+
+         varOffset += childrenValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 18, -1);
+      }
+
+      if (this.subCategories != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 22, varOffset - offset - 26);
+         if (this.subCategories.length > 4096000) {
+            throw ProtocolException.arrayTooLong("SubCategories", this.subCategories.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.subCategories.length);
+         int subCategoriesValueOffset = 0;
+
+         for (int i = 0; i < this.subCategories.length; i++) {
+            subCategoriesValueOffset += this.subCategories[i].serialize(mem, varOffset + subCategoriesValueOffset);
+         }
+
+         varOffset += subCategoriesValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 22, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

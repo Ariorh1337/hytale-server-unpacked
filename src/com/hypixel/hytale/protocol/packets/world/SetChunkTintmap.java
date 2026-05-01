@@ -3,10 +3,12 @@ package com.hypixel.hytale.protocol.packets.world;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -99,6 +101,99 @@ public class SetChunkTintmap implements Packet, ToClientPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 9L;
+   }
+
+   public static int getX(MemorySegment mem) {
+      return getX(mem, 0);
+   }
+
+   public static int getX(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   public static int getZ(MemorySegment mem) {
+      return getZ(mem, 0);
+   }
+
+   public static int getZ(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 5);
+   }
+
+   @Nullable
+   public static byte[] getTintmap(MemorySegment mem) {
+      return getTintmap(mem, 0);
+   }
+
+   @Nullable
+   public static byte[] getTintmap(MemorySegment mem, int offset) {
+      if (!hasTintmap(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + 9;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Tintmap", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Tintmap", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 1L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Tintmap", off + lenOffset + len * 1, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      byte[] data = new byte[len];
+      MemorySegment.copy(mem, PacketIO.PROTO_BYTE, off, data, 0, len);
+      return data;
+   }
+
+   public static boolean hasTintmap(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static SetChunkTintmap toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static SetChunkTintmap toObject(MemorySegment mem, int offset) {
+      if (offset + 9 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("SetChunkTintmap", offset + 9, (int)mem.byteSize());
+      }
+
+      byte[] tintmap = null;
+      if (hasTintmap(mem, offset)) {
+         int off = offset + 9;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Tintmap", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Tintmap", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 1L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Tintmap", off + lenOffset + len * 1, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         tintmap = new byte[len];
+         MemorySegment.copy(mem, PacketIO.PROTO_BYTE, off, tintmap, 0, len);
+      }
+
+      return new SetChunkTintmap(mem.get(PacketIO.PROTO_INT, offset + 1), mem.get(PacketIO.PROTO_INT, offset + 5), tintmap);
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -120,6 +215,30 @@ public class SetChunkTintmap implements Packet, ToClientPacket {
             buf.writeByte(item);
          }
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.tintmap != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.x);
+      mem.set(PacketIO.PROTO_INT, offset + 5, this.z);
+      int varOffset = offset + 9;
+      if (this.tintmap != null) {
+         if (this.tintmap.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Tintmap", this.tintmap.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.tintmap.length);
+         MemorySegment.copy(this.tintmap, 0, mem, PacketIO.PROTO_BYTE, varOffset, this.tintmap.length);
+         varOffset += this.tintmap.length * 1;
+      }
+
+      return varOffset - offset;
    }
 
    @Override

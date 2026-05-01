@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -100,6 +101,59 @@ public class InsertDataContextCollectionItemServersideUIProperty extends Servers
       }
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 12L;
+   }
+
+   public static String getProperty(MemorySegment mem) {
+      return getProperty(mem, 0);
+   }
+
+   public static String getProperty(MemorySegment mem, int offset) {
+      return PacketIO.readVarString("Property", mem, offset + getValidatedOffset(mem, offset, 4, 12, "Property"), 4096000, PacketIO.UTF8);
+   }
+
+   public static int getIndex(MemorySegment mem) {
+      return getIndex(mem, 0);
+   }
+
+   public static int getIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 0);
+   }
+
+   public static UIDataValue getValue(MemorySegment mem) {
+      return getValue(mem, 0);
+   }
+
+   public static UIDataValue getValue(MemorySegment mem, int offset) {
+      return UIDataValue.toObject(mem, offset + getValidatedOffset(mem, offset, 8, 12, "Value"));
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static InsertDataContextCollectionItemServersideUIProperty toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static InsertDataContextCollectionItemServersideUIProperty toObject(MemorySegment mem, int offset) {
+      if (offset + 12 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("InsertDataContextCollectionItemServersideUIProperty", offset + 12, (int)mem.byteSize());
+      } else {
+         return new InsertDataContextCollectionItemServersideUIProperty(
+            PacketIO.readVarString("Property", mem, offset + getValidatedOffset(mem, offset, 4, 12, "Property"), 4096000, PacketIO.UTF8),
+            mem.get(PacketIO.PROTO_INT, offset + 0),
+            UIDataValue.toObject(mem, offset + getValidatedOffset(mem, offset, 8, 12, "Value"))
+         );
+      }
+   }
+
    @Override
    public int serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -114,6 +168,17 @@ public class InsertDataContextCollectionItemServersideUIProperty extends Servers
       buf.setIntLE(valueOffsetSlot, buf.writerIndex() - varBlockStart);
       this.value.serializeWithTypeId(buf);
       return buf.writerIndex() - startPos;
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_INT, offset + 0, this.index);
+      int varOffset = offset + 12;
+      mem.set(PacketIO.PROTO_INT, offset + 4, varOffset - offset - 12);
+      varOffset += PacketIO.writeVarString(mem, varOffset, this.property, 4096000);
+      mem.set(PacketIO.PROTO_INT, offset + 8, varOffset - offset - 12);
+      varOffset += this.value.serializeWithTypeId(mem, varOffset);
+      return varOffset - offset;
    }
 
    @Override

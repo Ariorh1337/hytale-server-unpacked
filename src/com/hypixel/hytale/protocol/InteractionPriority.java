@@ -1,9 +1,11 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -82,6 +84,90 @@ public class InteractionPriority {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 1L;
+   }
+
+   @Nullable
+   public static Map<PrioritySlot, Integer> getValues(MemorySegment mem) {
+      return getValues(mem, 0);
+   }
+
+   @Nullable
+   public static Map<PrioritySlot, Integer> getValues(MemorySegment mem, int offset) {
+      if (!hasValues(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + 1;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Values", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("Values", len, 4096000);
+      }
+
+      Map<PrioritySlot, Integer> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         PrioritySlot key = PrioritySlot.fromValue(mem.get(PacketIO.PROTO_BYTE, off));
+         int value = mem.get(PacketIO.PROTO_INT, ++off);
+         off += 4;
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("Values", key);
+         }
+      }
+
+      return data;
+   }
+
+   public static boolean hasValues(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static InteractionPriority toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static InteractionPriority toObject(MemorySegment mem, int offset) {
+      if (offset + 1 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("InteractionPriority", offset + 1, (int)mem.byteSize());
+      }
+
+      Map<PrioritySlot, Integer> values = null;
+      if (hasValues(mem, offset)) {
+         int off = offset + 1;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Values", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Values", len, 4096000);
+         }
+
+         values = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            PrioritySlot key = PrioritySlot.fromValue(mem.get(PacketIO.PROTO_BYTE, off));
+            int value = mem.get(PacketIO.PROTO_INT, ++off);
+            off += 4;
+            if (values.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("Values", key);
+            }
+         }
+      }
+
+      return new InteractionPriority(values);
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
       if (this.values != null) {
@@ -101,6 +187,31 @@ public class InteractionPriority {
             buf.writeIntLE(e.getValue());
          }
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.values != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 1;
+      if (this.values != null) {
+         if (this.values.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Values", this.values.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.values.size());
+
+         for (Entry<PrioritySlot, Integer> e : this.values.entrySet()) {
+            mem.set(PacketIO.PROTO_BYTE, varOffset, (byte)e.getKey().getValue());
+            mem.set(PacketIO.PROTO_INT, ++varOffset, e.getValue());
+            varOffset += 4;
+         }
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

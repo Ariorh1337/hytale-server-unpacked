@@ -4,6 +4,7 @@ import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -61,6 +62,64 @@ public class AssetIconProperties {
       return 25;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 25L;
+   }
+
+   public static float getScale(MemorySegment mem) {
+      return getScale(mem, 0);
+   }
+
+   public static float getScale(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 1);
+   }
+
+   @Nullable
+   public static Vector2fc getTranslation(MemorySegment mem) {
+      return getTranslation(mem, 0);
+   }
+
+   @Nullable
+   public static Vector2fc getTranslation(MemorySegment mem, int offset) {
+      return hasTranslation(mem, offset) ? PacketIO.readVector2f(mem, offset + 5) : null;
+   }
+
+   @Nullable
+   public static Vector3fc getRotation(MemorySegment mem) {
+      return getRotation(mem, 0);
+   }
+
+   @Nullable
+   public static Vector3fc getRotation(MemorySegment mem, int offset) {
+      return hasRotation(mem, offset) ? PacketIO.readVector3f(mem, offset + 13) : null;
+   }
+
+   public static boolean hasTranslation(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasRotation(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static AssetIconProperties toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AssetIconProperties toObject(MemorySegment mem, int offset) {
+      if (offset + 25 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AssetIconProperties", offset + 25, (int)mem.byteSize());
+      } else {
+         return new AssetIconProperties(
+            mem.get(PacketIO.PROTO_FLOAT, offset + 1),
+            hasTranslation(mem, offset) ? PacketIO.readVector2f(mem, offset + 5) : null,
+            hasRotation(mem, offset) ? PacketIO.readVector3f(mem, offset + 13) : null
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
       if (this.translation != null) {
@@ -84,6 +143,33 @@ public class AssetIconProperties {
       } else {
          buf.writeZero(12);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.translation != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.rotation != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 1, this.scale);
+      if (this.translation != null) {
+         PacketIO.writeVector2f(mem, offset + 5, this.translation);
+      } else {
+         mem.asSlice(offset + 5, 8L).fill((byte)0);
+      }
+
+      if (this.rotation != null) {
+         PacketIO.writeVector3f(mem, offset + 13, this.rotation);
+      } else {
+         mem.asSlice(offset + 13, 12L).fill((byte)0);
+      }
+
+      return 25;
    }
 
    public int computeSize() {

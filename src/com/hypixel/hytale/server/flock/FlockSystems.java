@@ -138,7 +138,7 @@ public class FlockSystems {
                UUIDComponent uuidComponent = archetypeChunk.getComponent(index, this.uuidComponentType);
                assert uuidComponent != null;
                World world = store.getExternalData().getWorld();
-               int colorIndex = Math.abs(uuidComponent.getUuid().hashCode()) % DebugUtils.INDEXED_COLORS.length;
+               int colorIndex = Math.floorMod(uuidComponent.getUuid().hashCode(), DebugUtils.INDEXED_COLORS.length);
                Vector3f color = DebugUtils.INDEXED_COLORS[colorIndex];
                Ref<EntityStore> leaderRef = entityGroup.getLeaderRef();
                if (leaderRef != null && leaderRef.isValid()) {

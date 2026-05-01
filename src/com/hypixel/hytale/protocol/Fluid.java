@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -384,6 +385,427 @@ public class Fluid {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 47L;
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem) {
+      return getId(mem, 0);
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem, int offset) {
+      return hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 23, 47, "Id"), 4096000, PacketIO.UTF8) : null;
+   }
+
+   public static int getMaxFluidLevel(MemorySegment mem) {
+      return getMaxFluidLevel(mem, 0);
+   }
+
+   public static int getMaxFluidLevel(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   @Nullable
+   public static BlockTextures[] getCubeTextures(MemorySegment mem) {
+      return getCubeTextures(mem, 0);
+   }
+
+   @Nullable
+   public static BlockTextures[] getCubeTextures(MemorySegment mem, int offset) {
+      if (!hasCubeTextures(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 27, 47, "CubeTextures");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("CubeTextures", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("CubeTextures", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("CubeTextures", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      BlockTextures[] data = new BlockTextures[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = BlockTextures.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   public static boolean getRequiresAlphaBlending(MemorySegment mem) {
+      return getRequiresAlphaBlending(mem, 0);
+   }
+
+   public static boolean getRequiresAlphaBlending(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 5);
+   }
+
+   public static Opacity getOpacity(MemorySegment mem) {
+      return getOpacity(mem, 0);
+   }
+
+   public static Opacity getOpacity(MemorySegment mem, int offset) {
+      return Opacity.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 6));
+   }
+
+   @Nullable
+   public static ShaderType[] getShaderEffect(MemorySegment mem) {
+      return getShaderEffect(mem, 0);
+   }
+
+   @Nullable
+   public static ShaderType[] getShaderEffect(MemorySegment mem, int offset) {
+      if (!hasShaderEffect(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 31, 47, "ShaderEffect");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("ShaderEffect", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("ShaderEffect", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 1L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ShaderEffect", off + lenOffset + len * 1, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      ShaderType[] data = new ShaderType[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = ShaderType.fromValue(mem.get(PacketIO.PROTO_BYTE, off + i * 1));
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static ColorLight getLight(MemorySegment mem) {
+      return getLight(mem, 0);
+   }
+
+   @Nullable
+   public static ColorLight getLight(MemorySegment mem, int offset) {
+      return hasLight(mem, offset) ? ColorLight.toObject(mem, offset + 7) : null;
+   }
+
+   @Nullable
+   public static ModelParticle[] getParticles(MemorySegment mem) {
+      return getParticles(mem, 0);
+   }
+
+   @Nullable
+   public static ModelParticle[] getParticles(MemorySegment mem, int offset) {
+      if (!hasParticles(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 35, 47, "Particles");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Particles", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Particles", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Particles", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      ModelParticle[] data = new ModelParticle[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = ModelParticle.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   public static FluidDrawType getDrawType(MemorySegment mem) {
+      return getDrawType(mem, 0);
+   }
+
+   public static FluidDrawType getDrawType(MemorySegment mem, int offset) {
+      return FluidDrawType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 11));
+   }
+
+   public static int getFluidFXIndex(MemorySegment mem) {
+      return getFluidFXIndex(mem, 0);
+   }
+
+   public static int getFluidFXIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 12);
+   }
+
+   public static int getBlockSoundSetIndex(MemorySegment mem) {
+      return getBlockSoundSetIndex(mem, 0);
+   }
+
+   public static int getBlockSoundSetIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 16);
+   }
+
+   @Nullable
+   public static String getBlockParticleSetId(MemorySegment mem) {
+      return getBlockParticleSetId(mem, 0);
+   }
+
+   @Nullable
+   public static String getBlockParticleSetId(MemorySegment mem, int offset) {
+      return hasBlockParticleSetId(mem, offset)
+         ? PacketIO.readVarString("BlockParticleSetId", mem, offset + getValidatedOffset(mem, offset, 39, 47, "BlockParticleSetId"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static Color getParticleColor(MemorySegment mem) {
+      return getParticleColor(mem, 0);
+   }
+
+   @Nullable
+   public static Color getParticleColor(MemorySegment mem, int offset) {
+      return hasParticleColor(mem, offset) ? Color.toObject(mem, offset + 20) : null;
+   }
+
+   @Nullable
+   public static int[] getTagIndexes(MemorySegment mem) {
+      return getTagIndexes(mem, 0);
+   }
+
+   @Nullable
+   public static int[] getTagIndexes(MemorySegment mem, int offset) {
+      if (!hasTagIndexes(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 43, 47, "TagIndexes");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("TagIndexes", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("TagIndexes", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 4L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("TagIndexes", off + lenOffset + len * 4, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      int[] data = new int[len];
+      MemorySegment.copy(mem, PacketIO.PROTO_INT, off, data, 0, len);
+      return data;
+   }
+
+   public static boolean hasLight(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasParticleColor(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasCubeTextures(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasShaderEffect(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 16) != 0;
+   }
+
+   public static boolean hasParticles(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 32) != 0;
+   }
+
+   public static boolean hasBlockParticleSetId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 64) != 0;
+   }
+
+   public static boolean hasTagIndexes(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 128) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static Fluid toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static Fluid toObject(MemorySegment mem, int offset) {
+      if (offset + 47 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Fluid", offset + 47, (int)mem.byteSize());
+      }
+
+      BlockTextures[] cubeTextures = null;
+      if (hasCubeTextures(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 27, 47, "CubeTextures");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("CubeTextures", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("CubeTextures", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("CubeTextures", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         cubeTextures = new BlockTextures[len];
+
+         for (int i = 0; i < len; i++) {
+            cubeTextures[i] = BlockTextures.toObject(mem, off);
+            off += cubeTextures[i].computeSize();
+         }
+      }
+
+      ShaderType[] shaderEffect = null;
+      if (hasShaderEffect(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 31, 47, "ShaderEffect");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("ShaderEffect", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("ShaderEffect", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 1L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("ShaderEffect", off + lenOffset + len * 1, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         shaderEffect = new ShaderType[len];
+
+         for (int i = 0; i < len; i++) {
+            shaderEffect[i] = ShaderType.fromValue(mem.get(PacketIO.PROTO_BYTE, off + i * 1));
+         }
+      }
+
+      ModelParticle[] particles = null;
+      if (hasParticles(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 35, 47, "Particles");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Particles", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Particles", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Particles", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         particles = new ModelParticle[len];
+
+         for (int i = 0; i < len; i++) {
+            particles[i] = ModelParticle.toObject(mem, off);
+            off += particles[i].computeSize();
+         }
+      }
+
+      int[] tagIndexes = null;
+      if (hasTagIndexes(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 43, 47, "TagIndexes");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("TagIndexes", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("TagIndexes", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 4L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("TagIndexes", off + lenOffset + len * 4, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         tagIndexes = new int[len];
+         MemorySegment.copy(mem, PacketIO.PROTO_INT, off, tagIndexes, 0, len);
+      }
+
+      return new Fluid(
+         hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 23, 47, "Id"), 4096000, PacketIO.UTF8) : null,
+         mem.get(PacketIO.PROTO_INT, offset + 1),
+         cubeTextures,
+         mem.get(PacketIO.PROTO_BOOL, offset + 5),
+         Opacity.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 6)),
+         shaderEffect,
+         hasLight(mem, offset) ? ColorLight.toObject(mem, offset + 7) : null,
+         particles,
+         FluidDrawType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 11)),
+         mem.get(PacketIO.PROTO_INT, offset + 12),
+         mem.get(PacketIO.PROTO_INT, offset + 16),
+         hasBlockParticleSetId(mem, offset)
+            ? PacketIO.readVarString("BlockParticleSetId", mem, offset + getValidatedOffset(mem, offset, 39, 47, "BlockParticleSetId"), 4096000, PacketIO.UTF8)
+            : null,
+         hasParticleColor(mem, offset) ? Color.toObject(mem, offset + 20) : null,
+         tagIndexes
+      );
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -524,6 +946,143 @@ public class Fluid {
       } else {
          buf.setIntLE(tagIndexesOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.light != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.particleColor != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.id != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.cubeTextures != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.shaderEffect != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.particles != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
+      if (this.blockParticleSetId != null) {
+         nullBits = (byte)(nullBits | 64);
+      }
+
+      if (this.tagIndexes != null) {
+         nullBits = (byte)(nullBits | 128);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.maxFluidLevel);
+      mem.set(PacketIO.PROTO_BOOL, offset + 5, this.requiresAlphaBlending);
+      mem.set(PacketIO.PROTO_BYTE, offset + 6, (byte)this.opacity.getValue());
+      if (this.light != null) {
+         this.light.serialize(mem, offset + 7);
+      } else {
+         mem.asSlice(offset + 7, 4L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 11, (byte)this.drawType.getValue());
+      mem.set(PacketIO.PROTO_INT, offset + 12, this.fluidFXIndex);
+      mem.set(PacketIO.PROTO_INT, offset + 16, this.blockSoundSetIndex);
+      if (this.particleColor != null) {
+         this.particleColor.serialize(mem, offset + 20);
+      } else {
+         mem.asSlice(offset + 20, 3L).fill((byte)0);
+      }
+
+      int varOffset = offset + 47;
+      if (this.id != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 23, varOffset - offset - 47);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.id, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 23, -1);
+      }
+
+      if (this.cubeTextures != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 27, varOffset - offset - 47);
+         if (this.cubeTextures.length > 4096000) {
+            throw ProtocolException.arrayTooLong("CubeTextures", this.cubeTextures.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.cubeTextures.length);
+         int cubeTexturesValueOffset = 0;
+
+         for (int i = 0; i < this.cubeTextures.length; i++) {
+            cubeTexturesValueOffset += this.cubeTextures[i].serialize(mem, varOffset + cubeTexturesValueOffset);
+         }
+
+         varOffset += cubeTexturesValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 27, -1);
+      }
+
+      if (this.shaderEffect != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 31, varOffset - offset - 47);
+         if (this.shaderEffect.length > 4096000) {
+            throw ProtocolException.arrayTooLong("ShaderEffect", this.shaderEffect.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.shaderEffect.length);
+
+         for (int i = 0; i < this.shaderEffect.length; i++) {
+            mem.set(PacketIO.PROTO_BYTE, varOffset + i * 1, (byte)this.shaderEffect[i].getValue());
+         }
+
+         varOffset += this.shaderEffect.length * 1;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 31, -1);
+      }
+
+      if (this.particles != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 35, varOffset - offset - 47);
+         if (this.particles.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Particles", this.particles.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.particles.length);
+         int particlesValueOffset = 0;
+
+         for (int i = 0; i < this.particles.length; i++) {
+            particlesValueOffset += this.particles[i].serialize(mem, varOffset + particlesValueOffset);
+         }
+
+         varOffset += particlesValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 35, -1);
+      }
+
+      if (this.blockParticleSetId != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 39, varOffset - offset - 47);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.blockParticleSetId, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 39, -1);
+      }
+
+      if (this.tagIndexes != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 43, varOffset - offset - 47);
+         if (this.tagIndexes.length > 4096000) {
+            throw ProtocolException.arrayTooLong("TagIndexes", this.tagIndexes.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.tagIndexes.length);
+         MemorySegment.copy(this.tagIndexes, 0, mem, PacketIO.PROTO_INT, varOffset, this.tagIndexes.length);
+         varOffset += this.tagIndexes.length * 4;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 43, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

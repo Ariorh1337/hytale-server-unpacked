@@ -28,7 +28,6 @@ import com.hypixel.hytale.server.core.command.system.arguments.system.ArgWrapper
 import com.hypixel.hytale.server.core.command.system.arguments.system.Argument;
 import com.hypixel.hytale.server.core.command.system.exceptions.GeneralCommandException;
 import com.hypixel.hytale.server.core.command.system.suggestion.SuggestionResult;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.hitboxcollision.HitboxCollisionConfig;
 import com.hypixel.hytale.server.core.modules.entity.repulsion.RepulsionConfig;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
@@ -368,8 +367,8 @@ public final class ArgTypes {
             PlayerRef playerRef = context.get(argument);
             if (playerRef != null) {
                return playerRef;
-            } else if (sender instanceof Player player) {
-               return player.getPlayerRef();
+            } else if (sender instanceof PlayerRef senderPlayerRef) {
+               return senderPlayerRef;
             } else {
                throw new GeneralCommandException(Message.translation("server.commands.errors.playerOrArg").param("option", "player"));
             }
@@ -1051,8 +1050,8 @@ public final class ArgTypes {
          result.suggest(tildeTemplate);
       }
 
-      if (sender instanceof Player player) {
-         Vector3d pos = player.getPlayerRef().getTransform().getPosition();
+      if (sender instanceof PlayerRef playerRef) {
+         Vector3d pos = playerRef.getTransform().getPosition();
          result.suggest(formatter.apply(pos));
       }
    }

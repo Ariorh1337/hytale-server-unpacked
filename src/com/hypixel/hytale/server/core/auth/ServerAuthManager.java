@@ -372,8 +372,9 @@ public class ServerAuthManager {
                   case FAILED:
                      LOGGER.at(Level.WARNING).log("OAuth browser flow failed: %s", flow.getErrorMessage());
                      return ServerAuthManager.AuthResult.FAILED;
+                  case UNKNOWN:
                   default:
-                     LOGGER.at(Level.WARNING).log("OAuth browser flow completed with unexpected result: %v", res);
+                     LOGGER.at(Level.WARNING).log("OAuth browser flow completed with unexpected result: %s", res);
                      return ServerAuthManager.AuthResult.FAILED;
                }
             }
@@ -401,8 +402,9 @@ public class ServerAuthManager {
                   case FAILED:
                      LOGGER.at(Level.WARNING).log("OAuth device flow failed: %s", flow.getErrorMessage());
                      return ServerAuthManager.AuthResult.FAILED;
+                  case UNKNOWN:
                   default:
-                     LOGGER.at(Level.WARNING).log("OAuth device flow completed with unexpected result: %v", res);
+                     LOGGER.at(Level.WARNING).log("OAuth device flow completed with unexpected result: %s", res);
                      return ServerAuthManager.AuthResult.FAILED;
                }
             }

@@ -5,9 +5,11 @@ import com.hypixel.hytale.protocol.Model;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -148,6 +150,96 @@ public class AssetEditorUpdateModelPreview implements Packet, ToClientPacket {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 41L;
+   }
+
+   @Nullable
+   public static AssetPath getAssetPath(MemorySegment mem) {
+      return getAssetPath(mem, 0);
+   }
+
+   @Nullable
+   public static AssetPath getAssetPath(MemorySegment mem, int offset) {
+      return hasAssetPath(mem, offset) ? AssetPath.toObject(mem, offset + getValidatedOffset(mem, offset, 29, 41, "AssetPath")) : null;
+   }
+
+   @Nullable
+   public static Model getModel(MemorySegment mem) {
+      return getModel(mem, 0);
+   }
+
+   @Nullable
+   public static Model getModel(MemorySegment mem, int offset) {
+      return hasModel(mem, offset) ? Model.toObject(mem, offset + getValidatedOffset(mem, offset, 33, 41, "Model")) : null;
+   }
+
+   @Nullable
+   public static BlockType getBlock(MemorySegment mem) {
+      return getBlock(mem, 0);
+   }
+
+   @Nullable
+   public static BlockType getBlock(MemorySegment mem, int offset) {
+      return hasBlock(mem, offset) ? BlockType.toObject(mem, offset + getValidatedOffset(mem, offset, 37, 41, "Block")) : null;
+   }
+
+   @Nullable
+   public static AssetEditorPreviewCameraSettings getCamera(MemorySegment mem) {
+      return getCamera(mem, 0);
+   }
+
+   @Nullable
+   public static AssetEditorPreviewCameraSettings getCamera(MemorySegment mem, int offset) {
+      return hasCamera(mem, offset) ? AssetEditorPreviewCameraSettings.toObject(mem, offset + 1) : null;
+   }
+
+   public static boolean hasCamera(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasAssetPath(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasModel(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasBlock(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static AssetEditorUpdateModelPreview toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AssetEditorUpdateModelPreview toObject(MemorySegment mem, int offset) {
+      if (offset + 41 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AssetEditorUpdateModelPreview", offset + 41, (int)mem.byteSize());
+      } else {
+         return new AssetEditorUpdateModelPreview(
+            hasAssetPath(mem, offset) ? AssetPath.toObject(mem, offset + getValidatedOffset(mem, offset, 29, 41, "AssetPath")) : null,
+            hasModel(mem, offset) ? Model.toObject(mem, offset + getValidatedOffset(mem, offset, 33, 41, "Model")) : null,
+            hasBlock(mem, offset) ? BlockType.toObject(mem, offset + getValidatedOffset(mem, offset, 37, 41, "Block")) : null,
+            hasCamera(mem, offset) ? AssetEditorPreviewCameraSettings.toObject(mem, offset + 1) : null
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -202,6 +294,57 @@ public class AssetEditorUpdateModelPreview implements Packet, ToClientPacket {
       } else {
          buf.setIntLE(blockOffsetSlot, -1);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.camera != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.assetPath != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.model != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.block != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      if (this.camera != null) {
+         this.camera.serialize(mem, offset + 1);
+      } else {
+         mem.asSlice(offset + 1, 28L).fill((byte)0);
+      }
+
+      int varOffset = offset + 41;
+      if (this.assetPath != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 29, varOffset - offset - 41);
+         varOffset += this.assetPath.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 29, -1);
+      }
+
+      if (this.model != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 33, varOffset - offset - 41);
+         varOffset += this.model.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 33, -1);
+      }
+
+      if (this.block != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 37, varOffset - offset - 41);
+         varOffset += this.block.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 37, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

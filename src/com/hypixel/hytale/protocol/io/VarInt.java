@@ -1,9 +1,17 @@
 package com.hypixel.hytale.protocol.io;
 
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
+import java.lang.foreign.ValueLayout.OfInt;
+import java.lang.foreign.ValueLayout.OfShort;
+import java.nio.ByteOrder;
 import javax.annotation.Nonnull;
 
 public final class VarInt {
+   private static final OfShort BE_SHORT = ValueLayout.JAVA_SHORT_UNALIGNED.withOrder(ByteOrder.BIG_ENDIAN);
+   private static final OfInt BE_INT = ValueLayout.JAVA_INT_UNALIGNED.withOrder(ByteOrder.BIG_ENDIAN);
+
    private VarInt() {
    }
 
@@ -134,6 +142,156 @@ public final class VarInt {
       } else {
          return (buf.getByte(index + 4) & 128) == 0 ? 5 : -1;
       }
+   }
+
+   public static int length(@Nonnull MemorySegment mem, int offset) {
+      int limit = (int)mem.byteSize();
+      if (offset >= limit) {
+         return -1;
+      } else if ((mem.get(PacketIO.PROTO_BYTE, offset) & 128) == 0) {
+         return 1;
+      } else if (offset + 1 >= limit) {
+         return -1;
+      } else if ((mem.get(PacketIO.PROTO_BYTE, offset + 1) & 128) == 0) {
+         return 2;
+      } else if (offset + 2 >= limit) {
+         return -1;
+      } else if ((mem.get(PacketIO.PROTO_BYTE, offset + 2) & 128) == 0) {
+         return 3;
+      } else if (offset + 3 >= limit) {
+         return -1;
+      } else if ((mem.get(PacketIO.PROTO_BYTE, offset + 3) & 128) == 0) {
+         return 4;
+      } else if (offset + 4 >= limit) {
+         return -1;
+      } else {
+         return (mem.get(PacketIO.PROTO_BYTE, offset + 4) & 128) == 0 ? 5 : -1;
+      }
+   }
+
+   public static int set(@Nonnull MemorySegment mem, int offset, int value) {
+      if (value < 0) {
+         throw new IllegalArgumentException("VarInt cannot encode negative values: " + value);
+      } else if ((value & -128) == 0) {
+         mem.set(PacketIO.PROTO_BYTE, offset, (byte)value);
+         return 1;
+      } else if ((value & -16384) == 0) {
+         mem.set(BE_SHORT, offset, (short)((value & 127 | 128) << 8 | value >>> 7));
+         return 2;
+      } else if ((value & -2097152) == 0) {
+         mem.set(BE_SHORT, offset, (short)((value & 127 | 128) << 8 | value >>> 7 & 127 | 128));
+         mem.set(PacketIO.PROTO_BYTE, offset + 2, (byte)(value >>> 14));
+         return 3;
+      } else if ((value & -268435456) == 0) {
+         mem.set(BE_INT, offset, (value & 127 | 128) << 24 | (value >>> 7 & 127 | 128) << 16 | (value >>> 14 & 127 | 128) << 8 | value >>> 21);
+         return 4;
+      } else {
+         mem.set(BE_INT, offset, (value & 127 | 128) << 24 | (value >>> 7 & 127 | 128) << 16 | (value >>> 14 & 127 | 128) << 8 | value >>> 21 & 127 | 128);
+         mem.set(PacketIO.PROTO_BYTE, offset + 4, (byte)(value >>> 28));
+         return 5;
+      }
+   }
+
+   public static int get(@Nonnull MemorySegment mem, int offset) {
+      int limit = (int)mem.byteSize();
+      if (offset >= limit) {
+         return -1;
+      }
+
+      int b = mem.get(PacketIO.PROTO_BYTE, offset);
+      int value = b & 127;
+      if ((b & 128) == 0) {
+         return value;
+      }
+
+      if (offset + 1 >= limit) {
+         return -1;
+      }
+
+      int var5 = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      value |= (var5 & 127) << 7;
+      if ((var5 & 128) == 0) {
+         return value;
+      }
+
+      if (offset + 2 >= limit) {
+         return -1;
+      }
+
+      var5 = mem.get(PacketIO.PROTO_BYTE, offset + 2);
+      value |= (var5 & 127) << 14;
+      if ((var5 & 128) == 0) {
+         return value;
+      }
+
+      if (offset + 3 >= limit) {
+         return -1;
+      }
+
+      var5 = mem.get(PacketIO.PROTO_BYTE, offset + 3);
+      value |= (var5 & 127) << 21;
+      if ((var5 & 128) == 0) {
+         return value;
+      }
+
+      if (offset + 4 >= limit) {
+         return -1;
+      }
+
+      var5 = mem.get(PacketIO.PROTO_BYTE, offset + 4);
+      value |= (var5 & 127) << 28;
+      return (var5 & 128) == 0 ? value : -1;
+   }
+
+   public static long getWithLength(@Nonnull MemorySegment mem, int offset) {
+      int limit = (int)mem.byteSize();
+      if (offset >= limit) {
+         return -1L;
+      }
+
+      int b = mem.get(PacketIO.PROTO_BYTE, offset);
+      int value = b & 127;
+      if ((b & 128) == 0) {
+         return 4294967296L | value;
+      }
+
+      if (offset + 1 >= limit) {
+         return -1L;
+      }
+
+      int var5 = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      value |= (var5 & 127) << 7;
+      if ((var5 & 128) == 0) {
+         return 8589934592L | value;
+      }
+
+      if (offset + 2 >= limit) {
+         return -1L;
+      }
+
+      var5 = mem.get(PacketIO.PROTO_BYTE, offset + 2);
+      value |= (var5 & 127) << 14;
+      if ((var5 & 128) == 0) {
+         return 12884901888L | value;
+      }
+
+      if (offset + 3 >= limit) {
+         return -1L;
+      }
+
+      var5 = mem.get(PacketIO.PROTO_BYTE, offset + 3);
+      value |= (var5 & 127) << 21;
+      if ((var5 & 128) == 0) {
+         return 17179869184L | value;
+      }
+
+      if (offset + 4 >= limit) {
+         return -1L;
+      }
+
+      var5 = mem.get(PacketIO.PROTO_BYTE, offset + 4);
+      value |= (var5 & 127) << 28;
+      return (var5 & 128) == 0 ? 21474836480L | value : -1L;
    }
 
    public static int size(int value) {

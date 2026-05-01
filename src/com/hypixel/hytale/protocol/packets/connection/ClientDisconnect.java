@@ -3,9 +3,11 @@ package com.hypixel.hytale.protocol.packets.connection;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -61,10 +63,51 @@ public class ClientDisconnect implements Packet, ToServerPacket {
       return 2;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 2L;
+   }
+
+   public static ClientDisconnectReason getReason(MemorySegment mem) {
+      return getReason(mem, 0);
+   }
+
+   public static ClientDisconnectReason getReason(MemorySegment mem, int offset) {
+      return ClientDisconnectReason.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 0));
+   }
+
+   public static DisconnectType getType(MemorySegment mem) {
+      return getType(mem, 0);
+   }
+
+   public static DisconnectType getType(MemorySegment mem, int offset) {
+      return DisconnectType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1));
+   }
+
+   public static ClientDisconnect toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ClientDisconnect toObject(MemorySegment mem, int offset) {
+      if (offset + 2 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ClientDisconnect", offset + 2, (int)mem.byteSize());
+      } else {
+         return new ClientDisconnect(
+            ClientDisconnectReason.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 0)), DisconnectType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1))
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeByte(this.reason.getValue());
       buf.writeByte(this.type.getValue());
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, (byte)this.reason.getValue());
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.type.getValue());
+      return 2;
    }
 
    @Override

@@ -205,7 +205,7 @@ public class BlockPhysicsSystems {
                      return BlockTickStrategy.IGNORED;
                   }
 
-                  if (blockType.canBePlacedAsDeco() && isDeco) {
+                  if (isDeco) {
                      return BlockTickStrategy.IGNORED;
                   }
 

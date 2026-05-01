@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -168,6 +169,84 @@ public class AuthorInfo {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 13L;
+   }
+
+   @Nullable
+   public static String getName(MemorySegment mem) {
+      return getName(mem, 0);
+   }
+
+   @Nullable
+   public static String getName(MemorySegment mem, int offset) {
+      return hasName(mem, offset) ? PacketIO.readVarString("Name", mem, offset + getValidatedOffset(mem, offset, 1, 13, "Name"), 4096000, PacketIO.UTF8) : null;
+   }
+
+   @Nullable
+   public static String getEmail(MemorySegment mem) {
+      return getEmail(mem, 0);
+   }
+
+   @Nullable
+   public static String getEmail(MemorySegment mem, int offset) {
+      return hasEmail(mem, offset)
+         ? PacketIO.readVarString("Email", mem, offset + getValidatedOffset(mem, offset, 5, 13, "Email"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getUrl(MemorySegment mem) {
+      return getUrl(mem, 0);
+   }
+
+   @Nullable
+   public static String getUrl(MemorySegment mem, int offset) {
+      return hasUrl(mem, offset) ? PacketIO.readVarString("Url", mem, offset + getValidatedOffset(mem, offset, 9, 13, "Url"), 4096000, PacketIO.UTF8) : null;
+   }
+
+   public static boolean hasName(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasEmail(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasUrl(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static AuthorInfo toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AuthorInfo toObject(MemorySegment mem, int offset) {
+      if (offset + 13 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AuthorInfo", offset + 13, (int)mem.byteSize());
+      } else {
+         return new AuthorInfo(
+            hasName(mem, offset) ? PacketIO.readVarString("Name", mem, offset + getValidatedOffset(mem, offset, 1, 13, "Name"), 4096000, PacketIO.UTF8) : null,
+            hasEmail(mem, offset)
+               ? PacketIO.readVarString("Email", mem, offset + getValidatedOffset(mem, offset, 5, 13, "Email"), 4096000, PacketIO.UTF8)
+               : null,
+            hasUrl(mem, offset) ? PacketIO.readVarString("Url", mem, offset + getValidatedOffset(mem, offset, 9, 13, "Url"), 4096000, PacketIO.UTF8) : null
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -211,6 +290,46 @@ public class AuthorInfo {
       } else {
          buf.setIntLE(urlOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.name != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.email != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.url != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 13;
+      if (this.name != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 1, varOffset - offset - 13);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.name, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 1, -1);
+      }
+
+      if (this.email != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 5, varOffset - offset - 13);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.email, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 5, -1);
+      }
+
+      if (this.url != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 9, varOffset - offset - 13);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.url, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 9, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

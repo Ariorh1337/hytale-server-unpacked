@@ -3,9 +3,11 @@ package com.hypixel.hytale.protocol.packets.interface_;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -60,10 +62,49 @@ public class SetPage implements Packet, ToClientPacket {
       return 2;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 2L;
+   }
+
+   public static Page getPage(MemorySegment mem) {
+      return getPage(mem, 0);
+   }
+
+   public static Page getPage(MemorySegment mem, int offset) {
+      return Page.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 0));
+   }
+
+   public static boolean getCanCloseThroughInteraction(MemorySegment mem) {
+      return getCanCloseThroughInteraction(mem, 0);
+   }
+
+   public static boolean getCanCloseThroughInteraction(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 1);
+   }
+
+   public static SetPage toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static SetPage toObject(MemorySegment mem, int offset) {
+      if (offset + 2 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("SetPage", offset + 2, (int)mem.byteSize());
+      } else {
+         return new SetPage(Page.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 0)), mem.get(PacketIO.PROTO_BOOL, offset + 1));
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeByte(this.page.getValue());
       buf.writeByte(this.canCloseThroughInteraction ? 1 : 0);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, (byte)this.page.getValue());
+      mem.set(PacketIO.PROTO_BOOL, offset + 1, this.canCloseThroughInteraction);
+      return 2;
    }
 
    @Override

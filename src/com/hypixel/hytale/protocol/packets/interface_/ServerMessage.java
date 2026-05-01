@@ -4,9 +4,11 @@ import com.hypixel.hytale.protocol.FormattedMessage;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -75,6 +77,47 @@ public class ServerMessage implements Packet, ToClientPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 2L;
+   }
+
+   public static ChatType getType(MemorySegment mem) {
+      return getType(mem, 0);
+   }
+
+   public static ChatType getType(MemorySegment mem, int offset) {
+      return ChatType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1));
+   }
+
+   @Nullable
+   public static FormattedMessage getMessage(MemorySegment mem) {
+      return getMessage(mem, 0);
+   }
+
+   @Nullable
+   public static FormattedMessage getMessage(MemorySegment mem, int offset) {
+      return hasMessage(mem, offset) ? FormattedMessage.toObject(mem, offset + 2) : null;
+   }
+
+   public static boolean hasMessage(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static ServerMessage toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ServerMessage toObject(MemorySegment mem, int offset) {
+      if (offset + 2 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ServerMessage", offset + 2, (int)mem.byteSize());
+      } else {
+         return new ServerMessage(
+            ChatType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1)), hasMessage(mem, offset) ? FormattedMessage.toObject(mem, offset + 2) : null
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -87,6 +130,23 @@ public class ServerMessage implements Packet, ToClientPacket {
       if (this.message != null) {
          this.message.serialize(buf);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.message != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.type.getValue());
+      int varOffset = offset + 2;
+      if (this.message != null) {
+         varOffset += this.message.serialize(mem, varOffset);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

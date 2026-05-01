@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -79,6 +80,57 @@ public class CommandSuggestionOverride {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 9L;
+   }
+
+   public static int getArgStart(MemorySegment mem) {
+      return getArgStart(mem, 0);
+   }
+
+   public static int getArgStart(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   public static int getArgCount(MemorySegment mem) {
+      return getArgCount(mem, 0);
+   }
+
+   public static int getArgCount(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 5);
+   }
+
+   @Nullable
+   public static String getArgTypeId(MemorySegment mem) {
+      return getArgTypeId(mem, 0);
+   }
+
+   @Nullable
+   public static String getArgTypeId(MemorySegment mem, int offset) {
+      return hasArgTypeId(mem, offset) ? PacketIO.readVarString("ArgTypeId", mem, offset + 9, 4096000, PacketIO.UTF8) : null;
+   }
+
+   public static boolean hasArgTypeId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static CommandSuggestionOverride toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static CommandSuggestionOverride toObject(MemorySegment mem, int offset) {
+      if (offset + 9 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("CommandSuggestionOverride", offset + 9, (int)mem.byteSize());
+      } else {
+         return new CommandSuggestionOverride(
+            mem.get(PacketIO.PROTO_INT, offset + 1),
+            mem.get(PacketIO.PROTO_INT, offset + 5),
+            hasArgTypeId(mem, offset) ? PacketIO.readVarString("ArgTypeId", mem, offset + 9, 4096000, PacketIO.UTF8) : null
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
       if (this.argTypeId != null) {
@@ -91,6 +143,23 @@ public class CommandSuggestionOverride {
       if (this.argTypeId != null) {
          PacketIO.writeVarString(buf, this.argTypeId, 4096000);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.argTypeId != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.argStart);
+      mem.set(PacketIO.PROTO_INT, offset + 5, this.argCount);
+      int varOffset = offset + 9;
+      if (this.argTypeId != null) {
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.argTypeId, 4096000);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

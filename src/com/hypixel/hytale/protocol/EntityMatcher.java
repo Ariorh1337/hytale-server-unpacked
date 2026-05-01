@@ -1,8 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -45,9 +47,47 @@ public class EntityMatcher {
       return 2;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 2L;
+   }
+
+   public static EntityMatcherType getType(MemorySegment mem) {
+      return getType(mem, 0);
+   }
+
+   public static EntityMatcherType getType(MemorySegment mem, int offset) {
+      return EntityMatcherType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 0));
+   }
+
+   public static boolean getInvert(MemorySegment mem) {
+      return getInvert(mem, 0);
+   }
+
+   public static boolean getInvert(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 1);
+   }
+
+   public static EntityMatcher toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static EntityMatcher toObject(MemorySegment mem, int offset) {
+      if (offset + 2 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("EntityMatcher", offset + 2, (int)mem.byteSize());
+      } else {
+         return new EntityMatcher(EntityMatcherType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 0)), mem.get(PacketIO.PROTO_BOOL, offset + 1));
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeByte(this.type.getValue());
       buf.writeByte(this.invert ? 1 : 0);
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, (byte)this.type.getValue());
+      mem.set(PacketIO.PROTO_BOOL, offset + 1, this.invert);
+      return 2;
    }
 
    public int computeSize() {

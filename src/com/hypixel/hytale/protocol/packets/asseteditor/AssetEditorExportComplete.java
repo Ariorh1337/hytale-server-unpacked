@@ -3,10 +3,12 @@ package com.hypixel.hytale.protocol.packets.asseteditor;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -94,6 +96,92 @@ public class AssetEditorExportComplete implements Packet, ToClientPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 1L;
+   }
+
+   @Nullable
+   public static TimestampedAssetReference[] getAssets(MemorySegment mem) {
+      return getAssets(mem, 0);
+   }
+
+   @Nullable
+   public static TimestampedAssetReference[] getAssets(MemorySegment mem, int offset) {
+      if (!hasAssets(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + 1;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Assets", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Assets", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Assets", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      TimestampedAssetReference[] data = new TimestampedAssetReference[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = TimestampedAssetReference.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   public static boolean hasAssets(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static AssetEditorExportComplete toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AssetEditorExportComplete toObject(MemorySegment mem, int offset) {
+      if (offset + 1 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AssetEditorExportComplete", offset + 1, (int)mem.byteSize());
+      }
+
+      TimestampedAssetReference[] assets = null;
+      if (hasAssets(mem, offset)) {
+         int off = offset + 1;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Assets", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Assets", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Assets", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         assets = new TimestampedAssetReference[len];
+
+         for (int i = 0; i < len; i++) {
+            assets[i] = TimestampedAssetReference.toObject(mem, off);
+            off += assets[i].computeSize();
+         }
+      }
+
+      return new AssetEditorExportComplete(assets);
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -113,6 +201,33 @@ public class AssetEditorExportComplete implements Packet, ToClientPacket {
             item.serialize(buf);
          }
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.assets != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 1;
+      if (this.assets != null) {
+         if (this.assets.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Assets", this.assets.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.assets.length);
+         int assetsValueOffset = 0;
+
+         for (int i = 0; i < this.assets.length; i++) {
+            assetsValueOffset += this.assets[i].serialize(mem, varOffset + assetsValueOffset);
+         }
+
+         varOffset += assetsValueOffset;
+      }
+
+      return varOffset - offset;
    }
 
    @Override

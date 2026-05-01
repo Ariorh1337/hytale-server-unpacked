@@ -4,6 +4,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -43,6 +44,24 @@ public abstract class MusicContainer {
       };
    }
 
+   public static MusicContainer toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static MusicContainer toObject(MemorySegment mem, int offset) {
+      int typeId = VarInt.get(mem, offset);
+      int typeIdLen = VarInt.size(typeId);
+
+      return switch (typeId) {
+         case 0 -> SingleTrackMusicContainer.toObject(mem, offset + typeIdLen);
+         case 1 -> RandomMusicContainer.toObject(mem, offset + typeIdLen);
+         case 2 -> SequenceMusicContainer.toObject(mem, offset + typeIdLen);
+         case 3 -> HorizontalMusicContainer.toObject(mem, offset + typeIdLen);
+         case 4 -> SegmentMusicContainer.toObject(mem, offset + typeIdLen);
+         default -> throw ProtocolException.unknownPolymorphicType("MusicContainer", typeId);
+      };
+   }
+
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       int typeId = VarInt.peek(buf, offset);
       int typeIdLen = VarInt.size(typeId);
@@ -75,6 +94,8 @@ public abstract class MusicContainer {
 
    public abstract int serialize(@Nonnull ByteBuf var1);
 
+   public abstract int serialize(@Nonnull MemorySegment var1, int var2);
+
    public abstract int computeSize();
 
    public int serializeWithTypeId(@Nonnull ByteBuf buf) {
@@ -82,6 +103,11 @@ public abstract class MusicContainer {
       VarInt.write(buf, this.getTypeId());
       this.serialize(buf);
       return buf.writerIndex() - startPos;
+   }
+
+   public int serializeWithTypeId(@Nonnull MemorySegment mem, int offset) {
+      int len = VarInt.set(mem, offset, this.getTypeId());
+      return len + this.serialize(mem, offset + len);
    }
 
    public int computeSizeWithTypeId() {

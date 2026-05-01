@@ -3,9 +3,11 @@ package com.hypixel.hytale.protocol.packets.serveraccess;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -60,10 +62,49 @@ public class RequestServerAccess implements Packet, ToClientPacket {
       return 3;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 3L;
+   }
+
+   public static Access getAccess(MemorySegment mem) {
+      return getAccess(mem, 0);
+   }
+
+   public static Access getAccess(MemorySegment mem, int offset) {
+      return Access.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 0));
+   }
+
+   public static short getExternalPort(MemorySegment mem) {
+      return getExternalPort(mem, 0);
+   }
+
+   public static short getExternalPort(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_SHORT, offset + 1);
+   }
+
+   public static RequestServerAccess toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static RequestServerAccess toObject(MemorySegment mem, int offset) {
+      if (offset + 3 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("RequestServerAccess", offset + 3, (int)mem.byteSize());
+      } else {
+         return new RequestServerAccess(Access.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 0)), mem.get(PacketIO.PROTO_SHORT, offset + 1));
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeByte(this.access.getValue());
       buf.writeShortLE(this.externalPort);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, (byte)this.access.getValue());
+      mem.set(PacketIO.PROTO_SHORT, offset + 1, this.externalPort);
+      return 3;
    }
 
    @Override

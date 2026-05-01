@@ -1,8 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -50,10 +52,61 @@ public class MouseButtonEvent {
       return 3;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 3L;
+   }
+
+   public static MouseButtonType getMouseButtonType(MemorySegment mem) {
+      return getMouseButtonType(mem, 0);
+   }
+
+   public static MouseButtonType getMouseButtonType(MemorySegment mem, int offset) {
+      return MouseButtonType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 0));
+   }
+
+   public static MouseButtonState getState(MemorySegment mem) {
+      return getState(mem, 0);
+   }
+
+   public static MouseButtonState getState(MemorySegment mem, int offset) {
+      return MouseButtonState.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1));
+   }
+
+   public static byte getClicks(MemorySegment mem) {
+      return getClicks(mem, 0);
+   }
+
+   public static byte getClicks(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BYTE, offset + 2);
+   }
+
+   public static MouseButtonEvent toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static MouseButtonEvent toObject(MemorySegment mem, int offset) {
+      if (offset + 3 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("MouseButtonEvent", offset + 3, (int)mem.byteSize());
+      } else {
+         return new MouseButtonEvent(
+            MouseButtonType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 0)),
+            MouseButtonState.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1)),
+            mem.get(PacketIO.PROTO_BYTE, offset + 2)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeByte(this.mouseButtonType.getValue());
       buf.writeByte(this.state.getValue());
       buf.writeByte(this.clicks);
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, (byte)this.mouseButtonType.getValue());
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.state.getValue());
+      mem.set(PacketIO.PROTO_BYTE, offset + 2, this.clicks);
+      return 3;
    }
 
    public int computeSize() {

@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -168,6 +169,200 @@ public class ModelVFX {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 49L;
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem) {
+      return getId(mem, 0);
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem, int offset) {
+      return hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + 49, 4096000, PacketIO.UTF8) : null;
+   }
+
+   public static SwitchTo getSwitchTo(MemorySegment mem) {
+      return getSwitchTo(mem, 0);
+   }
+
+   public static SwitchTo getSwitchTo(MemorySegment mem, int offset) {
+      return SwitchTo.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1));
+   }
+
+   public static EffectDirection getEffectDirection(MemorySegment mem) {
+      return getEffectDirection(mem, 0);
+   }
+
+   public static EffectDirection getEffectDirection(MemorySegment mem, int offset) {
+      return EffectDirection.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 2));
+   }
+
+   public static float getAnimationDuration(MemorySegment mem) {
+      return getAnimationDuration(mem, 0);
+   }
+
+   public static float getAnimationDuration(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 3);
+   }
+
+   @Nullable
+   public static Vector2fc getAnimationRange(MemorySegment mem) {
+      return getAnimationRange(mem, 0);
+   }
+
+   @Nullable
+   public static Vector2fc getAnimationRange(MemorySegment mem, int offset) {
+      return hasAnimationRange(mem, offset) ? PacketIO.readVector2f(mem, offset + 7) : null;
+   }
+
+   public static LoopOption getLoopOption(MemorySegment mem) {
+      return getLoopOption(mem, 0);
+   }
+
+   public static LoopOption getLoopOption(MemorySegment mem, int offset) {
+      return LoopOption.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 15));
+   }
+
+   public static CurveType getCurveType(MemorySegment mem) {
+      return getCurveType(mem, 0);
+   }
+
+   public static CurveType getCurveType(MemorySegment mem, int offset) {
+      return CurveType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 16));
+   }
+
+   @Nullable
+   public static Color getHighlightColor(MemorySegment mem) {
+      return getHighlightColor(mem, 0);
+   }
+
+   @Nullable
+   public static Color getHighlightColor(MemorySegment mem, int offset) {
+      return hasHighlightColor(mem, offset) ? Color.toObject(mem, offset + 17) : null;
+   }
+
+   public static float getHighlightThickness(MemorySegment mem) {
+      return getHighlightThickness(mem, 0);
+   }
+
+   public static float getHighlightThickness(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 20);
+   }
+
+   public static boolean getUseBloomOnHighlight(MemorySegment mem) {
+      return getUseBloomOnHighlight(mem, 0);
+   }
+
+   public static boolean getUseBloomOnHighlight(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 24);
+   }
+
+   public static boolean getUseProgessiveHighlight(MemorySegment mem) {
+      return getUseProgessiveHighlight(mem, 0);
+   }
+
+   public static boolean getUseProgessiveHighlight(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 25);
+   }
+
+   @Nullable
+   public static Vector2fc getNoiseScale(MemorySegment mem) {
+      return getNoiseScale(mem, 0);
+   }
+
+   @Nullable
+   public static Vector2fc getNoiseScale(MemorySegment mem, int offset) {
+      return hasNoiseScale(mem, offset) ? PacketIO.readVector2f(mem, offset + 26) : null;
+   }
+
+   @Nullable
+   public static Vector2fc getNoiseScrollSpeed(MemorySegment mem) {
+      return getNoiseScrollSpeed(mem, 0);
+   }
+
+   @Nullable
+   public static Vector2fc getNoiseScrollSpeed(MemorySegment mem, int offset) {
+      return hasNoiseScrollSpeed(mem, offset) ? PacketIO.readVector2f(mem, offset + 34) : null;
+   }
+
+   @Nullable
+   public static Color getPostColor(MemorySegment mem) {
+      return getPostColor(mem, 0);
+   }
+
+   @Nullable
+   public static Color getPostColor(MemorySegment mem, int offset) {
+      return hasPostColor(mem, offset) ? Color.toObject(mem, offset + 42) : null;
+   }
+
+   public static float getPostColorOpacity(MemorySegment mem) {
+      return getPostColorOpacity(mem, 0);
+   }
+
+   public static float getPostColorOpacity(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 45);
+   }
+
+   public static boolean hasAnimationRange(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasHighlightColor(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasNoiseScale(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasNoiseScrollSpeed(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasPostColor(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 16) != 0;
+   }
+
+   public static boolean hasId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 32) != 0;
+   }
+
+   public static ModelVFX toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ModelVFX toObject(MemorySegment mem, int offset) {
+      if (offset + 49 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ModelVFX", offset + 49, (int)mem.byteSize());
+      } else {
+         return new ModelVFX(
+            hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + 49, 4096000, PacketIO.UTF8) : null,
+            SwitchTo.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1)),
+            EffectDirection.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 2)),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 3),
+            hasAnimationRange(mem, offset) ? PacketIO.readVector2f(mem, offset + 7) : null,
+            LoopOption.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 15)),
+            CurveType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 16)),
+            hasHighlightColor(mem, offset) ? Color.toObject(mem, offset + 17) : null,
+            mem.get(PacketIO.PROTO_FLOAT, offset + 20),
+            mem.get(PacketIO.PROTO_BOOL, offset + 24),
+            mem.get(PacketIO.PROTO_BOOL, offset + 25),
+            hasNoiseScale(mem, offset) ? PacketIO.readVector2f(mem, offset + 26) : null,
+            hasNoiseScrollSpeed(mem, offset) ? PacketIO.readVector2f(mem, offset + 34) : null,
+            hasPostColor(mem, offset) ? Color.toObject(mem, offset + 42) : null,
+            mem.get(PacketIO.PROTO_FLOAT, offset + 45)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
       if (this.animationRange != null) {
@@ -237,6 +432,80 @@ public class ModelVFX {
       if (this.id != null) {
          PacketIO.writeVarString(buf, this.id, 4096000);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.animationRange != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.highlightColor != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.noiseScale != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.noiseScrollSpeed != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.postColor != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.id != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.switchTo.getValue());
+      mem.set(PacketIO.PROTO_BYTE, offset + 2, (byte)this.effectDirection.getValue());
+      mem.set(PacketIO.PROTO_FLOAT, offset + 3, this.animationDuration);
+      if (this.animationRange != null) {
+         PacketIO.writeVector2f(mem, offset + 7, this.animationRange);
+      } else {
+         mem.asSlice(offset + 7, 8L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 15, (byte)this.loopOption.getValue());
+      mem.set(PacketIO.PROTO_BYTE, offset + 16, (byte)this.curveType.getValue());
+      if (this.highlightColor != null) {
+         this.highlightColor.serialize(mem, offset + 17);
+      } else {
+         mem.asSlice(offset + 17, 3L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_FLOAT, offset + 20, this.highlightThickness);
+      mem.set(PacketIO.PROTO_BOOL, offset + 24, this.useBloomOnHighlight);
+      mem.set(PacketIO.PROTO_BOOL, offset + 25, this.useProgessiveHighlight);
+      if (this.noiseScale != null) {
+         PacketIO.writeVector2f(mem, offset + 26, this.noiseScale);
+      } else {
+         mem.asSlice(offset + 26, 8L).fill((byte)0);
+      }
+
+      if (this.noiseScrollSpeed != null) {
+         PacketIO.writeVector2f(mem, offset + 34, this.noiseScrollSpeed);
+      } else {
+         mem.asSlice(offset + 34, 8L).fill((byte)0);
+      }
+
+      if (this.postColor != null) {
+         this.postColor.serialize(mem, offset + 42);
+      } else {
+         mem.asSlice(offset + 42, 3L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_FLOAT, offset + 45, this.postColorOpacity);
+      int varOffset = offset + 49;
+      if (this.id != null) {
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.id, 4096000);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -484,6 +485,418 @@ public class FormattedMessage {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 39L;
+   }
+
+   @Nullable
+   public static String getRawText(MemorySegment mem) {
+      return getRawText(mem, 0);
+   }
+
+   @Nullable
+   public static String getRawText(MemorySegment mem, int offset) {
+      return hasRawText(mem, offset)
+         ? PacketIO.readVarString("RawText", mem, offset + getValidatedOffset(mem, offset, 7, 39, "RawText"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getMessageId(MemorySegment mem) {
+      return getMessageId(mem, 0);
+   }
+
+   @Nullable
+   public static String getMessageId(MemorySegment mem, int offset) {
+      return hasMessageId(mem, offset)
+         ? PacketIO.readVarString("MessageId", mem, offset + getValidatedOffset(mem, offset, 11, 39, "MessageId"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static FormattedMessage[] getChildren(MemorySegment mem) {
+      return getChildren(mem, 0);
+   }
+
+   @Nullable
+   public static FormattedMessage[] getChildren(MemorySegment mem, int offset) {
+      if (!hasChildren(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 15, 39, "Children");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Children", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Children", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Children", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      FormattedMessage[] data = new FormattedMessage[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static Map<String, ParamValue> getParams(MemorySegment mem) {
+      return getParams(mem, 0);
+   }
+
+   @Nullable
+   public static Map<String, ParamValue> getParams(MemorySegment mem, int offset) {
+      if (!hasParams(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 19, 39, "Params");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Params", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("Params", len, 4096000);
+      }
+
+      Map<String, ParamValue> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         long keyPacked = VarInt.getWithLength(mem, off);
+         int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+         String key = PacketIO.readVarString("key", mem, off, 16384000, PacketIO.UTF8);
+         off += nkey;
+         ParamValue value = ParamValue.toObject(mem, off);
+         off += value.computeSizeWithTypeId();
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("Params", key);
+         }
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static Map<String, FormattedMessage> getMessageParams(MemorySegment mem) {
+      return getMessageParams(mem, 0);
+   }
+
+   @Nullable
+   public static Map<String, FormattedMessage> getMessageParams(MemorySegment mem, int offset) {
+      if (!hasMessageParams(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 23, 39, "MessageParams");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("MessageParams", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("MessageParams", len, 4096000);
+      }
+
+      Map<String, FormattedMessage> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         long keyPacked = VarInt.getWithLength(mem, off);
+         int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+         String key = PacketIO.readVarString("key", mem, off, 16384000, PacketIO.UTF8);
+         off += nkey;
+         FormattedMessage value = toObject(mem, off);
+         off += value.computeSize();
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("MessageParams", key);
+         }
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static String getColor(MemorySegment mem) {
+      return getColor(mem, 0);
+   }
+
+   @Nullable
+   public static String getColor(MemorySegment mem, int offset) {
+      return hasColor(mem, offset)
+         ? PacketIO.readVarString("Color", mem, offset + getValidatedOffset(mem, offset, 27, 39, "Color"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static Boolean getBold(MemorySegment mem) {
+      return getBold(mem, 0);
+   }
+
+   @Nullable
+   public static Boolean getBold(MemorySegment mem, int offset) {
+      return hasBold(mem, offset) ? mem.get(PacketIO.PROTO_BOOL, offset + 2) : null;
+   }
+
+   @Nullable
+   public static Boolean getItalic(MemorySegment mem) {
+      return getItalic(mem, 0);
+   }
+
+   @Nullable
+   public static Boolean getItalic(MemorySegment mem, int offset) {
+      return hasItalic(mem, offset) ? mem.get(PacketIO.PROTO_BOOL, offset + 3) : null;
+   }
+
+   @Nullable
+   public static Boolean getMonospace(MemorySegment mem) {
+      return getMonospace(mem, 0);
+   }
+
+   @Nullable
+   public static Boolean getMonospace(MemorySegment mem, int offset) {
+      return hasMonospace(mem, offset) ? mem.get(PacketIO.PROTO_BOOL, offset + 4) : null;
+   }
+
+   @Nullable
+   public static Boolean getUnderlined(MemorySegment mem) {
+      return getUnderlined(mem, 0);
+   }
+
+   @Nullable
+   public static Boolean getUnderlined(MemorySegment mem, int offset) {
+      return hasUnderlined(mem, offset) ? mem.get(PacketIO.PROTO_BOOL, offset + 5) : null;
+   }
+
+   @Nullable
+   public static String getLink(MemorySegment mem) {
+      return getLink(mem, 0);
+   }
+
+   @Nullable
+   public static String getLink(MemorySegment mem, int offset) {
+      return hasLink(mem, offset)
+         ? PacketIO.readVarString("Link", mem, offset + getValidatedOffset(mem, offset, 31, 39, "Link"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static boolean getMarkupEnabled(MemorySegment mem) {
+      return getMarkupEnabled(mem, 0);
+   }
+
+   public static boolean getMarkupEnabled(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 6);
+   }
+
+   @Nullable
+   public static FormattedMessageImage getImage(MemorySegment mem) {
+      return getImage(mem, 0);
+   }
+
+   @Nullable
+   public static FormattedMessageImage getImage(MemorySegment mem, int offset) {
+      return hasImage(mem, offset) ? FormattedMessageImage.toObject(mem, offset + getValidatedOffset(mem, offset, 35, 39, "Image")) : null;
+   }
+
+   public static boolean hasBold(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasItalic(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasMonospace(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasUnderlined(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasRawText(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 16) != 0;
+   }
+
+   public static boolean hasMessageId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 32) != 0;
+   }
+
+   public static boolean hasChildren(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 64) != 0;
+   }
+
+   public static boolean hasParams(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 128) != 0;
+   }
+
+   public static boolean hasMessageParams(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasColor(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasLink(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasImage(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 8) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static FormattedMessage toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static FormattedMessage toObject(MemorySegment mem, int offset) {
+      if (offset + 39 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("FormattedMessage", offset + 39, (int)mem.byteSize());
+      }
+
+      FormattedMessage[] children = null;
+      if (hasChildren(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 15, 39, "Children");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Children", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Children", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Children", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         children = new FormattedMessage[len];
+
+         for (int i = 0; i < len; i++) {
+            children[i] = toObject(mem, off);
+            off += children[i].computeSize();
+         }
+      }
+
+      Map<String, ParamValue> params = null;
+      if (hasParams(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 19, 39, "Params");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Params", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Params", len, 4096000);
+         }
+
+         params = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            long keyPacked = VarInt.getWithLength(mem, off);
+            int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+            String key = PacketIO.readVarString("key", mem, off, 16384000, PacketIO.UTF8);
+            off += nkey;
+            ParamValue value = ParamValue.toObject(mem, off);
+            off += value.computeSizeWithTypeId();
+            if (params.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("Params", key);
+            }
+         }
+      }
+
+      Map<String, FormattedMessage> messageParams = null;
+      if (hasMessageParams(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 23, 39, "MessageParams");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("MessageParams", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("MessageParams", len, 4096000);
+         }
+
+         messageParams = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            long keyPacked = VarInt.getWithLength(mem, off);
+            int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+            String key = PacketIO.readVarString("key", mem, off, 16384000, PacketIO.UTF8);
+            off += nkey;
+            FormattedMessage value = toObject(mem, off);
+            off += value.computeSize();
+            if (messageParams.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("MessageParams", key);
+            }
+         }
+      }
+
+      return new FormattedMessage(
+         hasRawText(mem, offset)
+            ? PacketIO.readVarString("RawText", mem, offset + getValidatedOffset(mem, offset, 7, 39, "RawText"), 4096000, PacketIO.UTF8)
+            : null,
+         hasMessageId(mem, offset)
+            ? PacketIO.readVarString("MessageId", mem, offset + getValidatedOffset(mem, offset, 11, 39, "MessageId"), 4096000, PacketIO.UTF8)
+            : null,
+         children,
+         params,
+         messageParams,
+         hasColor(mem, offset) ? PacketIO.readVarString("Color", mem, offset + getValidatedOffset(mem, offset, 27, 39, "Color"), 4096000, PacketIO.UTF8) : null,
+         hasBold(mem, offset) ? mem.get(PacketIO.PROTO_BOOL, offset + 2) : null,
+         hasItalic(mem, offset) ? mem.get(PacketIO.PROTO_BOOL, offset + 3) : null,
+         hasMonospace(mem, offset) ? mem.get(PacketIO.PROTO_BOOL, offset + 4) : null,
+         hasUnderlined(mem, offset) ? mem.get(PacketIO.PROTO_BOOL, offset + 5) : null,
+         hasLink(mem, offset) ? PacketIO.readVarString("Link", mem, offset + getValidatedOffset(mem, offset, 31, 39, "Link"), 4096000, PacketIO.UTF8) : null,
+         mem.get(PacketIO.PROTO_BOOL, offset + 6),
+         hasImage(mem, offset) ? FormattedMessageImage.toObject(mem, offset + getValidatedOffset(mem, offset, 35, 39, "Image")) : null
+      );
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte[] nullBits = new byte[2];
@@ -659,6 +1072,173 @@ public class FormattedMessage {
       } else {
          buf.setIntLE(imageOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.bold != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.italic != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.monospace != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.underlined != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.rawText != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.messageId != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
+      if (this.children != null) {
+         nullBits = (byte)(nullBits | 64);
+      }
+
+      if (this.params != null) {
+         nullBits = (byte)(nullBits | 128);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      nullBits = 0;
+      if (this.messageParams != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.color != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.link != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.image != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, nullBits);
+      if (this.bold != null) {
+         mem.set(PacketIO.PROTO_BOOL, offset + 2, this.bold);
+      } else {
+         mem.asSlice(offset + 2, 1L).fill((byte)0);
+      }
+
+      if (this.italic != null) {
+         mem.set(PacketIO.PROTO_BOOL, offset + 3, this.italic);
+      } else {
+         mem.asSlice(offset + 3, 1L).fill((byte)0);
+      }
+
+      if (this.monospace != null) {
+         mem.set(PacketIO.PROTO_BOOL, offset + 4, this.monospace);
+      } else {
+         mem.asSlice(offset + 4, 1L).fill((byte)0);
+      }
+
+      if (this.underlined != null) {
+         mem.set(PacketIO.PROTO_BOOL, offset + 5, this.underlined);
+      } else {
+         mem.asSlice(offset + 5, 1L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_BOOL, offset + 6, this.markupEnabled);
+      int varOffset = offset + 39;
+      if (this.rawText != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 7, varOffset - offset - 39);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.rawText, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 7, -1);
+      }
+
+      if (this.messageId != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 11, varOffset - offset - 39);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.messageId, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 11, -1);
+      }
+
+      if (this.children != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 15, varOffset - offset - 39);
+         if (this.children.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Children", this.children.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.children.length);
+         int childrenValueOffset = 0;
+
+         for (int i = 0; i < this.children.length; i++) {
+            childrenValueOffset += this.children[i].serialize(mem, varOffset + childrenValueOffset);
+         }
+
+         varOffset += childrenValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 15, -1);
+      }
+
+      if (this.params != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 19, varOffset - offset - 39);
+         if (this.params.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Params", this.params.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.params.size());
+
+         for (Entry<String, ParamValue> e : this.params.entrySet()) {
+            varOffset += PacketIO.writeVarString(mem, varOffset, e.getKey(), 16384000);
+            varOffset += e.getValue().serializeWithTypeId(mem, varOffset);
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 19, -1);
+      }
+
+      if (this.messageParams != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 23, varOffset - offset - 39);
+         if (this.messageParams.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("MessageParams", this.messageParams.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.messageParams.size());
+
+         for (Entry<String, FormattedMessage> e : this.messageParams.entrySet()) {
+            varOffset += PacketIO.writeVarString(mem, varOffset, e.getKey(), 16384000);
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 23, -1);
+      }
+
+      if (this.color != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 27, varOffset - offset - 39);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.color, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 27, -1);
+      }
+
+      if (this.link != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 31, varOffset - offset - 39);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.link, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 31, -1);
+      }
+
+      if (this.image != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 35, varOffset - offset - 39);
+         varOffset += this.image.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 35, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

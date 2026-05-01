@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -111,6 +112,50 @@ public class AddOrUpdateTriggerVolumeDisplay implements Packet, ToClientPacket {
       }
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 8L;
+   }
+
+   public static String getVolumeId(MemorySegment mem) {
+      return getVolumeId(mem, 0);
+   }
+
+   public static String getVolumeId(MemorySegment mem, int offset) {
+      return PacketIO.readVarString("VolumeId", mem, offset + getValidatedOffset(mem, offset, 0, 8, "VolumeId"), 4096000, PacketIO.UTF8);
+   }
+
+   public static TriggerVolumeDisplayEntry getEntry(MemorySegment mem) {
+      return getEntry(mem, 0);
+   }
+
+   public static TriggerVolumeDisplayEntry getEntry(MemorySegment mem, int offset) {
+      return TriggerVolumeDisplayEntry.toObject(mem, offset + getValidatedOffset(mem, offset, 4, 8, "Entry"));
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static AddOrUpdateTriggerVolumeDisplay toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AddOrUpdateTriggerVolumeDisplay toObject(MemorySegment mem, int offset) {
+      if (offset + 8 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AddOrUpdateTriggerVolumeDisplay", offset + 8, (int)mem.byteSize());
+      } else {
+         return new AddOrUpdateTriggerVolumeDisplay(
+            PacketIO.readVarString("VolumeId", mem, offset + getValidatedOffset(mem, offset, 0, 8, "VolumeId"), 4096000, PacketIO.UTF8),
+            TriggerVolumeDisplayEntry.toObject(mem, offset + getValidatedOffset(mem, offset, 4, 8, "Entry"))
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -123,6 +168,16 @@ public class AddOrUpdateTriggerVolumeDisplay implements Packet, ToClientPacket {
       PacketIO.writeVarString(buf, this.volumeId, 4096000);
       buf.setIntLE(entryOffsetSlot, buf.writerIndex() - varBlockStart);
       this.entry.serialize(buf);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      int varOffset = offset + 8;
+      mem.set(PacketIO.PROTO_INT, offset + 0, varOffset - offset - 8);
+      varOffset += PacketIO.writeVarString(mem, varOffset, this.volumeId, 4096000);
+      mem.set(PacketIO.PROTO_INT, offset + 4, varOffset - offset - 8);
+      varOffset += this.entry.serialize(mem, varOffset);
+      return varOffset - offset;
    }
 
    @Override

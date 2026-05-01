@@ -1,8 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -149,6 +151,221 @@ public class PhysicsConfig {
       return 122;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 122L;
+   }
+
+   public static PhysicsType getType(MemorySegment mem) {
+      return getType(mem, 0);
+   }
+
+   public static PhysicsType getType(MemorySegment mem, int offset) {
+      return PhysicsType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 0));
+   }
+
+   public static double getDensity(MemorySegment mem) {
+      return getDensity(mem, 0);
+   }
+
+   public static double getDensity(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_DOUBLE, offset + 1);
+   }
+
+   public static double getGravity(MemorySegment mem) {
+      return getGravity(mem, 0);
+   }
+
+   public static double getGravity(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_DOUBLE, offset + 9);
+   }
+
+   public static double getBounciness(MemorySegment mem) {
+      return getBounciness(mem, 0);
+   }
+
+   public static double getBounciness(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_DOUBLE, offset + 17);
+   }
+
+   public static int getBounceCount(MemorySegment mem) {
+      return getBounceCount(mem, 0);
+   }
+
+   public static int getBounceCount(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 25);
+   }
+
+   public static double getBounceLimit(MemorySegment mem) {
+      return getBounceLimit(mem, 0);
+   }
+
+   public static double getBounceLimit(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_DOUBLE, offset + 29);
+   }
+
+   public static boolean getSticksVertically(MemorySegment mem) {
+      return getSticksVertically(mem, 0);
+   }
+
+   public static boolean getSticksVertically(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 37);
+   }
+
+   public static boolean getComputeYaw(MemorySegment mem) {
+      return getComputeYaw(mem, 0);
+   }
+
+   public static boolean getComputeYaw(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 38);
+   }
+
+   public static boolean getComputePitch(MemorySegment mem) {
+      return getComputePitch(mem, 0);
+   }
+
+   public static boolean getComputePitch(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 39);
+   }
+
+   public static RotationMode getRotationMode(MemorySegment mem) {
+      return getRotationMode(mem, 0);
+   }
+
+   public static RotationMode getRotationMode(MemorySegment mem, int offset) {
+      return RotationMode.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 40));
+   }
+
+   public static double getMoveOutOfSolidSpeed(MemorySegment mem) {
+      return getMoveOutOfSolidSpeed(mem, 0);
+   }
+
+   public static double getMoveOutOfSolidSpeed(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_DOUBLE, offset + 41);
+   }
+
+   public static double getTerminalVelocityAir(MemorySegment mem) {
+      return getTerminalVelocityAir(mem, 0);
+   }
+
+   public static double getTerminalVelocityAir(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_DOUBLE, offset + 49);
+   }
+
+   public static double getDensityAir(MemorySegment mem) {
+      return getDensityAir(mem, 0);
+   }
+
+   public static double getDensityAir(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_DOUBLE, offset + 57);
+   }
+
+   public static double getTerminalVelocityWater(MemorySegment mem) {
+      return getTerminalVelocityWater(mem, 0);
+   }
+
+   public static double getTerminalVelocityWater(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_DOUBLE, offset + 65);
+   }
+
+   public static double getDensityWater(MemorySegment mem) {
+      return getDensityWater(mem, 0);
+   }
+
+   public static double getDensityWater(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_DOUBLE, offset + 73);
+   }
+
+   public static double getHitWaterImpulseLoss(MemorySegment mem) {
+      return getHitWaterImpulseLoss(mem, 0);
+   }
+
+   public static double getHitWaterImpulseLoss(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_DOUBLE, offset + 81);
+   }
+
+   public static double getRotationForce(MemorySegment mem) {
+      return getRotationForce(mem, 0);
+   }
+
+   public static double getRotationForce(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_DOUBLE, offset + 89);
+   }
+
+   public static float getSpeedRotationFactor(MemorySegment mem) {
+      return getSpeedRotationFactor(mem, 0);
+   }
+
+   public static float getSpeedRotationFactor(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 97);
+   }
+
+   public static double getSwimmingDampingFactor(MemorySegment mem) {
+      return getSwimmingDampingFactor(mem, 0);
+   }
+
+   public static double getSwimmingDampingFactor(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_DOUBLE, offset + 101);
+   }
+
+   public static boolean getAllowRolling(MemorySegment mem) {
+      return getAllowRolling(mem, 0);
+   }
+
+   public static boolean getAllowRolling(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 109);
+   }
+
+   public static double getRollingFrictionFactor(MemorySegment mem) {
+      return getRollingFrictionFactor(mem, 0);
+   }
+
+   public static double getRollingFrictionFactor(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_DOUBLE, offset + 110);
+   }
+
+   public static float getRollingSpeed(MemorySegment mem) {
+      return getRollingSpeed(mem, 0);
+   }
+
+   public static float getRollingSpeed(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 118);
+   }
+
+   public static PhysicsConfig toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static PhysicsConfig toObject(MemorySegment mem, int offset) {
+      if (offset + 122 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("PhysicsConfig", offset + 122, (int)mem.byteSize());
+      } else {
+         return new PhysicsConfig(
+            PhysicsType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 0)),
+            mem.get(PacketIO.PROTO_DOUBLE, offset + 1),
+            mem.get(PacketIO.PROTO_DOUBLE, offset + 9),
+            mem.get(PacketIO.PROTO_DOUBLE, offset + 17),
+            mem.get(PacketIO.PROTO_INT, offset + 25),
+            mem.get(PacketIO.PROTO_DOUBLE, offset + 29),
+            mem.get(PacketIO.PROTO_BOOL, offset + 37),
+            mem.get(PacketIO.PROTO_BOOL, offset + 38),
+            mem.get(PacketIO.PROTO_BOOL, offset + 39),
+            RotationMode.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 40)),
+            mem.get(PacketIO.PROTO_DOUBLE, offset + 41),
+            mem.get(PacketIO.PROTO_DOUBLE, offset + 49),
+            mem.get(PacketIO.PROTO_DOUBLE, offset + 57),
+            mem.get(PacketIO.PROTO_DOUBLE, offset + 65),
+            mem.get(PacketIO.PROTO_DOUBLE, offset + 73),
+            mem.get(PacketIO.PROTO_DOUBLE, offset + 81),
+            mem.get(PacketIO.PROTO_DOUBLE, offset + 89),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 97),
+            mem.get(PacketIO.PROTO_DOUBLE, offset + 101),
+            mem.get(PacketIO.PROTO_BOOL, offset + 109),
+            mem.get(PacketIO.PROTO_DOUBLE, offset + 110),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 118)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeByte(this.type.getValue());
       buf.writeDoubleLE(this.density);
@@ -172,6 +389,32 @@ public class PhysicsConfig {
       buf.writeByte(this.allowRolling ? 1 : 0);
       buf.writeDoubleLE(this.rollingFrictionFactor);
       buf.writeFloatLE(this.rollingSpeed);
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, (byte)this.type.getValue());
+      mem.set(PacketIO.PROTO_DOUBLE, offset + 1, this.density);
+      mem.set(PacketIO.PROTO_DOUBLE, offset + 9, this.gravity);
+      mem.set(PacketIO.PROTO_DOUBLE, offset + 17, this.bounciness);
+      mem.set(PacketIO.PROTO_INT, offset + 25, this.bounceCount);
+      mem.set(PacketIO.PROTO_DOUBLE, offset + 29, this.bounceLimit);
+      mem.set(PacketIO.PROTO_BOOL, offset + 37, this.sticksVertically);
+      mem.set(PacketIO.PROTO_BOOL, offset + 38, this.computeYaw);
+      mem.set(PacketIO.PROTO_BOOL, offset + 39, this.computePitch);
+      mem.set(PacketIO.PROTO_BYTE, offset + 40, (byte)this.rotationMode.getValue());
+      mem.set(PacketIO.PROTO_DOUBLE, offset + 41, this.moveOutOfSolidSpeed);
+      mem.set(PacketIO.PROTO_DOUBLE, offset + 49, this.terminalVelocityAir);
+      mem.set(PacketIO.PROTO_DOUBLE, offset + 57, this.densityAir);
+      mem.set(PacketIO.PROTO_DOUBLE, offset + 65, this.terminalVelocityWater);
+      mem.set(PacketIO.PROTO_DOUBLE, offset + 73, this.densityWater);
+      mem.set(PacketIO.PROTO_DOUBLE, offset + 81, this.hitWaterImpulseLoss);
+      mem.set(PacketIO.PROTO_DOUBLE, offset + 89, this.rotationForce);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 97, this.speedRotationFactor);
+      mem.set(PacketIO.PROTO_DOUBLE, offset + 101, this.swimmingDampingFactor);
+      mem.set(PacketIO.PROTO_BOOL, offset + 109, this.allowRolling);
+      mem.set(PacketIO.PROTO_DOUBLE, offset + 110, this.rollingFrictionFactor);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 118, this.rollingSpeed);
+      return 122;
    }
 
    public int computeSize() {

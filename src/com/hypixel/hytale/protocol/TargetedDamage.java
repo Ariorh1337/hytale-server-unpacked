@@ -1,8 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -62,6 +64,57 @@ public class TargetedDamage {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 9L;
+   }
+
+   public static int getIndex(MemorySegment mem) {
+      return getIndex(mem, 0);
+   }
+
+   public static int getIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   @Nullable
+   public static DamageEffects getDamageEffects(MemorySegment mem) {
+      return getDamageEffects(mem, 0);
+   }
+
+   @Nullable
+   public static DamageEffects getDamageEffects(MemorySegment mem, int offset) {
+      return hasDamageEffects(mem, offset) ? DamageEffects.toObject(mem, offset + 9) : null;
+   }
+
+   public static int getNext(MemorySegment mem) {
+      return getNext(mem, 0);
+   }
+
+   public static int getNext(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 5);
+   }
+
+   public static boolean hasDamageEffects(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static TargetedDamage toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static TargetedDamage toObject(MemorySegment mem, int offset) {
+      if (offset + 9 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("TargetedDamage", offset + 9, (int)mem.byteSize());
+      } else {
+         return new TargetedDamage(
+            mem.get(PacketIO.PROTO_INT, offset + 1),
+            hasDamageEffects(mem, offset) ? DamageEffects.toObject(mem, offset + 9) : null,
+            mem.get(PacketIO.PROTO_INT, offset + 5)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
       if (this.damageEffects != null) {
@@ -74,6 +127,23 @@ public class TargetedDamage {
       if (this.damageEffects != null) {
          this.damageEffects.serialize(buf);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.damageEffects != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.index);
+      mem.set(PacketIO.PROTO_INT, offset + 5, this.next);
+      int varOffset = offset + 9;
+      if (this.damageEffects != null) {
+         varOffset += this.damageEffects.serialize(mem, varOffset);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

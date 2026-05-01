@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -141,6 +142,72 @@ public class AuthGrant implements Packet, ToClientPacket {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 9L;
+   }
+
+   @Nullable
+   public static String getAuthorizationGrant(MemorySegment mem) {
+      return getAuthorizationGrant(mem, 0);
+   }
+
+   @Nullable
+   public static String getAuthorizationGrant(MemorySegment mem, int offset) {
+      return hasAuthorizationGrant(mem, offset)
+         ? PacketIO.readVarString("AuthorizationGrant", mem, offset + getValidatedOffset(mem, offset, 1, 9, "AuthorizationGrant"), 4096, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getServerIdentityToken(MemorySegment mem) {
+      return getServerIdentityToken(mem, 0);
+   }
+
+   @Nullable
+   public static String getServerIdentityToken(MemorySegment mem, int offset) {
+      return hasServerIdentityToken(mem, offset)
+         ? PacketIO.readVarString("ServerIdentityToken", mem, offset + getValidatedOffset(mem, offset, 5, 9, "ServerIdentityToken"), 8192, PacketIO.UTF8)
+         : null;
+   }
+
+   public static boolean hasAuthorizationGrant(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasServerIdentityToken(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static AuthGrant toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AuthGrant toObject(MemorySegment mem, int offset) {
+      if (offset + 9 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AuthGrant", offset + 9, (int)mem.byteSize());
+      } else {
+         return new AuthGrant(
+            hasAuthorizationGrant(mem, offset)
+               ? PacketIO.readVarString("AuthorizationGrant", mem, offset + getValidatedOffset(mem, offset, 1, 9, "AuthorizationGrant"), 4096, PacketIO.UTF8)
+               : null,
+            hasServerIdentityToken(mem, offset)
+               ? PacketIO.readVarString("ServerIdentityToken", mem, offset + getValidatedOffset(mem, offset, 5, 9, "ServerIdentityToken"), 8192, PacketIO.UTF8)
+               : null
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -172,6 +239,36 @@ public class AuthGrant implements Packet, ToClientPacket {
       } else {
          buf.setIntLE(serverIdentityTokenOffsetSlot, -1);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.authorizationGrant != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.serverIdentityToken != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 9;
+      if (this.authorizationGrant != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 1, varOffset - offset - 9);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.authorizationGrant, 4096);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 1, -1);
+      }
+
+      if (this.serverIdentityToken != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 5, varOffset - offset - 9);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.serverIdentityToken, 8192);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 5, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

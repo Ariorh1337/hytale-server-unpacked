@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -83,6 +84,64 @@ public class FluidParticle {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 8L;
+   }
+
+   @Nullable
+   public static String getSystemId(MemorySegment mem) {
+      return getSystemId(mem, 0);
+   }
+
+   @Nullable
+   public static String getSystemId(MemorySegment mem, int offset) {
+      return hasSystemId(mem, offset) ? PacketIO.readVarString("SystemId", mem, offset + 8, 4096000, PacketIO.UTF8) : null;
+   }
+
+   @Nullable
+   public static Color getColor(MemorySegment mem) {
+      return getColor(mem, 0);
+   }
+
+   @Nullable
+   public static Color getColor(MemorySegment mem, int offset) {
+      return hasColor(mem, offset) ? Color.toObject(mem, offset + 1) : null;
+   }
+
+   public static float getScale(MemorySegment mem) {
+      return getScale(mem, 0);
+   }
+
+   public static float getScale(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 4);
+   }
+
+   public static boolean hasColor(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasSystemId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static FluidParticle toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static FluidParticle toObject(MemorySegment mem, int offset) {
+      if (offset + 8 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("FluidParticle", offset + 8, (int)mem.byteSize());
+      } else {
+         return new FluidParticle(
+            hasSystemId(mem, offset) ? PacketIO.readVarString("SystemId", mem, offset + 8, 4096000, PacketIO.UTF8) : null,
+            hasColor(mem, offset) ? Color.toObject(mem, offset + 1) : null,
+            mem.get(PacketIO.PROTO_FLOAT, offset + 4)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
       if (this.color != null) {
@@ -104,6 +163,32 @@ public class FluidParticle {
       if (this.systemId != null) {
          PacketIO.writeVarString(buf, this.systemId, 4096000);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.color != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.systemId != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      if (this.color != null) {
+         this.color.serialize(mem, offset + 1);
+      } else {
+         mem.asSlice(offset + 1, 3L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_FLOAT, offset + 4, this.scale);
+      int varOffset = offset + 8;
+      if (this.systemId != null) {
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.systemId, 4096000);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

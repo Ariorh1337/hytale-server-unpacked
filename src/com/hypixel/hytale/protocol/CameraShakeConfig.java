@@ -1,8 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -130,6 +132,123 @@ public class CameraShakeConfig {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 28L;
+   }
+
+   public static float getDuration(MemorySegment mem) {
+      return getDuration(mem, 0);
+   }
+
+   public static float getDuration(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 1);
+   }
+
+   public static float getStartTime(MemorySegment mem) {
+      return getStartTime(mem, 0);
+   }
+
+   public static float getStartTime(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 5);
+   }
+
+   public static boolean getContinuous(MemorySegment mem) {
+      return getContinuous(mem, 0);
+   }
+
+   public static boolean getContinuous(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 9);
+   }
+
+   @Nullable
+   public static EasingConfig getEaseIn(MemorySegment mem) {
+      return getEaseIn(mem, 0);
+   }
+
+   @Nullable
+   public static EasingConfig getEaseIn(MemorySegment mem, int offset) {
+      return hasEaseIn(mem, offset) ? EasingConfig.toObject(mem, offset + 10) : null;
+   }
+
+   @Nullable
+   public static EasingConfig getEaseOut(MemorySegment mem) {
+      return getEaseOut(mem, 0);
+   }
+
+   @Nullable
+   public static EasingConfig getEaseOut(MemorySegment mem, int offset) {
+      return hasEaseOut(mem, offset) ? EasingConfig.toObject(mem, offset + 15) : null;
+   }
+
+   @Nullable
+   public static OffsetNoise getOffset(MemorySegment mem) {
+      return getOffset(mem, 0);
+   }
+
+   @Nullable
+   public static OffsetNoise getOffset(MemorySegment mem, int offset) {
+      return hasOffset(mem, offset) ? OffsetNoise.toObject(mem, offset + getValidatedOffset(mem, offset, 20, 28, "Offset")) : null;
+   }
+
+   @Nullable
+   public static RotationNoise getRotation(MemorySegment mem) {
+      return getRotation(mem, 0);
+   }
+
+   @Nullable
+   public static RotationNoise getRotation(MemorySegment mem, int offset) {
+      return hasRotation(mem, offset) ? RotationNoise.toObject(mem, offset + getValidatedOffset(mem, offset, 24, 28, "Rotation")) : null;
+   }
+
+   public static boolean hasEaseIn(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasEaseOut(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasOffset(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasRotation(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static CameraShakeConfig toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static CameraShakeConfig toObject(MemorySegment mem, int offset) {
+      if (offset + 28 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("CameraShakeConfig", offset + 28, (int)mem.byteSize());
+      } else {
+         return new CameraShakeConfig(
+            mem.get(PacketIO.PROTO_FLOAT, offset + 1),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 5),
+            mem.get(PacketIO.PROTO_BOOL, offset + 9),
+            hasEaseIn(mem, offset) ? EasingConfig.toObject(mem, offset + 10) : null,
+            hasEaseOut(mem, offset) ? EasingConfig.toObject(mem, offset + 15) : null,
+            hasOffset(mem, offset) ? OffsetNoise.toObject(mem, offset + getValidatedOffset(mem, offset, 20, 28, "Offset")) : null,
+            hasRotation(mem, offset) ? RotationNoise.toObject(mem, offset + getValidatedOffset(mem, offset, 24, 28, "Rotation")) : null
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -183,6 +302,58 @@ public class CameraShakeConfig {
       } else {
          buf.setIntLE(rotationOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.easeIn != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.easeOut != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.offset != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.rotation != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 1, this.duration);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 5, this.startTime);
+      mem.set(PacketIO.PROTO_BOOL, offset + 9, this.continuous);
+      if (this.easeIn != null) {
+         this.easeIn.serialize(mem, offset + 10);
+      } else {
+         mem.asSlice(offset + 10, 5L).fill((byte)0);
+      }
+
+      if (this.easeOut != null) {
+         this.easeOut.serialize(mem, offset + 15);
+      } else {
+         mem.asSlice(offset + 15, 5L).fill((byte)0);
+      }
+
+      int varOffset = offset + 28;
+      if (this.offset != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 20, varOffset - offset - 28);
+         varOffset += this.offset.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 20, -1);
+      }
+
+      if (this.rotation != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 24, varOffset - offset - 28);
+         varOffset += this.rotation.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 24, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

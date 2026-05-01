@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -119,6 +120,104 @@ public class AssetEditorFetchJsonAssetWithParentsReply implements Packet, ToClie
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 5L;
+   }
+
+   public static int getToken(MemorySegment mem) {
+      return getToken(mem, 0);
+   }
+
+   public static int getToken(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   @Nullable
+   public static Map<AssetPath, String> getAssets(MemorySegment mem) {
+      return getAssets(mem, 0);
+   }
+
+   @Nullable
+   public static Map<AssetPath, String> getAssets(MemorySegment mem, int offset) {
+      if (!hasAssets(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + 5;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Assets", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("Assets", len, 4096000);
+      }
+
+      Map<AssetPath, String> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         AssetPath key = AssetPath.toObject(mem, off);
+         off += key.computeSize();
+         long valuePacked = VarInt.getWithLength(mem, off);
+         int nvalue = (int)valuePacked + (int)(valuePacked >>> 32);
+         String value = PacketIO.readVarString("value", mem, off, 16384000, PacketIO.UTF8);
+         off += nvalue;
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("Assets", key);
+         }
+      }
+
+      return data;
+   }
+
+   public static boolean hasAssets(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static AssetEditorFetchJsonAssetWithParentsReply toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AssetEditorFetchJsonAssetWithParentsReply toObject(MemorySegment mem, int offset) {
+      if (offset + 5 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AssetEditorFetchJsonAssetWithParentsReply", offset + 5, (int)mem.byteSize());
+      }
+
+      Map<AssetPath, String> assets = null;
+      if (hasAssets(mem, offset)) {
+         int off = offset + 5;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Assets", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Assets", len, 4096000);
+         }
+
+         assets = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            AssetPath key = AssetPath.toObject(mem, off);
+            off += key.computeSize();
+            long valuePacked = VarInt.getWithLength(mem, off);
+            int nvalue = (int)valuePacked + (int)(valuePacked >>> 32);
+            String value = PacketIO.readVarString("value", mem, off, 16384000, PacketIO.UTF8);
+            off += nvalue;
+            if (assets.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("Assets", key);
+            }
+         }
+      }
+
+      return new AssetEditorFetchJsonAssetWithParentsReply(mem.get(PacketIO.PROTO_INT, offset + 1), assets);
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -140,6 +239,32 @@ public class AssetEditorFetchJsonAssetWithParentsReply implements Packet, ToClie
             PacketIO.writeVarString(buf, e.getValue(), 4096000);
          }
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.assets != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.token);
+      int varOffset = offset + 5;
+      if (this.assets != null) {
+         if (this.assets.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Assets", this.assets.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.assets.size());
+
+         for (Entry<AssetPath, String> e : this.assets.entrySet()) {
+            varOffset += e.getKey().serialize(mem, varOffset);
+            varOffset += PacketIO.writeVarString(mem, varOffset, e.getValue(), 16384000);
+         }
+      }
+
+      return varOffset - offset;
    }
 
    @Override

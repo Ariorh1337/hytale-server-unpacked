@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -95,6 +96,57 @@ public class StreamOpenResponse implements Packet, ToClientPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 3L;
+   }
+
+   public static StreamType getType(MemorySegment mem) {
+      return getType(mem, 0);
+   }
+
+   public static StreamType getType(MemorySegment mem, int offset) {
+      return StreamType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1));
+   }
+
+   public static boolean getAccepted(MemorySegment mem) {
+      return getAccepted(mem, 0);
+   }
+
+   public static boolean getAccepted(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 2);
+   }
+
+   @Nullable
+   public static String getRejectionReason(MemorySegment mem) {
+      return getRejectionReason(mem, 0);
+   }
+
+   @Nullable
+   public static String getRejectionReason(MemorySegment mem, int offset) {
+      return hasRejectionReason(mem, offset) ? PacketIO.readVarString("RejectionReason", mem, offset + 3, 4096000, PacketIO.UTF8) : null;
+   }
+
+   public static boolean hasRejectionReason(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static StreamOpenResponse toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static StreamOpenResponse toObject(MemorySegment mem, int offset) {
+      if (offset + 3 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("StreamOpenResponse", offset + 3, (int)mem.byteSize());
+      } else {
+         return new StreamOpenResponse(
+            StreamType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1)),
+            mem.get(PacketIO.PROTO_BOOL, offset + 2),
+            hasRejectionReason(mem, offset) ? PacketIO.readVarString("RejectionReason", mem, offset + 3, 4096000, PacketIO.UTF8) : null
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -108,6 +160,24 @@ public class StreamOpenResponse implements Packet, ToClientPacket {
       if (this.rejectionReason != null) {
          PacketIO.writeVarString(buf, this.rejectionReason, 4096000);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.rejectionReason != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.type.getValue());
+      mem.set(PacketIO.PROTO_BOOL, offset + 2, this.accepted);
+      int varOffset = offset + 3;
+      if (this.rejectionReason != null) {
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.rejectionReason, 4096000);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

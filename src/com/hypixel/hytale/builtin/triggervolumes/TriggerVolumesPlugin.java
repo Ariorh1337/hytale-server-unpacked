@@ -10,12 +10,12 @@ import com.hypixel.hytale.builtin.triggervolumes.component.TriggerVolume;
 import com.hypixel.hytale.builtin.triggervolumes.effect.TriggerEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.ConditionalEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.ControlDoorsEffect;
+import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.DamageEntityEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.DestroyVolumeEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.EntityEffectEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.PastePrefabEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.PlaySoundEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.PlayVfxEffect;
-import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.RunCommandEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.SendMessageEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.SetVelocityEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.SetWeatherEffect;
@@ -172,31 +172,7 @@ public class TriggerVolumesPlugin extends JavaPlugin {
       BuilderToolsPlugin builderTools = BuilderToolsPlugin.get();
       builderTools.registerPrefabSaveContributor(new TriggerVolumePrefabContributor());
       builderTools.registerClipboardContributor(new TriggerVolumePrefabContributor());
-      builderTools.setSelectionBoundsUpdatedCallback((playerRef, store) -> {
-         World world = store.getExternalData().getWorld();
-         if (world != null) {
-            TriggerVolumeManager mgr = world.getEntityStore().getStore().getResource(this.managerResourceType);
-            if (mgr != null) {
-               mgr.addViewer(playerRef.getUuid(), TriggerVolumeManager.ViewSource.SELECTION_TOOL);
-               mgr.sendVolumeDisplay(playerRef);
-            }
-         }
-      });
       builderTools.setBuilderToolModeDeactivatedCallback((playerRef, store) -> {
-         World world = store.getExternalData().getWorld();
-         if (world != null) {
-            TriggerVolumeManager mgr = world.getEntityStore().getStore().getResource(this.managerResourceType);
-            if (mgr != null) {
-               mgr.removeViewer(playerRef.getUuid(), TriggerVolumeManager.ViewSource.SELECTION_TOOL);
-               if (!mgr.isViewing(playerRef.getUuid())) {
-                  playerRef.getPacketHandler().write(new UpdateTriggerVolumeDisplay());
-               } else {
-                  mgr.sendVolumeDisplay(playerRef);
-               }
-            }
-         }
-      });
-      builderTools.setSelectionClearedCallback((playerRef, store) -> {
          World world = store.getExternalData().getWorld();
          if (world != null) {
             TriggerVolumeManager mgr = world.getEntityStore().getStore().getResource(this.managerResourceType);
@@ -227,7 +203,6 @@ public class TriggerVolumesPlugin extends JavaPlugin {
    private void registerEffectTypes() {
       TriggerEffect.CODEC.register("Teleport", TeleportEffect.class, TeleportEffect.CODEC);
       TriggerEffect.CODEC.register("SendMessage", SendMessageEffect.class, SendMessageEffect.CODEC);
-      TriggerEffect.CODEC.register("RunCommand", RunCommandEffect.class, RunCommandEffect.CODEC);
       TriggerEffect.CODEC.register("PlaySound", PlaySoundEffect.class, PlaySoundEffect.CODEC);
       TriggerEffect.CODEC.register("SetVelocity", SetVelocityEffect.class, SetVelocityEffect.CODEC);
       TriggerEffect.CODEC.register("Conditional", ConditionalEffect.class, ConditionalEffect.CODEC);
@@ -239,6 +214,7 @@ public class TriggerVolumesPlugin extends JavaPlugin {
       TriggerEffect.CODEC.register("PastePrefab", PastePrefabEffect.class, PastePrefabEffect.CODEC);
       TriggerEffect.CODEC.register("ControlDoors", ControlDoorsEffect.class, ControlDoorsEffect.CODEC);
       TriggerEffect.CODEC.register("DestroyVolume", DestroyVolumeEffect.class, DestroyVolumeEffect.CODEC);
+      TriggerEffect.CODEC.register("DamageEntity", DamageEntityEffect.class, DamageEntityEffect.CODEC);
       this.registerAssetSource("EntityEffect", () -> EntityEffect.getAssetMap().getAssetMap().keySet());
       this.registerAssetSource("SoundEvent", () -> SoundEvent.getAssetMap().getAssetMap().keySet());
       this.registerAssetSource("EffectAsset", () -> {

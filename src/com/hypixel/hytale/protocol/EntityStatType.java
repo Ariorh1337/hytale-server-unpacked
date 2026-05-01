@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -168,6 +169,125 @@ public class EntityStatType {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 27L;
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem) {
+      return getId(mem, 0);
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem, int offset) {
+      return hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 15, 27, "Id"), 4096000, PacketIO.UTF8) : null;
+   }
+
+   public static float getValue(MemorySegment mem) {
+      return getValue(mem, 0);
+   }
+
+   public static float getValue(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 1);
+   }
+
+   public static float getMin(MemorySegment mem) {
+      return getMin(mem, 0);
+   }
+
+   public static float getMin(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 5);
+   }
+
+   public static float getMax(MemorySegment mem) {
+      return getMax(mem, 0);
+   }
+
+   public static float getMax(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 9);
+   }
+
+   @Nullable
+   public static EntityStatEffects getMinValueEffects(MemorySegment mem) {
+      return getMinValueEffects(mem, 0);
+   }
+
+   @Nullable
+   public static EntityStatEffects getMinValueEffects(MemorySegment mem, int offset) {
+      return hasMinValueEffects(mem, offset) ? EntityStatEffects.toObject(mem, offset + getValidatedOffset(mem, offset, 19, 27, "MinValueEffects")) : null;
+   }
+
+   @Nullable
+   public static EntityStatEffects getMaxValueEffects(MemorySegment mem) {
+      return getMaxValueEffects(mem, 0);
+   }
+
+   @Nullable
+   public static EntityStatEffects getMaxValueEffects(MemorySegment mem, int offset) {
+      return hasMaxValueEffects(mem, offset) ? EntityStatEffects.toObject(mem, offset + getValidatedOffset(mem, offset, 23, 27, "MaxValueEffects")) : null;
+   }
+
+   public static EntityStatResetBehavior getResetBehavior(MemorySegment mem) {
+      return getResetBehavior(mem, 0);
+   }
+
+   public static EntityStatResetBehavior getResetBehavior(MemorySegment mem, int offset) {
+      return EntityStatResetBehavior.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 13));
+   }
+
+   public static boolean getHideFromTooltip(MemorySegment mem) {
+      return getHideFromTooltip(mem, 0);
+   }
+
+   public static boolean getHideFromTooltip(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 14);
+   }
+
+   public static boolean hasId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasMinValueEffects(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasMaxValueEffects(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static EntityStatType toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static EntityStatType toObject(MemorySegment mem, int offset) {
+      if (offset + 27 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("EntityStatType", offset + 27, (int)mem.byteSize());
+      } else {
+         return new EntityStatType(
+            hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 15, 27, "Id"), 4096000, PacketIO.UTF8) : null,
+            mem.get(PacketIO.PROTO_FLOAT, offset + 1),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 5),
+            mem.get(PacketIO.PROTO_FLOAT, offset + 9),
+            hasMinValueEffects(mem, offset) ? EntityStatEffects.toObject(mem, offset + getValidatedOffset(mem, offset, 19, 27, "MinValueEffects")) : null,
+            hasMaxValueEffects(mem, offset) ? EntityStatEffects.toObject(mem, offset + getValidatedOffset(mem, offset, 23, 27, "MaxValueEffects")) : null,
+            EntityStatResetBehavior.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 13)),
+            mem.get(PacketIO.PROTO_BOOL, offset + 14)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -216,6 +336,51 @@ public class EntityStatType {
       } else {
          buf.setIntLE(maxValueEffectsOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.id != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.minValueEffects != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.maxValueEffects != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 1, this.value);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 5, this.min);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 9, this.max);
+      mem.set(PacketIO.PROTO_BYTE, offset + 13, (byte)this.resetBehavior.getValue());
+      mem.set(PacketIO.PROTO_BOOL, offset + 14, this.hideFromTooltip);
+      int varOffset = offset + 27;
+      if (this.id != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 15, varOffset - offset - 27);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.id, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 15, -1);
+      }
+
+      if (this.minValueEffects != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 19, varOffset - offset - 27);
+         varOffset += this.minValueEffects.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 19, -1);
+      }
+
+      if (this.maxValueEffects != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 23, varOffset - offset - 27);
+         varOffset += this.maxValueEffects.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 23, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

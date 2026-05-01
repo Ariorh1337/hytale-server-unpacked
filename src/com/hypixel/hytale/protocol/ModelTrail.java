@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -159,6 +160,122 @@ public class ModelTrail {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 35L;
+   }
+
+   @Nullable
+   public static String getTrailId(MemorySegment mem) {
+      return getTrailId(mem, 0);
+   }
+
+   @Nullable
+   public static String getTrailId(MemorySegment mem, int offset) {
+      return hasTrailId(mem, offset)
+         ? PacketIO.readVarString("TrailId", mem, offset + getValidatedOffset(mem, offset, 27, 35, "TrailId"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static EntityPart getTargetEntityPart(MemorySegment mem) {
+      return getTargetEntityPart(mem, 0);
+   }
+
+   public static EntityPart getTargetEntityPart(MemorySegment mem, int offset) {
+      return EntityPart.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1));
+   }
+
+   @Nullable
+   public static String getTargetNodeName(MemorySegment mem) {
+      return getTargetNodeName(mem, 0);
+   }
+
+   @Nullable
+   public static String getTargetNodeName(MemorySegment mem, int offset) {
+      return hasTargetNodeName(mem, offset)
+         ? PacketIO.readVarString("TargetNodeName", mem, offset + getValidatedOffset(mem, offset, 31, 35, "TargetNodeName"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static Vector3fc getPositionOffset(MemorySegment mem) {
+      return getPositionOffset(mem, 0);
+   }
+
+   @Nullable
+   public static Vector3fc getPositionOffset(MemorySegment mem, int offset) {
+      return hasPositionOffset(mem, offset) ? PacketIO.readVector3f(mem, offset + 2) : null;
+   }
+
+   @Nullable
+   public static Direction getRotationOffset(MemorySegment mem) {
+      return getRotationOffset(mem, 0);
+   }
+
+   @Nullable
+   public static Direction getRotationOffset(MemorySegment mem, int offset) {
+      return hasRotationOffset(mem, offset) ? Direction.toObject(mem, offset + 14) : null;
+   }
+
+   public static boolean getFixedRotation(MemorySegment mem) {
+      return getFixedRotation(mem, 0);
+   }
+
+   public static boolean getFixedRotation(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 26);
+   }
+
+   public static boolean hasPositionOffset(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasRotationOffset(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasTrailId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasTargetNodeName(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static ModelTrail toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ModelTrail toObject(MemorySegment mem, int offset) {
+      if (offset + 35 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ModelTrail", offset + 35, (int)mem.byteSize());
+      } else {
+         return new ModelTrail(
+            hasTrailId(mem, offset)
+               ? PacketIO.readVarString("TrailId", mem, offset + getValidatedOffset(mem, offset, 27, 35, "TrailId"), 4096000, PacketIO.UTF8)
+               : null,
+            EntityPart.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1)),
+            hasTargetNodeName(mem, offset)
+               ? PacketIO.readVarString("TargetNodeName", mem, offset + getValidatedOffset(mem, offset, 31, 35, "TargetNodeName"), 4096000, PacketIO.UTF8)
+               : null,
+            hasPositionOffset(mem, offset) ? PacketIO.readVector3f(mem, offset + 2) : null,
+            hasRotationOffset(mem, offset) ? Direction.toObject(mem, offset + 14) : null,
+            mem.get(PacketIO.PROTO_BOOL, offset + 26)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -211,6 +328,57 @@ public class ModelTrail {
       } else {
          buf.setIntLE(targetNodeNameOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.positionOffset != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.rotationOffset != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.trailId != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.targetNodeName != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.targetEntityPart.getValue());
+      if (this.positionOffset != null) {
+         PacketIO.writeVector3f(mem, offset + 2, this.positionOffset);
+      } else {
+         mem.asSlice(offset + 2, 12L).fill((byte)0);
+      }
+
+      if (this.rotationOffset != null) {
+         this.rotationOffset.serialize(mem, offset + 14);
+      } else {
+         mem.asSlice(offset + 14, 12L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_BOOL, offset + 26, this.fixedRotation);
+      int varOffset = offset + 35;
+      if (this.trailId != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 27, varOffset - offset - 35);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.trailId, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 27, -1);
+      }
+
+      if (this.targetNodeName != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 31, varOffset - offset - 35);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.targetNodeName, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 31, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

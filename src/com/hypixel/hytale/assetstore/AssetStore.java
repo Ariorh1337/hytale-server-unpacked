@@ -317,7 +317,7 @@ public abstract class AssetStore<K, T extends JsonAssetWithMap<K, M>, M extends 
       Set<FileVisitOption> optionsSet = Set.of();
       Files.walkFileTree(assetsPath, optionsSet, Integer.MAX_VALUE, new SimpleFileVisitor<Path>() {
          @Nonnull
-         public FileVisitResult visitFile(@Nonnull Path file, @Nonnull BasicFileAttributes attrs) throws IOException {
+         public FileVisitResult visitFile(@Nonnull Path file, @Nonnull BasicFileAttributes attrs) {
             if (attrs.isRegularFile() && file.toString().endsWith(AssetStore.this.extension)) {
                files.add(file);
             }

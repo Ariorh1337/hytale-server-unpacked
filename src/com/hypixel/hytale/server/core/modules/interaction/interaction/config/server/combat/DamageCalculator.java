@@ -113,6 +113,22 @@ public class DamageCalculator {
       };
    }
 
+   public void computeDamageRange(double durationSeconds, @Nonnull float[] out) {
+      if (this.baseDamage.isEmpty()) {
+         out[0] = 0.0F;
+         out[1] = 0.0F;
+      } else {
+         float scaled = 0.0F;
+
+         for (Int2FloatMap.Entry entry : this.baseDamage.int2FloatEntrySet()) {
+            scaled += this.scaleDamage(durationSeconds, entry.getFloatValue());
+         }
+
+         out[0] = scaled * (1.0F - this.randomPercentageModifier);
+         out[1] = scaled * (1.0F + this.randomPercentageModifier);
+      }
+   }
+
    public DamageCalculator.Type getType() {
       return this.type;
    }

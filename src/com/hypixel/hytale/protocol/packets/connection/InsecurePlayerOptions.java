@@ -9,6 +9,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import java.util.UUID;
 import javax.annotation.Nonnull;
@@ -128,6 +129,66 @@ public class InsecurePlayerOptions implements Packet, ToServerPacket {
       }
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 25L;
+   }
+
+   public static UUID getUuid(MemorySegment mem) {
+      return getUuid(mem, 0);
+   }
+
+   public static UUID getUuid(MemorySegment mem, int offset) {
+      return PacketIO.readUUID(mem, offset + 1);
+   }
+
+   public static String getUsername(MemorySegment mem) {
+      return getUsername(mem, 0);
+   }
+
+   public static String getUsername(MemorySegment mem, int offset) {
+      return PacketIO.readValidatedAsciiString("Username", mem, offset + getValidatedOffset(mem, offset, 17, 25, "Username"), 16);
+   }
+
+   @Nullable
+   public static PlayerSkin getSkin(MemorySegment mem) {
+      return getSkin(mem, 0);
+   }
+
+   @Nullable
+   public static PlayerSkin getSkin(MemorySegment mem, int offset) {
+      return hasSkin(mem, offset) ? PlayerSkin.toObject(mem, offset + getValidatedOffset(mem, offset, 21, 25, "Skin")) : null;
+   }
+
+   public static boolean hasSkin(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static InsecurePlayerOptions toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static InsecurePlayerOptions toObject(MemorySegment mem, int offset) {
+      if (offset + 25 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("InsecurePlayerOptions", offset + 25, (int)mem.byteSize());
+      } else {
+         return new InsecurePlayerOptions(
+            PacketIO.readUUID(mem, offset + 1),
+            PacketIO.readValidatedAsciiString("Username", mem, offset + getValidatedOffset(mem, offset, 17, 25, "Username"), 16),
+            hasSkin(mem, offset) ? PlayerSkin.toObject(mem, offset + getValidatedOffset(mem, offset, 21, 25, "Skin")) : null
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -151,6 +212,28 @@ public class InsecurePlayerOptions implements Packet, ToServerPacket {
       } else {
          buf.setIntLE(skinOffsetSlot, -1);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.skin != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      PacketIO.writeUUID(mem, offset + 1, this.uuid);
+      int varOffset = offset + 25;
+      mem.set(PacketIO.PROTO_INT, offset + 17, varOffset - offset - 25);
+      varOffset += PacketIO.writeVarAsciiString(mem, varOffset, this.username, 16);
+      if (this.skin != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 21, varOffset - offset - 25);
+         varOffset += this.skin.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 21, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

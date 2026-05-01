@@ -29,6 +29,7 @@ import com.hypixel.hytale.server.core.modules.entity.component.DisplayNameCompon
 import com.hypixel.hytale.server.core.modules.entity.component.FromWorldGen;
 import com.hypixel.hytale.server.core.modules.entity.component.HiddenFromAdventurePlayers;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.PersistentDisplayName;
 import com.hypixel.hytale.server.core.modules.entity.component.WorldGenId;
 import com.hypixel.hytale.server.core.modules.entity.system.ModelSystems;
 import com.hypixel.hytale.server.core.prefab.PrefabCopyableComponent;
@@ -161,16 +162,20 @@ public class PrefabPathSystems {
       public void onEntityAdd(@Nonnull Holder<EntityStore> holder, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store) {
          PatrolPathMarkerEntity patrolPathMarkerComponent = holder.getComponent(PatrolPathMarkerEntity.getComponentType());
          assert patrolPathMarkerComponent != null;
-         DisplayNameComponent displayNameComponent = holder.getComponent(DisplayNameComponent.getComponentType());
-         String displayName = "";
-         if (displayNameComponent == null) {
+         PersistentDisplayName persistentDisplayName = holder.getComponent(PersistentDisplayName.getComponentType());
+         String displayName;
+         if (persistentDisplayName == null) {
             String legacyDisplayName = patrolPathMarkerComponent.getLegacyDisplayName();
             displayName = legacyDisplayName != null ? legacyDisplayName : "Path Marker";
             Message legacyDisplayNameMessage = Message.raw(displayName);
-            displayNameComponent = new DisplayNameComponent(legacyDisplayNameMessage);
-            holder.putComponent(DisplayNameComponent.getComponentType(), displayNameComponent);
+            persistentDisplayName = new PersistentDisplayName(legacyDisplayNameMessage);
+            holder.putComponent(PersistentDisplayName.getComponentType(), persistentDisplayName);
+         } else {
+            Message msg = persistentDisplayName.getDisplayName();
+            displayName = msg != null ? msg.getAnsiMessage() : "";
          }
 
+         holder.putComponent(DisplayNameComponent.getComponentType(), new DisplayNameComponent(persistentDisplayName.getDisplayName()));
          Nameplate nameplateComponent = holder.getComponent(Nameplate.getComponentType());
          if (nameplateComponent == null) {
             holder.putComponent(Nameplate.getComponentType(), new Nameplate(displayName));
@@ -272,6 +277,7 @@ public class PrefabPathSystems {
          assert patrolPathMarkerComponent != null;
          String displayName = PatrolPathMarkerEntity.generateDisplayName(component.getWorldGenId(), patrolPathMarkerComponent);
          Message displayNameMessage = Message.raw(displayName);
+         commandBuffer.putComponent(ref, PersistentDisplayName.getComponentType(), new PersistentDisplayName(displayNameMessage));
          commandBuffer.putComponent(ref, DisplayNameComponent.getComponentType(), new DisplayNameComponent(displayNameMessage));
       }
 
@@ -286,12 +292,14 @@ public class PrefabPathSystems {
          assert patrolPathMarkerComponent != null;
          String displayName = PatrolPathMarkerEntity.generateDisplayName(newComponent.getWorldGenId(), patrolPathMarkerComponent);
          Message displayNameMessage = Message.raw(displayName);
+         commandBuffer.putComponent(ref, PersistentDisplayName.getComponentType(), new PersistentDisplayName(displayNameMessage));
          commandBuffer.putComponent(ref, DisplayNameComponent.getComponentType(), new DisplayNameComponent(displayNameMessage));
       }
 
       public void onComponentRemoved(
          @Nonnull Ref<EntityStore> ref, @Nonnull WorldGenId component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
+         commandBuffer.putComponent(ref, PersistentDisplayName.getComponentType(), new PersistentDisplayName(MESSAGE_PREFABS_UNKNOWN));
          commandBuffer.putComponent(ref, DisplayNameComponent.getComponentType(), new DisplayNameComponent(MESSAGE_PREFABS_UNKNOWN));
       }
    }

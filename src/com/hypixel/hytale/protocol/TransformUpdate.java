@@ -3,6 +3,7 @@ package com.hypixel.hytale.protocol;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -41,11 +42,41 @@ public class TransformUpdate extends ComponentUpdate {
       return 49;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 49L;
+   }
+
+   public static ModelTransform getTransform(MemorySegment mem) {
+      return getTransform(mem, 0);
+   }
+
+   public static ModelTransform getTransform(MemorySegment mem, int offset) {
+      return ModelTransform.toObject(mem, offset + 0);
+   }
+
+   public static TransformUpdate toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static TransformUpdate toObject(MemorySegment mem, int offset) {
+      if (offset + 49 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("TransformUpdate", offset + 49, (int)mem.byteSize());
+      } else {
+         return new TransformUpdate(ModelTransform.toObject(mem, offset + 0));
+      }
+   }
+
    @Override
    public int serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       this.transform.serialize(buf);
       return buf.writerIndex() - startPos;
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      this.transform.serialize(mem, offset + 0);
+      return 49;
    }
 
    @Override

@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -214,6 +215,111 @@ public class ProtocolEmote {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 18L;
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem) {
+      return getId(mem, 0);
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem, int offset) {
+      return hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 2, 18, "Id"), 4096000, PacketIO.UTF8) : null;
+   }
+
+   @Nullable
+   public static String getName(MemorySegment mem) {
+      return getName(mem, 0);
+   }
+
+   @Nullable
+   public static String getName(MemorySegment mem, int offset) {
+      return hasName(mem, offset) ? PacketIO.readVarString("Name", mem, offset + getValidatedOffset(mem, offset, 6, 18, "Name"), 4096000, PacketIO.UTF8) : null;
+   }
+
+   @Nullable
+   public static String getAnimation(MemorySegment mem) {
+      return getAnimation(mem, 0);
+   }
+
+   @Nullable
+   public static String getAnimation(MemorySegment mem, int offset) {
+      return hasAnimation(mem, offset)
+         ? PacketIO.readVarString("Animation", mem, offset + getValidatedOffset(mem, offset, 10, 18, "Animation"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getIcon(MemorySegment mem) {
+      return getIcon(mem, 0);
+   }
+
+   @Nullable
+   public static String getIcon(MemorySegment mem, int offset) {
+      return hasIcon(mem, offset)
+         ? PacketIO.readVarString("Icon", mem, offset + getValidatedOffset(mem, offset, 14, 18, "Icon"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static boolean getIsLooping(MemorySegment mem) {
+      return getIsLooping(mem, 0);
+   }
+
+   public static boolean getIsLooping(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 1);
+   }
+
+   public static boolean hasId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasName(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasAnimation(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasIcon(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static ProtocolEmote toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ProtocolEmote toObject(MemorySegment mem, int offset) {
+      if (offset + 18 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ProtocolEmote", offset + 18, (int)mem.byteSize());
+      } else {
+         return new ProtocolEmote(
+            hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 2, 18, "Id"), 4096000, PacketIO.UTF8) : null,
+            hasName(mem, offset) ? PacketIO.readVarString("Name", mem, offset + getValidatedOffset(mem, offset, 6, 18, "Name"), 4096000, PacketIO.UTF8) : null,
+            hasAnimation(mem, offset)
+               ? PacketIO.readVarString("Animation", mem, offset + getValidatedOffset(mem, offset, 10, 18, "Animation"), 4096000, PacketIO.UTF8)
+               : null,
+            hasIcon(mem, offset) ? PacketIO.readVarString("Icon", mem, offset + getValidatedOffset(mem, offset, 14, 18, "Icon"), 4096000, PacketIO.UTF8) : null,
+            mem.get(PacketIO.PROTO_BOOL, offset + 1)
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -271,6 +377,58 @@ public class ProtocolEmote {
       } else {
          buf.setIntLE(iconOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.id != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.name != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.animation != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.icon != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BOOL, offset + 1, this.isLooping);
+      int varOffset = offset + 18;
+      if (this.id != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 2, varOffset - offset - 18);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.id, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 2, -1);
+      }
+
+      if (this.name != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 6, varOffset - offset - 18);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.name, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 6, -1);
+      }
+
+      if (this.animation != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 10, varOffset - offset - 18);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.animation, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 10, -1);
+      }
+
+      if (this.icon != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 14, varOffset - offset - 18);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.icon, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 14, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

@@ -1,8 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -58,6 +60,47 @@ public class RootInteractionSettings {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 2L;
+   }
+
+   public static boolean getAllowSkipChainOnClick(MemorySegment mem) {
+      return getAllowSkipChainOnClick(mem, 0);
+   }
+
+   public static boolean getAllowSkipChainOnClick(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 1);
+   }
+
+   @Nullable
+   public static InteractionCooldown getCooldown(MemorySegment mem) {
+      return getCooldown(mem, 0);
+   }
+
+   @Nullable
+   public static InteractionCooldown getCooldown(MemorySegment mem, int offset) {
+      return hasCooldown(mem, offset) ? InteractionCooldown.toObject(mem, offset + 2) : null;
+   }
+
+   public static boolean hasCooldown(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static RootInteractionSettings toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static RootInteractionSettings toObject(MemorySegment mem, int offset) {
+      if (offset + 2 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("RootInteractionSettings", offset + 2, (int)mem.byteSize());
+      } else {
+         return new RootInteractionSettings(
+            mem.get(PacketIO.PROTO_BOOL, offset + 1), hasCooldown(mem, offset) ? InteractionCooldown.toObject(mem, offset + 2) : null
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
       if (this.cooldown != null) {
@@ -69,6 +112,22 @@ public class RootInteractionSettings {
       if (this.cooldown != null) {
          this.cooldown.serialize(buf);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.cooldown != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BOOL, offset + 1, this.allowSkipChainOnClick);
+      int varOffset = offset + 2;
+      if (this.cooldown != null) {
+         varOffset += this.cooldown.serialize(mem, varOffset);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

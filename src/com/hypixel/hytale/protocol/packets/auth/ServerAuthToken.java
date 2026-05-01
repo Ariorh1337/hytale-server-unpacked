@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -146,6 +147,114 @@ public class ServerAuthToken implements Packet, ToClientPacket {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 9L;
+   }
+
+   @Nullable
+   public static String getServerAccessToken(MemorySegment mem) {
+      return getServerAccessToken(mem, 0);
+   }
+
+   @Nullable
+   public static String getServerAccessToken(MemorySegment mem, int offset) {
+      return hasServerAccessToken(mem, offset)
+         ? PacketIO.readVarString("ServerAccessToken", mem, offset + getValidatedOffset(mem, offset, 1, 9, "ServerAccessToken"), 8192, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static byte[] getPasswordChallenge(MemorySegment mem) {
+      return getPasswordChallenge(mem, 0);
+   }
+
+   @Nullable
+   public static byte[] getPasswordChallenge(MemorySegment mem, int offset) {
+      if (!hasPasswordChallenge(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 5, 9, "PasswordChallenge");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("PasswordChallenge", len);
+      }
+
+      if (len > 64) {
+         throw ProtocolException.arrayTooLong("PasswordChallenge", len, 64);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 1L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("PasswordChallenge", off + lenOffset + len * 1, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      byte[] data = new byte[len];
+      MemorySegment.copy(mem, PacketIO.PROTO_BYTE, off, data, 0, len);
+      return data;
+   }
+
+   public static boolean hasServerAccessToken(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasPasswordChallenge(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static ServerAuthToken toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ServerAuthToken toObject(MemorySegment mem, int offset) {
+      if (offset + 9 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ServerAuthToken", offset + 9, (int)mem.byteSize());
+      }
+
+      byte[] passwordChallenge = null;
+      if (hasPasswordChallenge(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 5, 9, "PasswordChallenge");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("PasswordChallenge", len);
+         }
+
+         if (len > 64) {
+            throw ProtocolException.arrayTooLong("PasswordChallenge", len, 64);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 1L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("PasswordChallenge", off + lenOffset + len * 1, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         passwordChallenge = new byte[len];
+         MemorySegment.copy(mem, PacketIO.PROTO_BYTE, off, passwordChallenge, 0, len);
+      }
+
+      return new ServerAuthToken(
+         hasServerAccessToken(mem, offset)
+            ? PacketIO.readVarString("ServerAccessToken", mem, offset + getValidatedOffset(mem, offset, 1, 9, "ServerAccessToken"), 8192, PacketIO.UTF8)
+            : null,
+         passwordChallenge
+      );
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -185,6 +294,42 @@ public class ServerAuthToken implements Packet, ToClientPacket {
       } else {
          buf.setIntLE(passwordChallengeOffsetSlot, -1);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.serverAccessToken != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.passwordChallenge != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 9;
+      if (this.serverAccessToken != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 1, varOffset - offset - 9);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.serverAccessToken, 8192);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 1, -1);
+      }
+
+      if (this.passwordChallenge != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 5, varOffset - offset - 9);
+         if (this.passwordChallenge.length > 64) {
+            throw ProtocolException.arrayTooLong("PasswordChallenge", this.passwordChallenge.length, 64);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.passwordChallenge.length);
+         MemorySegment.copy(this.passwordChallenge, 0, mem, PacketIO.PROTO_BYTE, varOffset, this.passwordChallenge.length);
+         varOffset += this.passwordChallenge.length * 1;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 5, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

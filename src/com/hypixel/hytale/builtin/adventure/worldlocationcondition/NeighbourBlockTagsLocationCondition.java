@@ -86,15 +86,11 @@ public class NeighbourBlockTagsLocationCondition extends WorldLocationCondition 
 
          return this.support.includes(count);
       } else {
-         int yPos = worldY;
-         switch (this.neighbourDirection) {
-            case ABOVE:
-               yPos++;
-               break;
-            case BELOW:
-               yPos--;
-         }
-
+         int yPos = switch (this.neighbourDirection) {
+            case ABOVE -> worldY + 1;
+            case BELOW -> worldY - 1;
+            case SIDEWAYS -> worldY;
+         };
          return this.checkBlockHasTag(worldX, yPos, worldZ, worldChunk);
       }
    }

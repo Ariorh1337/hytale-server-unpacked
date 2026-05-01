@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.HostAddress;
 import com.hypixel.hytale.protocol.PlayerSkin;
 import com.hypixel.hytale.protocol.ToServerPacket;
 import com.hypixel.hytale.protocol.io.ChannelConnection;
+import com.hypixel.hytale.protocol.io.ConnectionHandler;
 import com.hypixel.hytale.protocol.packets.auth.AuthGrant;
 import com.hypixel.hytale.protocol.packets.auth.AuthToken;
 import com.hypixel.hytale.protocol.packets.auth.ServerAuthToken;
@@ -20,7 +21,6 @@ import com.hypixel.hytale.server.core.auth.PlayerAuthentication;
 import com.hypixel.hytale.server.core.auth.ServerAuthManager;
 import com.hypixel.hytale.server.core.auth.SessionServiceClient;
 import com.hypixel.hytale.server.core.cosmetics.CosmeticsModule;
-import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.io.ProtocolVersion;
 import com.hypixel.hytale.server.core.io.handlers.GenericConnectionPacketHandler;
 import com.hypixel.hytale.server.core.modules.singleplayer.SingleplayerModule;
@@ -101,7 +101,7 @@ public abstract class HandshakeHandler extends GenericConnectionPacketHandler {
    }
 
    @Override
-   public void registered0(PacketHandler oldHandler) {
+   public void registered0(ConnectionHandler oldHandler) {
       HytaleServerConfig.TimeoutProfile timeouts = HytaleServer.get().getConfig().getConnectionTimeouts();
       this.enterStage("auth", timeouts.getAuth());
       this.identityClaims = getJwtValidator().validateIdentityToken(this.identityToken);

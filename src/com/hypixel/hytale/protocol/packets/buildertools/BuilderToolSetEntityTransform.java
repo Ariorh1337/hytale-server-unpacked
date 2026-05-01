@@ -4,9 +4,11 @@ import com.hypixel.hytale.protocol.ModelTransform;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -70,6 +72,57 @@ public class BuilderToolSetEntityTransform implements Packet, ToServerPacket {
       return 55;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 55L;
+   }
+
+   public static int getEntityId(MemorySegment mem) {
+      return getEntityId(mem, 0);
+   }
+
+   public static int getEntityId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   @Nullable
+   public static ModelTransform getModelTransform(MemorySegment mem) {
+      return getModelTransform(mem, 0);
+   }
+
+   @Nullable
+   public static ModelTransform getModelTransform(MemorySegment mem, int offset) {
+      return hasModelTransform(mem, offset) ? ModelTransform.toObject(mem, offset + 5) : null;
+   }
+
+   public static boolean getIsSessionEnd(MemorySegment mem) {
+      return getIsSessionEnd(mem, 0);
+   }
+
+   public static boolean getIsSessionEnd(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 54);
+   }
+
+   public static boolean hasModelTransform(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static BuilderToolSetEntityTransform toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static BuilderToolSetEntityTransform toObject(MemorySegment mem, int offset) {
+      if (offset + 55 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BuilderToolSetEntityTransform", offset + 55, (int)mem.byteSize());
+      } else {
+         return new BuilderToolSetEntityTransform(
+            mem.get(PacketIO.PROTO_INT, offset + 1),
+            hasModelTransform(mem, offset) ? ModelTransform.toObject(mem, offset + 5) : null,
+            mem.get(PacketIO.PROTO_BOOL, offset + 54)
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -86,6 +139,25 @@ public class BuilderToolSetEntityTransform implements Packet, ToServerPacket {
       }
 
       buf.writeByte(this.isSessionEnd ? 1 : 0);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.modelTransform != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.entityId);
+      if (this.modelTransform != null) {
+         this.modelTransform.serialize(mem, offset + 5);
+      } else {
+         mem.asSlice(offset + 5, 49L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_BOOL, offset + 54, this.isSessionEnd);
+      return 55;
    }
 
    @Override

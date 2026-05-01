@@ -1,8 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -53,10 +55,61 @@ public class ParticleCollision {
       return 3;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 3L;
+   }
+
+   public static ParticleCollisionBlockType getBlockType(MemorySegment mem) {
+      return getBlockType(mem, 0);
+   }
+
+   public static ParticleCollisionBlockType getBlockType(MemorySegment mem, int offset) {
+      return ParticleCollisionBlockType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 0));
+   }
+
+   public static ParticleCollisionAction getAction(MemorySegment mem) {
+      return getAction(mem, 0);
+   }
+
+   public static ParticleCollisionAction getAction(MemorySegment mem, int offset) {
+      return ParticleCollisionAction.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1));
+   }
+
+   public static ParticleRotationInfluence getParticleRotationInfluence(MemorySegment mem) {
+      return getParticleRotationInfluence(mem, 0);
+   }
+
+   public static ParticleRotationInfluence getParticleRotationInfluence(MemorySegment mem, int offset) {
+      return ParticleRotationInfluence.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 2));
+   }
+
+   public static ParticleCollision toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ParticleCollision toObject(MemorySegment mem, int offset) {
+      if (offset + 3 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ParticleCollision", offset + 3, (int)mem.byteSize());
+      } else {
+         return new ParticleCollision(
+            ParticleCollisionBlockType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 0)),
+            ParticleCollisionAction.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1)),
+            ParticleRotationInfluence.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 2))
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeByte(this.blockType.getValue());
       buf.writeByte(this.action.getValue());
       buf.writeByte(this.particleRotationInfluence.getValue());
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, (byte)this.blockType.getValue());
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.action.getValue());
+      mem.set(PacketIO.PROTO_BYTE, offset + 2, (byte)this.particleRotationInfluence.getValue());
+      return 3;
    }
 
    public int computeSize() {

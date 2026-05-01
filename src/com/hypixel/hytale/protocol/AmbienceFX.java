@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -268,6 +269,254 @@ public class AmbienceFX {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 42L;
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem) {
+      return getId(mem, 0);
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem, int offset) {
+      return hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 22, 42, "Id"), 4096000, PacketIO.UTF8) : null;
+   }
+
+   @Nullable
+   public static AmbienceFXConditions getConditions(MemorySegment mem) {
+      return getConditions(mem, 0);
+   }
+
+   @Nullable
+   public static AmbienceFXConditions getConditions(MemorySegment mem, int offset) {
+      return hasConditions(mem, offset) ? AmbienceFXConditions.toObject(mem, offset + getValidatedOffset(mem, offset, 26, 42, "Conditions")) : null;
+   }
+
+   @Nullable
+   public static AmbienceFXSound[] getSounds(MemorySegment mem) {
+      return getSounds(mem, 0);
+   }
+
+   @Nullable
+   public static AmbienceFXSound[] getSounds(MemorySegment mem, int offset) {
+      if (!hasSounds(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 30, 42, "Sounds");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Sounds", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Sounds", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 33L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Sounds", off + lenOffset + len * 33, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      AmbienceFXSound[] data = new AmbienceFXSound[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = AmbienceFXSound.toObject(mem, off + i * 33);
+      }
+
+      return data;
+   }
+
+   public static int getMusicContainerIndex(MemorySegment mem) {
+      return getMusicContainerIndex(mem, 0);
+   }
+
+   public static int getMusicContainerIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   @Nullable
+   public static AmbienceFXAmbientBed getAmbientBed(MemorySegment mem) {
+      return getAmbientBed(mem, 0);
+   }
+
+   @Nullable
+   public static AmbienceFXAmbientBed getAmbientBed(MemorySegment mem, int offset) {
+      return hasAmbientBed(mem, offset) ? AmbienceFXAmbientBed.toObject(mem, offset + getValidatedOffset(mem, offset, 34, 42, "AmbientBed")) : null;
+   }
+
+   @Nullable
+   public static AmbienceFXSoundEffect getSoundEffect(MemorySegment mem) {
+      return getSoundEffect(mem, 0);
+   }
+
+   @Nullable
+   public static AmbienceFXSoundEffect getSoundEffect(MemorySegment mem, int offset) {
+      return hasSoundEffect(mem, offset) ? AmbienceFXSoundEffect.toObject(mem, offset + 5) : null;
+   }
+
+   public static int getPriority(MemorySegment mem) {
+      return getPriority(mem, 0);
+   }
+
+   public static int getPriority(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 14);
+   }
+
+   @Nullable
+   public static int[] getBlockedAmbienceFxIndices(MemorySegment mem) {
+      return getBlockedAmbienceFxIndices(mem, 0);
+   }
+
+   @Nullable
+   public static int[] getBlockedAmbienceFxIndices(MemorySegment mem, int offset) {
+      if (!hasBlockedAmbienceFxIndices(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 38, 42, "BlockedAmbienceFxIndices");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("BlockedAmbienceFxIndices", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("BlockedAmbienceFxIndices", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 4L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BlockedAmbienceFxIndices", off + lenOffset + len * 4, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      int[] data = new int[len];
+      MemorySegment.copy(mem, PacketIO.PROTO_INT, off, data, 0, len);
+      return data;
+   }
+
+   public static int getAudioCategoryIndex(MemorySegment mem) {
+      return getAudioCategoryIndex(mem, 0);
+   }
+
+   public static int getAudioCategoryIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 18);
+   }
+
+   public static boolean hasSoundEffect(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasConditions(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasSounds(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasAmbientBed(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 16) != 0;
+   }
+
+   public static boolean hasBlockedAmbienceFxIndices(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 32) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static AmbienceFX toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AmbienceFX toObject(MemorySegment mem, int offset) {
+      if (offset + 42 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AmbienceFX", offset + 42, (int)mem.byteSize());
+      }
+
+      AmbienceFXSound[] sounds = null;
+      if (hasSounds(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 30, 42, "Sounds");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Sounds", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Sounds", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 33L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Sounds", off + lenOffset + len * 33, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         sounds = new AmbienceFXSound[len];
+
+         for (int i = 0; i < len; i++) {
+            sounds[i] = AmbienceFXSound.toObject(mem, off + i * 33);
+         }
+      }
+
+      int[] blockedAmbienceFxIndices = null;
+      if (hasBlockedAmbienceFxIndices(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 38, 42, "BlockedAmbienceFxIndices");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("BlockedAmbienceFxIndices", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("BlockedAmbienceFxIndices", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 4L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("BlockedAmbienceFxIndices", off + lenOffset + len * 4, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         blockedAmbienceFxIndices = new int[len];
+         MemorySegment.copy(mem, PacketIO.PROTO_INT, off, blockedAmbienceFxIndices, 0, len);
+      }
+
+      return new AmbienceFX(
+         hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 22, 42, "Id"), 4096000, PacketIO.UTF8) : null,
+         hasConditions(mem, offset) ? AmbienceFXConditions.toObject(mem, offset + getValidatedOffset(mem, offset, 26, 42, "Conditions")) : null,
+         sounds,
+         mem.get(PacketIO.PROTO_INT, offset + 1),
+         hasAmbientBed(mem, offset) ? AmbienceFXAmbientBed.toObject(mem, offset + getValidatedOffset(mem, offset, 34, 42, "AmbientBed")) : null,
+         hasSoundEffect(mem, offset) ? AmbienceFXSoundEffect.toObject(mem, offset + 5) : null,
+         mem.get(PacketIO.PROTO_INT, offset + 14),
+         blockedAmbienceFxIndices,
+         mem.get(PacketIO.PROTO_INT, offset + 18)
+      );
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -366,6 +615,98 @@ public class AmbienceFX {
       } else {
          buf.setIntLE(blockedAmbienceFxIndicesOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.soundEffect != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.id != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.conditions != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.sounds != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.ambientBed != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.blockedAmbienceFxIndices != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.musicContainerIndex);
+      if (this.soundEffect != null) {
+         this.soundEffect.serialize(mem, offset + 5);
+      } else {
+         mem.asSlice(offset + 5, 9L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_INT, offset + 14, this.priority);
+      mem.set(PacketIO.PROTO_INT, offset + 18, this.audioCategoryIndex);
+      int varOffset = offset + 42;
+      if (this.id != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 22, varOffset - offset - 42);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.id, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 22, -1);
+      }
+
+      if (this.conditions != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 26, varOffset - offset - 42);
+         varOffset += this.conditions.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 26, -1);
+      }
+
+      if (this.sounds != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 30, varOffset - offset - 42);
+         if (this.sounds.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Sounds", this.sounds.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.sounds.length);
+         int soundsValueOffset = 0;
+
+         for (int i = 0; i < this.sounds.length; i++) {
+            soundsValueOffset += this.sounds[i].serialize(mem, varOffset + soundsValueOffset);
+         }
+
+         varOffset += soundsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 30, -1);
+      }
+
+      if (this.ambientBed != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 34, varOffset - offset - 42);
+         varOffset += this.ambientBed.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 34, -1);
+      }
+
+      if (this.blockedAmbienceFxIndices != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 38, varOffset - offset - 42);
+         if (this.blockedAmbienceFxIndices.length > 4096000) {
+            throw ProtocolException.arrayTooLong("BlockedAmbienceFxIndices", this.blockedAmbienceFxIndices.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.blockedAmbienceFxIndices.length);
+         MemorySegment.copy(this.blockedAmbienceFxIndices, 0, mem, PacketIO.PROTO_INT, varOffset, this.blockedAmbienceFxIndices.length);
+         varOffset += this.blockedAmbienceFxIndices.length * 4;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 38, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

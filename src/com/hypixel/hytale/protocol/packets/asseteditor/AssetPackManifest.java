@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -356,6 +357,217 @@ public class AssetPackManifest {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 29L;
+   }
+
+   @Nullable
+   public static String getName(MemorySegment mem) {
+      return getName(mem, 0);
+   }
+
+   @Nullable
+   public static String getName(MemorySegment mem, int offset) {
+      return hasName(mem, offset) ? PacketIO.readVarString("Name", mem, offset + getValidatedOffset(mem, offset, 1, 29, "Name"), 4096000, PacketIO.UTF8) : null;
+   }
+
+   @Nullable
+   public static String getGroup(MemorySegment mem) {
+      return getGroup(mem, 0);
+   }
+
+   @Nullable
+   public static String getGroup(MemorySegment mem, int offset) {
+      return hasGroup(mem, offset)
+         ? PacketIO.readVarString("Group", mem, offset + getValidatedOffset(mem, offset, 5, 29, "Group"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getWebsite(MemorySegment mem) {
+      return getWebsite(mem, 0);
+   }
+
+   @Nullable
+   public static String getWebsite(MemorySegment mem, int offset) {
+      return hasWebsite(mem, offset)
+         ? PacketIO.readVarString("Website", mem, offset + getValidatedOffset(mem, offset, 9, 29, "Website"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getDescription(MemorySegment mem) {
+      return getDescription(mem, 0);
+   }
+
+   @Nullable
+   public static String getDescription(MemorySegment mem, int offset) {
+      return hasDescription(mem, offset)
+         ? PacketIO.readVarString("Description", mem, offset + getValidatedOffset(mem, offset, 13, 29, "Description"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getVersion(MemorySegment mem) {
+      return getVersion(mem, 0);
+   }
+
+   @Nullable
+   public static String getVersion(MemorySegment mem, int offset) {
+      return hasVersion(mem, offset)
+         ? PacketIO.readVarString("Version", mem, offset + getValidatedOffset(mem, offset, 17, 29, "Version"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static AuthorInfo[] getAuthors(MemorySegment mem) {
+      return getAuthors(mem, 0);
+   }
+
+   @Nullable
+   public static AuthorInfo[] getAuthors(MemorySegment mem, int offset) {
+      if (!hasAuthors(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 21, 29, "Authors");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Authors", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("Authors", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Authors", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      AuthorInfo[] data = new AuthorInfo[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = AuthorInfo.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static String getServerVersion(MemorySegment mem) {
+      return getServerVersion(mem, 0);
+   }
+
+   @Nullable
+   public static String getServerVersion(MemorySegment mem, int offset) {
+      return hasServerVersion(mem, offset)
+         ? PacketIO.readVarString("ServerVersion", mem, offset + getValidatedOffset(mem, offset, 25, 29, "ServerVersion"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static boolean hasName(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasGroup(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasWebsite(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasDescription(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasVersion(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 16) != 0;
+   }
+
+   public static boolean hasAuthors(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 32) != 0;
+   }
+
+   public static boolean hasServerVersion(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 64) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static AssetPackManifest toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AssetPackManifest toObject(MemorySegment mem, int offset) {
+      if (offset + 29 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AssetPackManifest", offset + 29, (int)mem.byteSize());
+      }
+
+      AuthorInfo[] authors = null;
+      if (hasAuthors(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 21, 29, "Authors");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Authors", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Authors", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Authors", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         authors = new AuthorInfo[len];
+
+         for (int i = 0; i < len; i++) {
+            authors[i] = AuthorInfo.toObject(mem, off);
+            off += authors[i].computeSize();
+         }
+      }
+
+      return new AssetPackManifest(
+         hasName(mem, offset) ? PacketIO.readVarString("Name", mem, offset + getValidatedOffset(mem, offset, 1, 29, "Name"), 4096000, PacketIO.UTF8) : null,
+         hasGroup(mem, offset) ? PacketIO.readVarString("Group", mem, offset + getValidatedOffset(mem, offset, 5, 29, "Group"), 4096000, PacketIO.UTF8) : null,
+         hasWebsite(mem, offset)
+            ? PacketIO.readVarString("Website", mem, offset + getValidatedOffset(mem, offset, 9, 29, "Website"), 4096000, PacketIO.UTF8)
+            : null,
+         hasDescription(mem, offset)
+            ? PacketIO.readVarString("Description", mem, offset + getValidatedOffset(mem, offset, 13, 29, "Description"), 4096000, PacketIO.UTF8)
+            : null,
+         hasVersion(mem, offset)
+            ? PacketIO.readVarString("Version", mem, offset + getValidatedOffset(mem, offset, 17, 29, "Version"), 4096000, PacketIO.UTF8)
+            : null,
+         authors,
+         hasServerVersion(mem, offset)
+            ? PacketIO.readVarString("ServerVersion", mem, offset + getValidatedOffset(mem, offset, 25, 29, "ServerVersion"), 4096000, PacketIO.UTF8)
+            : null
+      );
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -459,6 +671,101 @@ public class AssetPackManifest {
       } else {
          buf.setIntLE(serverVersionOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.name != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.group != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.website != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.description != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.version != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.authors != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
+      if (this.serverVersion != null) {
+         nullBits = (byte)(nullBits | 64);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      int varOffset = offset + 29;
+      if (this.name != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 1, varOffset - offset - 29);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.name, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 1, -1);
+      }
+
+      if (this.group != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 5, varOffset - offset - 29);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.group, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 5, -1);
+      }
+
+      if (this.website != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 9, varOffset - offset - 29);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.website, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 9, -1);
+      }
+
+      if (this.description != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 13, varOffset - offset - 29);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.description, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 13, -1);
+      }
+
+      if (this.version != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 17, varOffset - offset - 29);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.version, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 17, -1);
+      }
+
+      if (this.authors != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 21, varOffset - offset - 29);
+         if (this.authors.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Authors", this.authors.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.authors.length);
+         int authorsValueOffset = 0;
+
+         for (int i = 0; i < this.authors.length; i++) {
+            authorsValueOffset += this.authors[i].serialize(mem, varOffset + authorsValueOffset);
+         }
+
+         varOffset += authorsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 21, -1);
+      }
+
+      if (this.serverVersion != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 25, varOffset - offset - 29);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.serverVersion, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 25, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -89,12 +90,75 @@ public class TriggerVolumeToolGroupCreateResponse implements Packet, ToClientPac
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 9L;
+   }
+
+   public static String getGroupId(MemorySegment mem) {
+      return getGroupId(mem, 0);
+   }
+
+   public static String getGroupId(MemorySegment mem, int offset) {
+      return PacketIO.readVarString("GroupId", mem, offset + 9, 4096000, PacketIO.UTF8);
+   }
+
+   public static int getColor(MemorySegment mem) {
+      return getColor(mem, 0);
+   }
+
+   public static int getColor(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 0);
+   }
+
+   public static boolean getSuccess(MemorySegment mem) {
+      return getSuccess(mem, 0);
+   }
+
+   public static boolean getSuccess(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 4);
+   }
+
+   public static int getSkippedCount(MemorySegment mem) {
+      return getSkippedCount(mem, 0);
+   }
+
+   public static int getSkippedCount(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 5);
+   }
+
+   public static TriggerVolumeToolGroupCreateResponse toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static TriggerVolumeToolGroupCreateResponse toObject(MemorySegment mem, int offset) {
+      if (offset + 9 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("TriggerVolumeToolGroupCreateResponse", offset + 9, (int)mem.byteSize());
+      } else {
+         return new TriggerVolumeToolGroupCreateResponse(
+            PacketIO.readVarString("GroupId", mem, offset + 9, 4096000, PacketIO.UTF8),
+            mem.get(PacketIO.PROTO_INT, offset + 0),
+            mem.get(PacketIO.PROTO_BOOL, offset + 4),
+            mem.get(PacketIO.PROTO_INT, offset + 5)
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeIntLE(this.color);
       buf.writeByte(this.success ? 1 : 0);
       buf.writeIntLE(this.skippedCount);
       PacketIO.writeVarString(buf, this.groupId, 4096000);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_INT, offset + 0, this.color);
+      mem.set(PacketIO.PROTO_BOOL, offset + 4, this.success);
+      mem.set(PacketIO.PROTO_INT, offset + 5, this.skippedCount);
+      int varOffset = offset + 9;
+      varOffset += PacketIO.writeVarString(mem, varOffset, this.groupId, 4096000);
+      return varOffset - offset;
    }
 
    @Override

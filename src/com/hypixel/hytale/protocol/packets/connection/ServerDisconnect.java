@@ -4,9 +4,11 @@ import com.hypixel.hytale.protocol.FormattedMessage;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -75,6 +77,47 @@ public class ServerDisconnect implements Packet, ToClientPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 2L;
+   }
+
+   @Nullable
+   public static FormattedMessage getReason(MemorySegment mem) {
+      return getReason(mem, 0);
+   }
+
+   @Nullable
+   public static FormattedMessage getReason(MemorySegment mem, int offset) {
+      return hasReason(mem, offset) ? FormattedMessage.toObject(mem, offset + 2) : null;
+   }
+
+   public static DisconnectType getType(MemorySegment mem) {
+      return getType(mem, 0);
+   }
+
+   public static DisconnectType getType(MemorySegment mem, int offset) {
+      return DisconnectType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1));
+   }
+
+   public static boolean hasReason(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static ServerDisconnect toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ServerDisconnect toObject(MemorySegment mem, int offset) {
+      if (offset + 2 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ServerDisconnect", offset + 2, (int)mem.byteSize());
+      } else {
+         return new ServerDisconnect(
+            hasReason(mem, offset) ? FormattedMessage.toObject(mem, offset + 2) : null, DisconnectType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1))
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -87,6 +130,23 @@ public class ServerDisconnect implements Packet, ToClientPacket {
       if (this.reason != null) {
          this.reason.serialize(buf);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.reason != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.type.getValue());
+      int varOffset = offset + 2;
+      if (this.reason != null) {
+         varOffset += this.reason.serialize(mem, varOffset);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

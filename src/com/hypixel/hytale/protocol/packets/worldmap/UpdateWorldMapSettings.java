@@ -3,10 +3,12 @@ package com.hypixel.hytale.protocol.packets.worldmap;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -151,6 +153,184 @@ public class UpdateWorldMapSettings implements Packet, ToClientPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 20L;
+   }
+
+   public static boolean getEnabled(MemorySegment mem) {
+      return getEnabled(mem, 0);
+   }
+
+   public static boolean getEnabled(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 1);
+   }
+
+   @Nullable
+   public static Map<Short, BiomeData> getBiomeDataMap(MemorySegment mem) {
+      return getBiomeDataMap(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Short, BiomeData> getBiomeDataMap(MemorySegment mem, int offset) {
+      if (!hasBiomeDataMap(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + 20;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("BiomeDataMap", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("BiomeDataMap", len, 4096000);
+      }
+
+      Map<Short, BiomeData> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         short key = mem.get(PacketIO.PROTO_SHORT, off);
+         off += 2;
+         BiomeData value = BiomeData.toObject(mem, off);
+         off += value.computeSize();
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("BiomeDataMap", key);
+         }
+      }
+
+      return data;
+   }
+
+   public static boolean getAllowTeleportToCoordinates(MemorySegment mem) {
+      return getAllowTeleportToCoordinates(mem, 0);
+   }
+
+   public static boolean getAllowTeleportToCoordinates(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 2);
+   }
+
+   public static boolean getAllowTeleportToMarkers(MemorySegment mem) {
+      return getAllowTeleportToMarkers(mem, 0);
+   }
+
+   public static boolean getAllowTeleportToMarkers(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 3);
+   }
+
+   public static boolean getAllowShowOnMapToggle(MemorySegment mem) {
+      return getAllowShowOnMapToggle(mem, 0);
+   }
+
+   public static boolean getAllowShowOnMapToggle(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 4);
+   }
+
+   public static boolean getAllowCompassTrackingToggle(MemorySegment mem) {
+      return getAllowCompassTrackingToggle(mem, 0);
+   }
+
+   public static boolean getAllowCompassTrackingToggle(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 5);
+   }
+
+   public static boolean getAllowCreatingMapMarkers(MemorySegment mem) {
+      return getAllowCreatingMapMarkers(mem, 0);
+   }
+
+   public static boolean getAllowCreatingMapMarkers(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 6);
+   }
+
+   public static boolean getAllowRemovingOtherPlayersMarkers(MemorySegment mem) {
+      return getAllowRemovingOtherPlayersMarkers(mem, 0);
+   }
+
+   public static boolean getAllowRemovingOtherPlayersMarkers(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 7);
+   }
+
+   public static float getDefaultScale(MemorySegment mem) {
+      return getDefaultScale(mem, 0);
+   }
+
+   public static float getDefaultScale(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 8);
+   }
+
+   public static float getMinScale(MemorySegment mem) {
+      return getMinScale(mem, 0);
+   }
+
+   public static float getMinScale(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 12);
+   }
+
+   public static float getMaxScale(MemorySegment mem) {
+      return getMaxScale(mem, 0);
+   }
+
+   public static float getMaxScale(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 16);
+   }
+
+   public static boolean hasBiomeDataMap(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static UpdateWorldMapSettings toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UpdateWorldMapSettings toObject(MemorySegment mem, int offset) {
+      if (offset + 20 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("UpdateWorldMapSettings", offset + 20, (int)mem.byteSize());
+      }
+
+      Map<Short, BiomeData> biomeDataMap = null;
+      if (hasBiomeDataMap(mem, offset)) {
+         int off = offset + 20;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("BiomeDataMap", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("BiomeDataMap", len, 4096000);
+         }
+
+         biomeDataMap = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            short key = mem.get(PacketIO.PROTO_SHORT, off);
+            off += 2;
+            BiomeData value = BiomeData.toObject(mem, off);
+            off += value.computeSize();
+            if (biomeDataMap.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("BiomeDataMap", key);
+            }
+         }
+      }
+
+      return new UpdateWorldMapSettings(
+         mem.get(PacketIO.PROTO_BOOL, offset + 1),
+         biomeDataMap,
+         mem.get(PacketIO.PROTO_BOOL, offset + 2),
+         mem.get(PacketIO.PROTO_BOOL, offset + 3),
+         mem.get(PacketIO.PROTO_BOOL, offset + 4),
+         mem.get(PacketIO.PROTO_BOOL, offset + 5),
+         mem.get(PacketIO.PROTO_BOOL, offset + 6),
+         mem.get(PacketIO.PROTO_BOOL, offset + 7),
+         mem.get(PacketIO.PROTO_FLOAT, offset + 8),
+         mem.get(PacketIO.PROTO_FLOAT, offset + 12),
+         mem.get(PacketIO.PROTO_FLOAT, offset + 16)
+      );
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -181,6 +361,42 @@ public class UpdateWorldMapSettings implements Packet, ToClientPacket {
             e.getValue().serialize(buf);
          }
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.biomeDataMap != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BOOL, offset + 1, this.enabled);
+      mem.set(PacketIO.PROTO_BOOL, offset + 2, this.allowTeleportToCoordinates);
+      mem.set(PacketIO.PROTO_BOOL, offset + 3, this.allowTeleportToMarkers);
+      mem.set(PacketIO.PROTO_BOOL, offset + 4, this.allowShowOnMapToggle);
+      mem.set(PacketIO.PROTO_BOOL, offset + 5, this.allowCompassTrackingToggle);
+      mem.set(PacketIO.PROTO_BOOL, offset + 6, this.allowCreatingMapMarkers);
+      mem.set(PacketIO.PROTO_BOOL, offset + 7, this.allowRemovingOtherPlayersMarkers);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 8, this.defaultScale);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 12, this.minScale);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 16, this.maxScale);
+      int varOffset = offset + 20;
+      if (this.biomeDataMap != null) {
+         if (this.biomeDataMap.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("BiomeDataMap", this.biomeDataMap.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.biomeDataMap.size());
+
+         for (Entry<Short, BiomeData> e : this.biomeDataMap.entrySet()) {
+            mem.set(PacketIO.PROTO_SHORT, varOffset, e.getKey());
+            varOffset += 2;
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      }
+
+      return varOffset - offset;
    }
 
    @Override

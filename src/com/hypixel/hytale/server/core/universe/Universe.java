@@ -112,7 +112,7 @@ import com.hypixel.hytale.sneakythrow.SneakyThrow;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntIntPair;
 import it.unimi.dsi.fastutil.longs.LongIterator;
-import it.unimi.dsi.fastutil.longs.LongSet;
+import it.unimi.dsi.fastutil.longs.LongList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
@@ -189,7 +189,7 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
    public Universe(@Nonnull JavaPluginInit init) {
       super(init);
       instance = this;
-      if (!Files.isDirectory(this.path) && !Options.getOptionSet().has(Options.BARE)) {
+      if (!Files.isDirectory(this.path) && !Options.isBare()) {
          try {
             Files.createDirectories(this.path);
          } catch (IOException e) {
@@ -348,7 +348,7 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
          this.getLogger().at(Level.SEVERE).withCause(e).log("Failed to delete blockIdMap.json");
       }
 
-      if (Options.getOptionSet().has(Options.BARE)) {
+      if (Options.isBare()) {
          this.universeReady = CompletableFuture.completedFuture(null);
          HytaleServer.get().getEventBus().dispatch(AllWorldsLoadedEvent.class);
       } else {
@@ -472,8 +472,12 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
                   CompletableFuture.allOf(loadingWorlds.toArray(CompletableFuture[]::new))
                      .thenCompose(
                         v -> {
+                           if (HytaleServer.get().isShuttingDown()) {
+                              return CompletableFuture.completedFuture(null);
+                           }
+
                            String worldName = config.getDefaults().getWorld();
-                           return worldName != null && !this.worlds.containsKey(worldName.toLowerCase())
+                           return worldName != null && !this.worlds.containsKey(worldName.toLowerCase()) && !this.isWorldLoadable(worldName)
                               ? CompletableFutureUtil._catch(this.addWorld(worldName))
                               : CompletableFuture.completedFuture(null);
                         }
@@ -494,7 +498,7 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
          : world.getWorldConfig().getChunkStorageProvider().getRecoveryLoader(store.getStore(), recoveryPath);
       IChunkSaver saver = store.getSaver();
       if (loader != null && saver != null) {
-         LongSet chunks = loader.getIndexes();
+         LongList chunks = loader.getIndexes();
          IChunkLoader fallbackLoader;
          if (Options.getOptionSet().valueOf(Options.RECOVERY_MODE) == Options.RecoveryMode.FROM_BACKUP_OR_REGENERATE) {
             Path backupDir = HytaleServer.get().getConfig().getBackupConfig().getDirectory();

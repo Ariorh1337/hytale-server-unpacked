@@ -96,7 +96,7 @@ public class SensorBlock extends SensorBase {
       if (this.reserveBlock || !blockType.isAllowsMultipleUsers()) {
          ResourceView resourceView = store.getResource(Blackboard.getResourceType())
             .getView(ResourceView.class, ResourceView.indexViewFromWorldPosition(position));
-         resourceView.reserveBlock(npcComponent, blockData.getX(), blockData.getY(), blockData.getZ());
+         resourceView.reserveBlock(ref, blockData.getX(), blockData.getY(), blockData.getZ());
          target.setReservationHolder(resourceView);
          Blackboard.LOGGER.at(Level.FINE).log("Entity %s reserved block from set %s at %s", npcComponent.getRoleName(), this.blockSet, position);
       }

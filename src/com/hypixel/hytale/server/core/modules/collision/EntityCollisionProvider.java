@@ -150,9 +150,9 @@ public class EntityCollisionProvider {
       }
    }
 
-   protected void setContact(@Nonnull Entity entity) {
+   protected void setContact(@Nonnull Ref<EntityStore> ref) {
       this.collisionPosition.set(this.position).fma(this.minMax.x, this.direction);
-      this.contacts[0].assign(this.collisionPosition, this.minMax.x, this.minMax.y, entity.getReference(), null);
+      this.contacts[0].assign(this.collisionPosition, this.minMax.x, this.minMax.y, ref, null);
       this.count = 1;
    }
 
@@ -199,7 +199,7 @@ public class EntityCollisionProvider {
             && collisionProvider.isColliding(ref, collisionProvider.minMax, componentAccessor)
             && collisionProvider.minMax.x < collisionProvider.nearestCollisionStart) {
             collisionProvider.nearestCollisionStart = collisionProvider.minMax.x;
-            collisionProvider.setContact(entity);
+            collisionProvider.setContact(ref);
          }
       }
    }

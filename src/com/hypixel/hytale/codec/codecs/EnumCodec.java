@@ -158,7 +158,7 @@ public class EnumCodec<T extends Enum<T>> implements Codec<T> {
             case LEGACY -> {
                StringBuilder nameParts = new StringBuilder();
 
-               for (String part : name.split("_")) {
+               for (String part : name.split("_", -1)) {
                   nameParts.append(Character.toUpperCase(part.charAt(0))).append(part.substring(1).toLowerCase());
                }
 

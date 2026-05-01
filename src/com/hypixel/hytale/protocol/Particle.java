@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -200,6 +201,216 @@ public class Particle {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 141L;
+   }
+
+   @Nullable
+   public static String getTexturePath(MemorySegment mem) {
+      return getTexturePath(mem, 0);
+   }
+
+   @Nullable
+   public static String getTexturePath(MemorySegment mem, int offset) {
+      return hasTexturePath(mem, offset)
+         ? PacketIO.readVarString("TexturePath", mem, offset + getValidatedOffset(mem, offset, 133, 141, "TexturePath"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static Size getFrameSize(MemorySegment mem) {
+      return getFrameSize(mem, 0);
+   }
+
+   @Nullable
+   public static Size getFrameSize(MemorySegment mem, int offset) {
+      return hasFrameSize(mem, offset) ? Size.toObject(mem, offset + 1) : null;
+   }
+
+   public static ParticleUVOption getUvOption(MemorySegment mem) {
+      return getUvOption(mem, 0);
+   }
+
+   public static ParticleUVOption getUvOption(MemorySegment mem, int offset) {
+      return ParticleUVOption.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 9));
+   }
+
+   public static ParticleScaleRatioConstraint getScaleRatioConstraint(MemorySegment mem) {
+      return getScaleRatioConstraint(mem, 0);
+   }
+
+   public static ParticleScaleRatioConstraint getScaleRatioConstraint(MemorySegment mem, int offset) {
+      return ParticleScaleRatioConstraint.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 10));
+   }
+
+   public static SoftParticle getSoftParticles(MemorySegment mem) {
+      return getSoftParticles(mem, 0);
+   }
+
+   public static SoftParticle getSoftParticles(MemorySegment mem, int offset) {
+      return SoftParticle.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 11));
+   }
+
+   public static float getSoftParticlesFadeFactor(MemorySegment mem) {
+      return getSoftParticlesFadeFactor(mem, 0);
+   }
+
+   public static float getSoftParticlesFadeFactor(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 12);
+   }
+
+   public static boolean getUseSpriteBlending(MemorySegment mem) {
+      return getUseSpriteBlending(mem, 0);
+   }
+
+   public static boolean getUseSpriteBlending(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 16);
+   }
+
+   @Nullable
+   public static ParticleAnimationFrame getInitialAnimationFrame(MemorySegment mem) {
+      return getInitialAnimationFrame(mem, 0);
+   }
+
+   @Nullable
+   public static ParticleAnimationFrame getInitialAnimationFrame(MemorySegment mem, int offset) {
+      return hasInitialAnimationFrame(mem, offset) ? ParticleAnimationFrame.toObject(mem, offset + 17) : null;
+   }
+
+   @Nullable
+   public static ParticleAnimationFrame getCollisionAnimationFrame(MemorySegment mem) {
+      return getCollisionAnimationFrame(mem, 0);
+   }
+
+   @Nullable
+   public static ParticleAnimationFrame getCollisionAnimationFrame(MemorySegment mem, int offset) {
+      return hasCollisionAnimationFrame(mem, offset) ? ParticleAnimationFrame.toObject(mem, offset + 75) : null;
+   }
+
+   @Nullable
+   public static Map<Integer, ParticleAnimationFrame> getAnimationFrames(MemorySegment mem) {
+      return getAnimationFrames(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Integer, ParticleAnimationFrame> getAnimationFrames(MemorySegment mem, int offset) {
+      if (!hasAnimationFrames(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 137, 141, "AnimationFrames");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("AnimationFrames", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("AnimationFrames", len, 4096000);
+      }
+
+      Map<Integer, ParticleAnimationFrame> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         int key = mem.get(PacketIO.PROTO_INT, off);
+         off += 4;
+         ParticleAnimationFrame value = ParticleAnimationFrame.toObject(mem, off);
+         off += value.computeSize();
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("AnimationFrames", key);
+         }
+      }
+
+      return data;
+   }
+
+   public static boolean hasFrameSize(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasInitialAnimationFrame(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasCollisionAnimationFrame(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasTexturePath(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasAnimationFrames(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 16) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static Particle toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static Particle toObject(MemorySegment mem, int offset) {
+      if (offset + 141 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Particle", offset + 141, (int)mem.byteSize());
+      }
+
+      Map<Integer, ParticleAnimationFrame> animationFrames = null;
+      if (hasAnimationFrames(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 137, 141, "AnimationFrames");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("AnimationFrames", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("AnimationFrames", len, 4096000);
+         }
+
+         animationFrames = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            int key = mem.get(PacketIO.PROTO_INT, off);
+            off += 4;
+            ParticleAnimationFrame value = ParticleAnimationFrame.toObject(mem, off);
+            off += value.computeSize();
+            if (animationFrames.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("AnimationFrames", key);
+            }
+         }
+      }
+
+      return new Particle(
+         hasTexturePath(mem, offset)
+            ? PacketIO.readVarString("TexturePath", mem, offset + getValidatedOffset(mem, offset, 133, 141, "TexturePath"), 4096000, PacketIO.UTF8)
+            : null,
+         hasFrameSize(mem, offset) ? Size.toObject(mem, offset + 1) : null,
+         ParticleUVOption.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 9)),
+         ParticleScaleRatioConstraint.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 10)),
+         SoftParticle.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 11)),
+         mem.get(PacketIO.PROTO_FLOAT, offset + 12),
+         mem.get(PacketIO.PROTO_BOOL, offset + 16),
+         hasInitialAnimationFrame(mem, offset) ? ParticleAnimationFrame.toObject(mem, offset + 17) : null,
+         hasCollisionAnimationFrame(mem, offset) ? ParticleAnimationFrame.toObject(mem, offset + 75) : null,
+         animationFrames
+      );
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       byte nullBits = 0;
@@ -274,6 +485,80 @@ public class Particle {
       } else {
          buf.setIntLE(animationFramesOffsetSlot, -1);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.frameSize != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.initialAnimationFrame != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.collisionAnimationFrame != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.texturePath != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.animationFrames != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      if (this.frameSize != null) {
+         this.frameSize.serialize(mem, offset + 1);
+      } else {
+         mem.asSlice(offset + 1, 8L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 9, (byte)this.uvOption.getValue());
+      mem.set(PacketIO.PROTO_BYTE, offset + 10, (byte)this.scaleRatioConstraint.getValue());
+      mem.set(PacketIO.PROTO_BYTE, offset + 11, (byte)this.softParticles.getValue());
+      mem.set(PacketIO.PROTO_FLOAT, offset + 12, this.softParticlesFadeFactor);
+      mem.set(PacketIO.PROTO_BOOL, offset + 16, this.useSpriteBlending);
+      if (this.initialAnimationFrame != null) {
+         this.initialAnimationFrame.serialize(mem, offset + 17);
+      } else {
+         mem.asSlice(offset + 17, 58L).fill((byte)0);
+      }
+
+      if (this.collisionAnimationFrame != null) {
+         this.collisionAnimationFrame.serialize(mem, offset + 75);
+      } else {
+         mem.asSlice(offset + 75, 58L).fill((byte)0);
+      }
+
+      int varOffset = offset + 141;
+      if (this.texturePath != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 133, varOffset - offset - 141);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.texturePath, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 133, -1);
+      }
+
+      if (this.animationFrames != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 137, varOffset - offset - 141);
+         if (this.animationFrames.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("AnimationFrames", this.animationFrames.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.animationFrames.size());
+
+         for (Entry<Integer, ParticleAnimationFrame> e : this.animationFrames.entrySet()) {
+            mem.set(PacketIO.PROTO_INT, varOffset, e.getKey());
+            varOffset += 4;
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 137, -1);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

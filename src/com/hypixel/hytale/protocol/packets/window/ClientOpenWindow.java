@@ -3,9 +3,11 @@ package com.hypixel.hytale.protocol.packets.window;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -56,9 +58,39 @@ public class ClientOpenWindow implements Packet, ToServerPacket {
       return 1;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 1L;
+   }
+
+   public static WindowType getType(MemorySegment mem) {
+      return getType(mem, 0);
+   }
+
+   public static WindowType getType(MemorySegment mem, int offset) {
+      return WindowType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 0));
+   }
+
+   public static ClientOpenWindow toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ClientOpenWindow toObject(MemorySegment mem, int offset) {
+      if (offset + 1 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ClientOpenWindow", offset + 1, (int)mem.byteSize());
+      } else {
+         return new ClientOpenWindow(WindowType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 0)));
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeByte(this.type.getValue());
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, (byte)this.type.getValue());
+      return 1;
    }
 
    @Override

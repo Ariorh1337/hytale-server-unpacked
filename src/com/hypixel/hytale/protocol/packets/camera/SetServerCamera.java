@@ -5,9 +5,11 @@ import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ServerCameraSettings;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -72,6 +74,57 @@ public class SetServerCamera implements Packet, ToClientPacket {
       return 157;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 157L;
+   }
+
+   public static ClientCameraView getClientCameraView(MemorySegment mem) {
+      return getClientCameraView(mem, 0);
+   }
+
+   public static ClientCameraView getClientCameraView(MemorySegment mem, int offset) {
+      return ClientCameraView.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1));
+   }
+
+   public static boolean getIsLocked(MemorySegment mem) {
+      return getIsLocked(mem, 0);
+   }
+
+   public static boolean getIsLocked(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 2);
+   }
+
+   @Nullable
+   public static ServerCameraSettings getCameraSettings(MemorySegment mem) {
+      return getCameraSettings(mem, 0);
+   }
+
+   @Nullable
+   public static ServerCameraSettings getCameraSettings(MemorySegment mem, int offset) {
+      return hasCameraSettings(mem, offset) ? ServerCameraSettings.toObject(mem, offset + 3) : null;
+   }
+
+   public static boolean hasCameraSettings(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static SetServerCamera toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static SetServerCamera toObject(MemorySegment mem, int offset) {
+      if (offset + 157 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("SetServerCamera", offset + 157, (int)mem.byteSize());
+      } else {
+         return new SetServerCamera(
+            ClientCameraView.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1)),
+            mem.get(PacketIO.PROTO_BOOL, offset + 2),
+            hasCameraSettings(mem, offset) ? ServerCameraSettings.toObject(mem, offset + 3) : null
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
@@ -87,6 +140,25 @@ public class SetServerCamera implements Packet, ToClientPacket {
       } else {
          buf.writeZero(154);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.cameraSettings != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.clientCameraView.getValue());
+      mem.set(PacketIO.PROTO_BOOL, offset + 2, this.isLocked);
+      if (this.cameraSettings != null) {
+         this.cameraSettings.serialize(mem, offset + 3);
+      } else {
+         mem.asSlice(offset + 3, 154L).fill((byte)0);
+      }
+
+      return 157;
    }
 
    @Override

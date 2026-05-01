@@ -187,7 +187,9 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
       .metadata(new UIEditorSectionStart("Rendering"))
       .metadata(new UIRebuildCaches(false, UIRebuildCaches.ClientCache.MODELS))
       .metadata(new UIPropertyTitle("Item Model"))
-      .documentation("The model used for rendering this item. If this is a block, BlockType.Model should be used instead.")
+      .documentation(
+         "The model used for rendering this item when held, in inventory, or attached. If set, takes priority over BlockType.CustomModel. Block entities always use BlockType.CustomModel."
+      )
       .add()
       .<Double>appendInherited(
          new KeyedCodec<>("Scale", Codec.DOUBLE),
@@ -203,7 +205,9 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
       .addValidator(CommonAssetValidator.TEXTURE_ITEM)
       .metadata(new UIRebuildCaches(UIRebuildCaches.ClientCache.MODELS))
       .metadata(new UIPropertyTitle("Item Texture"))
-      .documentation("The texture used for rendering this item. If this is a block, block specific properties should be used instead.")
+      .documentation(
+         "The texture used for rendering this item when held, in inventory, or attached. Paired with Item.Model when set; otherwise block-specific texture properties are used."
+      )
       .add()
       .<String>appendInherited(
          new KeyedCodec<>("Animation", Codec.STRING),
@@ -214,7 +218,7 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
       .addValidator(CommonAssetValidator.ANIMATION_ITEM_BLOCK)
       .metadata(new UIRebuildCaches(UIRebuildCaches.ClientCache.MODELS))
       .metadata(new UIPropertyTitle("Item Animation"))
-      .documentation("The animation used for rendering this item. If this is a block, block specific properties should be used instead.")
+      .documentation("The animation used for rendering this item. Used only when Item.Model is set; otherwise the block's animation is used.")
       .add()
       .appendInherited(
          new KeyedCodec<>("UsePlayerAnimations", Codec.BOOLEAN),
@@ -248,7 +252,7 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
       )
       .metadata(new UIPropertyTitle("Item Particles"))
       .metadata(new UIRebuildCaches(UIRebuildCaches.ClientCache.MODELS))
-      .documentation("The particles played for this item. If this is a block, block specific properties should be used instead.")
+      .documentation("The particles played for this item. Used only when Item.Model is set; otherwise the block's particles are used.")
       .add()
       .<ModelParticle[]>appendInherited(
          new KeyedCodec<>("FirstPersonParticles", ModelParticle.ARRAY_CODEC),
@@ -258,7 +262,7 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
       )
       .metadata(new UIPropertyTitle("Item First Person Particles"))
       .metadata(new UIRebuildCaches(UIRebuildCaches.ClientCache.MODELS))
-      .documentation("The particles played for this item when in first person. If this is a block, block specific properties should be used instead.")
+      .documentation("The particles played for this item when in first person. Used only when Item.Model is set; otherwise the block's particles are used.")
       .add()
       .<ModelTrail[]>appendInherited(
          new KeyedCodec<>("Trails", ModelAsset.MODEL_TRAIL_ARRAY_CODEC),
@@ -274,7 +278,9 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
       )
       .metadata(new UIPropertyTitle("Item Light"))
       .metadata(new UIRebuildCaches(UIRebuildCaches.ClientCache.MODELS))
-      .documentation("The light this item is emitting when being held or dropped. For block light, see Block properties")
+      .documentation(
+         "The light this item is emitting when being held or dropped. Used only when Item.Model is set; otherwise the block's emitted light is used."
+      )
       .add()
       .<CraftingRecipe>append(new KeyedCodec<>("Recipe", CraftingRecipe.CODEC), (item, s) -> item.recipeToGenerate = s, item -> item.recipeToGenerate)
       .metadata(new UIEditorSectionStart("Crafting"))
@@ -585,6 +591,20 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
 
    public static DefaultAssetMap<String, Item> getAssetMap() {
       return (DefaultAssetMap<String, Item>)getAssetStore().getAssetMap();
+   }
+
+   public void invalidatePacketCache() {
+      this.cachedPacket = null;
+   }
+
+   @Nullable
+   public ItemWeapon unshareWeapon() {
+      if (this.weapon == null) {
+         return null;
+      }
+
+      this.weapon = new ItemWeapon(this.weapon);
+      return this.weapon;
    }
 
    protected Item() {

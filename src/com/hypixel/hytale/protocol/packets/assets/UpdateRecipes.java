@@ -10,6 +10,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -206,6 +207,187 @@ public class UpdateRecipes implements Packet, ToClientPacket {
       return maxEnd;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 10L;
+   }
+
+   public static UpdateType getType(MemorySegment mem) {
+      return getType(mem, 0);
+   }
+
+   public static UpdateType getType(MemorySegment mem, int offset) {
+      return UpdateType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1));
+   }
+
+   @Nullable
+   public static Map<String, CraftingRecipe> getRecipes(MemorySegment mem) {
+      return getRecipes(mem, 0);
+   }
+
+   @Nullable
+   public static Map<String, CraftingRecipe> getRecipes(MemorySegment mem, int offset) {
+      if (!hasRecipes(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 2, 10, "Recipes");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("Recipes", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("Recipes", len, 4096000);
+      }
+
+      Map<String, CraftingRecipe> data = new HashMap<>(len);
+      off += (int)(packed >>> 32);
+
+      for (int i = 0; i < len; i++) {
+         long keyPacked = VarInt.getWithLength(mem, off);
+         int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+         String key = PacketIO.readVarString("key", mem, off, 16384000, PacketIO.UTF8);
+         off += nkey;
+         CraftingRecipe value = CraftingRecipe.toObject(mem, off);
+         off += value.computeSize();
+         if (data.put(key, value) != null) {
+            throw ProtocolException.duplicateKey("Recipes", key);
+         }
+      }
+
+      return data;
+   }
+
+   @Nullable
+   public static String[] getRemovedRecipes(MemorySegment mem) {
+      return getRemovedRecipes(mem, 0);
+   }
+
+   @Nullable
+   public static String[] getRemovedRecipes(MemorySegment mem, int offset) {
+      if (!hasRemovedRecipes(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 6, 10, "RemovedRecipes");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("RemovedRecipes", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("RemovedRecipes", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("RemovedRecipes", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      String[] data = new String[len];
+
+      for (int i = 0; i < len; i++) {
+         long sp = VarInt.getWithLength(mem, off);
+         int n = (int)sp + (int)(sp >>> 32);
+         data[i] = PacketIO.readVarString("RemovedRecipes", mem, off, 16384000, PacketIO.UTF8);
+         off += n;
+      }
+
+      return data;
+   }
+
+   public static boolean hasRecipes(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasRemovedRecipes(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 2) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static UpdateRecipes toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UpdateRecipes toObject(MemorySegment mem, int offset) {
+      if (offset + 10 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("UpdateRecipes", offset + 10, (int)mem.byteSize());
+      }
+
+      Map<String, CraftingRecipe> recipes = null;
+      if (hasRecipes(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 2, 10, "Recipes");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Recipes", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Recipes", len, 4096000);
+         }
+
+         recipes = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            long keyPacked = VarInt.getWithLength(mem, off);
+            int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+            String key = PacketIO.readVarString("key", mem, off, 16384000, PacketIO.UTF8);
+            off += nkey;
+            CraftingRecipe value = CraftingRecipe.toObject(mem, off);
+            off += value.computeSize();
+            if (recipes.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("Recipes", key);
+            }
+         }
+      }
+
+      String[] removedRecipes = null;
+      if (hasRemovedRecipes(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 6, 10, "RemovedRecipes");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("RemovedRecipes", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("RemovedRecipes", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("RemovedRecipes", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         removedRecipes = new String[len];
+
+         for (int i = 0; i < len; i++) {
+            long sp = VarInt.getWithLength(mem, off);
+            int n = (int)sp + (int)(sp >>> 32);
+            removedRecipes[i] = PacketIO.readVarString("RemovedRecipes", mem, off, 16384000, PacketIO.UTF8);
+            off += n;
+         }
+      }
+
+      return new UpdateRecipes(UpdateType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1)), recipes, removedRecipes);
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -255,6 +437,57 @@ public class UpdateRecipes implements Packet, ToClientPacket {
       } else {
          buf.setIntLE(removedRecipesOffsetSlot, -1);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.recipes != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.removedRecipes != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.type.getValue());
+      int varOffset = offset + 10;
+      if (this.recipes != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 2, varOffset - offset - 10);
+         if (this.recipes.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Recipes", this.recipes.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.recipes.size());
+
+         for (Entry<String, CraftingRecipe> e : this.recipes.entrySet()) {
+            varOffset += PacketIO.writeVarString(mem, varOffset, e.getKey(), 16384000);
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 2, -1);
+      }
+
+      if (this.removedRecipes != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 6, varOffset - offset - 10);
+         if (this.removedRecipes.length > 4096000) {
+            throw ProtocolException.arrayTooLong("RemovedRecipes", this.removedRecipes.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.removedRecipes.length);
+         int removedRecipesValueOffset = 0;
+
+         for (int i = 0; i < this.removedRecipes.length; i++) {
+            removedRecipesValueOffset += PacketIO.writeVarString(mem, varOffset + removedRecipesValueOffset, this.removedRecipes[i], 16384000);
+         }
+
+         varOffset += removedRecipesValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 6, -1);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

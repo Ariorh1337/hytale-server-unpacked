@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -75,6 +76,48 @@ public class CraftRecipeAction extends WindowAction {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 5L;
+   }
+
+   @Nullable
+   public static String getRecipeId(MemorySegment mem) {
+      return getRecipeId(mem, 0);
+   }
+
+   @Nullable
+   public static String getRecipeId(MemorySegment mem, int offset) {
+      return hasRecipeId(mem, offset) ? PacketIO.readVarString("RecipeId", mem, offset + 5, 4096000, PacketIO.UTF8) : null;
+   }
+
+   public static int getQuantity(MemorySegment mem) {
+      return getQuantity(mem, 0);
+   }
+
+   public static int getQuantity(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, offset + 1);
+   }
+
+   public static boolean hasRecipeId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static CraftRecipeAction toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static CraftRecipeAction toObject(MemorySegment mem, int offset) {
+      if (offset + 5 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("CraftRecipeAction", offset + 5, (int)mem.byteSize());
+      } else {
+         return new CraftRecipeAction(
+            hasRecipeId(mem, offset) ? PacketIO.readVarString("RecipeId", mem, offset + 5, 4096000, PacketIO.UTF8) : null,
+            mem.get(PacketIO.PROTO_INT, offset + 1)
+         );
+      }
+   }
+
    @Override
    public int serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
@@ -90,6 +133,23 @@ public class CraftRecipeAction extends WindowAction {
       }
 
       return buf.writerIndex() - startPos;
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.recipeId != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_INT, offset + 1, this.quantity);
+      int varOffset = offset + 5;
+      if (this.recipeId != null) {
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.recipeId, 4096000);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

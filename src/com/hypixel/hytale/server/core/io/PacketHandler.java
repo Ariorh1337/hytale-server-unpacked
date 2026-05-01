@@ -120,21 +120,23 @@ public abstract class PacketHandler implements IPacketReceiver, ConnectionHandle
       return this.protocolVersion;
    }
 
-   public final void registered(@Nullable PacketHandler oldHandler) {
+   @Override
+   public final void registered(@Nullable ConnectionHandler oldHandler) {
       this.registered = true;
       this.registered0(oldHandler);
    }
 
-   protected void registered0(@Nullable PacketHandler oldHandler) {
+   protected void registered0(@Nullable ConnectionHandler oldHandler) {
    }
 
-   public final void unregistered(@Nullable PacketHandler newHandler) {
+   @Override
+   public final void unregistered(@Nullable ConnectionHandler newHandler) {
       this.registered = false;
       this.clearTimeout();
       this.unregistered0(newHandler);
    }
 
-   protected void unregistered0(@Nullable PacketHandler newHandler) {
+   protected void unregistered0(@Nullable ConnectionHandler newHandler) {
    }
 
    @Override

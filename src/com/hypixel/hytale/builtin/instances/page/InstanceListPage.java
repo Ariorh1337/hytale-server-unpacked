@@ -123,6 +123,9 @@ public class InstanceListPage extends InteractiveCustomUIPage<InstanceListPage.P
       } else {
          if (data.getAction() != null) {
             switch (data.getAction()) {
+               case Select:
+               default:
+                  break;
                case Load:
                   if (this.selectedInstance != null) {
                      this.load(ref, store);

@@ -1,8 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -50,6 +52,45 @@ public class IntersectionHighlight {
       return 8;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 8L;
+   }
+
+   public static float getHighlightThreshold(MemorySegment mem) {
+      return getHighlightThreshold(mem, 0);
+   }
+
+   public static float getHighlightThreshold(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 1);
+   }
+
+   @Nullable
+   public static Color getHighlightColor(MemorySegment mem) {
+      return getHighlightColor(mem, 0);
+   }
+
+   @Nullable
+   public static Color getHighlightColor(MemorySegment mem, int offset) {
+      return hasHighlightColor(mem, offset) ? Color.toObject(mem, offset + 5) : null;
+   }
+
+   public static boolean hasHighlightColor(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 1) != 0;
+   }
+
+   public static IntersectionHighlight toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static IntersectionHighlight toObject(MemorySegment mem, int offset) {
+      if (offset + 8 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("IntersectionHighlight", offset + 8, (int)mem.byteSize());
+      } else {
+         return new IntersectionHighlight(mem.get(PacketIO.PROTO_FLOAT, offset + 1), hasHighlightColor(mem, offset) ? Color.toObject(mem, offset + 5) : null);
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
       if (this.highlightColor != null) {
@@ -63,6 +104,23 @@ public class IntersectionHighlight {
       } else {
          buf.writeZero(3);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.highlightColor != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 1, this.highlightThreshold);
+      if (this.highlightColor != null) {
+         this.highlightColor.serialize(mem, offset + 5);
+      } else {
+         mem.asSlice(offset + 5, 3L).fill((byte)0);
+      }
+
+      return 8;
    }
 
    public int computeSize() {
