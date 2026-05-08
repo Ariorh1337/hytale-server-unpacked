@@ -454,7 +454,7 @@ public class RevolveOperation extends ToolOperation {
    }
 
    @Override
-   public boolean execute0(int x, int y, int z) {
+   protected boolean executeBlock(int x, int y, int z) {
       return false;
    }
 

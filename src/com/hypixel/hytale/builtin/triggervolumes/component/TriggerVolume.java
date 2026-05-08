@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Map.Entry;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.joml.Vector3d;
@@ -61,6 +62,12 @@ public class TriggerVolume implements Component<EntityStore> {
          new KeyedCodec<>("ActivationDelay", Codec.FLOAT, false), (c, v) -> c.activationDelay = v, c -> c.activationDelay > 0.0F ? c.activationDelay : null
       )
       .add()
+      .append(
+         new KeyedCodec<>("CancelDelayedOnExit", Codec.BOOLEAN, false),
+         (c, v) -> c.cancelDelayedEffectsOnExit = v,
+         c -> c.cancelDelayedEffectsOnExit ? null : Boolean.FALSE
+      )
+      .add()
       .append(new KeyedCodec<>("Cooldown", Codec.FLOAT, false), (c, v) -> c.cooldown = v, c -> c.cooldown > 0.0F ? c.cooldown : null)
       .add()
       .append(new KeyedCodec<>("CooldownMode", Codec.STRING, false), (c, v) -> {
@@ -87,6 +94,7 @@ public class TriggerVolume implements Component<EntityStore> {
    private boolean keepLoaded;
    @Nullable
    private Vector3f color;
+   private boolean cancelDelayedEffectsOnExit = true;
    private float activationDelay;
    private float cooldown;
    @Nonnull
@@ -97,14 +105,15 @@ public class TriggerVolume implements Component<EntityStore> {
    @Nonnull
    public static TriggerVolume fromVolumeEntry(@Nonnull VolumeEntry entry) {
       TriggerVolume tv = new TriggerVolume();
-      tv.shape = entry.getShape();
-      tv.effects = entry.getEffects().isEmpty() ? null : new ArrayList<>(entry.getEffects());
+      tv.shape = entry.getShape().copy();
+      tv.effects = entry.getEffects().isEmpty() ? null : TriggerEffect.deepCopyList(entry.getEffects());
       tv.enabled = entry.isEnabled();
       tv.targetTypes = EnumSet.copyOf(entry.getTargetTypes());
       tv.effectAssetRef = entry.getEffectAssetRef();
-      tv.rawTags = entry.getRawTags();
+      tv.rawTags = copyTags(entry.getRawTags());
       tv.keepLoaded = entry.isKeepLoaded();
-      tv.color = entry.getColor();
+      tv.color = entry.getColor() != null ? new Vector3f(entry.getColor()) : null;
+      tv.cancelDelayedEffectsOnExit = entry.isCancelDelayedEffectsOnExit();
       tv.activationDelay = entry.getActivationDelay();
       tv.cooldown = entry.getCooldown();
       tv.cooldownMode = entry.getCooldownMode();
@@ -114,12 +123,19 @@ public class TriggerVolume implements Component<EntityStore> {
 
    @Nonnull
    public VolumeEntry toVolumeEntry(@Nonnull String id, @Nonnull String worldName, @Nonnull Vector3d position) {
+      return this.toVolumeEntry(id, worldName, position, 0.0F);
+   }
+
+   @Nonnull
+   public VolumeEntry toVolumeEntry(@Nonnull String id, @Nonnull String worldName, @Nonnull Vector3d position, float yawRadians) {
+      TriggerVolumeShape entryShape = this.shape != null ? this.shape.copy() : new BoxShape();
+      entryShape.rotateInPlace(yawRadians);
       VolumeEntry entry = new VolumeEntry(
          id,
          worldName,
          position,
-         this.shape != null ? this.shape : new BoxShape(),
-         this.effects != null ? new ArrayList<>(this.effects) : new ArrayList<>(),
+         entryShape,
+         this.effects != null ? TriggerEffect.deepCopyList(this.effects) : new ArrayList<>(),
          EnumSet.copyOf(this.targetTypes),
          this.enabled
       );
@@ -130,13 +146,29 @@ public class TriggerVolume implements Component<EntityStore> {
       }
 
       entry.setActivationDelay(this.activationDelay);
+      entry.setCancelDelayedEffectsOnExit(this.cancelDelayedEffectsOnExit);
       entry.setCooldown(this.cooldown);
       entry.setCooldownMode(this.cooldownMode);
       if (!this.rawTags.isEmpty()) {
-         entry.setTags(this.rawTags);
+         entry.setTags(copyTags(this.rawTags));
       }
 
       return entry;
+   }
+
+   @Nonnull
+   private static Map<String, String[]> copyTags(@Nonnull Map<String, String[]> tags) {
+      if (tags.isEmpty()) {
+         return Collections.emptyMap();
+      }
+
+      HashMap<String, String[]> copy = new HashMap<>();
+
+      for (Entry<String, String[]> entry : tags.entrySet()) {
+         copy.put(entry.getKey(), (String[])entry.getValue().clone());
+      }
+
+      return copy;
    }
 
    @Nullable
@@ -152,14 +184,15 @@ public class TriggerVolume implements Component<EntityStore> {
    @Override
    public Component<EntityStore> clone() {
       TriggerVolume clone = new TriggerVolume();
-      clone.shape = this.shape;
-      clone.effects = this.effects != null ? new ArrayList<>(this.effects) : null;
+      clone.shape = this.shape != null ? this.shape.copy() : null;
+      clone.effects = this.effects != null ? TriggerEffect.deepCopyList(this.effects) : null;
       clone.enabled = this.enabled;
       clone.targetTypes = EnumSet.copyOf(this.targetTypes);
       clone.effectAssetRef = this.effectAssetRef;
-      clone.rawTags = this.rawTags;
+      clone.rawTags = copyTags(this.rawTags);
       clone.keepLoaded = this.keepLoaded;
       clone.color = this.color != null ? new Vector3f(this.color) : null;
+      clone.cancelDelayedEffectsOnExit = this.cancelDelayedEffectsOnExit;
       clone.activationDelay = this.activationDelay;
       clone.cooldown = this.cooldown;
       clone.cooldownMode = this.cooldownMode;

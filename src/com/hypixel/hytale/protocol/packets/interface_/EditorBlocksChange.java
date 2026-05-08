@@ -19,9 +19,9 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
    public static final int PACKET_ID = 222;
    public static final boolean IS_COMPRESSED = true;
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
-   public static final int FIXED_BLOCK_SIZE = 31;
+   public static final int FIXED_BLOCK_SIZE = 43;
    public static final int VARIABLE_FIELD_COUNT = 3;
-   public static final int VARIABLE_BLOCK_START = 43;
+   public static final int VARIABLE_BLOCK_START = 55;
    public static final int MAX_SIZE = 1677721600;
    @Nullable
    public EditorSelection selection;
@@ -34,6 +34,12 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
    public int blocksCount;
    public boolean advancedPreview;
    public boolean skipPreviewRebuild;
+   @Nullable
+   public Integer cumulativeRotX;
+   @Nullable
+   public Integer cumulativeRotY;
+   @Nullable
+   public Integer cumulativeRotZ;
 
    @Override
    public int getId() {
@@ -55,7 +61,10 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
       @Nullable ClipboardEntityChange[] entityChanges,
       int blocksCount,
       boolean advancedPreview,
-      boolean skipPreviewRebuild
+      boolean skipPreviewRebuild,
+      @Nullable Integer cumulativeRotX,
+      @Nullable Integer cumulativeRotY,
+      @Nullable Integer cumulativeRotZ
    ) {
       this.selection = selection;
       this.blocksChange = blocksChange;
@@ -64,6 +73,9 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
       this.blocksCount = blocksCount;
       this.advancedPreview = advancedPreview;
       this.skipPreviewRebuild = skipPreviewRebuild;
+      this.cumulativeRotX = cumulativeRotX;
+      this.cumulativeRotY = cumulativeRotY;
+      this.cumulativeRotZ = cumulativeRotZ;
    }
 
    public EditorBlocksChange(@Nonnull EditorBlocksChange other) {
@@ -74,12 +86,15 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
       this.blocksCount = other.blocksCount;
       this.advancedPreview = other.advancedPreview;
       this.skipPreviewRebuild = other.skipPreviewRebuild;
+      this.cumulativeRotX = other.cumulativeRotX;
+      this.cumulativeRotY = other.cumulativeRotY;
+      this.cumulativeRotZ = other.cumulativeRotZ;
    }
 
    @Nonnull
    public static EditorBlocksChange deserialize(@Nonnull ByteBuf buf, int offset) {
-      if (buf.readableBytes() - offset < 43) {
-         throw ProtocolException.bufferTooSmall("EditorBlocksChange", 43, buf.readableBytes() - offset);
+      if (buf.readableBytes() - offset < 55) {
+         throw ProtocolException.bufferTooSmall("EditorBlocksChange", 55, buf.readableBytes() - offset);
       }
 
       EditorBlocksChange obj = new EditorBlocksChange();
@@ -92,12 +107,24 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
       obj.advancedPreview = buf.getByte(offset + 29) != 0;
       obj.skipPreviewRebuild = buf.getByte(offset + 30) != 0;
       if ((nullBits & 2) != 0) {
-         int varPosBase0 = buf.getIntLE(offset + 31);
-         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 43) {
+         obj.cumulativeRotX = buf.getIntLE(offset + 31);
+      }
+
+      if ((nullBits & 4) != 0) {
+         obj.cumulativeRotY = buf.getIntLE(offset + 35);
+      }
+
+      if ((nullBits & 8) != 0) {
+         obj.cumulativeRotZ = buf.getIntLE(offset + 39);
+      }
+
+      if ((nullBits & 16) != 0) {
+         int varPosBase0 = buf.getIntLE(offset + 43);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 55) {
             throw ProtocolException.invalidOffset("BlocksChange", varPosBase0, buf.readableBytes());
          }
 
-         int varPos0 = offset + 43 + varPosBase0;
+         int varPos0 = offset + 55 + varPosBase0;
          int blocksChangeCount = VarInt.peek(buf, varPos0);
          if (blocksChangeCount < 0) {
             throw ProtocolException.invalidVarInt("BlocksChange");
@@ -121,13 +148,13 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
          }
       }
 
-      if ((nullBits & 4) != 0) {
-         int varPosBase1 = buf.getIntLE(offset + 35);
-         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 43) {
+      if ((nullBits & 32) != 0) {
+         int varPosBase1 = buf.getIntLE(offset + 47);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 55) {
             throw ProtocolException.invalidOffset("FluidsChange", varPosBase1, buf.readableBytes());
          }
 
-         int varPos1 = offset + 43 + varPosBase1;
+         int varPos1 = offset + 55 + varPosBase1;
          int fluidsChangeCount = VarInt.peek(buf, varPos1);
          if (fluidsChangeCount < 0) {
             throw ProtocolException.invalidVarInt("FluidsChange");
@@ -151,13 +178,13 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
          }
       }
 
-      if ((nullBits & 8) != 0) {
-         int varPosBase2 = buf.getIntLE(offset + 39);
-         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 43) {
+      if ((nullBits & 64) != 0) {
+         int varPosBase2 = buf.getIntLE(offset + 51);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 55) {
             throw ProtocolException.invalidOffset("EntityChanges", varPosBase2, buf.readableBytes());
          }
 
-         int varPos2 = offset + 43 + varPosBase2;
+         int varPos2 = offset + 55 + varPosBase2;
          int entityChangesCount = VarInt.peek(buf, varPos2);
          if (entityChangesCount < 0) {
             throw ProtocolException.invalidVarInt("EntityChanges");
@@ -186,14 +213,14 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte nullBits = buf.getByte(offset);
-      int maxEnd = 43;
-      if ((nullBits & 2) != 0) {
-         int fieldOffset0 = buf.getIntLE(offset + 31);
-         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 43) {
+      int maxEnd = 55;
+      if ((nullBits & 16) != 0) {
+         int fieldOffset0 = buf.getIntLE(offset + 43);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 55) {
             throw ProtocolException.invalidOffset("BlocksChange", fieldOffset0, maxEnd);
          }
 
-         int pos0 = offset + 43 + fieldOffset0;
+         int pos0 = offset + 55 + fieldOffset0;
          int arrLen = VarInt.peek(buf, pos0);
          pos0 += VarInt.size(arrLen);
 
@@ -206,13 +233,13 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
          }
       }
 
-      if ((nullBits & 4) != 0) {
-         int fieldOffset1 = buf.getIntLE(offset + 35);
-         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 43) {
+      if ((nullBits & 32) != 0) {
+         int fieldOffset1 = buf.getIntLE(offset + 47);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 55) {
             throw ProtocolException.invalidOffset("FluidsChange", fieldOffset1, maxEnd);
          }
 
-         int pos1 = offset + 43 + fieldOffset1;
+         int pos1 = offset + 55 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
          pos1 += VarInt.size(arrLen);
 
@@ -225,13 +252,13 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
          }
       }
 
-      if ((nullBits & 8) != 0) {
-         int fieldOffset2 = buf.getIntLE(offset + 39);
-         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 43) {
+      if ((nullBits & 64) != 0) {
+         int fieldOffset2 = buf.getIntLE(offset + 51);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 55) {
             throw ProtocolException.invalidOffset("EntityChanges", fieldOffset2, maxEnd);
          }
 
-         int pos2 = offset + 43 + fieldOffset2;
+         int pos2 = offset + 55 + fieldOffset2;
          int arrLen = VarInt.peek(buf, pos2);
          pos2 += VarInt.size(arrLen);
 
@@ -248,7 +275,7 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
    }
 
    public static boolean isBufferTooSmall(MemorySegment mem) {
-      return mem.byteSize() < 43L;
+      return mem.byteSize() < 55L;
    }
 
    @Nullable
@@ -272,7 +299,7 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
          return null;
       }
 
-      int off = offset + getValidatedOffset(mem, offset, 31, 43, "BlocksChange");
+      int off = offset + getValidatedOffset(mem, offset, 43, 55, "BlocksChange");
       long packed = VarInt.getWithLength(mem, off);
       int len = (int)packed;
       if (len < 0) {
@@ -309,7 +336,7 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
          return null;
       }
 
-      int off = offset + getValidatedOffset(mem, offset, 35, 43, "FluidsChange");
+      int off = offset + getValidatedOffset(mem, offset, 47, 55, "FluidsChange");
       long packed = VarInt.getWithLength(mem, off);
       int len = (int)packed;
       if (len < 0) {
@@ -346,7 +373,7 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
          return null;
       }
 
-      int off = offset + getValidatedOffset(mem, offset, 39, 43, "EntityChanges");
+      int off = offset + getValidatedOffset(mem, offset, 51, 55, "EntityChanges");
       long packed = VarInt.getWithLength(mem, off);
       int len = (int)packed;
       if (len < 0) {
@@ -397,24 +424,69 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
       return mem.get(PacketIO.PROTO_BOOL, offset + 30);
    }
 
+   @Nullable
+   public static Integer getCumulativeRotX(MemorySegment mem) {
+      return getCumulativeRotX(mem, 0);
+   }
+
+   @Nullable
+   public static Integer getCumulativeRotX(MemorySegment mem, int offset) {
+      return hasCumulativeRotX(mem, offset) ? mem.get(PacketIO.PROTO_INT, offset + 31) : null;
+   }
+
+   @Nullable
+   public static Integer getCumulativeRotY(MemorySegment mem) {
+      return getCumulativeRotY(mem, 0);
+   }
+
+   @Nullable
+   public static Integer getCumulativeRotY(MemorySegment mem, int offset) {
+      return hasCumulativeRotY(mem, offset) ? mem.get(PacketIO.PROTO_INT, offset + 35) : null;
+   }
+
+   @Nullable
+   public static Integer getCumulativeRotZ(MemorySegment mem) {
+      return getCumulativeRotZ(mem, 0);
+   }
+
+   @Nullable
+   public static Integer getCumulativeRotZ(MemorySegment mem, int offset) {
+      return hasCumulativeRotZ(mem, offset) ? mem.get(PacketIO.PROTO_INT, offset + 39) : null;
+   }
+
    public static boolean hasSelection(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
       return (b & 1) != 0;
    }
 
-   public static boolean hasBlocksChange(MemorySegment mem, int offset) {
+   public static boolean hasCumulativeRotX(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
       return (b & 2) != 0;
    }
 
-   public static boolean hasFluidsChange(MemorySegment mem, int offset) {
+   public static boolean hasCumulativeRotY(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
       return (b & 4) != 0;
    }
 
-   public static boolean hasEntityChanges(MemorySegment mem, int offset) {
+   public static boolean hasCumulativeRotZ(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
       return (b & 8) != 0;
+   }
+
+   public static boolean hasBlocksChange(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 16) != 0;
+   }
+
+   public static boolean hasFluidsChange(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 32) != 0;
+   }
+
+   public static boolean hasEntityChanges(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 64) != 0;
    }
 
    private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
@@ -431,13 +503,13 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
    }
 
    public static EditorBlocksChange toObject(MemorySegment mem, int offset) {
-      if (offset + 43 > mem.byteSize()) {
-         throw ProtocolException.bufferTooSmall("EditorBlocksChange", offset + 43, (int)mem.byteSize());
+      if (offset + 55 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("EditorBlocksChange", offset + 55, (int)mem.byteSize());
       }
 
       BlockChange[] blocksChange = null;
       if (hasBlocksChange(mem, offset)) {
-         int off = offset + getValidatedOffset(mem, offset, 31, 43, "BlocksChange");
+         int off = offset + getValidatedOffset(mem, offset, 43, 55, "BlocksChange");
          long packed = VarInt.getWithLength(mem, off);
          int len = (int)packed;
          if (len < 0) {
@@ -463,7 +535,7 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
 
       FluidChange[] fluidsChange = null;
       if (hasFluidsChange(mem, offset)) {
-         int off = offset + getValidatedOffset(mem, offset, 35, 43, "FluidsChange");
+         int off = offset + getValidatedOffset(mem, offset, 47, 55, "FluidsChange");
          long packed = VarInt.getWithLength(mem, off);
          int len = (int)packed;
          if (len < 0) {
@@ -489,7 +561,7 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
 
       ClipboardEntityChange[] entityChanges = null;
       if (hasEntityChanges(mem, offset)) {
-         int off = offset + getValidatedOffset(mem, offset, 39, 43, "EntityChanges");
+         int off = offset + getValidatedOffset(mem, offset, 51, 55, "EntityChanges");
          long packed = VarInt.getWithLength(mem, off);
          int len = (int)packed;
          if (len < 0) {
@@ -521,7 +593,10 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
          entityChanges,
          mem.get(PacketIO.PROTO_INT, offset + 25),
          mem.get(PacketIO.PROTO_BOOL, offset + 29),
-         mem.get(PacketIO.PROTO_BOOL, offset + 30)
+         mem.get(PacketIO.PROTO_BOOL, offset + 30),
+         hasCumulativeRotX(mem, offset) ? mem.get(PacketIO.PROTO_INT, offset + 31) : null,
+         hasCumulativeRotY(mem, offset) ? mem.get(PacketIO.PROTO_INT, offset + 35) : null,
+         hasCumulativeRotZ(mem, offset) ? mem.get(PacketIO.PROTO_INT, offset + 39) : null
       );
    }
 
@@ -533,16 +608,28 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
          nullBits = (byte)(nullBits | 1);
       }
 
-      if (this.blocksChange != null) {
+      if (this.cumulativeRotX != null) {
          nullBits = (byte)(nullBits | 2);
       }
 
-      if (this.fluidsChange != null) {
+      if (this.cumulativeRotY != null) {
          nullBits = (byte)(nullBits | 4);
       }
 
-      if (this.entityChanges != null) {
+      if (this.cumulativeRotZ != null) {
          nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.blocksChange != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.fluidsChange != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
+      if (this.entityChanges != null) {
+         nullBits = (byte)(nullBits | 64);
       }
 
       buf.writeByte(nullBits);
@@ -555,6 +642,24 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
       buf.writeIntLE(this.blocksCount);
       buf.writeByte(this.advancedPreview ? 1 : 0);
       buf.writeByte(this.skipPreviewRebuild ? 1 : 0);
+      if (this.cumulativeRotX != null) {
+         buf.writeIntLE(this.cumulativeRotX);
+      } else {
+         buf.writeZero(4);
+      }
+
+      if (this.cumulativeRotY != null) {
+         buf.writeIntLE(this.cumulativeRotY);
+      } else {
+         buf.writeZero(4);
+      }
+
+      if (this.cumulativeRotZ != null) {
+         buf.writeIntLE(this.cumulativeRotZ);
+      } else {
+         buf.writeZero(4);
+      }
+
       int blocksChangeOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
       int fluidsChangeOffsetSlot = buf.writerIndex();
@@ -615,16 +720,28 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
          nullBits = (byte)(nullBits | 1);
       }
 
-      if (this.blocksChange != null) {
+      if (this.cumulativeRotX != null) {
          nullBits = (byte)(nullBits | 2);
       }
 
-      if (this.fluidsChange != null) {
+      if (this.cumulativeRotY != null) {
          nullBits = (byte)(nullBits | 4);
       }
 
-      if (this.entityChanges != null) {
+      if (this.cumulativeRotZ != null) {
          nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.blocksChange != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.fluidsChange != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
+      if (this.entityChanges != null) {
+         nullBits = (byte)(nullBits | 64);
       }
 
       mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
@@ -637,9 +754,27 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
       mem.set(PacketIO.PROTO_INT, offset + 25, this.blocksCount);
       mem.set(PacketIO.PROTO_BOOL, offset + 29, this.advancedPreview);
       mem.set(PacketIO.PROTO_BOOL, offset + 30, this.skipPreviewRebuild);
-      int varOffset = offset + 43;
+      if (this.cumulativeRotX != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 31, this.cumulativeRotX);
+      } else {
+         mem.asSlice(offset + 31, 4L).fill((byte)0);
+      }
+
+      if (this.cumulativeRotY != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 35, this.cumulativeRotY);
+      } else {
+         mem.asSlice(offset + 35, 4L).fill((byte)0);
+      }
+
+      if (this.cumulativeRotZ != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 39, this.cumulativeRotZ);
+      } else {
+         mem.asSlice(offset + 39, 4L).fill((byte)0);
+      }
+
+      int varOffset = offset + 55;
       if (this.blocksChange != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 31, varOffset - offset - 43);
+         mem.set(PacketIO.PROTO_INT, offset + 43, varOffset - offset - 55);
          if (this.blocksChange.length > 4096000) {
             throw ProtocolException.arrayTooLong("BlocksChange", this.blocksChange.length, 4096000);
          }
@@ -653,11 +788,11 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
 
          varOffset += blocksChangeValueOffset;
       } else {
-         mem.set(PacketIO.PROTO_INT, offset + 31, -1);
+         mem.set(PacketIO.PROTO_INT, offset + 43, -1);
       }
 
       if (this.fluidsChange != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 35, varOffset - offset - 43);
+         mem.set(PacketIO.PROTO_INT, offset + 47, varOffset - offset - 55);
          if (this.fluidsChange.length > 4096000) {
             throw ProtocolException.arrayTooLong("FluidsChange", this.fluidsChange.length, 4096000);
          }
@@ -671,11 +806,11 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
 
          varOffset += fluidsChangeValueOffset;
       } else {
-         mem.set(PacketIO.PROTO_INT, offset + 35, -1);
+         mem.set(PacketIO.PROTO_INT, offset + 47, -1);
       }
 
       if (this.entityChanges != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 39, varOffset - offset - 43);
+         mem.set(PacketIO.PROTO_INT, offset + 51, varOffset - offset - 55);
          if (this.entityChanges.length > 4096000) {
             throw ProtocolException.arrayTooLong("EntityChanges", this.entityChanges.length, 4096000);
          }
@@ -689,7 +824,7 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
 
          varOffset += entityChangesValueOffset;
       } else {
-         mem.set(PacketIO.PROTO_INT, offset + 39, -1);
+         mem.set(PacketIO.PROTO_INT, offset + 51, -1);
       }
 
       return varOffset - offset;
@@ -697,7 +832,7 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
 
    @Override
    public int computeSize() {
-      int size = 43;
+      int size = 55;
       if (this.blocksChange != null) {
          size += VarInt.size(this.blocksChange.length) + this.blocksChange.length * 17;
       }
@@ -720,18 +855,18 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      if (buffer.readableBytes() - offset < 43) {
-         return ValidationResult.error("Buffer too small: expected at least 43 bytes");
+      if (buffer.readableBytes() - offset < 55) {
+         return ValidationResult.error("Buffer too small: expected at least 55 bytes");
       }
 
       byte nullBits = buffer.getByte(offset);
-      if ((nullBits & 2) != 0) {
-         int blocksChangeOffset = buffer.getIntLE(offset + 31);
-         if (blocksChangeOffset < 0 || blocksChangeOffset > buffer.writerIndex() - offset - 43) {
+      if ((nullBits & 16) != 0) {
+         int blocksChangeOffset = buffer.getIntLE(offset + 43);
+         if (blocksChangeOffset < 0 || blocksChangeOffset > buffer.writerIndex() - offset - 55) {
             return ValidationResult.error("Invalid offset for BlocksChange");
          }
 
-         int pos = offset + 43 + blocksChangeOffset;
+         int pos = offset + 55 + blocksChangeOffset;
          int blocksChangeCount = VarInt.peek(buffer, pos);
          if (blocksChangeCount < 0) {
             return ValidationResult.error("Invalid array count for BlocksChange");
@@ -748,13 +883,13 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
          }
       }
 
-      if ((nullBits & 4) != 0) {
-         int fluidsChangeOffset = buffer.getIntLE(offset + 35);
-         if (fluidsChangeOffset < 0 || fluidsChangeOffset > buffer.writerIndex() - offset - 43) {
+      if ((nullBits & 32) != 0) {
+         int fluidsChangeOffset = buffer.getIntLE(offset + 47);
+         if (fluidsChangeOffset < 0 || fluidsChangeOffset > buffer.writerIndex() - offset - 55) {
             return ValidationResult.error("Invalid offset for FluidsChange");
          }
 
-         int pos = offset + 43 + fluidsChangeOffset;
+         int pos = offset + 55 + fluidsChangeOffset;
          int fluidsChangeCount = VarInt.peek(buffer, pos);
          if (fluidsChangeCount < 0) {
             return ValidationResult.error("Invalid array count for FluidsChange");
@@ -771,13 +906,13 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
          }
       }
 
-      if ((nullBits & 8) != 0) {
-         int entityChangesOffset = buffer.getIntLE(offset + 39);
-         if (entityChangesOffset < 0 || entityChangesOffset > buffer.writerIndex() - offset - 43) {
+      if ((nullBits & 64) != 0) {
+         int entityChangesOffset = buffer.getIntLE(offset + 51);
+         if (entityChangesOffset < 0 || entityChangesOffset > buffer.writerIndex() - offset - 55) {
             return ValidationResult.error("Invalid offset for EntityChanges");
          }
 
-         int pos = offset + 43 + entityChangesOffset;
+         int pos = offset + 55 + entityChangesOffset;
          int entityChangesCount = VarInt.peek(buffer, pos);
          if (entityChangesCount < 0) {
             return ValidationResult.error("Invalid array count for EntityChanges");
@@ -811,6 +946,9 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
       copy.blocksCount = this.blocksCount;
       copy.advancedPreview = this.advancedPreview;
       copy.skipPreviewRebuild = this.skipPreviewRebuild;
+      copy.cumulativeRotX = this.cumulativeRotX;
+      copy.cumulativeRotY = this.cumulativeRotY;
+      copy.cumulativeRotZ = this.cumulativeRotZ;
       return copy;
    }
 
@@ -827,7 +965,10 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
                && Arrays.equals(this.entityChanges, other.entityChanges)
                && this.blocksCount == other.blocksCount
                && this.advancedPreview == other.advancedPreview
-               && this.skipPreviewRebuild == other.skipPreviewRebuild;
+               && this.skipPreviewRebuild == other.skipPreviewRebuild
+               && Objects.equals(this.cumulativeRotX, other.cumulativeRotX)
+               && Objects.equals(this.cumulativeRotY, other.cumulativeRotY)
+               && Objects.equals(this.cumulativeRotZ, other.cumulativeRotZ);
       }
    }
 
@@ -840,6 +981,9 @@ public class EditorBlocksChange implements Packet, ToClientPacket {
       result = 31 * result + Arrays.hashCode(this.entityChanges);
       result = 31 * result + Integer.hashCode(this.blocksCount);
       result = 31 * result + Boolean.hashCode(this.advancedPreview);
-      return 31 * result + Boolean.hashCode(this.skipPreviewRebuild);
+      result = 31 * result + Boolean.hashCode(this.skipPreviewRebuild);
+      result = 31 * result + Objects.hashCode(this.cumulativeRotX);
+      result = 31 * result + Objects.hashCode(this.cumulativeRotY);
+      return 31 * result + Objects.hashCode(this.cumulativeRotZ);
    }
 }

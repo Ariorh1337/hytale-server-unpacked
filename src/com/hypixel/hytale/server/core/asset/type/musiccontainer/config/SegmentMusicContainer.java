@@ -1,16 +1,13 @@
 package com.hypixel.hytale.server.core.asset.type.musiccontainer.config;
 
 import com.hypixel.hytale.assetstore.map.IndexedAssetMap;
-import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.common.util.ArrayUtil;
-import java.util.HashMap;
+import com.hypixel.hytale.server.core.asset.type.audiostate.config.AudioStateResolver;
 import java.util.HashSet;
-import java.util.Map;
-import java.util.Map.Entry;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -47,19 +44,6 @@ public class SegmentMusicContainer extends MusicContainer {
       .documentation(
          "Exit position on the timeline from segment-time 0. The active region is [EntryMarker, ExitMarker]. For looping Segments, this is the loop point. For play-once Segments in a Sequence, this is the transition trigger to the next child."
       )
-      .add()
-      .<Map<String, Map<String, Float>>>appendInherited(
-         new KeyedCodec<>("States", MusicStateMapCodec.INSTANCE), (mc, v) -> mc.states = v, mc -> mc.states, (mc, parent) -> mc.states = parent.states
-      )
-      .documentation("Named state presets. Each state is a map of layer name to volume multiplier (0 to 1). Layers omitted from a state default to volume 0.")
-      .add()
-      .<String>appendInherited(
-         new KeyedCodec<>("DefaultState", Codec.STRING),
-         (mc, v) -> mc.defaultState = v,
-         mc -> mc.defaultState,
-         (mc, parent) -> mc.defaultState = parent.defaultState
-      )
-      .documentation("Name of the state to apply when the Segment starts. If omitted, all layers start at volume 1.0 (full mix).")
       .add()
       .validator(
          (segment, results) -> {
@@ -116,39 +100,23 @@ public class SegmentMusicContainer extends MusicContainer {
                               );
                            }
                         }
+
+                        AudioStateResolver.validateBindings(layer.stateBindings, "Segment '" + segment.id + "' Layer '" + layer.name + "'", results);
                      } else {
                         results.fail("Every layer must have a Name");
                      }
                   }
                }
-
-               if (segment.states != null) {
-                  for (Entry<String, Map<String, Float>> stateEntry : segment.states.entrySet()) {
-                     String stateName = stateEntry.getKey();
-                     Map<String, Float> volumeMap = stateEntry.getValue();
-                     if (volumeMap != null) {
-                        for (Entry<String, Float> volumeEntry : volumeMap.entrySet()) {
-                           if (!layerNames.contains(volumeEntry.getKey())) {
-                              results.fail("State '" + stateName + "' references unknown layer '" + volumeEntry.getKey() + "'");
-                           }
-
-                           Float vol = volumeEntry.getValue();
-                           if (vol < 0.0F || vol > 1.0F) {
-                              results.fail("State '" + stateName + "' layer '" + volumeEntry.getKey() + "' volume " + vol + " is outside [0, 1]");
-                           }
-                        }
-                     }
-                  }
-
-                  if (segment.defaultState != null && !segment.states.containsKey(segment.defaultState)) {
-                     results.fail("DefaultState '" + segment.defaultState + "' does not match any defined state");
-                  }
-               } else if (segment.defaultState != null) {
-                  results.fail("DefaultState '" + segment.defaultState + "' is set but no States are defined");
-               }
             }
          }
       )
+      .afterDecode(segment -> {
+         if (segment.layers != null) {
+            for (LayerPlacement layer : segment.layers) {
+               AudioStateResolver.resolveBindings(layer.stateBindings);
+            }
+         }
+      })
       .build();
    @Nullable
    protected LayerPlacement[] layers;
@@ -156,19 +124,10 @@ public class SegmentMusicContainer extends MusicContainer {
    protected BarBeatDuration entryMarker;
    @Nullable
    protected BarBeatDuration exitMarker;
-   @Nullable
-   protected Map<String, Map<String, Float>> states;
-   @Nullable
-   protected String defaultState;
 
    @Nullable
    public LayerPlacement[] getLayers() {
       return this.layers;
-   }
-
-   @Nullable
-   public Map<String, Map<String, Float>> getStates() {
-      return this.states;
    }
 
    protected SegmentMusicContainer() {
@@ -185,12 +144,24 @@ public class SegmentMusicContainer extends MusicContainer {
          String[] ids = new String[this.layers.length];
 
          for (int i = 0; i < this.layers.length; i++) {
-            ids[i] = this.layers[i].getContainer();
+            ids[i] = this.layers[i].container;
          }
 
          return ids;
       } else {
          return ArrayUtil.EMPTY_STRING_ARRAY;
+      }
+   }
+
+   @Override
+   public void refreshAudioStateResolution() {
+      super.refreshAudioStateResolution();
+      if (this.layers != null) {
+         for (LayerPlacement layer : this.layers) {
+            if (layer != null) {
+               AudioStateResolver.resolveBindings(layer.stateBindings);
+            }
+         }
       }
    }
 
@@ -200,7 +171,6 @@ public class SegmentMusicContainer extends MusicContainer {
       this.fillBasePacketFields(packet);
       packet.entryMarker = this.entryMarker != null ? this.entryMarker.toProtocol() : null;
       packet.exitMarker = this.exitMarker != null ? this.exitMarker.toProtocol() : null;
-      packet.defaultStateIndex = -1;
       if (this.layers != null && this.layers.length > 0) {
          IndexedAssetMap<String, MusicContainer> assetMap = MusicContainer.getAssetMap();
          packet.layers = new com.hypixel.hytale.protocol.LayerPlacement[this.layers.length];
@@ -211,44 +181,8 @@ public class SegmentMusicContainer extends MusicContainer {
             dst.containerIndex = src.container != null ? assetMap.getIndex(src.container) : 0;
             dst.name = src.name;
             dst.clipStart = src.clipStart != null ? src.clipStart.toProtocol() : null;
+            dst.stateBindings = AudioStateResolver.toPacketArray(src.stateBindings);
             packet.layers[i] = dst;
-         }
-      }
-
-      if (this.states != null && !this.states.isEmpty() && this.layers != null) {
-         String[] stateNames = this.states.keySet().toArray(ArrayUtil.EMPTY_STRING_ARRAY);
-         int layerCount = this.layers.length;
-         HashMap<String, Integer> layerIndexByName = new HashMap<>(layerCount * 2);
-
-         for (int i = 0; i < layerCount; i++) {
-            if (this.layers[i].name != null) {
-               layerIndexByName.put(this.layers[i].name, i);
-            }
-         }
-
-         float[] flatData = new float[stateNames.length * layerCount];
-
-         for (int s = 0; s < stateNames.length; s++) {
-            Map<String, Float> volumeMap = this.states.get(stateNames[s]);
-            if (volumeMap != null) {
-               for (Entry<String, Float> entry : volumeMap.entrySet()) {
-                  Integer idx = layerIndexByName.get(entry.getKey());
-                  if (idx != null) {
-                     flatData[s * layerCount + idx] = entry.getValue();
-                  }
-               }
-            }
-         }
-
-         packet.stateNames = stateNames;
-         packet.stateVolumeData = flatData;
-         if (this.defaultState != null) {
-            for (int i = 0; i < stateNames.length; i++) {
-               if (stateNames[i].equals(this.defaultState)) {
-                  packet.defaultStateIndex = i;
-                  break;
-               }
-            }
          }
       }
 

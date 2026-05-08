@@ -7,16 +7,21 @@ import com.hypixel.hytale.builtin.buildertools.BuilderToolsPlugin;
 import com.hypixel.hytale.builtin.triggervolumes.asset.TriggerEffectAsset;
 import com.hypixel.hytale.builtin.triggervolumes.command.TriggerVolumeCommand;
 import com.hypixel.hytale.builtin.triggervolumes.component.TriggerVolume;
+import com.hypixel.hytale.builtin.triggervolumes.component.TriggerVolumeGroup;
 import com.hypixel.hytale.builtin.triggervolumes.effect.TriggerEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.ConditionalEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.ControlDoorsEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.DamageEntityEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.DestroyVolumeEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.EntityEffectEffect;
+import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.GiveItemEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.PastePrefabEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.PlaySoundEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.PlayVfxEffect;
+import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.RunRootInteractionEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.SendMessageEffect;
+import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.SetGameModeEffect;
+import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.SetMusicEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.SetVelocityEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.SetWeatherEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.ShowEventTitleEffect;
@@ -26,9 +31,12 @@ import com.hypixel.hytale.builtin.triggervolumes.interaction.DestroyTaggedVolume
 import com.hypixel.hytale.builtin.triggervolumes.manager.GroupEntry;
 import com.hypixel.hytale.builtin.triggervolumes.manager.TriggerVolumeManager;
 import com.hypixel.hytale.builtin.triggervolumes.manager.VolumeEntry;
+import com.hypixel.hytale.builtin.triggervolumes.prefab.TriggerVolumeChunkRegenSystem;
+import com.hypixel.hytale.builtin.triggervolumes.prefab.TriggerVolumeGroupWorldGenHandler;
 import com.hypixel.hytale.builtin.triggervolumes.prefab.TriggerVolumePasteHandler;
 import com.hypixel.hytale.builtin.triggervolumes.prefab.TriggerVolumePrefabContributor;
 import com.hypixel.hytale.builtin.triggervolumes.prefab.TriggerVolumePrefabPasteRemapSystem;
+import com.hypixel.hytale.builtin.triggervolumes.prefab.TriggerVolumeWorldGenHandler;
 import com.hypixel.hytale.builtin.triggervolumes.system.TriggerVolumeTickingSystem;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.ComponentRegistry;
@@ -40,12 +48,15 @@ import com.hypixel.hytale.protocol.packets.player.UpdateTriggerVolumeDisplay;
 import com.hypixel.hytale.server.core.asset.HytaleAssetStore;
 import com.hypixel.hytale.server.core.asset.type.buildertool.config.PrefabListAsset;
 import com.hypixel.hytale.server.core.asset.type.entityeffect.config.EntityEffect;
+import com.hypixel.hytale.server.core.asset.type.item.config.Item;
+import com.hypixel.hytale.server.core.asset.type.musiccontainer.config.MusicContainer;
 import com.hypixel.hytale.server.core.asset.type.particle.config.ParticleSystem;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.asset.type.weather.config.Weather;
 import com.hypixel.hytale.server.core.io.ServerManager;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.RootInteraction;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.prefab.PrefabStore;
@@ -80,6 +91,7 @@ public class TriggerVolumesPlugin extends JavaPlugin {
    private static TriggerVolumesPlugin instance;
    private ResourceType<EntityStore, TriggerVolumeManager> managerResourceType;
    private ComponentType<EntityStore, TriggerVolume> triggerVolumeComponentType;
+   private ComponentType<EntityStore, TriggerVolumeGroup> triggerVolumeGroupComponentType;
    private final Map<String, AssetSourceProvider> assetSources = new LinkedHashMap<>();
    private final Map<TriggerVolumesPlugin.AssetFieldKey, String> assetFieldMappings = new HashMap<>();
 
@@ -125,7 +137,7 @@ public class TriggerVolumesPlugin extends JavaPlugin {
    @Nonnull
    public Collection<String> getAssetIds(@Nonnull String sourceId) {
       AssetSourceProvider provider = this.assetSources.get(sourceId);
-      return provider != null ? provider.getAssetIds() : List.of();
+      return provider == null ? List.of() : provider.getAssetIds().stream().filter(id -> !id.startsWith("*")).toList();
    }
 
    @Nonnull
@@ -136,6 +148,11 @@ public class TriggerVolumesPlugin extends JavaPlugin {
    @Nonnull
    public ComponentType<EntityStore, TriggerVolume> getTriggerVolumeComponentType() {
       return this.triggerVolumeComponentType;
+   }
+
+   @Nonnull
+   public ComponentType<EntityStore, TriggerVolumeGroup> getTriggerVolumeGroupComponentType() {
+      return this.triggerVolumeGroupComponentType;
    }
 
    @Override
@@ -154,12 +171,18 @@ public class TriggerVolumesPlugin extends JavaPlugin {
       ComponentRegistry<EntityStore> entityStoreRegistry = EntityStore.REGISTRY;
       this.managerResourceType = entityStoreRegistry.registerResource(TriggerVolumeManager.class, "TriggerVolumeData", TriggerVolumeManager.CODEC);
       this.triggerVolumeComponentType = entityStoreRegistry.registerComponent(TriggerVolume.class, "TriggerVolume", TriggerVolume.CODEC);
+      this.triggerVolumeGroupComponentType = entityStoreRegistry.registerComponent(TriggerVolumeGroup.class, "TriggerVolumeGroup", TriggerVolumeGroup.CODEC);
       EntityModule entityModule = EntityModule.get();
       entityStoreRegistry.registerSystem(
          new TriggerVolumeTickingSystem(this.managerResourceType, entityModule.getPlayerSpatialResourceType(), entityModule.getEntitySpatialResourceType())
       );
-      entityStoreRegistry.registerSystem(new TriggerVolumePasteHandler(this.managerResourceType, this.triggerVolumeComponentType));
+      entityStoreRegistry.registerSystem(
+         new TriggerVolumePasteHandler(this.managerResourceType, this.triggerVolumeComponentType, this.triggerVolumeGroupComponentType)
+      );
       entityStoreRegistry.registerSystem(new TriggerVolumePrefabPasteRemapSystem(this.managerResourceType));
+      entityStoreRegistry.registerSystem(new TriggerVolumeWorldGenHandler(this.managerResourceType, this.triggerVolumeComponentType));
+      entityStoreRegistry.registerSystem(new TriggerVolumeGroupWorldGenHandler(this.managerResourceType, this.triggerVolumeGroupComponentType));
+      this.getChunkStoreRegistry().registerSystem(new TriggerVolumeChunkRegenSystem(this.managerResourceType));
       this.getCodecRegistry(Interaction.CODEC).register("DestroyTaggedVolumes", DestroyTaggedVolumesInteraction.class, DestroyTaggedVolumesInteraction.CODEC);
       this.getCommandRegistry().registerCommand(new TriggerVolumeCommand());
       ServerManager.get().registerSubPacketHandlers(TriggerVolumeToolPacketHandler::new);
@@ -215,7 +238,12 @@ public class TriggerVolumesPlugin extends JavaPlugin {
       TriggerEffect.CODEC.register("ControlDoors", ControlDoorsEffect.class, ControlDoorsEffect.CODEC);
       TriggerEffect.CODEC.register("DestroyVolume", DestroyVolumeEffect.class, DestroyVolumeEffect.CODEC);
       TriggerEffect.CODEC.register("DamageEntity", DamageEntityEffect.class, DamageEntityEffect.CODEC);
+      TriggerEffect.CODEC.register("RunRootInteraction", RunRootInteractionEffect.class, RunRootInteractionEffect.CODEC);
+      TriggerEffect.CODEC.register("SetMusic", SetMusicEffect.class, SetMusicEffect.CODEC);
+      TriggerEffect.CODEC.register("GiveItem", GiveItemEffect.class, GiveItemEffect.CODEC);
+      TriggerEffect.CODEC.register("SetGameMode", SetGameModeEffect.class, SetGameModeEffect.CODEC);
       this.registerAssetSource("EntityEffect", () -> EntityEffect.getAssetMap().getAssetMap().keySet());
+      this.registerAssetSource("Item", () -> Item.getAssetMap().getAssetMap().keySet());
       this.registerAssetSource("SoundEvent", () -> SoundEvent.getAssetMap().getAssetMap().keySet());
       this.registerAssetSource("EffectAsset", () -> {
          AssetStore<String, TriggerEffectAsset, DefaultAssetMap<String, TriggerEffectAsset>> store = AssetRegistry.getAssetStore(TriggerEffectAsset.class);
@@ -226,6 +254,8 @@ public class TriggerVolumesPlugin extends JavaPlugin {
       this.registerAssetSource("Prefab", TriggerVolumesPlugin::collectPrefabRelPaths);
       this.registerAssetSource("ParticleSystem", () -> ParticleSystem.getAssetMap().getAssetMap().keySet());
       this.registerAssetSource("ManualSpawnMarker", TriggerVolumesPlugin::collectManualSpawnMarkerIds);
+      this.registerAssetSource("RootInteraction", () -> RootInteraction.getAssetMap().getAssetMap().keySet());
+      this.registerAssetSource("MusicContainer", () -> MusicContainer.getAssetMap().getAssetMap().keySet());
       this.registerAssetField("EntityEffect", "Effect", "EntityEffect");
       this.registerAssetField("PlaySound", "SoundEvent", "SoundEvent");
       this.registerAssetField("Conditional", "EffectAssetRef", "EffectAsset");
@@ -234,6 +264,9 @@ public class TriggerVolumesPlugin extends JavaPlugin {
       this.registerAssetField("PastePrefab", "Prefab", "Prefab");
       this.registerAssetField("PlayVfx", "ParticleSystem", "ParticleSystem");
       this.registerAssetField("TriggerNpcMarkers", "MarkerType", "ManualSpawnMarker");
+      this.registerAssetField("RunRootInteraction", "RootInteraction", "RootInteraction");
+      this.registerAssetField("SetMusic", "MusicContainer", "MusicContainer");
+      this.registerAssetField("GiveItem", "Item", "Item");
    }
 
    @Nonnull

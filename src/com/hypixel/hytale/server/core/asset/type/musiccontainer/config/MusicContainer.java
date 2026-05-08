@@ -6,7 +6,10 @@ import com.hypixel.hytale.assetstore.AssetRegistry;
 import com.hypixel.hytale.assetstore.AssetStore;
 import com.hypixel.hytale.assetstore.codec.AssetCodecMapCodec;
 import com.hypixel.hytale.assetstore.codec.ContainedAssetCodec;
+import com.hypixel.hytale.assetstore.event.LoadedAssetsEvent;
+import com.hypixel.hytale.assetstore.event.RemovedAssetsEvent;
 import com.hypixel.hytale.assetstore.map.IndexedAssetMap;
+import com.hypixel.hytale.assetstore.map.IndexedLookupTableAssetMap;
 import com.hypixel.hytale.assetstore.map.JsonAssetWithMap;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
@@ -21,6 +24,9 @@ import com.hypixel.hytale.protocol.MusicTransitionType;
 import com.hypixel.hytale.protocol.Rangef;
 import com.hypixel.hytale.protocol.TempoSettings;
 import com.hypixel.hytale.server.core.asset.type.audiocategory.config.AudioCategory;
+import com.hypixel.hytale.server.core.asset.type.audiostate.config.AudioState;
+import com.hypixel.hytale.server.core.asset.type.audiostate.config.AudioStateResolver;
+import com.hypixel.hytale.server.core.asset.type.audiostate.config.StateBindingConfig;
 import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import javax.annotation.Nonnull;
@@ -128,6 +134,15 @@ public abstract class MusicContainer
       )
       .documentation("If true, this container plays to completion before yielding to higher-priority music.")
       .add()
+      .<Float>appendInherited(
+         new KeyedCodec<>("ResumeMemoryDuration", Codec.FLOAT),
+         (mc, v) -> mc.resumeMemoryDuration = v,
+         mc -> mc.resumeMemoryDuration,
+         (mc, parent) -> mc.resumeMemoryDuration = parent.resumeMemoryDuration
+      )
+      .documentation("How long to retain this container's playback state after leaving so a return resumes mid-track instead of restarting.")
+      .addValidator(Validators.min(0.0F))
+      .add()
       .<String>appendInherited(
          new KeyedCodec<>("NameTranslationKey", Codec.STRING),
          (mc, s) -> mc.nameTranslationKey = s,
@@ -148,11 +163,17 @@ public abstract class MusicContainer
       .<TempoSettings>appendInherited(new KeyedCodec<>("Tempo", TEMPO_CODEC), (mc, v) -> mc.tempo = v, mc -> mc.tempo, (mc, parent) -> mc.tempo = parent.tempo)
       .documentation("Tempo and beat grid settings.")
       .add()
+      .<StateBindingConfig[]>append(new KeyedCodec<>("StateBindings", StateBindingConfig.CODEC_ARRAY), (mc, v) -> mc.stateBindings = v, mc -> mc.stateBindings)
+      .documentation("Subscribe this container to one or more AudioState axes. Per-state volume deltas will be applied to the container and its descendants.")
+      .add()
       .afterDecode(mc -> {
          if (mc.audioCategoryId != null) {
             mc.audioCategoryIndex = AudioCategory.getAssetMap().getIndex(mc.audioCategoryId);
          }
+
+         AudioStateResolver.resolveBindings(mc.stateBindings);
       })
+      .validator((mc, results) -> AudioStateResolver.validateBindings(mc.stateBindings, "MusicContainer '" + mc.id + "'", results))
       .build();
    public static final int EMPTY_ID = 0;
    public static final MusicContainer EMPTY = new SingleTrackMusicContainer("Empty");
@@ -173,6 +194,7 @@ public abstract class MusicContainer
    protected MusicTransitionType transitionType = MusicTransitionType.Crossfade;
    protected float transitionDuration;
    protected boolean playToCompletion;
+   protected float resumeMemoryDuration = 30.0F;
    @Nullable
    protected String nameTranslationKey;
    @Nullable
@@ -180,6 +202,8 @@ public abstract class MusicContainer
    protected transient int audioCategoryIndex = 0;
    @Nullable
    protected TempoSettings tempo;
+   @Nullable
+   protected StateBindingConfig[] stateBindings;
 
    public static AssetStore<String, MusicContainer, IndexedAssetMap<String, MusicContainer>> getAssetStore() {
       if (ASSET_STORE == null) {
@@ -226,6 +250,28 @@ public abstract class MusicContainer
       return new String[0];
    }
 
+   public void refreshAudioStateResolution() {
+      AudioStateResolver.resolveBindings(this.stateBindings);
+   }
+
+   public static void onAudioStateLoaded(@Nonnull LoadedAssetsEvent<String, AudioState, IndexedLookupTableAssetMap<String, AudioState>> event) {
+      if (!event.isInitial()) {
+         refreshAllAudioStateResolutions();
+      }
+   }
+
+   public static void onAudioStateRemoved(@Nonnull RemovedAssetsEvent<String, AudioState, IndexedLookupTableAssetMap<String, AudioState>> event) {
+      refreshAllAudioStateResolutions();
+   }
+
+   private static void refreshAllAudioStateResolutions() {
+      for (MusicContainer mc : getAssetMap().getAssetMap().values()) {
+         if (mc != null) {
+            mc.refreshAudioStateResolution();
+         }
+      }
+   }
+
    protected void fillBasePacketFields(@Nonnull com.hypixel.hytale.protocol.MusicContainer packet) {
       packet.volume = this.volume;
       packet.loopCount = this.loopCount;
@@ -237,9 +283,11 @@ public abstract class MusicContainer
       packet.transitionType = this.transitionType;
       packet.transitionDuration = this.transitionDuration;
       packet.playToCompletion = this.playToCompletion;
+      packet.resumeMemoryDuration = this.resumeMemoryDuration;
       packet.nameTranslationKey = this.nameTranslationKey;
       packet.audioCategoryIndex = this.audioCategoryIndex;
       packet.tempo = this.tempo;
+      packet.stateBindings = AudioStateResolver.toPacketArray(this.stateBindings);
    }
 
    @Nonnull

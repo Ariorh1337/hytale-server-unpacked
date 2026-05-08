@@ -10,11 +10,14 @@ import com.hypixel.hytale.protocol.AmbienceFXSoundPlay3D;
 import com.hypixel.hytale.protocol.Range;
 import com.hypixel.hytale.protocol.Rangeb;
 import com.hypixel.hytale.protocol.Rangef;
+import com.hypixel.hytale.server.core.asset.type.audiostate.config.AudioStateResolver;
+import com.hypixel.hytale.server.core.asset.type.audiostate.config.StateBindingConfig;
 import com.hypixel.hytale.server.core.asset.type.blocksound.config.BlockSoundSet;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class AmbienceFXSound implements NetworkSerializable<com.hypixel.hytale.protocol.AmbienceFXSound> {
    public static final BuilderCodec<AmbienceFXSound> CODEC = BuilderCodec.builder(AmbienceFXSound.class, AmbienceFXSound::new)
@@ -65,6 +68,13 @@ public class AmbienceFXSound implements NetworkSerializable<com.hypixel.hytale.p
          ambienceFXSound -> ambienceFXSound.sunlightRange
       )
       .documentation("Required sunlight range for finding positions at which to play the sound. High values can be considered to be \"exterior\".")
+      .<StateBindingConfig[]>append(
+         new KeyedCodec<>("StateBindings", StateBindingConfig.CODEC_ARRAY),
+         (ambienceFXSound, v) -> ambienceFXSound.stateBindings = v,
+         ambienceFXSound -> ambienceFXSound.stateBindings
+      )
+      .documentation("Subscribe this AmbienceFX sound to AudioState axes. Per-state volume deltas will apply as a result.")
+      .add()
       .afterDecode(AmbienceFXSound::processConfig)
       .build();
    public static final Rangef DEFAULT_FREQUENCY = new Rangef(1.0F, 10.0F);
@@ -79,6 +89,8 @@ public class AmbienceFXSound implements NetworkSerializable<com.hypixel.hytale.p
    protected Range radius = DEFAULT_RADIUS;
    protected int maxBodiesPerEmitter = 8;
    protected Rangeb sunlightRange;
+   @Nullable
+   protected StateBindingConfig[] stateBindings;
 
    public AmbienceFXSound(
       String soundEventId,
@@ -112,7 +124,13 @@ public class AmbienceFXSound implements NetworkSerializable<com.hypixel.hytale.p
       packet.radius = this.radius;
       packet.maxBodiesPerEmitter = this.maxBodiesPerEmitter;
       packet.sunlightRange = this.sunlightRange;
+      packet.stateBindings = AudioStateResolver.toPacketArray(this.stateBindings);
       return packet;
+   }
+
+   @Nullable
+   public StateBindingConfig[] getStateBindings() {
+      return this.stateBindings;
    }
 
    public String getSoundEventId() {

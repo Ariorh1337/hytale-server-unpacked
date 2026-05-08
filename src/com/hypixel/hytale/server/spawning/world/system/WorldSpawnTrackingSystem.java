@@ -173,6 +173,7 @@ public class WorldSpawnTrackingSystem extends RefSystem<EntityStore> {
          WorldSpawnData worldSpawnData = store.getResource(this.worldSpawnDataResourceType);
          switch (reason) {
             case REMOVE:
+            case BUILDER_TOOLS_UNDO:
                int environmentIndex = npcComponent.getEnvironment();
                if (!untrackNPC(environmentIndex, npcComponent.getSpawnRoleIndex(), worldSpawnData)) {
                   return;

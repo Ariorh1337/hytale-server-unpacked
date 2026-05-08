@@ -523,7 +523,7 @@
   "ServerVersion": "*",
   "Dependencies": {
     "Hytale:NPC": "*",
-    "Hytale:Ambience": "*",
+    "Hytale:Audio": "*",
     "Hytale:Instances": "*",
     "Hytale:InteractionModule": "*"
   }
@@ -547,6 +547,17 @@
   "Version": "1.0.0",
   "Website": "https://hypixel.com/",
   "Main": "com.hypixel.hytale.builtin.ambience.AmbiencePlugin",
+  "ServerVersion": "*",
+  "Dependencies": {
+    "Hytale:EntityModule": "*"
+  }
+}
+,{
+  "Group": "Hytale",
+  "Name": "Audio",
+  "Version": "1.0.0",
+  "Website": "https://hypixel.com/",
+  "Main": "com.hypixel.hytale.builtin.audio.AudioPlugin",
   "ServerVersion": "*",
   "Dependencies": {
     "Hytale:EntityModule": "*"
@@ -588,7 +599,8 @@
     "Hytale:I18nModule": "*",
     "Hytale:EntityModule": "*",
     "Hytale:BuilderTools": "*",
-    "Hytale:NPC": "*"
+    "Hytale:NPC": "*",
+    "Hytale:Audio": "*"
   }
 }
 ,{

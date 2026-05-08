@@ -101,7 +101,7 @@ public class TriggerVolumeEffectEditorPage extends InteractiveCustomUIPage<Trigg
       this.readOnlyGroup = null;
       this.groupId = null;
       this.groupMembers = List.of();
-      this.workingEffects = new ArrayList<>(volumeEntry.getEffects());
+      this.workingEffects = TriggerEffect.deepCopyList(volumeEntry.getEffects());
    }
 
    public TriggerVolumeEffectEditorPage(
@@ -114,7 +114,7 @@ public class TriggerVolumeEffectEditorPage extends InteractiveCustomUIPage<Trigg
       this.readOnlyGroup = readOnlyGroup;
       this.groupId = null;
       this.groupMembers = List.of();
-      this.workingEffects = new ArrayList<>(volumeEntry.getEffects());
+      this.workingEffects = TriggerEffect.deepCopyList(volumeEntry.getEffects());
    }
 
    public TriggerVolumeEffectEditorPage(
@@ -132,7 +132,7 @@ public class TriggerVolumeEffectEditorPage extends InteractiveCustomUIPage<Trigg
       this.groupId = groupId;
       this.groupMembers = groupMembers;
       GroupEntry g = manager.getGroup(groupId);
-      this.workingEffects = g != null ? new ArrayList<>(g.getEffects()) : new ArrayList<>();
+      this.workingEffects = g != null ? TriggerEffect.deepCopyList(g.getEffects()) : new ArrayList<>();
    }
 
    @Override
@@ -335,6 +335,7 @@ public class TriggerVolumeEffectEditorPage extends InteractiveCustomUIPage<Trigg
             row,
             Message.translation("server.customUI.triggerVolumeEffectEditor.baseField.event"),
             "Event",
+            Message.translation("server.customUI.triggerVolumeEffectEditor.baseField.event.tooltip"),
             Arrays.stream(TriggerEventType.values()).map(Enum::name).toList(),
             effect.getEventType() != null ? effect.getEventType().name() : TriggerEventType.ENTER.name()
          );
@@ -344,11 +345,19 @@ public class TriggerVolumeEffectEditorPage extends InteractiveCustomUIPage<Trigg
             row,
             Message.translation("server.customUI.triggerVolumeEffectEditor.baseField.interval"),
             "Interval",
+            Message.translation("server.customUI.triggerVolumeEffectEditor.baseField.interval.tooltip"),
             String.valueOf(effect.getInterval()),
             2
          );
          row = this.addNumberRow(
-            cmd, evt, row, Message.translation("server.customUI.triggerVolumeEffectEditor.effectDelay"), "Delay", String.valueOf(effect.getDelay()), 1
+            cmd,
+            evt,
+            row,
+            Message.translation("server.customUI.triggerVolumeEffectEditor.effectDelay"),
+            "Delay",
+            Message.translation("server.customUI.triggerVolumeEffectEditor.effectDelay.tooltip"),
+            String.valueOf(effect.getDelay()),
+            1
          );
          BuilderCodec<TriggerEffect> codec = getBuilderCodecFor(typeId);
          if (codec != null) {
@@ -443,12 +452,24 @@ public class TriggerVolumeEffectEditorPage extends InteractiveCustomUIPage<Trigg
       return Message.translation("server.customUI.triggerVolumeEffectEditor.field." + typeId + "." + fieldKey);
    }
 
+   @Nonnull
+   private static Message fieldTooltip(@Nonnull String typeId, @Nonnull String fieldKey) {
+      return Message.translation("server.customUI.triggerVolumeEffectEditor.field." + typeId + "." + fieldKey + ".tooltip");
+   }
+
+   private static void setFieldTooltip(@Nonnull UICommandBuilder cmd, @Nonnull String selector, @Nonnull String typeId, @Nonnull String fieldKey) {
+      if (!typeId.isEmpty()) {
+         cmd.set(selector + " #Label.TooltipText", fieldTooltip(typeId, fieldKey));
+      }
+   }
+
    private int addTextRow(
       @Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder evt, int row, @Nonnull String typeId, @Nonnull String key, @Nonnull String value
    ) {
       String sel = "#DetailPanel[" + row + "]";
       cmd.append("#DetailPanel", "Pages/Fields/TextRow.ui");
       cmd.set(sel + " #Label.Text", fieldLabel(typeId, key));
+      setFieldTooltip(cmd, sel, typeId, key);
       cmd.set(sel + " #Input.Value", value);
       evt.addEventBinding(CustomUIEventBindingType.ValueChanged, sel + " #Input", paramEvent(key, sel + " #Input.Value"), false);
       return row + 1;
@@ -463,7 +484,7 @@ public class TriggerVolumeEffectEditorPage extends InteractiveCustomUIPage<Trigg
       @Nonnull String value,
       int decimals
    ) {
-      return this.addNumberRow(cmd, evt, row, typeId, paramKey, fieldLabel(typeId, paramKey), value, decimals);
+      return this.addNumberRow(cmd, evt, row, typeId, paramKey, fieldLabel(typeId, paramKey), null, value, decimals);
    }
 
    private int addNumberRow(
@@ -473,6 +494,7 @@ public class TriggerVolumeEffectEditorPage extends InteractiveCustomUIPage<Trigg
       @Nonnull String typeId,
       @Nonnull String paramKey,
       @Nonnull Object label,
+      @Nullable Message tooltip,
       @Nonnull String value,
       int decimals
    ) {
@@ -482,6 +504,12 @@ public class TriggerVolumeEffectEditorPage extends InteractiveCustomUIPage<Trigg
          cmd.set(sel + " #Label.Text", m);
       } else {
          cmd.set(sel + " #Label.Text", label.toString());
+      }
+
+      if (tooltip != null) {
+         cmd.set(sel + " #Label.TooltipText", tooltip);
+      } else {
+         setFieldTooltip(cmd, sel, typeId, paramKey);
       }
 
       try {
@@ -498,6 +526,7 @@ public class TriggerVolumeEffectEditorPage extends InteractiveCustomUIPage<Trigg
       String sel = "#DetailPanel[" + row + "]";
       cmd.append("#DetailPanel", "Pages/Fields/CheckboxRow.ui");
       cmd.set(sel + " #Label.Text", fieldLabel(typeId, key));
+      setFieldTooltip(cmd, sel, typeId, key);
       cmd.set(sel + " #Input.Value", value);
       evt.addEventBinding(CustomUIEventBindingType.ValueChanged, sel + " #Input", boolParamEvent(key, sel + " #Input.Value"), false);
       return row + 1;
@@ -515,6 +544,7 @@ public class TriggerVolumeEffectEditorPage extends InteractiveCustomUIPage<Trigg
       String sel = "#DetailPanel[" + row + "]";
       cmd.append("#DetailPanel", "Pages/Fields/DropdownRow.ui");
       cmd.set(sel + " #Label.Text", fieldLabel(typeId, key));
+      setFieldTooltip(cmd, sel, typeId, key);
       ObjectArrayList<DropdownEntryInfo> entries = new ObjectArrayList<>();
 
       for (String opt : options) {
@@ -536,9 +566,26 @@ public class TriggerVolumeEffectEditorPage extends InteractiveCustomUIPage<Trigg
       @Nonnull List<String> options,
       @Nonnull String value
    ) {
+      return this.addDropdownRow(cmd, evt, row, label, paramKey, null, options, value);
+   }
+
+   private int addDropdownRow(
+      @Nonnull UICommandBuilder cmd,
+      @Nonnull UIEventBuilder evt,
+      int row,
+      @Nonnull Message label,
+      @Nonnull String paramKey,
+      @Nullable Message tooltip,
+      @Nonnull List<String> options,
+      @Nonnull String value
+   ) {
       String sel = "#DetailPanel[" + row + "]";
       cmd.append("#DetailPanel", "Pages/Fields/DropdownRow.ui");
       cmd.set(sel + " #Label.Text", label);
+      if (tooltip != null) {
+         cmd.set(sel + " #Label.TooltipText", tooltip);
+      }
+
       ObjectArrayList<DropdownEntryInfo> entries = new ObjectArrayList<>();
 
       for (String opt : options) {
@@ -560,7 +607,20 @@ public class TriggerVolumeEffectEditorPage extends InteractiveCustomUIPage<Trigg
       @Nonnull String value,
       int decimals
    ) {
-      return this.addNumberRow(cmd, evt, row, "", paramKey, label, value, decimals);
+      return this.addNumberRow(cmd, evt, row, label, paramKey, null, value, decimals);
+   }
+
+   private int addNumberRow(
+      @Nonnull UICommandBuilder cmd,
+      @Nonnull UIEventBuilder evt,
+      int row,
+      @Nonnull Message label,
+      @Nonnull String paramKey,
+      @Nullable Message tooltip,
+      @Nonnull String value,
+      int decimals
+   ) {
+      return this.addNumberRow(cmd, evt, row, "", paramKey, label, tooltip, value, decimals);
    }
 
    private int addVec3Row(
@@ -569,6 +629,7 @@ public class TriggerVolumeEffectEditorPage extends InteractiveCustomUIPage<Trigg
       String sel = "#DetailPanel[" + row + "]";
       cmd.append("#DetailPanel", "Pages/Fields/Vec3Row.ui");
       cmd.set(sel + " #Label.Text", fieldLabel(typeId, key));
+      setFieldTooltip(cmd, sel, typeId, key);
       cmd.set(sel + " #X.Value", x);
       cmd.set(sel + " #Y.Value", y);
       cmd.set(sel + " #Z.Value", z);
@@ -596,6 +657,7 @@ public class TriggerVolumeEffectEditorPage extends InteractiveCustomUIPage<Trigg
       String sel = "#DetailPanel[" + row + "]";
       cmd.append("#DetailPanel", "Pages/Fields/AssetPickerRow.ui");
       cmd.set(sel + " #Label.Text", fieldLabel(typeId, key));
+      setFieldTooltip(cmd, sel, typeId, key);
       if (value.isEmpty()) {
          cmd.set(sel + " #PickerLabel.Text", Message.translation("server.customUI.triggerVolumeEffectEditor.assetPicker.none"));
       } else {
@@ -879,7 +941,7 @@ public class TriggerVolumeEffectEditorPage extends InteractiveCustomUIPage<Trigg
          GroupEntry g = this.manager.getGroup(this.groupId);
          if (g != null) {
             g.getEffects().clear();
-            g.getEffects().addAll(this.workingEffects);
+            g.getEffects().addAll(TriggerEffect.deepCopyList(this.workingEffects));
 
             for (VolumeEntry m : this.groupMembers) {
                this.manager.notifyViewersAdd(m);
@@ -887,7 +949,7 @@ public class TriggerVolumeEffectEditorPage extends InteractiveCustomUIPage<Trigg
          }
       } else {
          this.volumeEntry.getEffects().clear();
-         this.volumeEntry.getEffects().addAll(this.workingEffects);
+         this.volumeEntry.getEffects().addAll(TriggerEffect.deepCopyList(this.workingEffects));
          this.volumeEntry.setEffectAssetRef(null);
          this.manager.notifyViewersAdd(this.volumeEntry);
       }
@@ -897,7 +959,7 @@ public class TriggerVolumeEffectEditorPage extends InteractiveCustomUIPage<Trigg
       String gid = this.volumeEntry.getGroupId();
       if (gid != null) {
          this.volumeEntry.getEffects().clear();
-         this.volumeEntry.getEffects().addAll(this.workingEffects);
+         this.volumeEntry.getEffects().addAll(TriggerEffect.deepCopyList(this.workingEffects));
          this.volumeEntry.setEffectAssetRef(null);
          this.manager.notifyViewersAdd(this.volumeEntry);
          List<VolumeEntry> members = this.manager.getGroupMembers(gid);
@@ -1020,7 +1082,7 @@ public class TriggerVolumeEffectEditorPage extends InteractiveCustomUIPage<Trigg
                this.playerRef.sendMessage(Message.translation("server.customUI.triggerVolumeEffectEditor.presetNotFound").param("name", data.presetId));
             } else {
                this.workingEffects.clear();
-               this.workingEffects.addAll(Arrays.asList(effectAsset.getEffects()));
+               this.workingEffects.addAll(TriggerEffect.deepCopyList(Arrays.asList(effectAsset.getEffects())));
                this.selectedEffectIndex = this.workingEffects.isEmpty() ? -1 : 0;
                this.commitWorkingEffects();
                this.playerRef.sendMessage(Message.translation("server.customUI.triggerVolumeEffectEditor.presetLoaded").param("name", data.presetId));
@@ -1083,7 +1145,7 @@ public class TriggerVolumeEffectEditorPage extends InteractiveCustomUIPage<Trigg
             String typeId = getTypeId(effect);
             BuilderCodec<TriggerEffect> codec = getBuilderCodecFor(typeId);
             if (codec != null) {
-               this.applyPickerValue(codec, effect, this.pendingPickerFieldKey, data.assetPickerSelection);
+               this.applyPickerValue(codec, effect, this.pendingPickerFieldKey, data.assetPickerSelection.isEmpty() ? null : data.assetPickerSelection);
             }
          }
 
@@ -1108,13 +1170,15 @@ public class TriggerVolumeEffectEditorPage extends InteractiveCustomUIPage<Trigg
       this.sendUpdate(cmd);
    }
 
-   private void applyPickerValue(@Nonnull BuilderCodec<TriggerEffect> codec, @Nonnull TriggerEffect effect, @Nonnull String fieldKey, @Nonnull String value) {
+   private void applyPickerValue(@Nonnull BuilderCodec<TriggerEffect> codec, @Nonnull TriggerEffect effect, @Nonnull String fieldKey, @Nullable String value) {
       List<BuilderField<TriggerEffect, ?>> fieldList = codec.getEntries().get(fieldKey);
       if (fieldList != null && !fieldList.isEmpty()) {
          BuilderField field = fieldList.getLast();
          ExtraInfo extraInfo = ExtraInfo.THREAD_LOCAL.get();
          BsonDocument doc = new BsonDocument();
-         doc.put(fieldKey, new BsonString(value));
+         if (value != null) {
+            doc.put(fieldKey, new BsonString(value));
+         }
 
          try {
             field.decode(doc, effect, extraInfo);
@@ -1130,10 +1194,11 @@ public class TriggerVolumeEffectEditorPage extends InteractiveCustomUIPage<Trigg
       List<String> filtered;
       if (!this.assetPickerSearchQuery.isEmpty()) {
          Object2IntMap<String> scored = new Object2IntOpenHashMap<>(allIds.size());
+         String queryLower = this.assetPickerSearchQuery.toLowerCase(Locale.ROOT);
 
          for (String id : allIds) {
-            int distance = StringCompareUtil.getFuzzyDistance(id, this.assetPickerSearchQuery, Locale.ROOT);
-            if (distance > 0) {
+            if (id.toLowerCase(Locale.ROOT).contains(queryLower)) {
+               int distance = StringCompareUtil.getFuzzyDistance(id, this.assetPickerSearchQuery, Locale.ROOT);
                scored.put(id, distance);
             }
          }
@@ -1144,10 +1209,17 @@ public class TriggerVolumeEffectEditorPage extends InteractiveCustomUIPage<Trigg
       }
 
       cmd.set("#AssetPickerNoResults.Visible", filtered.isEmpty());
+      cmd.append("#AssetPickerList", "Common/TextButton.ui");
+      cmd.set("#AssetPickerList[0] #Button.Text", Message.translation("server.customUI.triggerVolumeEffectEditor.assetPicker.clearEntry"));
+      evt.addEventBinding(
+         CustomUIEventBindingType.Activating,
+         "#AssetPickerList[0] #Button",
+         new EventData().append("Action", TriggerVolumeEffectEditorPage.Action.AssetPickerSelect.name()).append("AssetPickerSelection", "")
+      );
 
       for (int i = 0; i < filtered.size(); i++) {
          String id = filtered.get(i);
-         String sel = "#AssetPickerList[" + i + "]";
+         String sel = "#AssetPickerList[" + (i + 1) + "]";
          cmd.append("#AssetPickerList", "Common/TextButton.ui");
          cmd.set(sel + " #Button.Text", id);
          evt.addEventBinding(

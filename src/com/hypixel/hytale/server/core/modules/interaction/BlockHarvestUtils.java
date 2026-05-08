@@ -594,9 +594,12 @@ public class BlockHarvestUtils {
          int blockTypeIndex = blockSection.get(x, y, z);
          BlockType blockTypeAsset = BlockType.getAssetMap().getAsset(blockTypeIndex);
          boolean isNaturalBlockBreak = BlockInteractionUtils.isNaturalAction(ref, entityStore);
-         setBlockSettings |= 256;
          if (!isNaturalBlockBreak) {
             setBlockSettings |= 2048;
+         }
+
+         if (!BlockInteractionUtils.isNoPhysics(ref, entityStore)) {
+            setBlockSettings |= 256;
          }
 
          naturallyRemoveBlock(

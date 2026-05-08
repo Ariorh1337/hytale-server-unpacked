@@ -24,12 +24,22 @@ public class PlayVfxEffect extends TriggerEffect {
       .add()
       .append(new KeyedCodec<>("AtEntity", Codec.BOOLEAN, false), (e, v) -> e.atEntity = v, e -> e.atEntity)
       .add()
+      .append(new KeyedCodec<>("Scale", Codec.FLOAT, false), (e, v) -> e.scale = v, e -> e.scale)
+      .add()
+      .append(new KeyedCodec<>("Rotation", Vector3dUtil.CODEC, false), (e, v) -> e.rotation = v, e -> e.rotation)
+      .add()
+      .append(new KeyedCodec<>("Duration", Codec.FLOAT, false), (e, v) -> e.duration = v, e -> e.duration)
+      .add()
       .build();
    @Nullable
    private String particleSystem;
    @Nonnull
    private Vector3d offset = new Vector3d();
    private boolean atEntity;
+   private float scale = 1.0F;
+   @Nonnull
+   private Vector3d rotation = new Vector3d();
+   private float duration;
 
    @Nonnull
    public static PlayVfxEffect create(@Nonnull TriggerEventType eventType, @Nonnull String particleSystem, boolean atEntity) {
@@ -56,7 +66,16 @@ public class PlayVfxEffect extends TriggerEffect {
             position = new Vector3d(context.getVolume().getPosition()).add(this.offset);
          }
 
-         ParticleUtil.spawnParticleEffect(this.particleSystem, position, store);
+         ParticleUtil.spawnParticleEffect(
+            this.particleSystem,
+            position,
+            (float)Math.toRadians(this.rotation.x),
+            (float)Math.toRadians(this.rotation.y),
+            (float)Math.toRadians(this.rotation.z),
+            this.scale,
+            this.duration,
+            store
+         );
       }
    }
 }

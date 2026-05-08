@@ -65,8 +65,8 @@ public class UpdateTriggerVolumeDisplay implements Packet, ToClientPacket {
             throw ProtocolException.arrayTooLong("Volumes", volumesCount, 4096000);
          }
 
-         if (pos + volumesVarLen + volumesCount * 57L > buf.readableBytes()) {
-            throw ProtocolException.bufferTooSmall("Volumes", pos + volumesVarLen + volumesCount * 57, buf.readableBytes());
+         if (pos + volumesVarLen + volumesCount * 58L > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Volumes", pos + volumesVarLen + volumesCount * 58, buf.readableBytes());
          }
 
          pos += volumesVarLen;

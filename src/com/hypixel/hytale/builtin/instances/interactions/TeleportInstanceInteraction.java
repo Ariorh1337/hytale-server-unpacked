@@ -7,7 +7,6 @@ import com.hypixel.hytale.builtin.instances.blocks.InstanceBlock;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.codec.codecs.EnumCodec;
 import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.component.AddReason;
 import com.hypixel.hytale.component.Archetype;
@@ -34,6 +33,7 @@ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponen
 import com.hypixel.hytale.server.core.modules.entity.teleport.PendingTeleport;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.OriginSource;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInstantInteraction;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -77,11 +77,8 @@ public class TeleportInstanceInteraction extends SimpleInstantInteraction {
       .<Rotation3f>appendInherited(new KeyedCodec<>("Rotation", Rotation3f.CODEC), (o, i) -> o.rotation = i, o -> o.rotation, (o, p) -> o.rotation = p.rotation)
       .documentation("The rotation to set the player to when returning from an instance.")
       .add()
-      .<TeleportInstanceInteraction.OriginSource>appendInherited(
-         new KeyedCodec<>("OriginSource", TeleportInstanceInteraction.OriginSource.CODEC),
-         (o, i) -> o.originSource = i,
-         o -> o.originSource,
-         (o, p) -> o.originSource = p.originSource
+      .<OriginSource>appendInherited(
+         new KeyedCodec<>("OriginSource", OriginSource.CODEC), (o, i) -> o.originSource = i, o -> o.originSource, (o, p) -> o.originSource = p.originSource
       )
       .documentation("The source to use for the return position.\n\nDefaults to the player's position.")
       .addValidator(Validators.nonNull())
@@ -126,7 +123,7 @@ public class TeleportInstanceInteraction extends SimpleInstantInteraction {
    private Vector3d positionOffset;
    private Rotation3f rotation;
    @Nonnull
-   private TeleportInstanceInteraction.OriginSource originSource = TeleportInstanceInteraction.OriginSource.PLAYER;
+   private OriginSource originSource = OriginSource.ENTITY;
    private boolean personalReturnPoint = false;
    private boolean closeOnBlockRemove = true;
    private double removeBlockAfter = -1.0;
@@ -265,7 +262,7 @@ public class TeleportInstanceInteraction extends SimpleInstantInteraction {
    ) {
       Transform transform = null;
       switch (this.originSource) {
-         case PLAYER:
+         case ENTITY:
             TransformComponent transformComponent = componentAccessor.getComponent(playerRef, TransformComponent.getComponentType());
             assert transformComponent != null;
             transform = new Transform(transformComponent.getTransform());
@@ -306,15 +303,5 @@ public class TeleportInstanceInteraction extends SimpleInstantInteraction {
       }
 
       return transform;
-   }
-
-   private enum OriginSource {
-      PLAYER,
-      BLOCK;
-
-      @Nonnull
-      public static EnumCodec<TeleportInstanceInteraction.OriginSource> CODEC = new EnumCodec<>(TeleportInstanceInteraction.OriginSource.class)
-         .documentKey(PLAYER, "The origin of operations will be based on the player's current position.")
-         .documentKey(BLOCK, "The origin of operations will be based on the middle of the block's hitbox.");
    }
 }

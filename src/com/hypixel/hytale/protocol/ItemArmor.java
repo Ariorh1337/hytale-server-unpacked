@@ -28,7 +28,7 @@ public class ItemArmor {
    public Map<Integer, Modifier[]> statModifiers;
    public double baseDamageResistance;
    @Nullable
-   public Map<String, Modifier[]> damageResistance;
+   public Map<String, ResistanceModifier[]> damageResistance;
    @Nullable
    public Map<String, Modifier[]> damageEnhancement;
    @Nullable
@@ -42,7 +42,7 @@ public class ItemArmor {
       @Nullable Cosmetic[] cosmeticsToHide,
       @Nullable Map<Integer, Modifier[]> statModifiers,
       double baseDamageResistance,
-      @Nullable Map<String, Modifier[]> damageResistance,
+      @Nullable Map<String, ResistanceModifier[]> damageResistance,
       @Nullable Map<String, Modifier[]> damageEnhancement,
       @Nullable Map<String, Modifier[]> damageClassEnhancement
    ) {
@@ -203,16 +203,16 @@ public class ItemArmor {
                throw ProtocolException.arrayTooLong("val", valLen, 64);
             }
 
-            if (dictPos + valVarLen + valLen * 6L > buf.readableBytes()) {
-               throw ProtocolException.bufferTooSmall("val", dictPos + valVarLen + valLen * 6, buf.readableBytes());
+            if (dictPos + valVarLen + valLen * 5L > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("val", dictPos + valVarLen + valLen * 5, buf.readableBytes());
             }
 
             dictPos += valVarLen;
-            Modifier[] val = new Modifier[valLen];
+            ResistanceModifier[] val = new ResistanceModifier[valLen];
 
             for (int valIdx = 0; valIdx < valLen; valIdx++) {
-               val[valIdx] = Modifier.deserialize(buf, dictPos);
-               dictPos += Modifier.computeBytesConsumed(buf, dictPos);
+               val[valIdx] = ResistanceModifier.deserialize(buf, dictPos);
+               dictPos += ResistanceModifier.computeBytesConsumed(buf, dictPos);
             }
 
             if (obj.damageResistance.put(key, val) != null) {
@@ -413,7 +413,7 @@ public class ItemArmor {
             pos2 += VarInt.size(sl);
 
             for (int j = 0; j < sl; j++) {
-               pos2 += Modifier.computeBytesConsumed(buf, pos2);
+               pos2 += ResistanceModifier.computeBytesConsumed(buf, pos2);
             }
          }
 
@@ -594,12 +594,12 @@ public class ItemArmor {
    }
 
    @Nullable
-   public static Map<String, Modifier[]> getDamageResistance(MemorySegment mem) {
+   public static Map<String, ResistanceModifier[]> getDamageResistance(MemorySegment mem) {
       return getDamageResistance(mem, 0);
    }
 
    @Nullable
-   public static Map<String, Modifier[]> getDamageResistance(MemorySegment mem, int offset) {
+   public static Map<String, ResistanceModifier[]> getDamageResistance(MemorySegment mem, int offset) {
       if (!hasDamageResistance(mem, offset)) {
          return null;
       }
@@ -615,7 +615,7 @@ public class ItemArmor {
          throw ProtocolException.dictionaryTooLarge("DamageResistance", len, 4096000);
       }
 
-      Map<String, Modifier[]> data = new HashMap<>(len);
+      Map<String, ResistanceModifier[]> data = new HashMap<>(len);
       off += (int)(packed >>> 32);
 
       for (int i = 0; i < len; i++) {
@@ -634,15 +634,15 @@ public class ItemArmor {
             throw ProtocolException.arrayTooLong("value", valueLen, 64);
          }
 
-         if (off + valueVarLen + valueLen * 6L > mem.byteSize()) {
-            throw ProtocolException.bufferTooSmall("value", off + valueVarLen + valueLen * 6, (int)mem.byteSize());
+         if (off + valueVarLen + valueLen * 5L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("value", off + valueVarLen + valueLen * 5, (int)mem.byteSize());
          }
 
          off += valueVarLen;
-         Modifier[] value = new Modifier[valueLen];
+         ResistanceModifier[] value = new ResistanceModifier[valueLen];
 
          for (int valueIdx = 0; valueIdx < valueLen; valueIdx++) {
-            value[valueIdx] = Modifier.toObject(mem, off);
+            value[valueIdx] = ResistanceModifier.toObject(mem, off);
             off += value[valueIdx].computeSize();
          }
 
@@ -893,7 +893,7 @@ public class ItemArmor {
          }
       }
 
-      Map<String, Modifier[]> damageResistance = null;
+      Map<String, ResistanceModifier[]> damageResistance = null;
       if (hasDamageResistance(mem, offset)) {
          int off = offset + getValidatedOffset(mem, offset, 18, 30, "DamageResistance");
          long packed = VarInt.getWithLength(mem, off);
@@ -925,15 +925,15 @@ public class ItemArmor {
                throw ProtocolException.arrayTooLong("value", valueLen, 64);
             }
 
-            if (off + valueVarLen + valueLen * 6L > mem.byteSize()) {
-               throw ProtocolException.bufferTooSmall("value", off + valueVarLen + valueLen * 6, (int)mem.byteSize());
+            if (off + valueVarLen + valueLen * 5L > mem.byteSize()) {
+               throw ProtocolException.bufferTooSmall("value", off + valueVarLen + valueLen * 5, (int)mem.byteSize());
             }
 
             off += valueVarLen;
-            Modifier[] value = new Modifier[valueLen];
+            ResistanceModifier[] value = new ResistanceModifier[valueLen];
 
             for (int valueIdx = 0; valueIdx < valueLen; valueIdx++) {
-               value[valueIdx] = Modifier.toObject(mem, off);
+               value[valueIdx] = ResistanceModifier.toObject(mem, off);
                off += value[valueIdx].computeSize();
             }
 
@@ -1134,11 +1134,11 @@ public class ItemArmor {
 
          VarInt.write(buf, this.damageResistance.size());
 
-         for (Entry<String, Modifier[]> e : this.damageResistance.entrySet()) {
+         for (Entry<String, ResistanceModifier[]> e : this.damageResistance.entrySet()) {
             PacketIO.writeVarString(buf, e.getKey(), 4096000);
             VarInt.write(buf, e.getValue().length);
 
-            for (Modifier arrItem : e.getValue()) {
+            for (ResistanceModifier arrItem : e.getValue()) {
                arrItem.serialize(buf);
             }
          }
@@ -1259,11 +1259,11 @@ public class ItemArmor {
 
          varOffset += VarInt.set(mem, varOffset, this.damageResistance.size());
 
-         for (Entry<String, Modifier[]> e : this.damageResistance.entrySet()) {
+         for (Entry<String, ResistanceModifier[]> e : this.damageResistance.entrySet()) {
             varOffset += PacketIO.writeVarString(mem, varOffset, e.getKey(), 16384000);
             varOffset += VarInt.set(mem, varOffset, e.getValue().length);
 
-            for (Modifier arrItem : e.getValue()) {
+            for (ResistanceModifier arrItem : e.getValue()) {
                varOffset += arrItem.serialize(mem, varOffset);
             }
          }
@@ -1333,8 +1333,8 @@ public class ItemArmor {
       if (this.damageResistance != null) {
          int damageResistanceSize = 0;
 
-         for (Entry<String, Modifier[]> kvp : this.damageResistance.entrySet()) {
-            damageResistanceSize += PacketIO.stringSize(kvp.getKey()) + VarInt.size(kvp.getValue().length) + ((Modifier[])kvp.getValue()).length * 6;
+         for (Entry<String, ResistanceModifier[]> kvp : this.damageResistance.entrySet()) {
+            damageResistanceSize += PacketIO.stringSize(kvp.getKey()) + VarInt.size(kvp.getValue().length) + ((ResistanceModifier[])kvp.getValue()).length * 5;
          }
 
          size += VarInt.size(this.damageResistance.size()) + damageResistanceSize;
@@ -1484,7 +1484,7 @@ public class ItemArmor {
             pos += VarInt.size(valueArrCount);
 
             for (int valueArrIdx = 0; valueArrIdx < valueArrCount; valueArrIdx++) {
-               pos += 6;
+               pos += 5;
             }
          }
       }
@@ -1602,10 +1602,10 @@ public class ItemArmor {
 
       copy.baseDamageResistance = this.baseDamageResistance;
       if (this.damageResistance != null) {
-         Map<String, Modifier[]> m = new HashMap<>();
+         Map<String, ResistanceModifier[]> m = new HashMap<>();
 
-         for (Entry<String, Modifier[]> e : this.damageResistance.entrySet()) {
-            m.put(e.getKey(), Arrays.stream(e.getValue()).map(x -> x.clone()).toArray(Modifier[]::new));
+         for (Entry<String, ResistanceModifier[]> e : this.damageResistance.entrySet()) {
+            m.put(e.getKey(), Arrays.stream(e.getValue()).map(x -> x.clone()).toArray(ResistanceModifier[]::new));
          }
 
          copy.damageResistance = m;

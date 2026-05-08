@@ -93,9 +93,9 @@ public class InitialPacketHandler extends PacketHandler {
          this.receivedConnect = true;
          this.clearTimeout();
          this.getChannel().logConnectionTimings("Connect", Level.FINE);
-         if (packet.protocolCrc != 315434396) {
+         if (packet.protocolCrc != -1149927892) {
             int clientBuild = packet.protocolBuildNumber;
-            int serverBuild = 84;
+            int serverBuild = 92;
             QuicApplicationErrorCode errorCode = clientBuild < serverBuild ? QuicApplicationErrorCode.ClientOutdated : QuicApplicationErrorCode.ServerOutdated;
             String serverVersion = ManifestUtil.getImplementationVersion();
             this.getChannel().closeApplicationConnection(errorCode, serverVersion != null ? serverVersion : "unknown");

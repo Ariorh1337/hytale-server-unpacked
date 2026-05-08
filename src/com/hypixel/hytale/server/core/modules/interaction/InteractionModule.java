@@ -94,7 +94,6 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.non
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.StatsConditionInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.StatsConditionWithModifierInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.simple.ApplyEffectInteraction;
-import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.simple.CommandInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.simple.RemoveEntityInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.simple.SendMessageInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.selector.AOECircleSelector;
@@ -265,7 +264,6 @@ public class InteractionModule extends JavaPlugin {
       Interaction.CODEC.register("StatsConditionWithModifier", StatsConditionWithModifierInteraction.class, StatsConditionWithModifierInteraction.CODEC);
       Interaction.CODEC.register("SpawnPrefab", SpawnPrefabInteraction.class, SpawnPrefabInteraction.CODEC);
       Interaction.CODEC.register("SendMessage", SendMessageInteraction.class, SendMessageInteraction.CODEC);
-      Interaction.CODEC.register("Command", CommandInteraction.class, CommandInteraction.CODEC);
       Interaction.CODEC.register("EquipItem", EquipItemInteraction.class, EquipItemInteraction.CODEC);
       Interaction.CODEC.register("RefillContainer", RefillContainerInteraction.class, RefillContainerInteraction.CODEC);
       Interaction.CODEC.register("Door", DoorInteraction.class, DoorInteraction.CODEC);

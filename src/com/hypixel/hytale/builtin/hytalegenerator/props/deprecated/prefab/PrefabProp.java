@@ -34,6 +34,7 @@ import com.hypixel.hytale.server.core.prefab.selection.buffer.impl.PrefabBuffer;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
@@ -69,7 +70,6 @@ public class PrefabProp extends Prop {
    private final Pattern moldingPattern;
    private final MoldingDirection moldingDirection;
    private final boolean moldChildren;
-   private final int prefabId = this.hashCode();
    private boolean loadEntities;
 
    public PrefabProp(
@@ -250,6 +250,7 @@ public class PrefabProp extends Prop {
       try {
          Vector3i prefabPositionVector = position.toVector3i();
          VoxelSpace<Integer> moldingOffsetsFinal = moldingOffsets;
+         int prefabInstanceId = Objects.hash(position.x, position.y, position.z, prefab.hashCode());
          prefab.forEach(
             IPrefabBuffer.iterateAllColumns(),
             (x, yx, z, blockId, holder, support, rotation, filler, call, fluidId, fluidLevel) -> {
@@ -308,7 +309,7 @@ public class PrefabProp extends Prop {
                                  }
 
                                  EntityPlacementData placementData = new EntityPlacementData(
-                                    new Vector3i(), PrefabRotation.ROTATION_0, entityClone, this.prefabId
+                                    new Vector3i(), PrefabRotation.ROTATION_0, entityClone, prefabInstanceId
                                  );
                                  entityBuffer.addEntity(placementData);
                               }

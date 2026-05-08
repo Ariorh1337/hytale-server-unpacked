@@ -66,6 +66,31 @@ public class BoxShape extends TriggerVolumeShape {
       outMax.set(origin).add(this.max);
    }
 
+   @Override
+   public void rotateInPlace(float yawRadians) {
+      if (this.min != null && this.max != null && !(Math.abs(yawRadians) < 1.0E-6F)) {
+         double cos = Math.cos(yawRadians);
+         double sin = Math.sin(yawRadians);
+         Vector3d newMin = new Vector3d(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY);
+         Vector3d newMax = new Vector3d(Double.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY);
+
+         for (double x : new double[]{this.min.x(), this.max.x()}) {
+            for (double y : new double[]{this.min.y(), this.max.y()}) {
+               for (double z : new double[]{this.min.z(), this.max.z()}) {
+                  double rotatedX = x * cos - z * sin;
+                  double rotatedZ = x * sin + z * cos;
+                  newMin.set(Math.min(newMin.x(), rotatedX), Math.min(newMin.y(), y), Math.min(newMin.z(), rotatedZ));
+                  newMax.set(Math.max(newMax.x(), rotatedX), Math.max(newMax.y(), y), Math.max(newMax.z(), rotatedZ));
+               }
+            }
+         }
+
+         this.min.set(newMin);
+         this.max.set(newMax);
+         this.computeDerived();
+      }
+   }
+
    @Nonnull
    public BoxShape copy() {
       return new BoxShape(new Vector3d(this.min), new Vector3d(this.max));

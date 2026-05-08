@@ -495,18 +495,24 @@ public class StagedChunkGenerator implements ChunkGenerator {
       EntityBufferView entityView = new EntityBufferView(entityBufferAccess.createView());
       GeneratedEntityChunk entityChunk = generatedChunk.getEntityChunk();
       TimeInstrument.Probe entitesTransfer_timeProbe = transfer_timeProbe.createProbe("Entities");
-      return CompletableFuture.runAsync(() -> {
-         entitesTransfer_timeProbe.start();
-         entityView.forEach(e -> entityChunk.addEntities(e.getOffset(), e.getRotation(), new Holder[]{e.getEntityHolder()}, arguments.seed()));
-         entitesTransfer_timeProbe.stop();
-      }, this.concurrentExecutor).handle((r, e) -> {
-         if (e == null) {
-            return (Void)r;
-         }
+      return CompletableFuture.runAsync(
+            () -> {
+               entitesTransfer_timeProbe.start();
+               entityView.forEach(
+                  e -> entityChunk.addEntities(e.getOffset(), e.getRotation(), new Holder[]{e.getEntityHolder()}, arguments.seed(), e.getPrefabInstanceId())
+               );
+               entitesTransfer_timeProbe.stop();
+            },
+            this.concurrentExecutor
+         )
+         .handle((r, e) -> {
+            if (e == null) {
+               return (Void)r;
+            }
 
-         LoggerUtil.logException("a HytaleGenerator async process", e, LoggerUtil.getLogger());
-         return null;
-      });
+            LoggerUtil.logException("a HytaleGenerator async process", e, LoggerUtil.getLogger());
+            return null;
+         });
    }
 
    @Nonnull

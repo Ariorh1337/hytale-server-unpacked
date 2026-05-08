@@ -59,6 +59,7 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
    private static final Value<String> BUTTON_HIGHLIGHTED = Value.ref("Pages/BasicTextButton.ui", "SelectedLabelStyle");
    private static final String ASSETS_ROOT_KEY = "Assets";
+   private static final String BASE_PACK_KEY = "HytaleAssets";
    private final AssetPackSaveBrowser packBrowser = new AssetPackSaveBrowser(AssetPackSaveBrowserConfig.defaults());
    private final List<DropdownEntryInfo> savedConfigsDropdown = new ObjectArrayList<>();
    private volatile boolean isLoading;
@@ -248,6 +249,11 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
          CustomUIEventBindingType.Activating,
          "#MainPage #PrefabPaths #BrowseButton",
          new EventData().append("Action", PrefabEditorLoadSettingsPage.Action.OpenBrowser.name())
+      );
+      eventBuilder.addEventBinding(
+         CustomUIEventBindingType.Activating,
+         "#BrowserPage #BrowserContent #HomeButton",
+         new EventData().append("Action", PrefabEditorLoadSettingsPage.Action.BrowserHome.name())
       );
       eventBuilder.addEventBinding(
          CustomUIEventBindingType.ValueChanged,
@@ -474,7 +480,8 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
                break;
             case OpenBrowser: {
                this.inAssetsRoot = true;
-               this.assetsCurrentDir = Paths.get("");
+               List<PrefabStore.AssetPackPrefabPath> assetPacks = PrefabStore.get().getAllAssetPrefabPaths();
+               this.assetsCurrentDir = assetPacks.size() == 1 ? Paths.get("HytaleAssets") : Paths.get("");
                this.browserRoot = Paths.get("Assets");
                this.browserCurrent = Paths.get("");
                this.selectedPath = null;
@@ -485,10 +492,28 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
                commandBuilder.set("#MainPage.Visible", false);
                commandBuilder.set("#BrowserPage.Visible", true);
                List<DropdownEntryInfo> roots = this.buildBrowserRootEntries();
+               commandBuilder.set("#BrowserPage #BrowserContent #RootSelector.Visible", true);
                commandBuilder.set("#BrowserPage #BrowserContent #RootSelector.Entries", roots);
                commandBuilder.set("#BrowserPage #BrowserContent #RootSelector.Value", "Assets");
                commandBuilder.set("#BrowserPage #BrowserContent #SearchInput.Value", "");
                commandBuilder.set("#BrowserPage #SelectedSection #SelectedItems.Value", "");
+               this.buildBrowserList(commandBuilder, eventBuilder);
+               this.sendUpdate(commandBuilder, eventBuilder, false);
+               break;
+            }
+            case BrowserHome: {
+               if (this.inAssetsRoot) {
+                  List<PrefabStore.AssetPackPrefabPath> packs = PrefabStore.get().getAllAssetPrefabPaths();
+                  this.assetsCurrentDir = packs.size() == 1 ? Paths.get("HytaleAssets") : Paths.get("");
+               } else {
+                  this.browserCurrent = this.browserRoot.getFileSystem().getPath("");
+               }
+
+               this.selectedPath = null;
+               this.browserSearchQuery = "";
+               UICommandBuilder commandBuilder = new UICommandBuilder();
+               UIEventBuilder eventBuilder = new UIEventBuilder();
+               commandBuilder.set("#BrowserPage #BrowserContent #SearchInput.Value", "");
                this.buildBrowserList(commandBuilder, eventBuilder);
                this.sendUpdate(commandBuilder, eventBuilder, false);
                break;
@@ -515,8 +540,9 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
                }
 
                this.inAssetsRoot = "Assets".equals(data.browserRootStr);
-               this.assetsCurrentDir = Paths.get("");
                if (this.inAssetsRoot) {
+                  List<PrefabStore.AssetPackPrefabPath> packs = PrefabStore.get().getAllAssetPrefabPaths();
+                  this.assetsCurrentDir = packs.size() == 1 ? Paths.get("HytaleAssets") : Paths.get("");
                   this.browserRoot = Paths.get("Assets");
                   this.browserCurrent = Paths.get("");
                } else {
@@ -910,6 +936,7 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
       CancelLoading,
       SavePropertiesNameChanged,
       OpenBrowser,
+      BrowserHome,
       BrowserNavigate,
       BrowserRootChanged,
       BrowserSearch,

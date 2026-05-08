@@ -31,6 +31,7 @@ import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolGeneralAction
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolLineAction;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolOnUseInteraction;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolPasteClipboard;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolRandomizeClipboard;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolResetClipboardRotation;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolRotateClipboard;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSelectionToolAskForClipboard;
@@ -84,6 +85,7 @@ import com.hypixel.hytale.server.core.permissions.HytalePermissions;
 import com.hypixel.hytale.server.core.permissions.PermissionsModule;
 import com.hypixel.hytale.server.core.prefab.selection.mask.BlockPattern;
 import com.hypixel.hytale.server.core.prefab.selection.standard.BlockSelection;
+import com.hypixel.hytale.server.core.prefab.selection.standard.RotateBlockMode;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
@@ -143,7 +145,7 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
    @Override
    public void registerHandlers() {
       if (BuilderToolsPlugin.get().isDisabled()) {
-         this.packetHandler.registerNoOpHandlers(400, 401, 412, 409, 403, 406, 427, 407, 413, 414, 417, 426);
+         this.packetHandler.registerNoOpHandlers(400, 401, 412, 409, 403, 406, 427, 428, 407, 413, 414, 417, 426);
       } else {
          IWorldPacketHandler.registerHandler(this.packetHandler, 106, this::handleLoadHotbar, BuilderToolsPacketHandler::hasPermission);
          IWorldPacketHandler.registerHandler(this.packetHandler, 107, this::handleSaveHotbar, BuilderToolsPacketHandler::hasPermission);
@@ -173,6 +175,9 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
          );
          IWorldPacketHandler.registerHandler(
             this.packetHandler, 427, this::handleBuilderToolResetClipboardRotation, p -> hasPermission(p, HytalePermissions.EDITOR_SELECTION_CLIPBOARD)
+         );
+         IWorldPacketHandler.registerHandler(
+            this.packetHandler, 428, this::handleBuilderToolRandomizeClipboard, p -> hasPermission(p, HytalePermissions.EDITOR_SELECTION_CLIPBOARD)
          );
          IWorldPacketHandler.registerHandler(
             this.packetHandler, 407, this::handleBuilderToolPasteClipboard, p -> hasPermission(p, HytalePermissions.EDITOR_SELECTION_CLIPBOARD)
@@ -245,7 +250,9 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
       int targetId = packet.entityId;
       Ref<EntityStore> targetRef = world.getEntityStore().getRefFromNetworkId(targetId);
       Player playerComponent = store.getComponent(ref, Player.getComponentType());
-      if (targetRef != null && targetRef.isValid()) {
+      if (targetRef == null || !targetRef.isValid()) {
+         playerRef.sendMessage(Message.translation("server.general.entityNotFound").param("id", targetId));
+      } else if (playerComponent != null) {
          Player targetPlayerComponent = store.getComponent(targetRef, Player.getComponentType());
          if (targetPlayerComponent != null) {
             playerRef.sendMessage(Message.translation("server.builderTools.entityTool.cannotTargetPlayer"));
@@ -289,8 +296,6 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
                   });
             }
          }
-      } else {
-         playerRef.sendMessage(Message.translation("server.general.entityNotFound").param("id", targetId));
       }
    }
 
@@ -524,133 +529,139 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
             playerComponent,
             playerRef,
             (r, s, componentAccessor) -> {
-               int blockCount = s.getSelection().getSelectionVolume();
-               boolean large = blockCount > 20000;
-               if (large) {
-                  playerRef.sendMessage(Message.translation("server.builderTools.selection.large.warning"));
-               }
-
-               try {
-                  if (prototypeSettings.getBlockChangesForPlaySelectionToolPasteMode() == null) {
-                     s.select(initialSelectionMin, initialSelectionMax, "server.builderTools.selectReasons.selectionTranslatePacket", componentAccessor);
-                     List<Ref<EntityStore>> lastTransformRefs = prototypeSettings.getLastTransformEntityRefs();
-                     HashSet<Ref<EntityStore>> skipSet = lastTransformRefs != null ? new HashSet<>(lastTransformRefs) : null;
-                     if (packet.cutOriginal) {
-                        s.copyOrCut(
-                           r,
-                           initialSelectionMin.x,
-                           initialSelectionMin.y,
-                           initialSelectionMin.z,
-                           initialSelectionMax.x,
-                           initialSelectionMax.y,
-                           initialSelectionMax.z,
-                           154,
-                           null,
-                           skipSet,
-                           store
-                        );
-                     } else {
-                        s.copyOrCut(
-                           r,
-                           initialSelectionMin.x,
-                           initialSelectionMin.y,
-                           initialSelectionMin.z,
-                           initialSelectionMax.x,
-                           initialSelectionMax.y,
-                           initialSelectionMax.z,
-                           152,
-                           store
-                        );
-                     }
-
-                     BlockSelection selection = s.getSelection();
-                     int anchorX = selection.getAnchorX();
-                     int anchorY = selection.getAnchorY();
-                     int anchorZ = selection.getAnchorZ();
-                     ObjectArrayList<BlockChange> blockChangeList = new ObjectArrayList<>();
-                     ObjectArrayList<Holder<ChunkStore>> blockHolderList = new ObjectArrayList<>();
-                     selection.forEachBlock((x, y, z, block) -> {
-                        if (block.filler() == 0) {
-                           blockChangeList.add(new BlockChange(x - anchorX, y - anchorY, z - anchorZ, block.blockId(), (byte)block.rotation()));
-                           blockHolderList.add(block.holder() != null ? block.holder().clone() : null);
-                        }
-                     });
-                     prototypeSettings.setBlockChangesForPlaySelectionToolPasteMode(blockChangeList.toArray(BlockChange[]::new));
-                     prototypeSettings.setBlockHoldersForPasteMode(blockHolderList.toArray(new Holder[0]));
-                     ArrayList<PrototypePlayerBuilderToolSettings.FluidChange> fluidChanges = new ArrayList<>();
-                     selection.forEachFluid(
-                        (x, y, z, fluidId, fluidLevel) -> fluidChanges.add(
-                           new PrototypePlayerBuilderToolSettings.FluidChange(x - anchorX, y - anchorY, z - anchorZ, fluidId, fluidLevel)
-                        )
-                     );
-                     prototypeSettings.setFluidChangesForPlaySelectionToolPasteMode(fluidChanges.toArray(PrototypePlayerBuilderToolSettings.FluidChange[]::new));
-                     ArrayList<PrototypePlayerBuilderToolSettings.EntityChange> entityChanges = new ArrayList<>();
-                     selection.forEachEntity(holder -> {
-                        TransformComponent transform = holder.getComponent(TransformComponent.getComponentType());
-                        if (transform != null && transform.getPosition() != null) {
-                           Vector3d pos = transform.getPosition();
-                           entityChanges.add(new PrototypePlayerBuilderToolSettings.EntityChange(pos.x(), pos.y(), pos.z(), holder.clone()));
-                        }
-                     });
-                     prototypeSettings.setEntityChangesForPlaySelectionToolPasteMode(
-                        entityChanges.toArray(PrototypePlayerBuilderToolSettings.EntityChange[]::new)
-                     );
-                     prototypeSettings.setBlockChangeOffsetOrigin(new Vector3i(selection.getX(), selection.getY(), selection.getZ()));
+               if (s.getSelection() != null) {
+                  int blockCount = s.getSelection().getSelectionVolume();
+                  boolean large = blockCount > 20000;
+                  if (large) {
+                     playerRef.sendMessage(Message.translation("server.builderTools.selection.large.warning"));
                   }
 
-                  BlockChange[] localBlockChanges = prototypeSettings.getBlockChangesForPlaySelectionToolPasteMode();
-                  PrototypePlayerBuilderToolSettings.FluidChange[] localFluidChanges = prototypeSettings.getFluidChangesForPlaySelectionToolPasteMode();
-                  PrototypePlayerBuilderToolSettings.EntityChange[] localEntityChanges = prototypeSettings.getEntityChangesForPlaySelectionToolPasteMode();
-                  Holder<ChunkStore>[] localBlockHolders = prototypeSettings.getBlockHoldersForPasteMode();
-                  Vector3i blockChangeOffsetOrigin = prototypeSettings.getBlockChangeOffsetOrigin();
-                  if (packet.initialPastePointForClipboardPaste != null) {
-                     blockChangeOffsetOrigin = new Vector3i(
-                        packet.initialPastePointForClipboardPaste.x, packet.initialPastePointForClipboardPaste.y, packet.initialPastePointForClipboardPaste.z
-                     );
-                  }
+                  try {
+                     if (prototypeSettings.getBlockChangesForPlaySelectionToolPasteMode() == null) {
+                        s.select(initialSelectionMin, initialSelectionMax, "server.builderTools.selectReasons.selectionTranslatePacket", componentAccessor);
+                        List<Ref<EntityStore>> lastTransformRefs = prototypeSettings.getLastTransformEntityRefs();
+                        HashSet<Ref<EntityStore>> skipSet = lastTransformRefs != null ? new HashSet<>(lastTransformRefs) : null;
+                        if (packet.cutOriginal) {
+                           s.copyOrCut(
+                              r,
+                              initialSelectionMin.x,
+                              initialSelectionMin.y,
+                              initialSelectionMin.z,
+                              initialSelectionMax.x,
+                              initialSelectionMax.y,
+                              initialSelectionMax.z,
+                              154,
+                              null,
+                              skipSet,
+                              store
+                           );
+                        } else {
+                           s.copyOrCut(
+                              r,
+                              initialSelectionMin.x,
+                              initialSelectionMin.y,
+                              initialSelectionMin.z,
+                              initialSelectionMax.x,
+                              initialSelectionMax.y,
+                              initialSelectionMax.z,
+                              152,
+                              store
+                           );
+                        }
 
-                  if (blockChangeOffsetOrigin != null) {
-                     prototypeSettings.setLastTransformEntityRefs(null);
-                     s.transformThenPasteClipboard(
-                        localBlockChanges,
-                        localFluidChanges,
-                        localEntityChanges,
-                        localBlockHolders,
-                        rotation,
-                        translationOffset,
-                        rotationOrigin,
-                        blockChangeOffsetOrigin,
-                        finalKeepEmptyBlocks,
-                        prototypeSettings,
-                        componentAccessor
-                     );
-                     s.select(initialSelectionMin, initialSelectionMax, "server.builderTools.selectReasons.selectionTranslatePacket", componentAccessor);
-                     s.transformSelectionPoints(rotation, translationOffset, rotationOrigin);
-                     if (!packet.isExitingTransformMode) {
-                        prototypeSettings.setBlockChangeOffsetOrigin(
-                           new Vector3i(
-                              blockChangeOffsetOrigin.x + translationOffset.x,
-                              blockChangeOffsetOrigin.y + translationOffset.y,
-                              blockChangeOffsetOrigin.z + translationOffset.z
+                        BlockSelection selection = s.getSelection();
+                        int anchorX = selection.getAnchorX();
+                        int anchorY = selection.getAnchorY();
+                        int anchorZ = selection.getAnchorZ();
+                        ObjectArrayList<BlockChange> blockChangeList = new ObjectArrayList<>();
+                        ObjectArrayList<Holder<ChunkStore>> blockHolderList = new ObjectArrayList<>();
+                        selection.forEachBlock((x, y, z, block) -> {
+                           if (block.filler() == 0) {
+                              blockChangeList.add(new BlockChange(x - anchorX, y - anchorY, z - anchorZ, block.blockId(), (byte)block.rotation()));
+                              blockHolderList.add(block.holder() != null ? block.holder().clone() : null);
+                           }
+                        });
+                        prototypeSettings.setBlockChangesForPlaySelectionToolPasteMode(blockChangeList.toArray(BlockChange[]::new));
+                        prototypeSettings.setBlockHoldersForPasteMode(blockHolderList.toArray(new Holder[0]));
+                        ArrayList<PrototypePlayerBuilderToolSettings.FluidChange> fluidChanges = new ArrayList<>();
+                        selection.forEachFluid(
+                           (x, y, z, fluidId, fluidLevel) -> fluidChanges.add(
+                              new PrototypePlayerBuilderToolSettings.FluidChange(x - anchorX, y - anchorY, z - anchorZ, fluidId, fluidLevel)
                            )
                         );
+                        prototypeSettings.setFluidChangesForPlaySelectionToolPasteMode(
+                           fluidChanges.toArray(PrototypePlayerBuilderToolSettings.FluidChange[]::new)
+                        );
+                        ArrayList<PrototypePlayerBuilderToolSettings.EntityChange> entityChanges = new ArrayList<>();
+                        selection.forEachEntity(holder -> {
+                           TransformComponent transform = holder.getComponent(TransformComponent.getComponentType());
+                           if (transform != null && transform.getPosition() != null) {
+                              Vector3d pos = transform.getPosition();
+                              entityChanges.add(new PrototypePlayerBuilderToolSettings.EntityChange(pos.x(), pos.y(), pos.z(), holder.clone()));
+                           }
+                        });
+                        prototypeSettings.setEntityChangesForPlaySelectionToolPasteMode(
+                           entityChanges.toArray(PrototypePlayerBuilderToolSettings.EntityChange[]::new)
+                        );
+                        prototypeSettings.setBlockChangeOffsetOrigin(new Vector3i(selection.getX(), selection.getY(), selection.getZ()));
                      }
 
-                     if (large) {
-                        playerRef.sendMessage(Message.translation("server.builderTools.selection.large.complete"));
+                     BlockChange[] localBlockChanges = prototypeSettings.getBlockChangesForPlaySelectionToolPasteMode();
+                     PrototypePlayerBuilderToolSettings.FluidChange[] localFluidChanges = prototypeSettings.getFluidChangesForPlaySelectionToolPasteMode();
+                     PrototypePlayerBuilderToolSettings.EntityChange[] localEntityChanges = prototypeSettings.getEntityChangesForPlaySelectionToolPasteMode();
+                     Holder<ChunkStore>[] localBlockHolders = prototypeSettings.getBlockHoldersForPasteMode();
+                     Vector3i blockChangeOffsetOrigin = prototypeSettings.getBlockChangeOffsetOrigin();
+                     if (packet.initialPastePointForClipboardPaste != null) {
+                        blockChangeOffsetOrigin = new Vector3i(
+                           packet.initialPastePointForClipboardPaste.x,
+                           packet.initialPastePointForClipboardPaste.y,
+                           packet.initialPastePointForClipboardPaste.z
+                        );
                      }
 
+                     if (blockChangeOffsetOrigin != null) {
+                        prototypeSettings.setLastTransformEntityRefs(null);
+                        s.transformThenPasteClipboard(
+                           localBlockChanges,
+                           localFluidChanges,
+                           localEntityChanges,
+                           localBlockHolders,
+                           rotation,
+                           translationOffset,
+                           rotationOrigin,
+                           blockChangeOffsetOrigin,
+                           finalKeepEmptyBlocks,
+                           prototypeSettings,
+                           componentAccessor
+                        );
+                        s.select(initialSelectionMin, initialSelectionMax, "server.builderTools.selectReasons.selectionTranslatePacket", componentAccessor);
+                        s.transformSelectionPoints(rotation, translationOffset, rotationOrigin);
+                        if (!packet.isExitingTransformMode) {
+                           prototypeSettings.setBlockChangeOffsetOrigin(
+                              new Vector3i(
+                                 blockChangeOffsetOrigin.x + translationOffset.x,
+                                 blockChangeOffsetOrigin.y + translationOffset.y,
+                                 blockChangeOffsetOrigin.z + translationOffset.z
+                              )
+                           );
+                        }
+
+                        if (large) {
+                           playerRef.sendMessage(Message.translation("server.builderTools.selection.large.complete"));
+                        }
+
+                        return;
+                     }
+
+                     playerRef.sendMessage(Message.translation("server.builderTools.selection.noBlockChangeOffsetOrigin"));
+                  } catch (Exception e) {
+                     LOGGER.at(Level.WARNING).log("Error during selection transform", e);
                      return;
-                  }
-
-                  playerRef.sendMessage(Message.translation("server.builderTools.selection.noBlockChangeOffsetOrigin"));
-               } catch (Exception e) {
-                  LOGGER.at(Level.WARNING).log("Error during selection transform", e);
-                  return;
-               } finally {
-                  if (packet.isExitingTransformMode) {
-                     prototypeSettings.setInSelectionTransformationMode(false);
-                     prototypeSettings.setLastTransformEntityRefs(null);
+                  } finally {
+                     if (packet.isExitingTransformMode) {
+                        prototypeSettings.setInSelectionTransformationMode(false);
+                        prototypeSettings.setLastTransformEntityRefs(null);
+                     }
                   }
                }
             }
@@ -818,11 +829,53 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
          Axis axis = packet.axis == com.hypixel.hytale.protocol.packets.buildertools.Axis.X
             ? Axis.X
             : (packet.axis == com.hypixel.hytale.protocol.packets.buildertools.Axis.Y ? Axis.Y : Axis.Z);
+         RotateBlockMode rotateBlockMode = RotateBlockMode.ALL;
+         BuilderTool builderTool = BuilderTool.getActiveBuilderTool(ref, store);
+         if (builderTool != null && builderTool.getId().equals("Paste")) {
+            ItemStack itemInHand = InventoryComponent.getItemInHand(store, ref);
+            BuilderTool.ArgData args = builderTool.getItemArgData(itemInHand);
+            if (args != null && args.tool() != null) {
+               rotateBlockMode = RotateBlockMode.fromString((String)args.tool().getOrDefault("RotateBlock", "All"));
+            }
+         }
+
+         RotateBlockMode finalRotateBlockMode = rotateBlockMode;
          LOGGER.at(Level.INFO).log("%s: %s", this.packetHandler.getIdentifier(), packet);
          BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> {
-            s.setSkipNextPreviewRebuild(true);
-            s.rotate(r, axis, packet.angle, componentAccessor);
+            s.setSkipNextPreviewRebuild(finalRotateBlockMode == RotateBlockMode.ALL);
+            s.rotate(r, axis, packet.angle, finalRotateBlockMode, componentAccessor);
          });
+      }
+   }
+
+   public void handleBuilderToolRandomizeClipboard(
+      @Nonnull BuilderToolRandomizeClipboard packet,
+      @Nonnull PlayerRef playerRef,
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull World world,
+      @Nonnull Store<EntityStore> store
+   ) {
+      Player playerComponent = store.getComponent(ref, Player.getComponentType());
+      if (playerComponent != null) {
+         RotateBlockMode rotateBlockMode = RotateBlockMode.ALL;
+         BuilderTool builderTool = BuilderTool.getActiveBuilderTool(ref, store);
+         if (builderTool != null && builderTool.getId().equals("Paste")) {
+            ItemStack itemInHand = InventoryComponent.getItemInHand(store, ref);
+            BuilderTool.ArgData args = builderTool.getItemArgData(itemInHand);
+            if (args != null && args.tool() != null) {
+               rotateBlockMode = RotateBlockMode.fromString((String)args.tool().getOrDefault("RotateBlock", "All"));
+            }
+         }
+
+         RotateBlockMode finalRotateBlockMode = rotateBlockMode;
+         LOGGER.at(Level.INFO).log("%s: %s", this.packetHandler.getIdentifier(), packet);
+         BuilderToolsPlugin.addToQueue(
+            playerComponent,
+            playerRef,
+            (r, s, componentAccessor) -> s.applyRandomizeTransforms(
+               r, packet.deltaX, packet.deltaY, packet.deltaZ, packet.flipX, packet.flipY, packet.flipZ, finalRotateBlockMode, componentAccessor
+            )
+         );
       }
    }
 
@@ -836,10 +889,7 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
       Player playerComponent = store.getComponent(ref, Player.getComponentType());
       if (playerComponent != null) {
          LOGGER.at(Level.INFO).log("%s: %s", this.packetHandler.getIdentifier(), packet);
-         BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> {
-            s.setSkipNextPreviewRebuild(true);
-            s.resetClipboardRotation(r, componentAccessor);
-         });
+         BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> s.resetClipboardRotation(r, componentAccessor));
       }
    }
 
@@ -852,8 +902,21 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
    ) {
       Player playerComponent = store.getComponent(ref, Player.getComponentType());
       if (playerComponent != null) {
+         boolean pasteAir = true;
+         BuilderTool builderTool = BuilderTool.getActiveBuilderTool(ref, store);
+         if (builderTool != null && builderTool.getId().equals("Paste")) {
+            ItemStack itemInHand = InventoryComponent.getItemInHand(store, ref);
+            BuilderTool.ArgData args = builderTool.getItemArgData(itemInHand);
+            if (args != null && args.tool() != null) {
+               pasteAir = (Boolean)args.tool().getOrDefault("PasteAir", true);
+            }
+         }
+
+         boolean finalPasteAir = pasteAir;
          LOGGER.at(Level.INFO).log("%s: %s", this.packetHandler.getIdentifier(), packet);
-         BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> s.paste(r, packet.x, packet.y, packet.z, componentAccessor));
+         BuilderToolsPlugin.addToQueue(
+            playerComponent, playerRef, (r, s, componentAccessor) -> s.paste(r, packet.x, packet.y, packet.z, false, !finalPasteAir, componentAccessor)
+         );
       }
    }
 

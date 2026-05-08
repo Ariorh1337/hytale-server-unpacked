@@ -11,6 +11,7 @@ import com.hypixel.hytale.math.util.NearestBlockUtil;
 import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.protocol.BlockMaterial;
+import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.entity.InteractionChain;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
@@ -151,9 +152,12 @@ public class StandardPhysicsProvider implements IBlockCollisionConsumer, Compone
                   } else {
                      InteractionContext context = InteractionContext.forProxyEntity(interactionManagerComponent, creatorRef, ref, commandBuffer);
                      DynamicMetaStore<InteractionContext> metaStore = context.getMetaStore();
+                     BlockPosition hitBlockPosition = new BlockPosition((int)position.x, (int)position.y, (int)position.z);
                      metaStore.putMetaObject(Interaction.TARGET_ENTITY, targetRef);
                      metaStore.putMetaObject(Interaction.HIT_LOCATION, new Vector4d(position.x, position.y, position.z, 1.0));
                      metaStore.putMetaObject(Interaction.HIT_DETAIL, collisionDetailName);
+                     metaStore.putMetaObject(Interaction.TARGET_BLOCK_RAW, hitBlockPosition);
+                     metaStore.putMetaObject(Interaction.TARGET_BLOCK, this.world.getBaseBlock(hitBlockPosition));
                      InteractionType interactionType = targetRef != null ? InteractionType.ProjectileHit : InteractionType.ProjectileMiss;
                      String rootInteractionId = context.getRootInteractionId(interactionType);
                      if (rootInteractionId != null) {

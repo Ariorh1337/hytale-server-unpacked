@@ -1,6 +1,7 @@
 package com.hypixel.hytale.builtin.triggervolumes.manager;
 
 import com.hypixel.hytale.builtin.triggervolumes.EntityTargetType;
+import com.hypixel.hytale.builtin.triggervolumes.component.TriggerVolumeGroup;
 import com.hypixel.hytale.builtin.triggervolumes.shape.BoxShape;
 import com.hypixel.hytale.builtin.triggervolumes.shape.CylinderShape;
 import com.hypixel.hytale.builtin.triggervolumes.shape.SphereShape;
@@ -10,6 +11,7 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.map.MapCodec;
 import com.hypixel.hytale.component.Resource;
+import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.protocol.packets.player.AddOrUpdateTriggerVolumeDisplay;
 import com.hypixel.hytale.protocol.packets.player.RemoveTriggerVolumeDisplay;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeDisplayEntry;
@@ -23,7 +25,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.Map.Entry;
@@ -57,6 +61,7 @@ public class TriggerVolumeManager implements Resource<EntityStore> {
    private static final float OPACITY_DISABLED = 0.15F;
    private static final String PASTED_GROUP_ID_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";
    private static final int PASTED_GROUP_ID_LENGTH = 8;
+   private static final int PASTED_VOLUME_ID_LENGTH = 6;
    private final Map<String, VolumeEntry> volumes = new ConcurrentHashMap<>();
    private final Map<String, GroupEntry> groups = new ConcurrentHashMap<>();
    private final ConcurrentHashMap<String, String> prefabGroupLinkRemap = new ConcurrentHashMap<>();
@@ -97,6 +102,43 @@ public class TriggerVolumeManager implements Resource<EntityStore> {
    public void unregister(@Nonnull String id) {
       this.volumes.remove(id);
       this.spatialIndex.markDirty();
+   }
+
+   public void removeWorldGenVolumesInChunk(long chunkIndex) {
+      ArrayList<String> emptiedGroups = new ArrayList<>();
+      boolean removedAny = false;
+      Iterator<VolumeEntry> iter = this.volumes.values().iterator();
+
+      while (iter.hasNext()) {
+         VolumeEntry entry = iter.next();
+         if (entry.isFromWorldGen()) {
+            Vector3d pos = entry.getPosition();
+            if (ChunkUtil.indexChunkFromBlock(pos.x(), pos.z()) == chunkIndex) {
+               String groupId = entry.getGroupId();
+               if (groupId != null) {
+                  GroupEntry group = this.groups.get(groupId);
+                  if (group != null) {
+                     group.removeMember(entry.getId());
+                     if (group.getMemberVolumeIds().isEmpty()) {
+                        emptiedGroups.add(groupId);
+                     }
+                  }
+               }
+
+               iter.remove();
+               this.notifyViewersRemove(entry.getId());
+               removedAny = true;
+            }
+         }
+      }
+
+      for (String gid : emptiedGroups) {
+         this.unregisterGroup(gid);
+      }
+
+      if (removedAny) {
+         this.spatialIndex.markDirty();
+      }
    }
 
    @Nullable
@@ -180,6 +222,106 @@ public class TriggerVolumeManager implements Resource<EntityStore> {
                return gid;
             }
          );
+   }
+
+   @Nonnull
+   public String upsertGroupForPrefabLink(
+      @Nonnull String groupLinkId, @Nonnull TriggerVolumeGroup groupComponent, @Nonnull String worldName, @Nonnull Vector3d origin
+   ) {
+      String gid = this.prefabGroupLinkRemap.computeIfAbsent(groupLinkId, link -> this.generateUniquePastedGroupId());
+      GroupEntry existing = this.groups.get(gid);
+      if (existing == null) {
+         this.registerGroup(gid, groupComponent.toGroupEntry(gid, worldName, new Vector3d(origin)));
+      } else {
+         groupComponent.applyTo(existing, new Vector3d(origin));
+      }
+
+      return gid;
+   }
+
+   @Nullable
+   public String ensureWorldGenGroup(int prefabInstanceId, @Nonnull String linkId, @Nonnull VolumeEntry memberVolume, @Nonnull String worldName) {
+      String gid = getWorldGenGroupId(prefabInstanceId, linkId);
+      if (gid == null) {
+         return null;
+      }
+
+      if (this.groups.containsKey(gid)) {
+         return gid;
+      }
+
+      int packed = memberVolume.getColor() != null
+         ? packRgb(memberVolume.getColor())
+         : (int)(COLOR_ENABLED.x() * 255.0F) << 16 | (int)(COLOR_ENABLED.y() * 255.0F) << 8 | (int)(COLOR_ENABLED.z() * 255.0F);
+      GroupEntry ge = new GroupEntry(
+         gid,
+         worldName,
+         new Vector3d(memberVolume.getPosition()),
+         new ArrayList<>(),
+         EnumSet.copyOf(memberVolume.getTargetTypes()),
+         memberVolume.isEnabled(),
+         packed
+      );
+      this.registerGroup(gid, ge);
+      return gid;
+   }
+
+   @Nullable
+   public String upsertWorldGenGroup(
+      int prefabInstanceId, @Nonnull String linkId, @Nonnull TriggerVolumeGroup groupComponent, @Nonnull String worldName, @Nonnull Vector3d origin
+   ) {
+      String gid = getWorldGenGroupId(prefabInstanceId, linkId);
+      if (gid == null) {
+         return null;
+      }
+
+      GroupEntry existing = this.groups.get(gid);
+      if (existing == null) {
+         this.registerGroup(gid, groupComponent.toGroupEntry(gid, worldName, new Vector3d(origin)));
+      } else {
+         groupComponent.applyTo(existing, new Vector3d(origin));
+      }
+
+      return gid;
+   }
+
+   @Nullable
+   private static String getWorldGenGroupId(int prefabInstanceId, @Nonnull String linkId) {
+      String sanitized = sanitizeWorldGenLinkId(linkId);
+      return sanitized.isEmpty() ? null : "tvg_wg_" + Integer.toUnsignedString(prefabInstanceId, 36) + "_" + sanitized;
+   }
+
+   @Nonnull
+   private static String sanitizeWorldGenLinkId(@Nonnull String linkId) {
+      String lower = linkId.toLowerCase(Locale.ROOT);
+      StringBuilder builder = new StringBuilder(lower.length());
+
+      for (int i = 0; i < lower.length(); i++) {
+         char c = lower.charAt(i);
+         if (c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c == '_') {
+            builder.append(c);
+         }
+      }
+
+      return builder.toString();
+   }
+
+   @Nonnull
+   public String generateUniqueVolumeId() {
+      ThreadLocalRandom rng = ThreadLocalRandom.current();
+
+      String id;
+      do {
+         StringBuilder builder = new StringBuilder("tv_");
+
+         for (int i = 0; i < 6; i++) {
+            builder.append("abcdefghijklmnopqrstuvwxyz0123456789".charAt(rng.nextInt("abcdefghijklmnopqrstuvwxyz0123456789".length())));
+         }
+
+         id = builder.toString();
+      } while (this.hasVolume(id));
+
+      return id;
    }
 
    @Nonnull
@@ -389,6 +531,7 @@ public class TriggerVolumeManager implements Resource<EntityStore> {
 
       entry.targetTypes = targetBits;
       entry.keepLoaded = vol.isKeepLoaded();
+      entry.cancelDelayedOnExit = vol.isCancelDelayedEffectsOnExit();
       entry.cooldown = vol.getCooldown();
       entry.cooldownMode = (byte)vol.getCooldownMode().ordinal();
       entry.activationDelay = vol.getActivationDelay();

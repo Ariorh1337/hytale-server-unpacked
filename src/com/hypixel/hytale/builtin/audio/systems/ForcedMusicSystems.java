@@ -1,7 +1,6 @@
-package com.hypixel.hytale.builtin.ambience.systems;
+package com.hypixel.hytale.builtin.audio.systems;
 
-import com.hypixel.hytale.builtin.ambience.components.AmbienceTracker;
-import com.hypixel.hytale.builtin.ambience.resources.AmbienceResource;
+import com.hypixel.hytale.builtin.audio.components.ForcedMusicTracker;
 import com.hypixel.hytale.component.AddReason;
 import com.hypixel.hytale.component.Archetype;
 import com.hypixel.hytale.component.ArchetypeChunk;
@@ -9,13 +8,11 @@ import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.RemoveReason;
-import com.hypixel.hytale.component.ResourceType;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.protocol.packets.world.UpdateForcedMusic;
-import com.hypixel.hytale.protocol.packets.world.UpdateMusicState;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -26,31 +23,31 @@ public class ForcedMusicSystems {
       @Nonnull
       private final ComponentType<EntityStore, PlayerRef> playerRefComponentType;
       @Nonnull
-      private final ComponentType<EntityStore, AmbienceTracker> ambienceTrackerComponentType;
+      private final ComponentType<EntityStore, ForcedMusicTracker> forcedMusicTrackerComponentType;
       @Nonnull
       private final Query<EntityStore> query;
 
       public PlayerAdded(
          @Nonnull ComponentType<EntityStore, PlayerRef> playerRefComponentType,
-         @Nonnull ComponentType<EntityStore, AmbienceTracker> ambienceTrackerComponentType
+         @Nonnull ComponentType<EntityStore, ForcedMusicTracker> forcedMusicTrackerComponentType
       ) {
          this.playerRefComponentType = playerRefComponentType;
-         this.ambienceTrackerComponentType = ambienceTrackerComponentType;
+         this.forcedMusicTrackerComponentType = forcedMusicTrackerComponentType;
          this.query = Query.and(playerRefComponentType);
       }
 
       @Override
       public void onEntityAdd(@Nonnull Holder<EntityStore> holder, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store) {
-         holder.ensureComponent(this.ambienceTrackerComponentType);
+         holder.ensureComponent(this.forcedMusicTrackerComponentType);
       }
 
       @Override
       public void onEntityRemoved(@Nonnull Holder<EntityStore> holder, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store) {
-         AmbienceTracker ambienceTrackerComponent = holder.getComponent(this.ambienceTrackerComponentType);
-         assert ambienceTrackerComponent != null;
+         ForcedMusicTracker forcedMusicTracker = holder.getComponent(this.forcedMusicTrackerComponentType);
+         assert forcedMusicTracker != null;
          PlayerRef playerRefComponent = holder.getComponent(this.playerRefComponentType);
          assert playerRefComponent != null;
-         UpdateForcedMusic pooledPacket = ambienceTrackerComponent.getMusicPacket();
+         UpdateForcedMusic pooledPacket = forcedMusicTracker.getMusicPacket();
          pooledPacket.containerIndex = 0;
          playerRefComponent.getPacketHandler().write(pooledPacket);
       }
@@ -66,22 +63,18 @@ public class ForcedMusicSystems {
       @Nonnull
       private final ComponentType<EntityStore, PlayerRef> playerRefComponentType;
       @Nonnull
-      private final ComponentType<EntityStore, AmbienceTracker> ambienceTrackerComponentType;
-      @Nonnull
-      private final ResourceType<EntityStore, AmbienceResource> ambienceResourceType;
+      private final ComponentType<EntityStore, ForcedMusicTracker> forcedMusicTrackerComponentType;
       @Nonnull
       private final Query<EntityStore> query;
 
       public Tick(
          @Nonnull ComponentType<EntityStore, Player> playerComponentType,
          @Nonnull ComponentType<EntityStore, PlayerRef> playerRefComponentType,
-         @Nonnull ComponentType<EntityStore, AmbienceTracker> ambienceTrackerComponentType,
-         @Nonnull ResourceType<EntityStore, AmbienceResource> ambienceResourceType
+         @Nonnull ComponentType<EntityStore, ForcedMusicTracker> forcedMusicTrackerComponentType
       ) {
          this.playerRefComponentType = playerRefComponentType;
-         this.ambienceTrackerComponentType = ambienceTrackerComponentType;
-         this.ambienceResourceType = ambienceResourceType;
-         this.query = Archetype.of(playerComponentType, playerRefComponentType, ambienceTrackerComponentType);
+         this.forcedMusicTrackerComponentType = forcedMusicTrackerComponentType;
+         this.query = Archetype.of(playerComponentType, playerRefComponentType, forcedMusicTrackerComponentType);
       }
 
       @Override
@@ -92,29 +85,17 @@ public class ForcedMusicSystems {
          @Nonnull Store<EntityStore> store,
          @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
-         AmbienceResource ambienceResource = store.getResource(this.ambienceResourceType);
-         AmbienceTracker ambienceTrackerComponent = archetypeChunk.getComponent(index, this.ambienceTrackerComponentType);
-         assert ambienceTrackerComponent != null;
+         ForcedMusicTracker forcedMusicTracker = archetypeChunk.getComponent(index, this.forcedMusicTrackerComponentType);
+         assert forcedMusicTracker != null;
          PlayerRef playerRefComponent = archetypeChunk.getComponent(index, this.playerRefComponentType);
          assert playerRefComponent != null;
-         int have = ambienceTrackerComponent.getLastSentContainerIndex();
-         int desired = ambienceResource.getForcedMusicContainerIndex();
+         int have = forcedMusicTracker.getLastSentContainerIndex();
+         int desired = forcedMusicTracker.getCurrentContainerIndex();
          if (have != desired) {
-            ambienceTrackerComponent.setLastSentContainerIndex(desired);
-            ambienceTrackerComponent.setLastSentMusicStateVersion(0);
-            UpdateForcedMusic pooledPacket = ambienceTrackerComponent.getMusicPacket();
+            forcedMusicTracker.setLastSentContainerIndex(desired);
+            UpdateForcedMusic pooledPacket = forcedMusicTracker.getMusicPacket();
             pooledPacket.containerIndex = desired;
             playerRefComponent.getPacketHandler().write(pooledPacket);
-         }
-
-         int desiredStateVersion = ambienceResource.getForcedMusicStateVersion();
-         if (ambienceTrackerComponent.getLastSentMusicStateVersion() != desiredStateVersion) {
-            ambienceTrackerComponent.setLastSentMusicStateVersion(desiredStateVersion);
-            UpdateMusicState statePacket = ambienceTrackerComponent.getMusicStatePacket();
-            statePacket.containerIndex = desired;
-            statePacket.stateIndex = ambienceResource.getForcedMusicStateIndex();
-            statePacket.fadeDuration = ambienceResource.getForcedMusicStateFadeDuration();
-            playerRefComponent.getPacketHandler().write(statePacket);
          }
       }
 

@@ -349,15 +349,19 @@ public class BlockPlaceUtils {
             FillerBlockUtil.forEachFillerBlock(
                hitBoxType.get(rotationIndex),
                (x1, y1, z1) -> breakAndDropReplacedBlock(
-                  new Vector3i(blockPosition).add(x1, y1, z1), worldChunkComponent, chunkReference, ref, chunkStore, entityStore
+                  new Vector3i(blockPosition).add(x1, y1, z1), worldChunkComponent, chunkReference, ref, chunkStore, entityStore, noPhysics
                )
             );
          } else {
-            breakAndDropReplacedBlock(blockPosition, worldChunkComponent, chunkReference, ref, chunkStore, entityStore);
+            breakAndDropReplacedBlock(blockPosition, worldChunkComponent, chunkReference, ref, chunkStore, entityStore, noPhysics);
          }
 
-         int placeBlockSettings = 10;
-         if (!worldChunkComponent.placeBlock(blockPosition.x(), blockPosition.y(), blockPosition.z(), blockTypeKey, rotation, 10, false)) {
+         int placeBlockSettings = 8;
+         if (!noPhysics) {
+            placeBlockSettings |= 2;
+         }
+
+         if (!worldChunkComponent.placeBlock(blockPosition.x(), blockPosition.y(), blockPosition.z(), blockTypeKey, rotation, placeBlockSettings, false)) {
             return false;
          }
 
@@ -395,7 +399,8 @@ public class BlockPlaceUtils {
       @Nonnull Ref<ChunkStore> chunkReference,
       @Nonnull Ref<EntityStore> ref,
       @Nonnull ComponentAccessor<ChunkStore> chunkStore,
-      @Nonnull ComponentAccessor<EntityStore> entityStore
+      @Nonnull ComponentAccessor<EntityStore> entityStore,
+      boolean noPhysics
    ) {
       int targetBlockId = worldChunkComponent.getBlock(blockPosition);
       if (targetBlockId != 0) {
@@ -417,7 +422,11 @@ public class BlockPlaceUtils {
                }
             }
 
-            int setBlockSettings = 288;
+            int setBlockSettings = 32;
+            if (!noPhysics) {
+               setBlockSettings |= 256;
+            }
+
             BlockHarvestUtils.performBlockBreak(
                chunkStore.getExternalData().getWorld(),
                blockPosition,
@@ -426,7 +435,7 @@ public class BlockPlaceUtils {
                dropQuantity,
                itemId,
                dropListId,
-               288,
+               setBlockSettings,
                ref,
                chunkReference,
                entityStore,

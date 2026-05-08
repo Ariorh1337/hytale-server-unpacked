@@ -31,6 +31,7 @@ import com.hypixel.hytale.server.core.prefab.selection.buffer.impl.PrefabBuffer;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
@@ -50,7 +51,6 @@ public class PrefabProp extends Prop {
    private final RngField rngField;
    @Nonnull
    private final FastRandom random;
-   private final int prefabId;
    @Nonnull
    private final List<com.hypixel.hytale.builtin.hytalegenerator.props.deprecated.prefab.PrefabProp> childProps;
    @Nonnull
@@ -128,7 +128,6 @@ public class PrefabProp extends Prop {
             }
          }
       );
-      this.prefabId = this.hashCode();
       this.rPrefabPosition = new Vector3i();
       this.rColumnPredicate = new PrefabProp.IntersectingColumnPredicate<>();
       this.rWorldPosition = new Vector3i();
@@ -148,6 +147,7 @@ public class PrefabProp extends Prop {
       this.rPrefabPosition.set(context.position);
       this.rColumnPredicate.bounds.assign(context.materialWriteSpace.getBounds());
       this.rColumnPredicate.bounds.offsetOpposite(context.position);
+      int prefabInstanceId = Objects.hash(context.position.x, context.position.y, context.position.z, prefab.hashCode());
 
       try {
          prefab.forEach(
@@ -175,7 +175,9 @@ public class PrefabProp extends Prop {
                            transformComp = entityClone.getComponent(TransformComponent.getComponentType());
                            if (transformComp != null) {
                               transformComp.getPosition().set(this.rEntityWorldPosition);
-                              EntityPlacementData placementData = new EntityPlacementData(new Vector3i(), PrefabRotation.ROTATION_0, entityClone, this.prefabId);
+                              EntityPlacementData placementData = new EntityPlacementData(
+                                 new Vector3i(), PrefabRotation.ROTATION_0, entityClone, prefabInstanceId
+                              );
                               context.entityWriteBuffer.addEntity(placementData);
                            }
                         }

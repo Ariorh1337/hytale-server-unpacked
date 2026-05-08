@@ -20,10 +20,10 @@ public class SpawnParticleSystem implements Packet, ToClientPacket {
    public static final int PACKET_ID = 152;
    public static final boolean IS_COMPRESSED = false;
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
-   public static final int FIXED_BLOCK_SIZE = 44;
+   public static final int FIXED_BLOCK_SIZE = 48;
    public static final int VARIABLE_FIELD_COUNT = 1;
-   public static final int VARIABLE_BLOCK_START = 44;
-   public static final int MAX_SIZE = 16384049;
+   public static final int VARIABLE_BLOCK_START = 48;
+   public static final int MAX_SIZE = 16384053;
    @Nullable
    public String particleSystemId;
    @Nullable
@@ -33,6 +33,7 @@ public class SpawnParticleSystem implements Packet, ToClientPacket {
    public float scale;
    @Nullable
    public Color color;
+   public float maxDuration;
 
    @Override
    public int getId() {
@@ -47,12 +48,15 @@ public class SpawnParticleSystem implements Packet, ToClientPacket {
    public SpawnParticleSystem() {
    }
 
-   public SpawnParticleSystem(@Nullable String particleSystemId, @Nullable Position position, @Nullable Direction rotation, float scale, @Nullable Color color) {
+   public SpawnParticleSystem(
+      @Nullable String particleSystemId, @Nullable Position position, @Nullable Direction rotation, float scale, @Nullable Color color, float maxDuration
+   ) {
       this.particleSystemId = particleSystemId;
       this.position = position;
       this.rotation = rotation;
       this.scale = scale;
       this.color = color;
+      this.maxDuration = maxDuration;
    }
 
    public SpawnParticleSystem(@Nonnull SpawnParticleSystem other) {
@@ -61,12 +65,13 @@ public class SpawnParticleSystem implements Packet, ToClientPacket {
       this.rotation = other.rotation;
       this.scale = other.scale;
       this.color = other.color;
+      this.maxDuration = other.maxDuration;
    }
 
    @Nonnull
    public static SpawnParticleSystem deserialize(@Nonnull ByteBuf buf, int offset) {
-      if (buf.readableBytes() - offset < 44) {
-         throw ProtocolException.bufferTooSmall("SpawnParticleSystem", 44, buf.readableBytes() - offset);
+      if (buf.readableBytes() - offset < 48) {
+         throw ProtocolException.bufferTooSmall("SpawnParticleSystem", 48, buf.readableBytes() - offset);
       }
 
       SpawnParticleSystem obj = new SpawnParticleSystem();
@@ -84,7 +89,8 @@ public class SpawnParticleSystem implements Packet, ToClientPacket {
          obj.color = Color.deserialize(buf, offset + 41);
       }
 
-      int pos = offset + 44;
+      obj.maxDuration = buf.getFloatLE(offset + 44);
+      int pos = offset + 48;
       if ((nullBits & 8) != 0) {
          int particleSystemIdLen = VarInt.peek(buf, pos);
          if (particleSystemIdLen < 0) {
@@ -109,7 +115,7 @@ public class SpawnParticleSystem implements Packet, ToClientPacket {
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte nullBits = buf.getByte(offset);
-      int pos = offset + 44;
+      int pos = offset + 48;
       if ((nullBits & 8) != 0) {
          int sl = VarInt.peek(buf, pos);
          pos += VarInt.size(sl) + sl;
@@ -119,7 +125,7 @@ public class SpawnParticleSystem implements Packet, ToClientPacket {
    }
 
    public static boolean isBufferTooSmall(MemorySegment mem) {
-      return mem.byteSize() < 44L;
+      return mem.byteSize() < 48L;
    }
 
    @Nullable
@@ -129,7 +135,7 @@ public class SpawnParticleSystem implements Packet, ToClientPacket {
 
    @Nullable
    public static String getParticleSystemId(MemorySegment mem, int offset) {
-      return hasParticleSystemId(mem, offset) ? PacketIO.readVarString("ParticleSystemId", mem, offset + 44, 4096000, PacketIO.UTF8) : null;
+      return hasParticleSystemId(mem, offset) ? PacketIO.readVarString("ParticleSystemId", mem, offset + 48, 4096000, PacketIO.UTF8) : null;
    }
 
    @Nullable
@@ -170,6 +176,14 @@ public class SpawnParticleSystem implements Packet, ToClientPacket {
       return hasColor(mem, offset) ? Color.toObject(mem, offset + 41) : null;
    }
 
+   public static float getMaxDuration(MemorySegment mem) {
+      return getMaxDuration(mem, 0);
+   }
+
+   public static float getMaxDuration(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 44);
+   }
+
    public static boolean hasPosition(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
       return (b & 1) != 0;
@@ -195,15 +209,16 @@ public class SpawnParticleSystem implements Packet, ToClientPacket {
    }
 
    public static SpawnParticleSystem toObject(MemorySegment mem, int offset) {
-      if (offset + 44 > mem.byteSize()) {
-         throw ProtocolException.bufferTooSmall("SpawnParticleSystem", offset + 44, (int)mem.byteSize());
+      if (offset + 48 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("SpawnParticleSystem", offset + 48, (int)mem.byteSize());
       } else {
          return new SpawnParticleSystem(
-            hasParticleSystemId(mem, offset) ? PacketIO.readVarString("ParticleSystemId", mem, offset + 44, 4096000, PacketIO.UTF8) : null,
+            hasParticleSystemId(mem, offset) ? PacketIO.readVarString("ParticleSystemId", mem, offset + 48, 4096000, PacketIO.UTF8) : null,
             hasPosition(mem, offset) ? Position.toObject(mem, offset + 1) : null,
             hasRotation(mem, offset) ? Direction.toObject(mem, offset + 25) : null,
             mem.get(PacketIO.PROTO_FLOAT, offset + 37),
-            hasColor(mem, offset) ? Color.toObject(mem, offset + 41) : null
+            hasColor(mem, offset) ? Color.toObject(mem, offset + 41) : null,
+            mem.get(PacketIO.PROTO_FLOAT, offset + 44)
          );
       }
    }
@@ -247,6 +262,7 @@ public class SpawnParticleSystem implements Packet, ToClientPacket {
          buf.writeZero(3);
       }
 
+      buf.writeFloatLE(this.maxDuration);
       if (this.particleSystemId != null) {
          PacketIO.writeVarString(buf, this.particleSystemId, 4096000);
       }
@@ -291,7 +307,8 @@ public class SpawnParticleSystem implements Packet, ToClientPacket {
          mem.asSlice(offset + 41, 3L).fill((byte)0);
       }
 
-      int varOffset = offset + 44;
+      mem.set(PacketIO.PROTO_FLOAT, offset + 44, this.maxDuration);
+      int varOffset = offset + 48;
       if (this.particleSystemId != null) {
          varOffset += PacketIO.writeVarString(mem, varOffset, this.particleSystemId, 4096000);
       }
@@ -301,7 +318,7 @@ public class SpawnParticleSystem implements Packet, ToClientPacket {
 
    @Override
    public int computeSize() {
-      int size = 44;
+      int size = 48;
       if (this.particleSystemId != null) {
          size += PacketIO.stringSize(this.particleSystemId);
       }
@@ -310,12 +327,12 @@ public class SpawnParticleSystem implements Packet, ToClientPacket {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      if (buffer.readableBytes() - offset < 44) {
-         return ValidationResult.error("Buffer too small: expected at least 44 bytes");
+      if (buffer.readableBytes() - offset < 48) {
+         return ValidationResult.error("Buffer too small: expected at least 48 bytes");
       }
 
       byte nullBits = buffer.getByte(offset);
-      int pos = offset + 44;
+      int pos = offset + 48;
       if ((nullBits & 8) != 0) {
          int particleSystemIdLen = VarInt.peek(buffer, pos);
          if (particleSystemIdLen < 0) {
@@ -343,6 +360,7 @@ public class SpawnParticleSystem implements Packet, ToClientPacket {
       copy.rotation = this.rotation != null ? this.rotation.clone() : null;
       copy.scale = this.scale;
       copy.color = this.color != null ? this.color.clone() : null;
+      copy.maxDuration = this.maxDuration;
       return copy;
    }
 
@@ -357,12 +375,13 @@ public class SpawnParticleSystem implements Packet, ToClientPacket {
                && Objects.equals(this.position, other.position)
                && Objects.equals(this.rotation, other.rotation)
                && this.scale == other.scale
-               && Objects.equals(this.color, other.color);
+               && Objects.equals(this.color, other.color)
+               && this.maxDuration == other.maxDuration;
       }
    }
 
    @Override
    public int hashCode() {
-      return Objects.hash(this.particleSystemId, this.position, this.rotation, this.scale, this.color);
+      return Objects.hash(this.particleSystemId, this.position, this.rotation, this.scale, this.color, this.maxDuration);
    }
 }

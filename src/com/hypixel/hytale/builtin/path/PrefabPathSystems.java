@@ -107,6 +107,7 @@ public class PrefabPathSystems {
                worldPathData.unloadPrefabPathWaypoint(worldgenId, pathMarker.getPathId(), pathMarker.getOrder());
                break;
             case REMOVE:
+            case BUILDER_TOOLS_UNDO:
                UUID path = pathMarker.getPathId();
                if (path != null) {
                   worldPathData.removePrefabPathWaypoint(worldgenId, path, pathMarker.getOrder());

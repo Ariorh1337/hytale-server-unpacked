@@ -24,7 +24,7 @@ public class ScatterOperation extends ToolOperation {
    }
 
    @Override
-   boolean execute0(int x, int y, int z) {
+   protected boolean executeBlock(int x, int y, int z) {
       int currentBlock = this.edit.getBlock(x, y, z);
       if (currentBlock <= 0
          && this.builderState.isAsideBlock(this.edit.getAccessor(), x, y, z)

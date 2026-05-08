@@ -10,6 +10,7 @@ import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.NameMatching;
 import com.hypixel.hytale.server.core.asset.type.ambiencefx.config.AmbienceFX;
+import com.hypixel.hytale.server.core.asset.type.audiostate.config.AudioState;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.entityeffect.config.EntityEffect;
 import com.hypixel.hytale.server.core.asset.type.environment.config.Environment;
@@ -469,6 +470,9 @@ public final class ArgTypes {
    );
    public static final SingleArgumentType<MusicContainer> MUSIC_CONTAINER_ASSET = new AssetArgumentType(
       "server.commands.parsing.argtype.asset.musiccontainer.name", MusicContainer.class, "server.commands.parsing.argtype.asset.musiccontainer.usage"
+   );
+   public static final SingleArgumentType<AudioState> AUDIO_STATE_ASSET = new AssetArgumentType(
+      "server.commands.parsing.argtype.asset.audiostate.name", AudioState.class, "server.commands.parsing.argtype.asset.audiostate.usage"
    );
    public static final SingleArgumentType<SoundCategory> SOUND_CATEGORY = forEnum("server.commands.parsing.argtype.soundcategory.name", SoundCategory.class);
    public static final ArgWrapper<EntityWrappedArg, UUID> ENTITY_ID = new ArgWrapper<>(

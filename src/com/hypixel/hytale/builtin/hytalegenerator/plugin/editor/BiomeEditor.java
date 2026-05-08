@@ -20,6 +20,7 @@ import com.hypixel.hytale.codec.ExtraInfo;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.util.RawJsonReader;
+import com.hypixel.hytale.common.plugin.PluginIdentifier;
 import com.hypixel.hytale.common.util.ArrayUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
@@ -27,6 +28,8 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector3iUtil;
+import com.hypixel.hytale.server.core.HytaleServer;
+import com.hypixel.hytale.server.core.HytaleServerConfig;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.WorldConfig;
@@ -62,6 +65,14 @@ public interface BiomeEditor {
             context.config = config;
             context.pack = pack;
             return context;
+         })
+         .thenComposeAsync(context -> {
+            AssetPack pack = context.pack;
+            PluginIdentifier identifier = new PluginIdentifier(pack.getManifest());
+            HytaleServerConfig serverConfig = HytaleServer.get().getConfig();
+            HytaleServerConfig.setBoot(serverConfig, identifier, true);
+            serverConfig.markChanged();
+            return serverConfig.consumeHasChanged() ? HytaleServerConfig.save(serverConfig).thenApply(context) : CompletableFuture.completedFuture(context);
          })
          .thenApplyAsync(
             SneakyThrow.sneakyFunction(

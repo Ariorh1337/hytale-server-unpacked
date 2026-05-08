@@ -40,9 +40,7 @@ public class ItemRepairPageSupplier implements OpenCustomUIInteraction.CustomPag
          return null;
       }
 
-      CombinedItemContainer hotbarUtilityCombinedContainer = InventoryComponent.getCombined(
-         componentAccessor, ref, InventoryComponent.ARMOR_HOTBAR_UTILITY_STORAGE
-      );
+      CombinedItemContainer hotbarUtilityCombinedContainer = InventoryComponent.getCombined(componentAccessor, ref, InventoryComponent.EVERYTHING);
       return new ItemRepairPage(playerRef, hotbarUtilityCombinedContainer, this.repairPenalty, itemContext);
    }
 }

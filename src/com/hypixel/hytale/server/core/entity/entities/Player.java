@@ -216,8 +216,12 @@ public class Player extends LivingEntity implements MetricProvider {
       }
 
       if (this.playerRef.getPacketHandler().getChannel().isActive()) {
+         PacketHandler.DisconnectReason reason = this.playerRef.getPacketHandler().getDisconnectReason();
+         if (reason.getServerDisconnectReason() == null && reason.getClientDisconnectType() == null) {
+            LOGGER.at(Level.WARNING).withCause(this.removedBy).log("Player removed from world! %s", this);
+         }
+
          this.playerRef.getPacketHandler().disconnect(Message.translation("server.general.disconnect.playerRemovedFromWorld"));
-         LOGGER.at(Level.WARNING).withCause(this.removedBy).log("Player removed from world! %s", this);
       }
 
       ScheduledFuture<?> task;

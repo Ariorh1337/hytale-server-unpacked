@@ -30,6 +30,22 @@ public class ParticleUtil {
    }
 
    public static void spawnParticleEffect(
+      @Nonnull String name,
+      @Nonnull Vector3d position,
+      float yaw,
+      float pitch,
+      float roll,
+      float scale,
+      float maxDuration,
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
+      SpatialResource<Ref<EntityStore>, EntityStore> playerSpatialResource = componentAccessor.getResource(EntityModule.get().getPlayerSpatialResourceType());
+      List<Ref<EntityStore>> playerRefs = SpatialResource.getThreadLocalReferenceList();
+      playerSpatialResource.getSpatialStructure().collect(position, 75.0, playerRefs);
+      spawnParticleEffect(name, position.x(), position.y(), position.z(), yaw, pitch, roll, scale, null, null, playerRefs, componentAccessor, maxDuration);
+   }
+
+   public static void spawnParticleEffect(
       @Nonnull String name, @Nonnull Vector3d position, @Nonnull List<Ref<EntityStore>> playerRefs, @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       spawnParticleEffect(name, position.x(), position.y(), position.z(), null, playerRefs, componentAccessor);
@@ -222,12 +238,30 @@ public class ParticleUtil {
       @Nonnull List<Ref<EntityStore>> playerRefs,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
+      spawnParticleEffect(name, x, y, z, rotationYaw, rotationPitch, rotationRoll, scale, color, sourceRef, playerRefs, componentAccessor, 0.0F);
+   }
+
+   public static void spawnParticleEffect(
+      @Nonnull String name,
+      double x,
+      double y,
+      double z,
+      float rotationYaw,
+      float rotationPitch,
+      float rotationRoll,
+      float scale,
+      @Nullable Color color,
+      @Nullable Ref<EntityStore> sourceRef,
+      @Nonnull List<Ref<EntityStore>> playerRefs,
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor,
+      float maxDuration
+   ) {
       Direction rotation = null;
       if (rotationYaw != 0.0F || rotationPitch != 0.0F || rotationRoll != 0.0F) {
          rotation = new Direction(rotationYaw, rotationPitch, rotationRoll);
       }
 
-      SpawnParticleSystem packet = new SpawnParticleSystem(name, new Position(x, y, z), rotation, scale, color);
+      SpawnParticleSystem packet = new SpawnParticleSystem(name, new Position(x, y, z), rotation, scale, color, maxDuration);
       ComponentType<EntityStore, PlayerRef> playerRefComponentType = PlayerRef.getComponentType();
 
       for (Ref<EntityStore> playerRef : playerRefs) {

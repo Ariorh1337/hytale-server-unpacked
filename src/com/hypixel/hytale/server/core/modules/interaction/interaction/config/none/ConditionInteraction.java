@@ -90,7 +90,7 @@ public class ConditionInteraction extends SimpleInteraction {
       boolean success = true;
       CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
       assert commandBuffer != null;
-      Ref<EntityStore> ref = context.getEntity();
+      Ref<EntityStore> ref = context.getOwningEntity();
       Player playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
       if (this.requiredGameMode != null && playerComponent != null && this.requiredGameMode != playerComponent.getGameMode()) {
          success = false;

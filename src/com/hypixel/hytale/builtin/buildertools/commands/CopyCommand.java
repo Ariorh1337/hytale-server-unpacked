@@ -116,7 +116,7 @@ public class CopyCommand extends AbstractPlayerCommand {
       assert playerComponent != null;
       PlayerRef playerRefComponent = componentAccessor.getComponent(ref, PlayerRef.getComponentType());
       assert playerRefComponent != null;
-      copySelection(ref, componentAccessor, BuilderToolsPlugin.getState(playerComponent, playerRefComponent), 24);
+      copySelection(ref, componentAccessor, BuilderToolsPlugin.getState(playerComponent, playerRefComponent), 28);
    }
 
    public static void copySelection(

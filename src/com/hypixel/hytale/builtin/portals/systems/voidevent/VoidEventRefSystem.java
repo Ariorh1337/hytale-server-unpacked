@@ -1,6 +1,6 @@
 package com.hypixel.hytale.builtin.portals.systems.voidevent;
 
-import com.hypixel.hytale.builtin.ambience.resources.AmbienceResource;
+import com.hypixel.hytale.builtin.audio.components.ForcedMusicTracker;
 import com.hypixel.hytale.builtin.portals.components.voidevent.VoidEvent;
 import com.hypixel.hytale.builtin.portals.components.voidevent.config.VoidEventConfig;
 import com.hypixel.hytale.builtin.portals.components.voidevent.config.VoidEventStage;
@@ -12,6 +12,8 @@ import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.RefSystem;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -26,8 +28,7 @@ public final class VoidEventRefSystem extends RefSystem<EntityStore> {
          VoidEventConfig voidEventConfig = portalWorld.getVoidEventConfig();
          int musicIndex = voidEventConfig.getMusicContainerIndex();
          if (musicIndex > 0) {
-            AmbienceResource ambienceResource = store.getResource(AmbienceResource.getResourceType());
-            ambienceResource.setForcedMusicContainerIndex(musicIndex);
+            applyForcedMusicToWorld(store, musicIndex);
          }
       }
    }
@@ -41,8 +42,7 @@ public final class VoidEventRefSystem extends RefSystem<EntityStore> {
          VoidEventConfig voidEventConfig = portalWorld.getVoidEventConfig();
          int musicIndex = voidEventConfig.getMusicContainerIndex();
          if (musicIndex > 0) {
-            AmbienceResource ambienceResource = store.getResource(AmbienceResource.getResourceType());
-            ambienceResource.setForcedMusicContainerIndex(0);
+            applyForcedMusicToWorld(store, 0);
          }
 
          VoidEvent voidEvent = commandBuffer.getComponent(ref, VoidEvent.getComponentType());
@@ -50,6 +50,20 @@ public final class VoidEventRefSystem extends RefSystem<EntityStore> {
          if (activeStage != null) {
             VoidEventStagesSystem.stopStage(activeStage, store, commandBuffer);
             voidEvent.setActiveStage(null);
+         }
+      }
+   }
+
+   private static void applyForcedMusicToWorld(@Nonnull Store<EntityStore> store, int containerIndex) {
+      World world = store.getExternalData().getWorld();
+
+      for (PlayerRef playerRef : world.getPlayerRefs()) {
+         Ref<EntityStore> ref = playerRef.getReference();
+         if (ref != null) {
+            ForcedMusicTracker tracker = store.getComponent(ref, ForcedMusicTracker.getComponentType());
+            if (tracker != null) {
+               tracker.setCurrentContainerIndex(containerIndex);
+            }
          }
       }
    }

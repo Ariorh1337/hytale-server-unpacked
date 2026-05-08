@@ -61,6 +61,7 @@ public class FlockSystems {
          Flock flock = store.getComponent(ref, this.flockComponentType);
          switch (reason) {
             case REMOVE:
+            case BUILDER_TOOLS_UNDO:
                entityGroup.setDissolved(true);
 
                for (Ref<EntityStore> memberRef : entityGroup.getMemberList()) {

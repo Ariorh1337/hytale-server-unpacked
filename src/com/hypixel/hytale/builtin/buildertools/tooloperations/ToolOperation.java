@@ -458,7 +458,7 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
 
    public final boolean test(int x, int y, int z, Void aVoid) {
       if (this.transform == Transform.NONE) {
-         return this.execute0(x + this.originOffsetX, y + this.originOffsetY, z + this.originOffsetZ);
+         return this.executeBlock(x + this.originOffsetX, y + this.originOffsetY, z + this.originOffsetZ);
       }
 
       this.vector.set(x - this.currentCenterX, y - this.currentCenterY, z - this.currentCenterZ);
@@ -466,14 +466,14 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
       x = this.currentCenterX + this.originOffsetX + this.vector.x;
       y = this.currentCenterY + this.originOffsetY + this.vector.y;
       z = this.currentCenterZ + this.originOffsetZ + this.vector.z;
-      return this.execute0(x, y, z);
+      return this.executeBlock(x, y, z);
    }
 
    public boolean showEditNotification() {
       return true;
    }
 
-   abstract boolean execute0(int var1, int var2, int var3);
+   protected abstract boolean executeBlock(int var1, int var2, int var3);
 
    public void execute(ComponentAccessor<EntityStore> componentAccessor) {
       executeShapeOperation(this.x, this.y, this.z, this, this.shape, this.shapeRange, this.shapeHeight, this.shapeThickness, this.capped);

@@ -1169,20 +1169,21 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
    }
 
    private void finalizePlayerRemoval(@Nonnull PlayerRef playerRef) {
-      this.playersByUuid.remove(playerRef.getUuid());
-      CommandManager.get().broadcastArgCacheInvalidation("player_ref");
-      if (Constants.SINGLEPLAYER) {
-         if (this.playersByUuid.isEmpty()) {
-            this.getLogger().at(Level.INFO).log("No players left on singleplayer server shutting down!");
-            HytaleServer.get().shutdownServer();
-         } else if (SingleplayerModule.isOwner(playerRef)) {
-            this.getLogger().at(Level.INFO).log("Owner left the singleplayer server shutting down!");
-            this.getPlayers()
-               .forEach(
-                  p -> p.getPacketHandler()
-                     .disconnect(Message.translation("server.general.disconnect.singleplayerOwnerLeft").param("username", playerRef.getUsername()))
-               );
-            HytaleServer.get().shutdownServer();
+      if (this.playersByUuid.remove(playerRef.getUuid(), playerRef)) {
+         CommandManager.get().broadcastArgCacheInvalidation("player_ref");
+         if (Constants.SINGLEPLAYER) {
+            if (this.playersByUuid.isEmpty()) {
+               this.getLogger().at(Level.INFO).log("No players left on singleplayer server shutting down!");
+               HytaleServer.get().shutdownServer();
+            } else if (SingleplayerModule.isOwner(playerRef)) {
+               this.getLogger().at(Level.INFO).log("Owner left the singleplayer server shutting down!");
+               this.getPlayers()
+                  .forEach(
+                     p -> p.getPacketHandler()
+                        .disconnect(Message.translation("server.general.disconnect.singleplayerOwnerLeft").param("username", playerRef.getUsername()))
+                  );
+               HytaleServer.get().shutdownServer();
+            }
          }
       }
    }

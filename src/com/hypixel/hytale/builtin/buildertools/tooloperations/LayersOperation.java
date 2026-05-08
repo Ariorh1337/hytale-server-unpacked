@@ -105,7 +105,7 @@ public class LayersOperation extends ToolOperation {
    }
 
    @Override
-   boolean execute0(int x, int y, int z) {
+   protected boolean executeBlock(int x, int y, int z) {
       if (this.failed) {
          return false;
       }

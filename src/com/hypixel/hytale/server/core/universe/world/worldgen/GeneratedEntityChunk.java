@@ -1,6 +1,7 @@
 package com.hypixel.hytale.server.core.universe.world.worldgen;
 
 import com.hypixel.hytale.component.Holder;
+import com.hypixel.hytale.server.core.modules.entity.component.FromPrefabInstance;
 import com.hypixel.hytale.server.core.modules.entity.component.FromWorldGen;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -34,9 +35,9 @@ public class GeneratedEntityChunk {
       this.entities.forEach(consumer);
    }
 
-   public void addEntities(Vector3i offset, PrefabRotation rotation, @Nullable Holder<EntityStore>[] entityHolders, int objectId) {
+   public void addEntities(Vector3i offset, PrefabRotation rotation, @Nullable Holder<EntityStore>[] entityHolders, int objectId, int prefabInstanceId) {
       if (entityHolders != null && entityHolders.length > 0) {
-         this.entities.add(new GeneratedEntityChunk.EntityWrapperEntry(offset, rotation, entityHolders, objectId));
+         this.entities.add(new GeneratedEntityChunk.EntityWrapperEntry(offset, rotation, entityHolders, objectId, prefabInstanceId));
       }
    }
 
@@ -46,6 +47,7 @@ public class GeneratedEntityChunk {
 
       for (GeneratedEntityChunk.EntityWrapperEntry entry : this.entities) {
          FromWorldGen fromWorldGen = new FromWorldGen(entry.worldgenId());
+         FromPrefabInstance fromPrefabInstance = new FromPrefabInstance(entry.prefabInstanceId());
 
          for (Holder<EntityStore> entityHolder : entry.entityHolders()) {
             TransformComponent transformComponent = entityHolder.getComponent(TransformComponent.getComponentType());
@@ -61,6 +63,7 @@ public class GeneratedEntityChunk {
             Vector3i offset = entry.offset();
             transformComponent.getPosition().add(offset.x, offset.y, offset.z);
             entityHolder.putComponent(FromWorldGen.getComponentType(), fromWorldGen);
+            entityHolder.putComponent(FromPrefabInstance.getComponentType(), fromPrefabInstance);
             entityChunk.storeEntityHolder(entityHolder);
          }
       }
@@ -68,11 +71,19 @@ public class GeneratedEntityChunk {
       return entityChunk;
    }
 
-   public record EntityWrapperEntry(Vector3i offset, PrefabRotation rotation, Holder<EntityStore>[] entityHolders, int worldgenId) {
+   public record EntityWrapperEntry(Vector3i offset, PrefabRotation rotation, Holder<EntityStore>[] entityHolders, int worldgenId, int prefabInstanceId) {
       @Nonnull
       @Override
       public String toString() {
-         return "EntityWrapperEntry{offset=" + this.offset + ", rotation=" + this.rotation + ", entityHolders=" + Arrays.toString(this.entityHolders) + "}";
+         return "EntityWrapperEntry{offset="
+            + this.offset
+            + ", rotation="
+            + this.rotation
+            + ", entityHolders="
+            + Arrays.toString(this.entityHolders)
+            + ", prefabInstanceId="
+            + this.prefabInstanceId
+            + "}";
       }
    }
 }

@@ -23,11 +23,14 @@ public abstract class MusicContainer {
    public MusicTransitionType transitionType = MusicTransitionType.Crossfade;
    public float transitionDuration;
    public boolean playToCompletion;
+   public float resumeMemoryDuration;
    @Nullable
    public String nameTranslationKey;
    public int audioCategoryIndex;
    @Nullable
    public TempoSettings tempo;
+   @Nullable
+   public StateBinding[] stateBindings;
 
    @Nonnull
    public static MusicContainer deserialize(@Nonnull ByteBuf buf, int offset) {

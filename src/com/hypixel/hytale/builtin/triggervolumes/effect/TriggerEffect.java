@@ -1,10 +1,13 @@
 package com.hypixel.hytale.builtin.triggervolumes.effect;
 
 import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.EmptyExtraInfo;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.EnumCodec;
 import com.hypixel.hytale.codec.lookup.CodecMapCodec;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 
@@ -27,6 +30,27 @@ public abstract class TriggerEffect {
    private TriggerEventType eventType;
    private float interval = 0.0F;
    private float delay = 0.0F;
+
+   @Nonnull
+   public static TriggerEffect deepCopy(@Nonnull TriggerEffect effect) {
+      TriggerEffect copy = CODEC.decode(CODEC.encode(effect, EmptyExtraInfo.EMPTY), EmptyExtraInfo.EMPTY);
+      if (copy == null) {
+         throw new IllegalStateException("Trigger effect codec returned null for " + effect.getClass().getName());
+      } else {
+         return copy;
+      }
+   }
+
+   @Nonnull
+   public static List<TriggerEffect> deepCopyList(@Nonnull List<TriggerEffect> effects) {
+      ArrayList<TriggerEffect> copy = new ArrayList<>(effects.size());
+
+      for (TriggerEffect effect : effects) {
+         copy.add(deepCopy(effect));
+      }
+
+      return copy;
+   }
 
    @Nonnull
    public TriggerEventType getEventType() {

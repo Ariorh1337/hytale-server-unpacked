@@ -97,6 +97,12 @@ public class VolumeEntry {
          new KeyedCodec<>("ActivationDelay", Codec.FLOAT, false), (v, d) -> v.activationDelay = d, v -> v.activationDelay > 0.0F ? v.activationDelay : null
       )
       .add()
+      .append(
+         new KeyedCodec<>("CancelDelayedOnExit", Codec.BOOLEAN, false),
+         (v, b) -> v.cancelDelayedEffectsOnExit = b,
+         v -> v.cancelDelayedEffectsOnExit ? null : Boolean.FALSE
+      )
+      .add()
       .append(new KeyedCodec<>("Cooldown", Codec.FLOAT, false), (v, c) -> v.cooldown = c, v -> v.cooldown > 0.0F ? v.cooldown : null)
       .add()
       .append(new KeyedCodec<>("CooldownMode", Codec.STRING, false), (v, s) -> {
@@ -111,6 +117,8 @@ public class VolumeEntry {
          (v, tags) -> v.rawTags = tags,
          v -> v.rawTags.isEmpty() ? null : v.rawTags
       )
+      .add()
+      .append(new KeyedCodec<>("FromWorldGen", Codec.BOOLEAN, false), (v, b) -> v.fromWorldGen = b, v -> v.fromWorldGen ? Boolean.TRUE : null)
       .add()
       .build();
    @Nonnull
@@ -127,6 +135,8 @@ public class VolumeEntry {
    private final Set<EntityTargetType> targetTypes;
    private boolean enabled = true;
    private boolean keepLoaded;
+   private boolean fromWorldGen;
+   private boolean cancelDelayedEffectsOnExit = true;
    private float activationDelay = 0.0F;
    private float cooldown = 0.0F;
    @Nonnull
@@ -230,6 +240,22 @@ public class VolumeEntry {
 
    public void setKeepLoaded(boolean keepLoaded) {
       this.keepLoaded = keepLoaded;
+   }
+
+   public boolean isFromWorldGen() {
+      return this.fromWorldGen;
+   }
+
+   public void setFromWorldGen(boolean fromWorldGen) {
+      this.fromWorldGen = fromWorldGen;
+   }
+
+   public boolean isCancelDelayedEffectsOnExit() {
+      return this.cancelDelayedEffectsOnExit;
+   }
+
+   public void setCancelDelayedEffectsOnExit(boolean cancelDelayedEffectsOnExit) {
+      this.cancelDelayedEffectsOnExit = cancelDelayedEffectsOnExit;
    }
 
    public float getActivationDelay() {

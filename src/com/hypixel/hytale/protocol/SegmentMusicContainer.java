@@ -12,10 +12,10 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class SegmentMusicContainer extends MusicContainer {
-   public static final int NULLABLE_BIT_FIELD_SIZE = 2;
-   public static final int FIXED_BLOCK_SIZE = 88;
-   public static final int VARIABLE_FIELD_COUNT = 4;
-   public static final int VARIABLE_BLOCK_START = 104;
+   public static final int NULLABLE_BIT_FIELD_SIZE = 1;
+   public static final int FIXED_BLOCK_SIZE = 87;
+   public static final int VARIABLE_FIELD_COUNT = 3;
+   public static final int VARIABLE_BLOCK_START = 99;
    public static final int MAX_SIZE = 1677721600;
    @Nullable
    public LayerPlacement[] layers;
@@ -23,11 +23,6 @@ public class SegmentMusicContainer extends MusicContainer {
    public BarBeatDuration entryMarker;
    @Nullable
    public BarBeatDuration exitMarker;
-   @Nullable
-   public String[] stateNames;
-   @Nullable
-   public float[] stateVolumeData;
-   public int defaultStateIndex;
 
    public SegmentMusicContainer() {
    }
@@ -43,15 +38,14 @@ public class SegmentMusicContainer extends MusicContainer {
       @Nonnull MusicTransitionType transitionType,
       float transitionDuration,
       boolean playToCompletion,
+      float resumeMemoryDuration,
       @Nullable String nameTranslationKey,
       int audioCategoryIndex,
       @Nullable TempoSettings tempo,
+      @Nullable StateBinding[] stateBindings,
       @Nullable LayerPlacement[] layers,
       @Nullable BarBeatDuration entryMarker,
-      @Nullable BarBeatDuration exitMarker,
-      @Nullable String[] stateNames,
-      @Nullable float[] stateVolumeData,
-      int defaultStateIndex
+      @Nullable BarBeatDuration exitMarker
    ) {
       this.volume = volume;
       this.loopCount = loopCount;
@@ -63,15 +57,14 @@ public class SegmentMusicContainer extends MusicContainer {
       this.transitionType = transitionType;
       this.transitionDuration = transitionDuration;
       this.playToCompletion = playToCompletion;
+      this.resumeMemoryDuration = resumeMemoryDuration;
       this.nameTranslationKey = nameTranslationKey;
       this.audioCategoryIndex = audioCategoryIndex;
       this.tempo = tempo;
+      this.stateBindings = stateBindings;
       this.layers = layers;
       this.entryMarker = entryMarker;
       this.exitMarker = exitMarker;
-      this.stateNames = stateNames;
-      this.stateVolumeData = stateVolumeData;
-      this.defaultStateIndex = defaultStateIndex;
    }
 
    public SegmentMusicContainer(@Nonnull SegmentMusicContainer other) {
@@ -85,62 +78,61 @@ public class SegmentMusicContainer extends MusicContainer {
       this.transitionType = other.transitionType;
       this.transitionDuration = other.transitionDuration;
       this.playToCompletion = other.playToCompletion;
+      this.resumeMemoryDuration = other.resumeMemoryDuration;
       this.nameTranslationKey = other.nameTranslationKey;
       this.audioCategoryIndex = other.audioCategoryIndex;
       this.tempo = other.tempo;
+      this.stateBindings = other.stateBindings;
       this.layers = other.layers;
       this.entryMarker = other.entryMarker;
       this.exitMarker = other.exitMarker;
-      this.stateNames = other.stateNames;
-      this.stateVolumeData = other.stateVolumeData;
-      this.defaultStateIndex = other.defaultStateIndex;
    }
 
    @Nonnull
    public static SegmentMusicContainer deserialize(@Nonnull ByteBuf buf, int offset) {
-      if (buf.readableBytes() - offset < 104) {
-         throw ProtocolException.bufferTooSmall("SegmentMusicContainer", 104, buf.readableBytes() - offset);
+      if (buf.readableBytes() - offset < 99) {
+         throw ProtocolException.bufferTooSmall("SegmentMusicContainer", 99, buf.readableBytes() - offset);
       }
 
       SegmentMusicContainer obj = new SegmentMusicContainer();
-      byte[] nullBits = PacketIO.readBytes(buf, offset, 2);
-      obj.volume = buf.getFloatLE(offset + 2);
-      obj.loopCount = buf.getIntLE(offset + 6);
-      obj.weight = buf.getFloatLE(offset + 10);
-      if ((nullBits[0] & 1) != 0) {
-         obj.silenceAfter = Rangef.deserialize(buf, offset + 14);
+      byte nullBits = buf.getByte(offset);
+      obj.volume = buf.getFloatLE(offset + 1);
+      obj.loopCount = buf.getIntLE(offset + 5);
+      obj.weight = buf.getFloatLE(offset + 9);
+      if ((nullBits & 1) != 0) {
+         obj.silenceAfter = Rangef.deserialize(buf, offset + 13);
       }
 
-      if ((nullBits[0] & 2) != 0) {
-         obj.exitSilence = Rangef.deserialize(buf, offset + 22);
+      if ((nullBits & 2) != 0) {
+         obj.exitSilence = Rangef.deserialize(buf, offset + 21);
       }
 
-      obj.fadeInDuration = buf.getFloatLE(offset + 30);
-      obj.fadeOutDuration = buf.getFloatLE(offset + 34);
-      obj.transitionType = MusicTransitionType.fromValue(buf.getByte(offset + 38));
-      obj.transitionDuration = buf.getFloatLE(offset + 39);
-      obj.playToCompletion = buf.getByte(offset + 43) != 0;
-      obj.audioCategoryIndex = buf.getIntLE(offset + 44);
-      if ((nullBits[0] & 4) != 0) {
-         obj.tempo = TempoSettings.deserialize(buf, offset + 48);
+      obj.fadeInDuration = buf.getFloatLE(offset + 29);
+      obj.fadeOutDuration = buf.getFloatLE(offset + 33);
+      obj.transitionType = MusicTransitionType.fromValue(buf.getByte(offset + 37));
+      obj.transitionDuration = buf.getFloatLE(offset + 38);
+      obj.playToCompletion = buf.getByte(offset + 42) != 0;
+      obj.resumeMemoryDuration = buf.getFloatLE(offset + 43);
+      obj.audioCategoryIndex = buf.getIntLE(offset + 47);
+      if ((nullBits & 4) != 0) {
+         obj.tempo = TempoSettings.deserialize(buf, offset + 51);
       }
 
-      if ((nullBits[0] & 8) != 0) {
-         obj.entryMarker = BarBeatDuration.deserialize(buf, offset + 60);
+      if ((nullBits & 8) != 0) {
+         obj.entryMarker = BarBeatDuration.deserialize(buf, offset + 63);
       }
 
-      if ((nullBits[0] & 16) != 0) {
-         obj.exitMarker = BarBeatDuration.deserialize(buf, offset + 72);
+      if ((nullBits & 16) != 0) {
+         obj.exitMarker = BarBeatDuration.deserialize(buf, offset + 75);
       }
 
-      obj.defaultStateIndex = buf.getIntLE(offset + 84);
-      if ((nullBits[0] & 32) != 0) {
-         int varPosBase0 = buf.getIntLE(offset + 88);
-         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 104) {
+      if ((nullBits & 32) != 0) {
+         int varPosBase0 = buf.getIntLE(offset + 87);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 99) {
             throw ProtocolException.invalidOffset("NameTranslationKey", varPosBase0, buf.readableBytes());
          }
 
-         int varPos0 = offset + 104 + varPosBase0;
+         int varPos0 = offset + 99 + varPosBase0;
          int nameTranslationKeyLen = VarInt.peek(buf, varPos0);
          if (nameTranslationKeyLen < 0) {
             throw ProtocolException.invalidVarInt("NameTranslationKey");
@@ -158,14 +150,44 @@ public class SegmentMusicContainer extends MusicContainer {
          obj.nameTranslationKey = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
-      if ((nullBits[0] & 64) != 0) {
-         int varPosBase1 = buf.getIntLE(offset + 92);
-         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 104) {
-            throw ProtocolException.invalidOffset("Layers", varPosBase1, buf.readableBytes());
+      if ((nullBits & 64) != 0) {
+         int varPosBase1 = buf.getIntLE(offset + 91);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 99) {
+            throw ProtocolException.invalidOffset("StateBindings", varPosBase1, buf.readableBytes());
          }
 
-         int varPos1 = offset + 104 + varPosBase1;
-         int layersCount = VarInt.peek(buf, varPos1);
+         int varPos1 = offset + 99 + varPosBase1;
+         int stateBindingsCount = VarInt.peek(buf, varPos1);
+         if (stateBindingsCount < 0) {
+            throw ProtocolException.invalidVarInt("StateBindings");
+         }
+
+         int varIntLen = VarInt.size(stateBindingsCount);
+         if (stateBindingsCount > 4096000) {
+            throw ProtocolException.arrayTooLong("StateBindings", stateBindingsCount, 4096000);
+         }
+
+         if (varPos1 + varIntLen + stateBindingsCount * 5L > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("StateBindings", varPos1 + varIntLen + stateBindingsCount * 5, buf.readableBytes());
+         }
+
+         obj.stateBindings = new StateBinding[stateBindingsCount];
+         int elemPos = varPos1 + varIntLen;
+
+         for (int i = 0; i < stateBindingsCount; i++) {
+            obj.stateBindings[i] = StateBinding.deserialize(buf, elemPos);
+            elemPos += StateBinding.computeBytesConsumed(buf, elemPos);
+         }
+      }
+
+      if ((nullBits & 128) != 0) {
+         int varPosBase2 = buf.getIntLE(offset + 95);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 99) {
+            throw ProtocolException.invalidOffset("Layers", varPosBase2, buf.readableBytes());
+         }
+
+         int varPos2 = offset + 99 + varPosBase2;
+         int layersCount = VarInt.peek(buf, varPos2);
          if (layersCount < 0) {
             throw ProtocolException.invalidVarInt("Layers");
          }
@@ -175,12 +197,12 @@ public class SegmentMusicContainer extends MusicContainer {
             throw ProtocolException.arrayTooLong("Layers", layersCount, 4096000);
          }
 
-         if (varPos1 + varIntLen + layersCount * 17L > buf.readableBytes()) {
-            throw ProtocolException.bufferTooSmall("Layers", varPos1 + varIntLen + layersCount * 17, buf.readableBytes());
+         if (varPos2 + varIntLen + layersCount * 17L > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Layers", varPos2 + varIntLen + layersCount * 17, buf.readableBytes());
          }
 
          obj.layers = new LayerPlacement[layersCount];
-         int elemPos = varPos1 + varIntLen;
+         int elemPos = varPos2 + varIntLen;
 
          for (int i = 0; i < layersCount; i++) {
             obj.layers[i] = LayerPlacement.deserialize(buf, elemPos);
@@ -188,91 +210,19 @@ public class SegmentMusicContainer extends MusicContainer {
          }
       }
 
-      if ((nullBits[0] & 128) != 0) {
-         int varPosBase2 = buf.getIntLE(offset + 96);
-         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 104) {
-            throw ProtocolException.invalidOffset("StateNames", varPosBase2, buf.readableBytes());
-         }
-
-         int varPos2 = offset + 104 + varPosBase2;
-         int stateNamesCount = VarInt.peek(buf, varPos2);
-         if (stateNamesCount < 0) {
-            throw ProtocolException.invalidVarInt("StateNames");
-         }
-
-         int varIntLen = VarInt.size(stateNamesCount);
-         if (stateNamesCount > 4096000) {
-            throw ProtocolException.arrayTooLong("StateNames", stateNamesCount, 4096000);
-         }
-
-         if (varPos2 + varIntLen + stateNamesCount * 1L > buf.readableBytes()) {
-            throw ProtocolException.bufferTooSmall("StateNames", varPos2 + varIntLen + stateNamesCount * 1, buf.readableBytes());
-         }
-
-         obj.stateNames = new String[stateNamesCount];
-         int elemPos = varPos2 + varIntLen;
-
-         for (int i = 0; i < stateNamesCount; i++) {
-            int strLen = VarInt.peek(buf, elemPos);
-            if (strLen < 0) {
-               throw ProtocolException.invalidVarInt("stateNames[" + i + "]");
-            }
-
-            int strVarLen = VarInt.size(strLen);
-            if (strLen > 4096000) {
-               throw ProtocolException.stringTooLong("stateNames[" + i + "]", strLen, 4096000);
-            }
-
-            if (elemPos + strVarLen + strLen > buf.readableBytes()) {
-               throw ProtocolException.bufferTooSmall("stateNames[" + i + "]", elemPos + strVarLen + strLen, buf.readableBytes());
-            }
-
-            obj.stateNames[i] = PacketIO.readVarString(buf, elemPos);
-            elemPos += strVarLen + strLen;
-         }
-      }
-
-      if ((nullBits[1] & 1) != 0) {
-         int varPosBase3 = buf.getIntLE(offset + 100);
-         if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 104) {
-            throw ProtocolException.invalidOffset("StateVolumeData", varPosBase3, buf.readableBytes());
-         }
-
-         int varPos3 = offset + 104 + varPosBase3;
-         int stateVolumeDataCount = VarInt.peek(buf, varPos3);
-         if (stateVolumeDataCount < 0) {
-            throw ProtocolException.invalidVarInt("StateVolumeData");
-         }
-
-         int varIntLen = VarInt.size(stateVolumeDataCount);
-         if (stateVolumeDataCount > 4096000) {
-            throw ProtocolException.arrayTooLong("StateVolumeData", stateVolumeDataCount, 4096000);
-         }
-
-         if (varPos3 + varIntLen + stateVolumeDataCount * 4L > buf.readableBytes()) {
-            throw ProtocolException.bufferTooSmall("StateVolumeData", varPos3 + varIntLen + stateVolumeDataCount * 4, buf.readableBytes());
-         }
-
-         obj.stateVolumeData = new float[stateVolumeDataCount];
-
-         for (int i = 0; i < stateVolumeDataCount; i++) {
-            obj.stateVolumeData[i] = buf.getFloatLE(varPos3 + varIntLen + i * 4);
-         }
-      }
-
       return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
-      byte[] nullBits = PacketIO.readBytes(buf, offset, 2);
-      int maxEnd = 104;
-      if ((nullBits[0] & 32) != 0) {
-         int fieldOffset0 = buf.getIntLE(offset + 88);
-         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 104) {
+      byte nullBits = buf.getByte(offset);
+      int maxEnd = 99;
+      if ((nullBits & 32) != 0) {
+         int fieldOffset0 = buf.getIntLE(offset + 87);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 99) {
             throw ProtocolException.invalidOffset("NameTranslationKey", fieldOffset0, maxEnd);
          }
 
-         int pos0 = offset + 104 + fieldOffset0;
+         int pos0 = offset + 99 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
          pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
@@ -280,18 +230,18 @@ public class SegmentMusicContainer extends MusicContainer {
          }
       }
 
-      if ((nullBits[0] & 64) != 0) {
-         int fieldOffset1 = buf.getIntLE(offset + 92);
-         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 104) {
-            throw ProtocolException.invalidOffset("Layers", fieldOffset1, maxEnd);
+      if ((nullBits & 64) != 0) {
+         int fieldOffset1 = buf.getIntLE(offset + 91);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 99) {
+            throw ProtocolException.invalidOffset("StateBindings", fieldOffset1, maxEnd);
          }
 
-         int pos1 = offset + 104 + fieldOffset1;
+         int pos1 = offset + 99 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
          pos1 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
-            pos1 += LayerPlacement.computeBytesConsumed(buf, pos1);
+            pos1 += StateBinding.computeBytesConsumed(buf, pos1);
          }
 
          if (pos1 - offset > maxEnd) {
@@ -299,19 +249,18 @@ public class SegmentMusicContainer extends MusicContainer {
          }
       }
 
-      if ((nullBits[0] & 128) != 0) {
-         int fieldOffset2 = buf.getIntLE(offset + 96);
-         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 104) {
-            throw ProtocolException.invalidOffset("StateNames", fieldOffset2, maxEnd);
+      if ((nullBits & 128) != 0) {
+         int fieldOffset2 = buf.getIntLE(offset + 95);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 99) {
+            throw ProtocolException.invalidOffset("Layers", fieldOffset2, maxEnd);
          }
 
-         int pos2 = offset + 104 + fieldOffset2;
+         int pos2 = offset + 99 + fieldOffset2;
          int arrLen = VarInt.peek(buf, pos2);
          pos2 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
-            int sl = VarInt.peek(buf, pos2);
-            pos2 += VarInt.size(sl) + sl;
+            pos2 += LayerPlacement.computeBytesConsumed(buf, pos2);
          }
 
          if (pos2 - offset > maxEnd) {
@@ -319,25 +268,11 @@ public class SegmentMusicContainer extends MusicContainer {
          }
       }
 
-      if ((nullBits[1] & 1) != 0) {
-         int fieldOffset3 = buf.getIntLE(offset + 100);
-         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 104) {
-            throw ProtocolException.invalidOffset("StateVolumeData", fieldOffset3, maxEnd);
-         }
-
-         int pos3 = offset + 104 + fieldOffset3;
-         int arrLen = VarInt.peek(buf, pos3);
-         pos3 += VarInt.size(arrLen) + arrLen * 4;
-         if (pos3 - offset > maxEnd) {
-            maxEnd = pos3 - offset;
-         }
-      }
-
       return maxEnd;
    }
 
    public static boolean isBufferTooSmall(MemorySegment mem) {
-      return mem.byteSize() < 104L;
+      return mem.byteSize() < 99L;
    }
 
    public static float getVolume(MemorySegment mem) {
@@ -345,7 +280,7 @@ public class SegmentMusicContainer extends MusicContainer {
    }
 
    public static float getVolume(MemorySegment mem, int offset) {
-      return mem.get(PacketIO.PROTO_FLOAT, offset + 2);
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 1);
    }
 
    public static int getLoopCount(MemorySegment mem) {
@@ -353,7 +288,7 @@ public class SegmentMusicContainer extends MusicContainer {
    }
 
    public static int getLoopCount(MemorySegment mem, int offset) {
-      return mem.get(PacketIO.PROTO_INT, offset + 6);
+      return mem.get(PacketIO.PROTO_INT, offset + 5);
    }
 
    public static float getWeight(MemorySegment mem) {
@@ -361,7 +296,7 @@ public class SegmentMusicContainer extends MusicContainer {
    }
 
    public static float getWeight(MemorySegment mem, int offset) {
-      return mem.get(PacketIO.PROTO_FLOAT, offset + 10);
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 9);
    }
 
    @Nullable
@@ -371,7 +306,7 @@ public class SegmentMusicContainer extends MusicContainer {
 
    @Nullable
    public static Rangef getSilenceAfter(MemorySegment mem, int offset) {
-      return hasSilenceAfter(mem, offset) ? Rangef.toObject(mem, offset + 14) : null;
+      return hasSilenceAfter(mem, offset) ? Rangef.toObject(mem, offset + 13) : null;
    }
 
    @Nullable
@@ -381,7 +316,7 @@ public class SegmentMusicContainer extends MusicContainer {
 
    @Nullable
    public static Rangef getExitSilence(MemorySegment mem, int offset) {
-      return hasExitSilence(mem, offset) ? Rangef.toObject(mem, offset + 22) : null;
+      return hasExitSilence(mem, offset) ? Rangef.toObject(mem, offset + 21) : null;
    }
 
    public static float getFadeInDuration(MemorySegment mem) {
@@ -389,7 +324,7 @@ public class SegmentMusicContainer extends MusicContainer {
    }
 
    public static float getFadeInDuration(MemorySegment mem, int offset) {
-      return mem.get(PacketIO.PROTO_FLOAT, offset + 30);
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 29);
    }
 
    public static float getFadeOutDuration(MemorySegment mem) {
@@ -397,7 +332,7 @@ public class SegmentMusicContainer extends MusicContainer {
    }
 
    public static float getFadeOutDuration(MemorySegment mem, int offset) {
-      return mem.get(PacketIO.PROTO_FLOAT, offset + 34);
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 33);
    }
 
    public static MusicTransitionType getTransitionType(MemorySegment mem) {
@@ -405,7 +340,7 @@ public class SegmentMusicContainer extends MusicContainer {
    }
 
    public static MusicTransitionType getTransitionType(MemorySegment mem, int offset) {
-      return MusicTransitionType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 38));
+      return MusicTransitionType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 37));
    }
 
    public static float getTransitionDuration(MemorySegment mem) {
@@ -413,7 +348,7 @@ public class SegmentMusicContainer extends MusicContainer {
    }
 
    public static float getTransitionDuration(MemorySegment mem, int offset) {
-      return mem.get(PacketIO.PROTO_FLOAT, offset + 39);
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 38);
    }
 
    public static boolean getPlayToCompletion(MemorySegment mem) {
@@ -421,7 +356,15 @@ public class SegmentMusicContainer extends MusicContainer {
    }
 
    public static boolean getPlayToCompletion(MemorySegment mem, int offset) {
-      return mem.get(PacketIO.PROTO_BOOL, offset + 43);
+      return mem.get(PacketIO.PROTO_BOOL, offset + 42);
+   }
+
+   public static float getResumeMemoryDuration(MemorySegment mem) {
+      return getResumeMemoryDuration(mem, 0);
+   }
+
+   public static float getResumeMemoryDuration(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 43);
    }
 
    @Nullable
@@ -432,7 +375,7 @@ public class SegmentMusicContainer extends MusicContainer {
    @Nullable
    public static String getNameTranslationKey(MemorySegment mem, int offset) {
       return hasNameTranslationKey(mem, offset)
-         ? PacketIO.readVarString("NameTranslationKey", mem, offset + getValidatedOffset(mem, offset, 88, 104, "NameTranslationKey"), 4096000, PacketIO.UTF8)
+         ? PacketIO.readVarString("NameTranslationKey", mem, offset + getValidatedOffset(mem, offset, 87, 99, "NameTranslationKey"), 4096000, PacketIO.UTF8)
          : null;
    }
 
@@ -441,7 +384,7 @@ public class SegmentMusicContainer extends MusicContainer {
    }
 
    public static int getAudioCategoryIndex(MemorySegment mem, int offset) {
-      return mem.get(PacketIO.PROTO_INT, offset + 44);
+      return mem.get(PacketIO.PROTO_INT, offset + 47);
    }
 
    @Nullable
@@ -451,7 +394,45 @@ public class SegmentMusicContainer extends MusicContainer {
 
    @Nullable
    public static TempoSettings getTempo(MemorySegment mem, int offset) {
-      return hasTempo(mem, offset) ? TempoSettings.toObject(mem, offset + 48) : null;
+      return hasTempo(mem, offset) ? TempoSettings.toObject(mem, offset + 51) : null;
+   }
+
+   @Nullable
+   public static StateBinding[] getStateBindings(MemorySegment mem) {
+      return getStateBindings(mem, 0);
+   }
+
+   @Nullable
+   public static StateBinding[] getStateBindings(MemorySegment mem, int offset) {
+      if (!hasStateBindings(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 91, 99, "StateBindings");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("StateBindings", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("StateBindings", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("StateBindings", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      StateBinding[] data = new StateBinding[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = StateBinding.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
    }
 
    @Nullable
@@ -465,7 +446,7 @@ public class SegmentMusicContainer extends MusicContainer {
          return null;
       }
 
-      int off = offset + getValidatedOffset(mem, offset, 92, 104, "Layers");
+      int off = offset + getValidatedOffset(mem, offset, 95, 99, "Layers");
       long packed = VarInt.getWithLength(mem, off);
       int len = (int)packed;
       if (len < 0) {
@@ -499,7 +480,7 @@ public class SegmentMusicContainer extends MusicContainer {
 
    @Nullable
    public static BarBeatDuration getEntryMarker(MemorySegment mem, int offset) {
-      return hasEntryMarker(mem, offset) ? BarBeatDuration.toObject(mem, offset + 60) : null;
+      return hasEntryMarker(mem, offset) ? BarBeatDuration.toObject(mem, offset + 63) : null;
    }
 
    @Nullable
@@ -509,88 +490,7 @@ public class SegmentMusicContainer extends MusicContainer {
 
    @Nullable
    public static BarBeatDuration getExitMarker(MemorySegment mem, int offset) {
-      return hasExitMarker(mem, offset) ? BarBeatDuration.toObject(mem, offset + 72) : null;
-   }
-
-   @Nullable
-   public static String[] getStateNames(MemorySegment mem) {
-      return getStateNames(mem, 0);
-   }
-
-   @Nullable
-   public static String[] getStateNames(MemorySegment mem, int offset) {
-      if (!hasStateNames(mem, offset)) {
-         return null;
-      }
-
-      int off = offset + getValidatedOffset(mem, offset, 96, 104, "StateNames");
-      long packed = VarInt.getWithLength(mem, off);
-      int len = (int)packed;
-      if (len < 0) {
-         throw ProtocolException.negativeLength("StateNames", len);
-      }
-
-      if (len > 4096000) {
-         throw ProtocolException.arrayTooLong("StateNames", len, 4096000);
-      }
-
-      int lenOffset = (int)(packed >>> 32);
-      if (off + lenOffset + len > mem.byteSize()) {
-         throw ProtocolException.bufferTooSmall("StateNames", off + lenOffset + len, (int)mem.byteSize());
-      }
-
-      off += lenOffset;
-      String[] data = new String[len];
-
-      for (int i = 0; i < len; i++) {
-         long sp = VarInt.getWithLength(mem, off);
-         int n = (int)sp + (int)(sp >>> 32);
-         data[i] = PacketIO.readVarString("StateNames", mem, off, 16384000, PacketIO.UTF8);
-         off += n;
-      }
-
-      return data;
-   }
-
-   @Nullable
-   public static float[] getStateVolumeData(MemorySegment mem) {
-      return getStateVolumeData(mem, 0);
-   }
-
-   @Nullable
-   public static float[] getStateVolumeData(MemorySegment mem, int offset) {
-      if (!hasStateVolumeData(mem, offset)) {
-         return null;
-      }
-
-      int off = offset + getValidatedOffset(mem, offset, 100, 104, "StateVolumeData");
-      long packed = VarInt.getWithLength(mem, off);
-      int len = (int)packed;
-      if (len < 0) {
-         throw ProtocolException.negativeLength("StateVolumeData", len);
-      }
-
-      if (len > 4096000) {
-         throw ProtocolException.arrayTooLong("StateVolumeData", len, 4096000);
-      }
-
-      int lenOffset = (int)(packed >>> 32);
-      if (off + lenOffset + len * 4L > mem.byteSize()) {
-         throw ProtocolException.bufferTooSmall("StateVolumeData", off + lenOffset + len * 4, (int)mem.byteSize());
-      }
-
-      off += lenOffset;
-      float[] data = new float[len];
-      MemorySegment.copy(mem, PacketIO.PROTO_FLOAT, off, data, 0, len);
-      return data;
-   }
-
-   public static int getDefaultStateIndex(MemorySegment mem) {
-      return getDefaultStateIndex(mem, 0);
-   }
-
-   public static int getDefaultStateIndex(MemorySegment mem, int offset) {
-      return mem.get(PacketIO.PROTO_INT, offset + 84);
+      return hasExitMarker(mem, offset) ? BarBeatDuration.toObject(mem, offset + 75) : null;
    }
 
    public static boolean hasSilenceAfter(MemorySegment mem, int offset) {
@@ -623,19 +523,14 @@ public class SegmentMusicContainer extends MusicContainer {
       return (b & 32) != 0;
    }
 
-   public static boolean hasLayers(MemorySegment mem, int offset) {
+   public static boolean hasStateBindings(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
       return (b & 64) != 0;
    }
 
-   public static boolean hasStateNames(MemorySegment mem, int offset) {
+   public static boolean hasLayers(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
       return (b & 128) != 0;
-   }
-
-   public static boolean hasStateVolumeData(MemorySegment mem, int offset) {
-      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
-      return (b & 1) != 0;
    }
 
    private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
@@ -652,13 +547,40 @@ public class SegmentMusicContainer extends MusicContainer {
    }
 
    public static SegmentMusicContainer toObject(MemorySegment mem, int offset) {
-      if (offset + 104 > mem.byteSize()) {
-         throw ProtocolException.bufferTooSmall("SegmentMusicContainer", offset + 104, (int)mem.byteSize());
+      if (offset + 99 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("SegmentMusicContainer", offset + 99, (int)mem.byteSize());
+      }
+
+      StateBinding[] stateBindings = null;
+      if (hasStateBindings(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 91, 99, "StateBindings");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("StateBindings", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("StateBindings", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("StateBindings", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         stateBindings = new StateBinding[len];
+
+         for (int i = 0; i < len; i++) {
+            stateBindings[i] = StateBinding.toObject(mem, off);
+            off += stateBindings[i].computeSize();
+         }
       }
 
       LayerPlacement[] layers = null;
       if (hasLayers(mem, offset)) {
-         int off = offset + getValidatedOffset(mem, offset, 92, 104, "Layers");
+         int off = offset + getValidatedOffset(mem, offset, 95, 99, "Layers");
          long packed = VarInt.getWithLength(mem, off);
          int len = (int)packed;
          if (len < 0) {
@@ -683,124 +605,67 @@ public class SegmentMusicContainer extends MusicContainer {
          }
       }
 
-      String[] stateNames = null;
-      if (hasStateNames(mem, offset)) {
-         int off = offset + getValidatedOffset(mem, offset, 96, 104, "StateNames");
-         long packed = VarInt.getWithLength(mem, off);
-         int len = (int)packed;
-         if (len < 0) {
-            throw ProtocolException.negativeLength("StateNames", len);
-         }
-
-         if (len > 4096000) {
-            throw ProtocolException.arrayTooLong("StateNames", len, 4096000);
-         }
-
-         int lenOffset = (int)(packed >>> 32);
-         if (off + lenOffset + len > mem.byteSize()) {
-            throw ProtocolException.bufferTooSmall("StateNames", off + lenOffset + len, (int)mem.byteSize());
-         }
-
-         off += lenOffset;
-         stateNames = new String[len];
-
-         for (int i = 0; i < len; i++) {
-            long sp = VarInt.getWithLength(mem, off);
-            int n = (int)sp + (int)(sp >>> 32);
-            stateNames[i] = PacketIO.readVarString("StateNames", mem, off, 16384000, PacketIO.UTF8);
-            off += n;
-         }
-      }
-
-      float[] stateVolumeData = null;
-      if (hasStateVolumeData(mem, offset)) {
-         int off = offset + getValidatedOffset(mem, offset, 100, 104, "StateVolumeData");
-         long packed = VarInt.getWithLength(mem, off);
-         int len = (int)packed;
-         if (len < 0) {
-            throw ProtocolException.negativeLength("StateVolumeData", len);
-         }
-
-         if (len > 4096000) {
-            throw ProtocolException.arrayTooLong("StateVolumeData", len, 4096000);
-         }
-
-         int lenOffset = (int)(packed >>> 32);
-         if (off + lenOffset + len * 4L > mem.byteSize()) {
-            throw ProtocolException.bufferTooSmall("StateVolumeData", off + lenOffset + len * 4, (int)mem.byteSize());
-         }
-
-         off += lenOffset;
-         stateVolumeData = new float[len];
-         MemorySegment.copy(mem, PacketIO.PROTO_FLOAT, off, stateVolumeData, 0, len);
-      }
-
       return new SegmentMusicContainer(
-         mem.get(PacketIO.PROTO_FLOAT, offset + 2),
-         mem.get(PacketIO.PROTO_INT, offset + 6),
-         mem.get(PacketIO.PROTO_FLOAT, offset + 10),
-         hasSilenceAfter(mem, offset) ? Rangef.toObject(mem, offset + 14) : null,
-         hasExitSilence(mem, offset) ? Rangef.toObject(mem, offset + 22) : null,
-         mem.get(PacketIO.PROTO_FLOAT, offset + 30),
-         mem.get(PacketIO.PROTO_FLOAT, offset + 34),
-         MusicTransitionType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 38)),
-         mem.get(PacketIO.PROTO_FLOAT, offset + 39),
-         mem.get(PacketIO.PROTO_BOOL, offset + 43),
+         mem.get(PacketIO.PROTO_FLOAT, offset + 1),
+         mem.get(PacketIO.PROTO_INT, offset + 5),
+         mem.get(PacketIO.PROTO_FLOAT, offset + 9),
+         hasSilenceAfter(mem, offset) ? Rangef.toObject(mem, offset + 13) : null,
+         hasExitSilence(mem, offset) ? Rangef.toObject(mem, offset + 21) : null,
+         mem.get(PacketIO.PROTO_FLOAT, offset + 29),
+         mem.get(PacketIO.PROTO_FLOAT, offset + 33),
+         MusicTransitionType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 37)),
+         mem.get(PacketIO.PROTO_FLOAT, offset + 38),
+         mem.get(PacketIO.PROTO_BOOL, offset + 42),
+         mem.get(PacketIO.PROTO_FLOAT, offset + 43),
          hasNameTranslationKey(mem, offset)
-            ? PacketIO.readVarString("NameTranslationKey", mem, offset + getValidatedOffset(mem, offset, 88, 104, "NameTranslationKey"), 4096000, PacketIO.UTF8)
+            ? PacketIO.readVarString("NameTranslationKey", mem, offset + getValidatedOffset(mem, offset, 87, 99, "NameTranslationKey"), 4096000, PacketIO.UTF8)
             : null,
-         mem.get(PacketIO.PROTO_INT, offset + 44),
-         hasTempo(mem, offset) ? TempoSettings.toObject(mem, offset + 48) : null,
+         mem.get(PacketIO.PROTO_INT, offset + 47),
+         hasTempo(mem, offset) ? TempoSettings.toObject(mem, offset + 51) : null,
+         stateBindings,
          layers,
-         hasEntryMarker(mem, offset) ? BarBeatDuration.toObject(mem, offset + 60) : null,
-         hasExitMarker(mem, offset) ? BarBeatDuration.toObject(mem, offset + 72) : null,
-         stateNames,
-         stateVolumeData,
-         mem.get(PacketIO.PROTO_INT, offset + 84)
+         hasEntryMarker(mem, offset) ? BarBeatDuration.toObject(mem, offset + 63) : null,
+         hasExitMarker(mem, offset) ? BarBeatDuration.toObject(mem, offset + 75) : null
       );
    }
 
    @Override
    public int serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
-      byte[] nullBits = new byte[2];
+      byte nullBits = 0;
       if (this.silenceAfter != null) {
-         nullBits[0] = (byte)(nullBits[0] | 1);
+         nullBits = (byte)(nullBits | 1);
       }
 
       if (this.exitSilence != null) {
-         nullBits[0] = (byte)(nullBits[0] | 2);
+         nullBits = (byte)(nullBits | 2);
       }
 
       if (this.tempo != null) {
-         nullBits[0] = (byte)(nullBits[0] | 4);
+         nullBits = (byte)(nullBits | 4);
       }
 
       if (this.entryMarker != null) {
-         nullBits[0] = (byte)(nullBits[0] | 8);
+         nullBits = (byte)(nullBits | 8);
       }
 
       if (this.exitMarker != null) {
-         nullBits[0] = (byte)(nullBits[0] | 16);
+         nullBits = (byte)(nullBits | 16);
       }
 
       if (this.nameTranslationKey != null) {
-         nullBits[0] = (byte)(nullBits[0] | 32);
+         nullBits = (byte)(nullBits | 32);
+      }
+
+      if (this.stateBindings != null) {
+         nullBits = (byte)(nullBits | 64);
       }
 
       if (this.layers != null) {
-         nullBits[0] = (byte)(nullBits[0] | 64);
+         nullBits = (byte)(nullBits | 128);
       }
 
-      if (this.stateNames != null) {
-         nullBits[0] = (byte)(nullBits[0] | 128);
-      }
-
-      if (this.stateVolumeData != null) {
-         nullBits[1] = (byte)(nullBits[1] | 1);
-      }
-
-      buf.writeBytes(nullBits);
+      buf.writeByte(nullBits);
       buf.writeFloatLE(this.volume);
       buf.writeIntLE(this.loopCount);
       buf.writeFloatLE(this.weight);
@@ -821,6 +686,7 @@ public class SegmentMusicContainer extends MusicContainer {
       buf.writeByte(this.transitionType.getValue());
       buf.writeFloatLE(this.transitionDuration);
       buf.writeByte(this.playToCompletion ? 1 : 0);
+      buf.writeFloatLE(this.resumeMemoryDuration);
       buf.writeIntLE(this.audioCategoryIndex);
       if (this.tempo != null) {
          this.tempo.serialize(buf);
@@ -840,14 +706,11 @@ public class SegmentMusicContainer extends MusicContainer {
          buf.writeZero(12);
       }
 
-      buf.writeIntLE(this.defaultStateIndex);
       int nameTranslationKeyOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
+      int stateBindingsOffsetSlot = buf.writerIndex();
+      buf.writeIntLE(0);
       int layersOffsetSlot = buf.writerIndex();
-      buf.writeIntLE(0);
-      int stateNamesOffsetSlot = buf.writerIndex();
-      buf.writeIntLE(0);
-      int stateVolumeDataOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
       int varBlockStart = buf.writerIndex();
       if (this.nameTranslationKey != null) {
@@ -855,6 +718,21 @@ public class SegmentMusicContainer extends MusicContainer {
          PacketIO.writeVarString(buf, this.nameTranslationKey, 4096000);
       } else {
          buf.setIntLE(nameTranslationKeyOffsetSlot, -1);
+      }
+
+      if (this.stateBindings != null) {
+         buf.setIntLE(stateBindingsOffsetSlot, buf.writerIndex() - varBlockStart);
+         if (this.stateBindings.length > 4096000) {
+            throw ProtocolException.arrayTooLong("StateBindings", this.stateBindings.length, 4096000);
+         }
+
+         VarInt.write(buf, this.stateBindings.length);
+
+         for (StateBinding item : this.stateBindings) {
+            item.serialize(buf);
+         }
+      } else {
+         buf.setIntLE(stateBindingsOffsetSlot, -1);
       }
 
       if (this.layers != null) {
@@ -870,36 +748,6 @@ public class SegmentMusicContainer extends MusicContainer {
          }
       } else {
          buf.setIntLE(layersOffsetSlot, -1);
-      }
-
-      if (this.stateNames != null) {
-         buf.setIntLE(stateNamesOffsetSlot, buf.writerIndex() - varBlockStart);
-         if (this.stateNames.length > 4096000) {
-            throw ProtocolException.arrayTooLong("StateNames", this.stateNames.length, 4096000);
-         }
-
-         VarInt.write(buf, this.stateNames.length);
-
-         for (String item : this.stateNames) {
-            PacketIO.writeVarString(buf, item, 4096000);
-         }
-      } else {
-         buf.setIntLE(stateNamesOffsetSlot, -1);
-      }
-
-      if (this.stateVolumeData != null) {
-         buf.setIntLE(stateVolumeDataOffsetSlot, buf.writerIndex() - varBlockStart);
-         if (this.stateVolumeData.length > 4096000) {
-            throw ProtocolException.arrayTooLong("StateVolumeData", this.stateVolumeData.length, 4096000);
-         }
-
-         VarInt.write(buf, this.stateVolumeData.length);
-
-         for (float item : this.stateVolumeData) {
-            buf.writeFloatLE(item);
-         }
-      } else {
-         buf.setIntLE(stateVolumeDataOffsetSlot, -1);
       }
 
       return buf.writerIndex() - startPos;
@@ -932,71 +780,83 @@ public class SegmentMusicContainer extends MusicContainer {
          nullBits = (byte)(nullBits | 32);
       }
 
-      if (this.layers != null) {
+      if (this.stateBindings != null) {
          nullBits = (byte)(nullBits | 64);
       }
 
-      if (this.stateNames != null) {
+      if (this.layers != null) {
          nullBits = (byte)(nullBits | 128);
       }
 
       mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
-      nullBits = 0;
-      if (this.stateVolumeData != null) {
-         nullBits = (byte)(nullBits | 1);
-      }
-
-      mem.set(PacketIO.PROTO_BYTE, offset + 1, nullBits);
-      mem.set(PacketIO.PROTO_FLOAT, offset + 2, this.volume);
-      mem.set(PacketIO.PROTO_INT, offset + 6, this.loopCount);
-      mem.set(PacketIO.PROTO_FLOAT, offset + 10, this.weight);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 1, this.volume);
+      mem.set(PacketIO.PROTO_INT, offset + 5, this.loopCount);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 9, this.weight);
       if (this.silenceAfter != null) {
-         this.silenceAfter.serialize(mem, offset + 14);
+         this.silenceAfter.serialize(mem, offset + 13);
       } else {
-         mem.asSlice(offset + 14, 8L).fill((byte)0);
+         mem.asSlice(offset + 13, 8L).fill((byte)0);
       }
 
       if (this.exitSilence != null) {
-         this.exitSilence.serialize(mem, offset + 22);
+         this.exitSilence.serialize(mem, offset + 21);
       } else {
-         mem.asSlice(offset + 22, 8L).fill((byte)0);
+         mem.asSlice(offset + 21, 8L).fill((byte)0);
       }
 
-      mem.set(PacketIO.PROTO_FLOAT, offset + 30, this.fadeInDuration);
-      mem.set(PacketIO.PROTO_FLOAT, offset + 34, this.fadeOutDuration);
-      mem.set(PacketIO.PROTO_BYTE, offset + 38, (byte)this.transitionType.getValue());
-      mem.set(PacketIO.PROTO_FLOAT, offset + 39, this.transitionDuration);
-      mem.set(PacketIO.PROTO_BOOL, offset + 43, this.playToCompletion);
-      mem.set(PacketIO.PROTO_INT, offset + 44, this.audioCategoryIndex);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 29, this.fadeInDuration);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 33, this.fadeOutDuration);
+      mem.set(PacketIO.PROTO_BYTE, offset + 37, (byte)this.transitionType.getValue());
+      mem.set(PacketIO.PROTO_FLOAT, offset + 38, this.transitionDuration);
+      mem.set(PacketIO.PROTO_BOOL, offset + 42, this.playToCompletion);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 43, this.resumeMemoryDuration);
+      mem.set(PacketIO.PROTO_INT, offset + 47, this.audioCategoryIndex);
       if (this.tempo != null) {
-         this.tempo.serialize(mem, offset + 48);
+         this.tempo.serialize(mem, offset + 51);
       } else {
-         mem.asSlice(offset + 48, 12L).fill((byte)0);
+         mem.asSlice(offset + 51, 12L).fill((byte)0);
       }
 
       if (this.entryMarker != null) {
-         this.entryMarker.serialize(mem, offset + 60);
+         this.entryMarker.serialize(mem, offset + 63);
       } else {
-         mem.asSlice(offset + 60, 12L).fill((byte)0);
+         mem.asSlice(offset + 63, 12L).fill((byte)0);
       }
 
       if (this.exitMarker != null) {
-         this.exitMarker.serialize(mem, offset + 72);
+         this.exitMarker.serialize(mem, offset + 75);
       } else {
-         mem.asSlice(offset + 72, 12L).fill((byte)0);
+         mem.asSlice(offset + 75, 12L).fill((byte)0);
       }
 
-      mem.set(PacketIO.PROTO_INT, offset + 84, this.defaultStateIndex);
-      int varOffset = offset + 104;
+      int varOffset = offset + 99;
       if (this.nameTranslationKey != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 88, varOffset - offset - 104);
+         mem.set(PacketIO.PROTO_INT, offset + 87, varOffset - offset - 99);
          varOffset += PacketIO.writeVarString(mem, varOffset, this.nameTranslationKey, 4096000);
       } else {
-         mem.set(PacketIO.PROTO_INT, offset + 88, -1);
+         mem.set(PacketIO.PROTO_INT, offset + 87, -1);
+      }
+
+      if (this.stateBindings != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 91, varOffset - offset - 99);
+         if (this.stateBindings.length > 4096000) {
+            throw ProtocolException.arrayTooLong("StateBindings", this.stateBindings.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.stateBindings.length);
+         int stateBindingsValueOffset = 0;
+
+         for (int i = 0; i < this.stateBindings.length; i++) {
+            stateBindingsValueOffset += this.stateBindings[i].serialize(mem, varOffset + stateBindingsValueOffset);
+         }
+
+         varOffset += stateBindingsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 91, -1);
       }
 
       if (this.layers != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 92, varOffset - offset - 104);
+         mem.set(PacketIO.PROTO_INT, offset + 95, varOffset - offset - 99);
          if (this.layers.length > 4096000) {
             throw ProtocolException.arrayTooLong("Layers", this.layers.length, 4096000);
          }
@@ -1010,38 +870,7 @@ public class SegmentMusicContainer extends MusicContainer {
 
          varOffset += layersValueOffset;
       } else {
-         mem.set(PacketIO.PROTO_INT, offset + 92, -1);
-      }
-
-      if (this.stateNames != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 96, varOffset - offset - 104);
-         if (this.stateNames.length > 4096000) {
-            throw ProtocolException.arrayTooLong("StateNames", this.stateNames.length, 4096000);
-         }
-
-         varOffset += VarInt.set(mem, varOffset, this.stateNames.length);
-         int stateNamesValueOffset = 0;
-
-         for (int i = 0; i < this.stateNames.length; i++) {
-            stateNamesValueOffset += PacketIO.writeVarString(mem, varOffset + stateNamesValueOffset, this.stateNames[i], 16384000);
-         }
-
-         varOffset += stateNamesValueOffset;
-      } else {
-         mem.set(PacketIO.PROTO_INT, offset + 96, -1);
-      }
-
-      if (this.stateVolumeData != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 100, varOffset - offset - 104);
-         if (this.stateVolumeData.length > 4096000) {
-            throw ProtocolException.arrayTooLong("StateVolumeData", this.stateVolumeData.length, 4096000);
-         }
-
-         varOffset += VarInt.set(mem, varOffset, this.stateVolumeData.length);
-         MemorySegment.copy(this.stateVolumeData, 0, mem, PacketIO.PROTO_FLOAT, varOffset, this.stateVolumeData.length);
-         varOffset += this.stateVolumeData.length * 4;
-      } else {
-         mem.set(PacketIO.PROTO_INT, offset + 100, -1);
+         mem.set(PacketIO.PROTO_INT, offset + 95, -1);
       }
 
       return varOffset - offset;
@@ -1049,9 +878,19 @@ public class SegmentMusicContainer extends MusicContainer {
 
    @Override
    public int computeSize() {
-      int size = 104;
+      int size = 99;
       if (this.nameTranslationKey != null) {
          size += PacketIO.stringSize(this.nameTranslationKey);
+      }
+
+      if (this.stateBindings != null) {
+         int stateBindingsSize = 0;
+
+         for (StateBinding elem : this.stateBindings) {
+            stateBindingsSize += elem.computeSize();
+         }
+
+         size += VarInt.size(this.stateBindings.length) + stateBindingsSize;
       }
 
       if (this.layers != null) {
@@ -1064,41 +903,27 @@ public class SegmentMusicContainer extends MusicContainer {
          size += VarInt.size(this.layers.length) + layersSize;
       }
 
-      if (this.stateNames != null) {
-         int stateNamesSize = 0;
-
-         for (String elem : this.stateNames) {
-            stateNamesSize += PacketIO.stringSize(elem);
-         }
-
-         size += VarInt.size(this.stateNames.length) + stateNamesSize;
-      }
-
-      if (this.stateVolumeData != null) {
-         size += VarInt.size(this.stateVolumeData.length) + this.stateVolumeData.length * 4;
-      }
-
       return size;
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      if (buffer.readableBytes() - offset < 104) {
-         return ValidationResult.error("Buffer too small: expected at least 104 bytes");
+      if (buffer.readableBytes() - offset < 99) {
+         return ValidationResult.error("Buffer too small: expected at least 99 bytes");
       }
 
-      byte[] nullBits = PacketIO.readBytes(buffer, offset, 2);
-      int v = buffer.getByte(offset + 38) & 255;
+      byte nullBits = buffer.getByte(offset);
+      int v = buffer.getByte(offset + 37) & 255;
       if (v >= 3) {
          return ValidationResult.error("Invalid MusicTransitionType value for TransitionType");
       }
 
-      if ((nullBits[0] & 32) != 0) {
-         v = buffer.getIntLE(offset + 88);
-         if (v < 0 || v > buffer.writerIndex() - offset - 104) {
+      if ((nullBits & 32) != 0) {
+         v = buffer.getIntLE(offset + 87);
+         if (v < 0 || v > buffer.writerIndex() - offset - 99) {
             return ValidationResult.error("Invalid offset for NameTranslationKey");
          }
 
-         int pos = offset + 104 + v;
+         int pos = offset + 99 + v;
          int nameTranslationKeyLen = VarInt.peek(buffer, pos);
          if (nameTranslationKeyLen < 0) {
             return ValidationResult.error("Invalid string length for NameTranslationKey");
@@ -1115,13 +940,41 @@ public class SegmentMusicContainer extends MusicContainer {
          }
       }
 
-      if ((nullBits[0] & 64) != 0) {
-         v = buffer.getIntLE(offset + 92);
-         if (v < 0 || v > buffer.writerIndex() - offset - 104) {
+      if ((nullBits & 64) != 0) {
+         v = buffer.getIntLE(offset + 91);
+         if (v < 0 || v > buffer.writerIndex() - offset - 99) {
+            return ValidationResult.error("Invalid offset for StateBindings");
+         }
+
+         int pos = offset + 99 + v;
+         int stateBindingsCount = VarInt.peek(buffer, pos);
+         if (stateBindingsCount < 0) {
+            return ValidationResult.error("Invalid array count for StateBindings");
+         }
+
+         if (stateBindingsCount > 4096000) {
+            return ValidationResult.error("StateBindings exceeds max length 4096000");
+         }
+
+         pos += VarInt.size(stateBindingsCount);
+
+         for (int i = 0; i < stateBindingsCount; i++) {
+            ValidationResult structResult = StateBinding.validateStructure(buffer, pos);
+            if (!structResult.isValid()) {
+               return ValidationResult.error("Invalid StateBinding in StateBindings[" + i + "]: " + structResult.error());
+            }
+
+            pos += StateBinding.computeBytesConsumed(buffer, pos);
+         }
+      }
+
+      if ((nullBits & 128) != 0) {
+         v = buffer.getIntLE(offset + 95);
+         if (v < 0 || v > buffer.writerIndex() - offset - 99) {
             return ValidationResult.error("Invalid offset for Layers");
          }
 
-         int pos = offset + 104 + v;
+         int pos = offset + 99 + v;
          int layersCount = VarInt.peek(buffer, pos);
          if (layersCount < 0) {
             return ValidationResult.error("Invalid array count for Layers");
@@ -1143,61 +996,6 @@ public class SegmentMusicContainer extends MusicContainer {
          }
       }
 
-      if ((nullBits[0] & 128) != 0) {
-         v = buffer.getIntLE(offset + 96);
-         if (v < 0 || v > buffer.writerIndex() - offset - 104) {
-            return ValidationResult.error("Invalid offset for StateNames");
-         }
-
-         int pos = offset + 104 + v;
-         int stateNamesCount = VarInt.peek(buffer, pos);
-         if (stateNamesCount < 0) {
-            return ValidationResult.error("Invalid array count for StateNames");
-         }
-
-         if (stateNamesCount > 4096000) {
-            return ValidationResult.error("StateNames exceeds max length 4096000");
-         }
-
-         pos += VarInt.size(stateNamesCount);
-
-         for (int i = 0; i < stateNamesCount; i++) {
-            int strLen = VarInt.peek(buffer, pos);
-            if (strLen < 0) {
-               return ValidationResult.error("Invalid string length in StateNames");
-            }
-
-            pos += VarInt.size(strLen);
-            pos += strLen;
-            if (pos > buffer.writerIndex()) {
-               return ValidationResult.error("Buffer overflow reading string in StateNames");
-            }
-         }
-      }
-
-      if ((nullBits[1] & 1) != 0) {
-         v = buffer.getIntLE(offset + 100);
-         if (v < 0 || v > buffer.writerIndex() - offset - 104) {
-            return ValidationResult.error("Invalid offset for StateVolumeData");
-         }
-
-         int pos = offset + 104 + v;
-         int stateVolumeDataCount = VarInt.peek(buffer, pos);
-         if (stateVolumeDataCount < 0) {
-            return ValidationResult.error("Invalid array count for StateVolumeData");
-         }
-
-         if (stateVolumeDataCount > 4096000) {
-            return ValidationResult.error("StateVolumeData exceeds max length 4096000");
-         }
-
-         pos += VarInt.size(stateVolumeDataCount);
-         pos += stateVolumeDataCount * 4;
-         if (pos > buffer.writerIndex()) {
-            return ValidationResult.error("Buffer overflow reading StateVolumeData");
-         }
-      }
-
       return ValidationResult.OK;
    }
 
@@ -1213,15 +1011,14 @@ public class SegmentMusicContainer extends MusicContainer {
       copy.transitionType = this.transitionType;
       copy.transitionDuration = this.transitionDuration;
       copy.playToCompletion = this.playToCompletion;
+      copy.resumeMemoryDuration = this.resumeMemoryDuration;
       copy.nameTranslationKey = this.nameTranslationKey;
       copy.audioCategoryIndex = this.audioCategoryIndex;
       copy.tempo = this.tempo != null ? this.tempo.clone() : null;
+      copy.stateBindings = this.stateBindings != null ? Arrays.stream(this.stateBindings).map(e -> e.clone()).toArray(StateBinding[]::new) : null;
       copy.layers = this.layers != null ? Arrays.stream(this.layers).map(e -> e.clone()).toArray(LayerPlacement[]::new) : null;
       copy.entryMarker = this.entryMarker != null ? this.entryMarker.clone() : null;
       copy.exitMarker = this.exitMarker != null ? this.exitMarker.clone() : null;
-      copy.stateNames = this.stateNames != null ? Arrays.copyOf(this.stateNames, this.stateNames.length) : null;
-      copy.stateVolumeData = this.stateVolumeData != null ? Arrays.copyOf(this.stateVolumeData, this.stateVolumeData.length) : null;
-      copy.defaultStateIndex = this.defaultStateIndex;
       return copy;
    }
 
@@ -1242,15 +1039,14 @@ public class SegmentMusicContainer extends MusicContainer {
                && Objects.equals(this.transitionType, other.transitionType)
                && this.transitionDuration == other.transitionDuration
                && this.playToCompletion == other.playToCompletion
+               && this.resumeMemoryDuration == other.resumeMemoryDuration
                && Objects.equals(this.nameTranslationKey, other.nameTranslationKey)
                && this.audioCategoryIndex == other.audioCategoryIndex
                && Objects.equals(this.tempo, other.tempo)
+               && Arrays.equals(this.stateBindings, other.stateBindings)
                && Arrays.equals(this.layers, other.layers)
                && Objects.equals(this.entryMarker, other.entryMarker)
-               && Objects.equals(this.exitMarker, other.exitMarker)
-               && Arrays.equals(this.stateNames, other.stateNames)
-               && Arrays.equals(this.stateVolumeData, other.stateVolumeData)
-               && this.defaultStateIndex == other.defaultStateIndex;
+               && Objects.equals(this.exitMarker, other.exitMarker);
       }
    }
 
@@ -1267,14 +1063,13 @@ public class SegmentMusicContainer extends MusicContainer {
       result = 31 * result + Objects.hashCode(this.transitionType);
       result = 31 * result + Float.hashCode(this.transitionDuration);
       result = 31 * result + Boolean.hashCode(this.playToCompletion);
+      result = 31 * result + Float.hashCode(this.resumeMemoryDuration);
       result = 31 * result + Objects.hashCode(this.nameTranslationKey);
       result = 31 * result + Integer.hashCode(this.audioCategoryIndex);
       result = 31 * result + Objects.hashCode(this.tempo);
+      result = 31 * result + Arrays.hashCode(this.stateBindings);
       result = 31 * result + Arrays.hashCode(this.layers);
       result = 31 * result + Objects.hashCode(this.entryMarker);
-      result = 31 * result + Objects.hashCode(this.exitMarker);
-      result = 31 * result + Arrays.hashCode(this.stateNames);
-      result = 31 * result + Arrays.hashCode(this.stateVolumeData);
-      return 31 * result + Integer.hashCode(this.defaultStateIndex);
+      return 31 * result + Objects.hashCode(this.exitMarker);
    }
 }

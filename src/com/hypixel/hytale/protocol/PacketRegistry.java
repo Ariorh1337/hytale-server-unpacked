@@ -60,6 +60,7 @@ import com.hypixel.hytale.protocol.packets.assets.TrackOrUpdateObjective;
 import com.hypixel.hytale.protocol.packets.assets.UntrackObjective;
 import com.hypixel.hytale.protocol.packets.assets.UpdateAmbienceFX;
 import com.hypixel.hytale.protocol.packets.assets.UpdateAudioCategories;
+import com.hypixel.hytale.protocol.packets.assets.UpdateAudioStates;
 import com.hypixel.hytale.protocol.packets.assets.UpdateBlockBreakingDecals;
 import com.hypixel.hytale.protocol.packets.assets.UpdateBlockGroups;
 import com.hypixel.hytale.protocol.packets.assets.UpdateBlockHitboxes;
@@ -122,6 +123,8 @@ import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolLaserPointer;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolLineAction;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolOnUseInteraction;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolPasteClipboard;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolPrefabPreview;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolRandomizeClipboard;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolResetClipboardRotation;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolRotateClipboard;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSelectionToolAskForClipboard;
@@ -233,6 +236,7 @@ import com.hypixel.hytale.protocol.packets.player.SyncPlayerPreferences;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolCreate;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolCreateResponse;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolDelete;
+import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolDuplicate;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolEquip;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolGroupCreate;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolGroupCreateResponse;
@@ -242,6 +246,7 @@ import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolMultiMove;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolResize;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolSelect;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolSetActivationDelay;
+import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolSetCancelDelayedOnExit;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolSetColor;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolSetCooldown;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolSetKeepLoaded;
@@ -288,6 +293,7 @@ import com.hypixel.hytale.protocol.packets.world.ServerSetBlocks;
 import com.hypixel.hytale.protocol.packets.world.ServerSetFluid;
 import com.hypixel.hytale.protocol.packets.world.ServerSetFluids;
 import com.hypixel.hytale.protocol.packets.world.ServerSetPaused;
+import com.hypixel.hytale.protocol.packets.world.SetAudioState;
 import com.hypixel.hytale.protocol.packets.world.SetChunk;
 import com.hypixel.hytale.protocol.packets.world.SetChunkEnvironments;
 import com.hypixel.hytale.protocol.packets.world.SetChunkHeightmap;
@@ -301,7 +307,6 @@ import com.hypixel.hytale.protocol.packets.world.UpdateBlockDamage;
 import com.hypixel.hytale.protocol.packets.world.UpdateEditorTimeOverride;
 import com.hypixel.hytale.protocol.packets.world.UpdateEditorWeatherOverride;
 import com.hypixel.hytale.protocol.packets.world.UpdateForcedMusic;
-import com.hypixel.hytale.protocol.packets.world.UpdateMusicState;
 import com.hypixel.hytale.protocol.packets.world.UpdatePostFxSettings;
 import com.hypixel.hytale.protocol.packets.world.UpdateSleepState;
 import com.hypixel.hytale.protocol.packets.world.UpdateSunSettings;
@@ -1396,6 +1401,19 @@ public final class PacketRegistry {
       register(
          PacketRegistry.PacketDirection.ToClient,
          NetworkChannel.Default,
+         89,
+         "UpdateAudioStates",
+         UpdateAudioStates.class,
+         6,
+         1677721600,
+         true,
+         UpdateAudioStates::validateStructure,
+         UpdateAudioStates::deserialize,
+         UpdateAudioStates::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
          100,
          "SetClientId",
          SetClientId.class,
@@ -1607,8 +1625,8 @@ public final class PacketRegistry {
          116,
          "SyncPlayerPreferences",
          SyncPlayerPreferences.class,
-         18,
-         16384023,
+         19,
+         16384024,
          false,
          SyncPlayerPreferences::validateStructure,
          SyncPlayerPreferences::deserialize,
@@ -1893,8 +1911,8 @@ public final class PacketRegistry {
          152,
          "SpawnParticleSystem",
          SpawnParticleSystem.class,
-         44,
-         16384049,
+         48,
+         16384053,
          false,
          SpawnParticleSystem::validateStructure,
          SpawnParticleSystem::deserialize,
@@ -2099,14 +2117,14 @@ public final class PacketRegistry {
          PacketRegistry.PacketDirection.ToClient,
          NetworkChannel.Default,
          168,
-         "UpdateMusicState",
-         UpdateMusicState.class,
-         12,
-         12,
+         "SetAudioState",
+         SetAudioState.class,
+         24,
+         24,
          false,
-         UpdateMusicState::validateStructure,
-         UpdateMusicState::deserialize,
-         UpdateMusicState::toObject
+         SetAudioState::validateStructure,
+         SetAudioState::deserialize,
+         SetAudioState::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2439,7 +2457,7 @@ public final class PacketRegistry {
          222,
          "EditorBlocksChange",
          EditorBlocksChange.class,
-         31,
+         43,
          1677721600,
          true,
          EditorBlocksChange::validateStructure,
@@ -4112,6 +4130,32 @@ public final class PacketRegistry {
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         428,
+         "BuilderToolRandomizeClipboard",
+         BuilderToolRandomizeClipboard.class,
+         15,
+         15,
+         false,
+         BuilderToolRandomizeClipboard::validateStructure,
+         BuilderToolRandomizeClipboard::deserialize,
+         BuilderToolRandomizeClipboard::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         429,
+         "BuilderToolPrefabPreview",
+         BuilderToolPrefabPreview.class,
+         21,
+         1677721600,
+         true,
+         BuilderToolPrefabPreview::validateStructure,
+         BuilderToolPrefabPreview::deserialize,
+         BuilderToolPrefabPreview::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
          NetworkChannel.Voice,
          450,
          "VoiceData",
@@ -4195,7 +4239,7 @@ public final class PacketRegistry {
          "AddOrUpdateTriggerVolumeDisplay",
          AddOrUpdateTriggerVolumeDisplay.class,
          0,
-         65536097,
+         65536098,
          false,
          AddOrUpdateTriggerVolumeDisplay::validateStructure,
          AddOrUpdateTriggerVolumeDisplay::deserialize,
@@ -4285,8 +4329,8 @@ public final class PacketRegistry {
          485,
          "TriggerVolumeToolCreateResponse",
          TriggerVolumeToolCreateResponse.class,
-         0,
-         16384005,
+         1,
+         1677721600,
          false,
          TriggerVolumeToolCreateResponse::validateStructure,
          TriggerVolumeToolCreateResponse::deserialize,
@@ -4447,6 +4491,32 @@ public final class PacketRegistry {
          SelectionToolShowTriggerVolumes::validateStructure,
          SelectionToolShowTriggerVolumes::deserialize,
          SelectionToolShowTriggerVolumes::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         504,
+         "TriggerVolumeToolSetCancelDelayedOnExit",
+         TriggerVolumeToolSetCancelDelayedOnExit.class,
+         1,
+         16384006,
+         false,
+         TriggerVolumeToolSetCancelDelayedOnExit::validateStructure,
+         TriggerVolumeToolSetCancelDelayedOnExit::deserialize,
+         TriggerVolumeToolSetCancelDelayedOnExit::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         505,
+         "TriggerVolumeToolDuplicate",
+         TriggerVolumeToolDuplicate.class,
+         0,
+         1677721600,
+         false,
+         TriggerVolumeToolDuplicate::validateStructure,
+         TriggerVolumeToolDuplicate::deserialize,
+         TriggerVolumeToolDuplicate::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,

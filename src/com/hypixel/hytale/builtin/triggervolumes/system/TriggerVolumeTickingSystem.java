@@ -241,7 +241,10 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
          }
 
          this.fireGroupOnEntityExit(entry, manager, exitedUuid);
-         this.delayedEffectScheduler.cancelNonExitForEntity(exitedUuid);
+         if (entry.isCancelDelayedEffectsOnExit()) {
+            this.delayedEffectScheduler.cancelNonExitForEntity(exitedUuid);
+         }
+
          this.clearIntervalTimers(entry, exitedUuid);
       }
    }

@@ -68,6 +68,17 @@ public class CylinderShape extends TriggerVolumeShape {
       outMax.set(cx + this.radius, cy + this.height, cz + this.radius);
    }
 
+   @Override
+   public void rotateInPlace(float yawRadians) {
+      if (!(Math.abs(yawRadians) < 1.0E-6F)) {
+         double x = this.center.x();
+         double z = this.center.z();
+         double cos = Math.cos(yawRadians);
+         double sin = Math.sin(yawRadians);
+         this.center.set(x * cos - z * sin, this.center.y(), x * sin + z * cos);
+      }
+   }
+
    @Nonnull
    public CylinderShape copy() {
       return new CylinderShape(new Vector3d(this.center), this.radius, this.height);

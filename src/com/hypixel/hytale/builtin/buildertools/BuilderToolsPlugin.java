@@ -236,6 +236,7 @@ import com.hypixel.hytale.server.core.prefab.selection.mask.BlockMask;
 import com.hypixel.hytale.server.core.prefab.selection.mask.BlockPattern;
 import com.hypixel.hytale.server.core.prefab.selection.standard.BlockSelection;
 import com.hypixel.hytale.server.core.prefab.selection.standard.FeedbackConsumer;
+import com.hypixel.hytale.server.core.prefab.selection.standard.RotateBlockMode;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -1035,11 +1036,21 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
    @Nonnull
    public UUID getNewPathIdOnPrefabPasted(@Nullable UUID id, String name, int prefabId) {
       ConcurrentHashMap<UUID, UUID> prefabIdMap = this.pastedPrefabPathUUIDMap.get(prefabId);
+      if (prefabIdMap == null) {
+         prefabIdMap = new ConcurrentHashMap<>();
+         this.pastedPrefabPathUUIDMap.put(prefabId, prefabIdMap);
+      }
+
       if (id != null) {
          return prefabIdMap.computeIfAbsent(id, k -> UUID.randomUUID());
       }
 
       ConcurrentHashMap<String, UUID> prefabNameMap = this.pastedPrefabPathNameToUUIDMap.get(prefabId);
+      if (prefabNameMap == null) {
+         prefabNameMap = new ConcurrentHashMap<>();
+         this.pastedPrefabPathNameToUUIDMap.put(prefabId, prefabNameMap);
+      }
+
       UUID newId = prefabNameMap.computeIfAbsent(name, k -> UUID.randomUUID());
       prefabIdMap.put(newId, newId);
       return newId;
@@ -1060,13 +1071,13 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       return this.pastedPrefabPathUUIDMap;
    }
 
-   public enum Action {
+   public enum Action implements UndoAction {
       EDIT("server.builderTools.action.edit"),
       EDIT_SELECTION("server.builderTools.action.editSelection"),
       EDIT_LINE("server.builderTools.action.editLine"),
-      CUT_COPY("server.builderTools.action.cutCopy"),
+      CUT_COPY("server.builderTools.action.cutCopy", false),
       CUT_REMOVE("server.builderTools.action.cutRemove"),
-      COPY("server.builderTools.action.copy"),
+      COPY("server.builderTools.action.copy", false),
       PASTE("server.builderTools.action.paste"),
       CLEAR("server.builderTools.action.clear"),
       ROTATE("server.builderTools.action.rotate"),
@@ -1076,7 +1087,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       SET("server.builderTools.action.set"),
       REPLACE("server.builderTools.action.replace"),
       EXTRUDE("server.builderTools.action.extrude"),
-      UPDATE_SELECTION("server.builderTools.action.updateSelection"),
+      UPDATE_SELECTION("server.builderTools.action.updateSelection", false),
       WALLS("server.builderTools.action.walls"),
       HOLLOW("server.builderTools.action.hollow"),
       LAYER("server.builderTools.action.layer"),
@@ -1086,34 +1097,56 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       ENTITY_REMOVE("server.builderTools.action.entityRemove"),
       ENTITY_FREEZE("server.builderTools.action.entityFreeze"),
       ENTITY_SETTINGS("server.builderTools.action.entitySettings"),
-      TRIGGER_VOLUME("server.builderTools.action.triggerVolume");
+      TRIGGER_VOLUME("server.builderTools.action.triggerVolume", false);
 
       private final String translationKey;
+      private final boolean marksPrefabDirty;
 
       Action(String translationKey) {
-         this.translationKey = translationKey;
+         this(translationKey, true);
       }
 
+      Action(String translationKey, boolean marksPrefabDirty) {
+         this.translationKey = translationKey;
+         this.marksPrefabDirty = marksPrefabDirty;
+      }
+
+      @Nonnull
+      @Override
+      public String id() {
+         return "builtin:" + this.name().toLowerCase();
+      }
+
+      @Nonnull
+      @Override
       public Message toMessage() {
          return Message.translation(this.translationKey);
+      }
+
+      @Override
+      public boolean marksPrefabDirty() {
+         return this.marksPrefabDirty;
       }
    }
 
    public static class ActionEntry {
-      private final BuilderToolsPlugin.Action action;
+      private final UndoAction action;
       private final List<SelectionSnapshot<?>> snapshots;
       private boolean entityNotFound;
+      private int cumulativeRotXBefore;
+      private int cumulativeRotYBefore;
+      private int cumulativeRotZBefore;
 
-      public ActionEntry(BuilderToolsPlugin.Action action, SelectionSnapshot<?> snapshots) {
+      public ActionEntry(UndoAction action, SelectionSnapshot<?> snapshots) {
          this(action, Collections.singletonList(snapshots));
       }
 
-      public ActionEntry(BuilderToolsPlugin.Action action, List<SelectionSnapshot<?>> snapshots) {
+      public ActionEntry(UndoAction action, List<SelectionSnapshot<?>> snapshots) {
          this.action = action;
          this.snapshots = snapshots;
       }
 
-      public BuilderToolsPlugin.Action getAction() {
+      public UndoAction getAction() {
          return this.action;
       }
 
@@ -1126,12 +1159,30 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          return this.entityNotFound;
       }
 
+      public void setCumulativeRotBefore(int x, int y, int z) {
+         this.cumulativeRotXBefore = x;
+         this.cumulativeRotYBefore = y;
+         this.cumulativeRotZBefore = z;
+      }
+
+      public int getCumulativeRotXBefore() {
+         return this.cumulativeRotXBefore;
+      }
+
+      public int getCumulativeRotYBefore() {
+         return this.cumulativeRotYBefore;
+      }
+
+      public int getCumulativeRotZBefore() {
+         return this.cumulativeRotZBefore;
+      }
+
       @Nonnull
       public BuilderToolsPlugin.ActionEntry restore(Ref<EntityStore> ref, PlayerRef playerRef, World world, ComponentAccessor<EntityStore> componentAccessor) {
          List<SelectionSnapshot<?>> collector = Collections.emptyList();
          List<Ref<EntityStore>> recreatedEntityRefs = null;
          boolean handledViaLastTransformRefs = false;
-         if (this.action == BuilderToolsPlugin.Action.ROTATE) {
+         if (this.action instanceof BuilderToolsPlugin.Action builtinAction && builtinAction == BuilderToolsPlugin.Action.ROTATE) {
             PrototypePlayerBuilderToolSettings protoSettings = ToolOperation.getOrCreatePrototypeSettings(playerRef.getUuid());
             List<Ref<EntityStore>> currentRefs = protoSettings.getLastTransformEntityRefs();
             if (currentRefs != null) {
@@ -1171,7 +1222,8 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             }
          }
 
-         if ((this.action == BuilderToolsPlugin.Action.ROTATE || this.action == BuilderToolsPlugin.Action.CUT_REMOVE)
+         if (this.action instanceof BuilderToolsPlugin.Action builtinAction2
+            && (builtinAction2 == BuilderToolsPlugin.Action.ROTATE || builtinAction2 == BuilderToolsPlugin.Action.CUT_REMOVE)
             && recreatedEntityRefs != null
             && !recreatedEntityRefs.isEmpty()) {
             PrototypePlayerBuilderToolSettings prototypeSettings = ToolOperation.getOrCreatePrototypeSettings(playerRef.getUuid());
@@ -1213,6 +1265,9 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       @Nullable
       private Vector3i rawPos2;
       private boolean skipNextPreviewRebuild;
+      private int cumulativeRotX;
+      private int cumulativeRotY;
+      private int cumulativeRotZ;
       @Nullable
       private BlockSelection preRotationSnapshot;
       private BlockMask globalMask;
@@ -1302,6 +1357,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                BlockSelection oldSelection = this.selection;
                this.pushHistory(BuilderToolsPlugin.Action.COPY, BlockSelectionSnapshot.copyOf(this.selection));
                this.selection = new BlockSelection();
+               this.preRotationSnapshot = null;
                this.selection.setPosition(oldSelection.getX(), oldSelection.getY(), oldSelection.getZ());
                this.selection.setSelectionArea(oldSelection.getSelectionMin(), oldSelection.getSelectionMax());
                task.accept(this.selection);
@@ -1408,6 +1464,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          return this.taskFuture;
       }
 
+      @Nullable
       public BlockSelection getSelection() {
          return this.selection;
       }
@@ -2648,6 +2705,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          Vector3i min = Vector3iUtil.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
          Vector3i max = Vector3iUtil.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
          this.selection = new BlockSelection();
+         this.preRotationSnapshot = null;
          this.selection.setPosition(xMin + halfWidth, yMin, zMin + halfDepth);
          this.selection.setSelectionArea(min, max);
          this.syncRawPositions();
@@ -2709,6 +2767,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
 
          if (count > 4000000) {
             this.selection = new BlockSelection();
+            this.preRotationSnapshot = null;
             NotificationUtil.sendNotification(
                this.playerRef.getPacketHandler(),
                Message.translation("server.builderTools.copycut.tooLarge"),
@@ -3294,10 +3353,22 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       }
 
       public int paste(@Nonnull Ref<EntityStore> ref, int x, int y, int z, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-         return this.paste(ref, x, y, z, false, componentAccessor);
+         return this.paste(ref, x, y, z, false, false, componentAccessor);
       }
 
       public int paste(@Nonnull Ref<EntityStore> ref, int x, int y, int z, boolean technicalPaste, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+         return this.paste(ref, x, y, z, technicalPaste, false, componentAccessor);
+      }
+
+      public int paste(
+         @Nonnull Ref<EntityStore> ref,
+         int x,
+         int y,
+         int z,
+         boolean technicalPaste,
+         boolean skipAirBlocks,
+         @Nonnull ComponentAccessor<EntityStore> componentAccessor
+      ) {
          World world = componentAccessor.getExternalData().getWorld();
          if (this.selection != null) {
             long start = System.nanoTime();
@@ -3333,7 +3404,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                collector = e -> snapshots.add(new EntityAddSnapshot(e));
             }
 
-            BlockSelection before = selectionToPlace.place(this.playerRef, world, Vector3iUtil.ZERO, this.globalMask, collector);
+            BlockSelection before = selectionToPlace.place(this.playerRef, world, Vector3iUtil.ZERO, this.globalMask, collector, skipAirBlocks);
             before.setSelectionArea(pasteMin, pasteMax);
             snapshots.add(new BlockSelectionSnapshot(before));
             this.pushHistory(BuilderToolsPlugin.Action.PASTE, snapshots);
@@ -3407,6 +3478,16 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       }
 
       public void rotate(@Nonnull Ref<EntityStore> ref, @Nonnull Axis axis, int angle, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+         this.rotate(ref, axis, angle, RotateBlockMode.ALL, componentAccessor);
+      }
+
+      public void rotate(
+         @Nonnull Ref<EntityStore> ref,
+         @Nonnull Axis axis,
+         int angle,
+         @Nonnull RotateBlockMode rotateBlockMode,
+         @Nonnull ComponentAccessor<EntityStore> componentAccessor
+      ) {
          if (this.selection != null) {
             long start = System.nanoTime();
             if (this.preRotationSnapshot == null) {
@@ -3414,7 +3495,18 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             }
 
             this.pushHistory(BuilderToolsPlugin.Action.ROTATE, ClipboardContentsSnapshot.copyOf(this.selection));
-            this.selection = this.selection.rotate(axis, angle);
+            this.selection = this.selection.rotate(axis, angle, rotateBlockMode);
+            switch (axis) {
+               case X:
+                  this.cumulativeRotX = ((this.cumulativeRotX + angle) % 360 + 360) % 360;
+                  break;
+               case Y:
+                  this.cumulativeRotY = ((this.cumulativeRotY + angle) % 360 + 360) % 360;
+                  break;
+               case Z:
+                  this.cumulativeRotZ = ((this.cumulativeRotZ + angle) % 360 + 360) % 360;
+            }
+
             long end = System.nanoTime();
             long diff = end - start;
             BuilderToolsPlugin.get()
@@ -3437,6 +3529,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             this.pushHistory(BuilderToolsPlugin.Action.ROTATE, ClipboardContentsSnapshot.copyOf(this.selection));
             this.selection = this.preRotationSnapshot;
             this.preRotationSnapshot = null;
+            this.cumulativeRotX = this.cumulativeRotY = this.cumulativeRotZ = 0;
             this.sendUpdate();
             this.sendFeedback(Message.translation("server.builderTools.clipboardRotationReset"), componentAccessor);
          }
@@ -3476,6 +3569,10 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       public void flip(@Nonnull Ref<EntityStore> ref, @Nonnull Axis axis, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
          if (this.selection != null) {
             long start = System.nanoTime();
+            if (this.preRotationSnapshot == null) {
+               this.preRotationSnapshot = this.selection.cloneSelection();
+            }
+
             this.pushHistory(BuilderToolsPlugin.Action.FLIP, ClipboardContentsSnapshot.copyOf(this.selection));
             this.selection = this.selection.flip(axis);
             long end = System.nanoTime();
@@ -3488,6 +3585,65 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             this.sendFeedback(Message.translation("server.builderTools.clipboardFlipped").param("axis", axis.toString()), componentAccessor);
          } else {
             this.sendErrorFeedback(ref, Message.translation("server.builderTools.noSelectionClipboardEmpty"), componentAccessor);
+         }
+      }
+
+      public void applyRandomizeTransforms(
+         @Nonnull Ref<EntityStore> ref,
+         int deltaX,
+         int deltaY,
+         int deltaZ,
+         boolean flipX,
+         boolean flipY,
+         boolean flipZ,
+         @Nonnull RotateBlockMode rotateBlockMode,
+         @Nonnull ComponentAccessor<EntityStore> componentAccessor
+      ) {
+         if (this.selection == null) {
+            this.sendErrorFeedback(ref, Message.translation("server.builderTools.noSelectionClipboardEmpty"), componentAccessor);
+         } else {
+            if (this.preRotationSnapshot == null) {
+               this.preRotationSnapshot = this.selection.cloneSelection();
+            }
+
+            if (deltaX != 0) {
+               this.selection = this.selection.rotate(Axis.X, deltaX, rotateBlockMode);
+            }
+
+            if (deltaY != 0) {
+               this.selection = this.selection.rotate(Axis.Y, deltaY, rotateBlockMode);
+            }
+
+            if (deltaZ != 0) {
+               this.selection = this.selection.rotate(Axis.Z, deltaZ, rotateBlockMode);
+            }
+
+            if (flipX) {
+               this.selection = this.selection.flip(Axis.X);
+            }
+
+            if (flipY) {
+               this.selection = this.selection.flip(Axis.Y);
+            }
+
+            if (flipZ) {
+               this.selection = this.selection.flip(Axis.Z);
+            }
+
+            if (deltaX != 0) {
+               this.cumulativeRotX = ((this.cumulativeRotX + deltaX) % 360 + 360) % 360;
+            }
+
+            if (deltaY != 0) {
+               this.cumulativeRotY = ((this.cumulativeRotY + deltaY) % 360 + 360) % 360;
+            }
+
+            if (deltaZ != 0) {
+               this.cumulativeRotZ = ((this.cumulativeRotZ + deltaZ) % 360 + 360) % 360;
+            }
+
+            this.sendUpdate();
+            this.sendFeedback(Message.translation("server.builderTools.clipboardRandomized"), componentAccessor);
          }
       }
 
@@ -5096,8 +5252,12 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                max = Vector3iUtil.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
             }
 
-            this.selection = serverPrefab.cloneSelection();
+            this.pushHistory(
+               BuilderToolsPlugin.Action.COPY, ClipboardContentsSnapshot.copyOf(Objects.requireNonNullElseGet(this.selection, BlockSelection::new))
+            );
+            this.setSelection(serverPrefab.cloneSelection());
             this.selection.setSelectionArea(min, max);
+            this.cumulativeRotX = this.cumulativeRotY = this.cumulativeRotZ = 0;
             this.syncRawPositions();
             this.sendUpdate();
             this.sendFeedback(Message.translation("server.general.loadedPrefab").param("name", name), componentAccessor);
@@ -5150,6 +5310,9 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          EditorBlocksChange packet = Objects.requireNonNullElseGet(this.selection, BlockSelection::new).toPacket();
          packet.skipPreviewRebuild = this.skipNextPreviewRebuild;
          this.skipNextPreviewRebuild = false;
+         packet.cumulativeRotX = this.cumulativeRotX;
+         packet.cumulativeRotY = this.cumulativeRotY;
+         packet.cumulativeRotZ = this.cumulativeRotZ;
          this.playerRef.getPacketHandler().write(packet);
       }
 
@@ -5163,16 +5326,18 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          }
       }
 
-      private void pushHistory(BuilderToolsPlugin.Action action, SelectionSnapshot<?> snapshot) {
+      public void pushHistory(@Nonnull UndoAction action, @Nonnull SelectionSnapshot<?> snapshot) {
          this.pushHistory(action, Collections.singletonList(snapshot));
       }
 
-      private void pushHistory(BuilderToolsPlugin.Action action, List<SelectionSnapshot<?>> snapshots) {
+      public void pushHistory(@Nonnull UndoAction action, @Nonnull List<SelectionSnapshot<?>> snapshots) {
          if (action != BuilderToolsPlugin.Action.UPDATE_SELECTION || this.getUserData().isRecordingSelectionHistory()) {
             long stamp = this.undoLock.writeLock();
 
             try {
-               this.undo.enqueue(new BuilderToolsPlugin.ActionEntry(action, snapshots));
+               BuilderToolsPlugin.ActionEntry entry = new BuilderToolsPlugin.ActionEntry(action, snapshots);
+               entry.setCumulativeRotBefore(this.cumulativeRotX, this.cumulativeRotY, this.cumulativeRotZ);
+               this.undo.enqueue(entry);
                this.redo.clear();
 
                while (this.undo.size() > BuilderToolsPlugin.get().historyCount) {
@@ -5182,10 +5347,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                this.undoLock.unlockWrite(stamp);
             }
 
-            if (action != BuilderToolsPlugin.Action.UPDATE_SELECTION
-               && action != BuilderToolsPlugin.Action.COPY
-               && action != BuilderToolsPlugin.Action.CUT_COPY
-               && action != BuilderToolsPlugin.Action.TRIGGER_VOLUME) {
+            if (action.marksPrefabDirty()) {
                this.markPrefabsDirtyFromSnapshots(snapshots);
             }
          }
@@ -5387,6 +5549,16 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             BuilderToolsPlugin.ActionEntry restoredAction = builderAction.restore(
                ref, this.playerRef, componentAccessor.getExternalData().getWorld(), componentAccessor
             );
+            if (builderAction.getAction() == BuilderToolsPlugin.Action.ROTATE) {
+               int savedRotX = this.cumulativeRotX;
+               int savedRotY = this.cumulativeRotY;
+               int savedRotZ = this.cumulativeRotZ;
+               this.cumulativeRotX = builderAction.getCumulativeRotXBefore();
+               this.cumulativeRotY = builderAction.getCumulativeRotYBefore();
+               this.cumulativeRotZ = builderAction.getCumulativeRotZBefore();
+               restoredAction.setCumulativeRotBefore(savedRotX, savedRotY, savedRotZ);
+            }
+
             to.enqueue(restoredAction);
 
             while (to.size() > BuilderToolsPlugin.get().historyCount) {

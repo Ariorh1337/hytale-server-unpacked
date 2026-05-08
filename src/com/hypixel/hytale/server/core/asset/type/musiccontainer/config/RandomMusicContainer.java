@@ -36,14 +36,6 @@ public class RandomMusicContainer extends MusicContainer {
       .documentation("How many recently played children to avoid re-selecting.")
       .addValidator(Validators.min(0))
       .add()
-      .<Float>appendInherited(
-         new KeyedCodec<>("AvoidRepeatMemoryDuration", Codec.FLOAT),
-         (mc, v) -> mc.avoidRepeatMemoryDuration = v,
-         mc -> mc.avoidRepeatMemoryDuration,
-         (mc, parent) -> mc.avoidRepeatMemoryDuration = parent.avoidRepeatMemoryDuration
-      )
-      .documentation("How long (seconds) the avoid-repeat history is retained after leaving this container.")
-      .add()
       .<String[]>appendInherited(
          new KeyedCodec<>("Children", new ArrayCodec<>(MusicContainer.CHILD_ASSET_CODEC, String[]::new)),
          (mc, v) -> mc.children = v,
@@ -57,15 +49,16 @@ public class RandomMusicContainer extends MusicContainer {
    @Nonnull
    protected RandomMode mode = RandomMode.Shuffle;
    protected int avoidRepeatCount;
-   protected float avoidRepeatMemoryDuration = 600.0F;
    @Nullable
    protected String[] children;
 
    protected RandomMusicContainer() {
+      this.resumeMemoryDuration = 600.0F;
    }
 
    public RandomMusicContainer(@Nonnull String id) {
       super(id);
+      this.resumeMemoryDuration = 600.0F;
    }
 
    @Nonnull
@@ -77,7 +70,7 @@ public class RandomMusicContainer extends MusicContainer {
       container.loopCount = 0;
       container.mode = RandomMode.Shuffle;
       container.avoidRepeatCount = 1;
-      container.avoidRepeatMemoryDuration = 600.0F;
+      container.resumeMemoryDuration = 600.0F;
       String[] tracks = legacy.getTracks();
       if (tracks != null && tracks.length > 0) {
          container.children = new String[tracks.length];
@@ -110,7 +103,6 @@ public class RandomMusicContainer extends MusicContainer {
       this.fillBasePacketFields(packet);
       packet.mode = this.mode;
       packet.avoidRepeatCount = this.avoidRepeatCount;
-      packet.avoidRepeatMemoryDuration = this.avoidRepeatMemoryDuration;
       if (this.children != null && this.children.length > 0) {
          IndexedAssetMap<String, MusicContainer> assetMap = MusicContainer.getAssetMap();
          packet.children = new int[this.children.length];

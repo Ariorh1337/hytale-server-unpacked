@@ -16,6 +16,7 @@ import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
 import com.hypixel.hytale.server.core.asset.type.gameplay.WorldConfig;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.modules.interaction.BlockHarvestUtils;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
@@ -83,10 +84,13 @@ public class BreakBlockInteraction extends SimpleBlockInteraction {
       @Nonnull CooldownHandler cooldownHandler
    ) {
       Ref<EntityStore> ref = context.getEntity();
-      Player playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
+      Ref<EntityStore> ownerRef = context.getOwningEntity();
+      Player playerComponent = commandBuffer.getComponent(ownerRef, Player.getComponentType());
       if (playerComponent == null) {
          HytaleLogger.getLogger().at(Level.INFO).atMostEvery(5, TimeUnit.MINUTES).log("BreakBlockInteraction requires a Player but was used for: %s", ref);
       } else {
+         Inventory playerInventory = playerComponent.getInventory();
+         ItemStack ownerHeldItem = playerInventory.getItemInHand();
          ChunkStore chunkStore = world.getChunkStore();
          Store<ChunkStore> chunkStoreStore = chunkStore.getStore();
          long chunkIndex = ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z);
@@ -133,11 +137,11 @@ public class BreakBlockInteraction extends SimpleBlockInteraction {
                      throw new UnsupportedOperationException("GameMode is not supported");
                   case Adventure:
                      BlockHarvestUtils.performBlockDamage(
-                        ref, targetBlock, heldItemStack, null, this.toolId, this.matchTool, 1.0F, 0, chunkReference, commandBuffer, chunkStoreStore
+                        ref, targetBlock, ownerHeldItem, null, this.toolId, this.matchTool, 1.0F, 0, chunkReference, commandBuffer, chunkStoreStore
                      );
                      break;
                   case Creative:
-                     BlockHarvestUtils.performBlockBreak(ref, heldItemStack, targetBlock, chunkReference, commandBuffer, chunkStoreStore);
+                     BlockHarvestUtils.performBlockBreak(ref, ownerHeldItem, targetBlock, chunkReference, commandBuffer, chunkStoreStore);
                      break;
                   default:
                      throw new MatchException(null, null);

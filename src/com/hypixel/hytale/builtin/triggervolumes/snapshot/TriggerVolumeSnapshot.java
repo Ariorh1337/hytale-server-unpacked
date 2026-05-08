@@ -12,7 +12,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
@@ -35,6 +34,7 @@ public class TriggerVolumeSnapshot implements SelectionSnapshot<TriggerVolumeSna
    private final Set<EntityTargetType> targetTypes;
    private final boolean enabled;
    private final boolean keepLoaded;
+   private final boolean cancelDelayedEffectsOnExit;
    @Nullable
    private final String effectAssetRef;
    @Nullable
@@ -52,6 +52,7 @@ public class TriggerVolumeSnapshot implements SelectionSnapshot<TriggerVolumeSna
       @Nullable Set<EntityTargetType> targetTypes,
       boolean enabled,
       boolean keepLoaded,
+      boolean cancelDelayedEffectsOnExit,
       @Nullable String effectAssetRef,
       @Nullable String groupId,
       @Nullable Vector3f color
@@ -65,6 +66,7 @@ public class TriggerVolumeSnapshot implements SelectionSnapshot<TriggerVolumeSna
       this.targetTypes = targetTypes;
       this.enabled = enabled;
       this.keepLoaded = keepLoaded;
+      this.cancelDelayedEffectsOnExit = cancelDelayedEffectsOnExit;
       this.effectAssetRef = effectAssetRef;
       this.groupId = groupId;
       this.color = color;
@@ -72,7 +74,7 @@ public class TriggerVolumeSnapshot implements SelectionSnapshot<TriggerVolumeSna
 
    public static TriggerVolumeSnapshot ofCreate(@Nonnull VolumeEntry entry) {
       return new TriggerVolumeSnapshot(
-         TriggerVolumeSnapshot.SnapshotType.CREATE, entry.getId(), entry.getWorldName(), null, null, null, null, true, false, null, null, null
+         TriggerVolumeSnapshot.SnapshotType.CREATE, entry.getId(), entry.getWorldName(), null, null, null, null, true, false, true, null, null, null
       );
    }
 
@@ -91,10 +93,11 @@ public class TriggerVolumeSnapshot implements SelectionSnapshot<TriggerVolumeSna
          entry.getWorldName(),
          new Vector3d(entry.getPosition()),
          entry.getShape().copy(),
-         new ArrayList<>(entry.getEffects()),
+         TriggerEffect.deepCopyList(entry.getEffects()),
          EnumSet.copyOf(entry.getTargetTypes()),
          entry.isEnabled(),
          entry.isKeepLoaded(),
+         entry.isCancelDelayedEffectsOnExit(),
          entry.getEffectAssetRef(),
          entry.getGroupId(),
          entry.getColor() != null ? new Vector3f(entry.getColor()) : null
@@ -127,12 +130,13 @@ public class TriggerVolumeSnapshot implements SelectionSnapshot<TriggerVolumeSna
                   this.volumeId,
                   this.worldName,
                   new Vector3d(this.position),
-                  this.shape,
-                  new ArrayList<>(this.effects),
+                  this.shape.copy(),
+                  TriggerEffect.deepCopyList(this.effects),
                   EnumSet.copyOf(this.targetTypes),
                   this.enabled
                );
                entry.setKeepLoaded(this.keepLoaded);
+               entry.setCancelDelayedEffectsOnExit(this.cancelDelayedEffectsOnExit);
                entry.setEffectAssetRef(this.effectAssetRef);
                entry.setGroupId(this.groupId);
                entry.setColor(this.color != null ? new Vector3f(this.color) : null);
@@ -154,12 +158,12 @@ public class TriggerVolumeSnapshot implements SelectionSnapshot<TriggerVolumeSna
                }
 
                if (this.shape != null) {
-                  entry.setShape(this.shape);
+                  entry.setShape(this.shape.copy());
                }
 
                if (this.effects != null) {
                   entry.getEffects().clear();
-                  entry.getEffects().addAll(this.effects);
+                  entry.getEffects().addAll(TriggerEffect.deepCopyList(this.effects));
                }
 
                if (this.targetTypes != null) {
@@ -169,6 +173,7 @@ public class TriggerVolumeSnapshot implements SelectionSnapshot<TriggerVolumeSna
 
                entry.setEnabled(this.enabled);
                entry.setKeepLoaded(this.keepLoaded);
+               entry.setCancelDelayedEffectsOnExit(this.cancelDelayedEffectsOnExit);
                entry.setEffectAssetRef(this.effectAssetRef);
                entry.setGroupId(this.groupId);
                entry.setColor(this.color != null ? new Vector3f(this.color) : null);

@@ -75,8 +75,10 @@ public class MemoriesPage extends InteractiveCustomUIPage<MemoriesPage.PageEvent
 
          commandBuilder.set("#MemoriesProgressBar.Value", (float)recordedMemories.size() / totalMemories);
          commandBuilder.set("#MemoriesProgressBarTexture.Value", (float)recordedMemories.size() / totalMemories);
-         commandBuilder.set("#TotalCollected.Text", String.valueOf(recordedMemories.size()));
-         commandBuilder.set("#MemoriesTotal.Text", String.valueOf(totalMemories));
+         commandBuilder.set(
+            "#TotalCollected.TextSpans",
+            Message.translation("server.memories.general.totalCollected").param("current", recordedMemories.size()).param("max", totalMemories)
+         );
          eventBuilder.addEventBinding(
             CustomUIEventBindingType.Activating, "#MemoriesInfoButton", new EventData().append("Action", MemoriesPage.PageAction.MemoriesInfo)
          );

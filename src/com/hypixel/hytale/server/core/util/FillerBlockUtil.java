@@ -21,7 +21,6 @@ import com.hypixel.hytale.server.core.universe.world.chunk.BlockOperations;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
 import javax.annotation.Nonnull;
 
 public class FillerBlockUtil {
@@ -30,7 +29,6 @@ public class FillerBlockUtil {
    private static final int BITS_PER_AXIS = 5;
    private static final int MASK = 31;
    private static final int INVERT = -32;
-   private static final int MAX_FILLER_OFFSET = 15;
 
    public static void forEachFillerBlock(@Nonnull BlockBoundingBoxes.RotatedVariantBoxes blockBoundingBoxes, @Nonnull TriIntConsumer consumer) {
       forEachFillerBlock(0.0F, blockBoundingBoxes, consumer);
@@ -294,38 +292,6 @@ public class FillerBlockUtil {
       }
    }
 
-   private static void withBlockSection(
-      @Nonnull ComponentAccessor<ChunkStore> accessor,
-      @Nonnull BlockSection localSection,
-      int localX,
-      int localY,
-      int localZ,
-      int targetX,
-      int targetY,
-      int targetZ,
-      @Nonnull Consumer<BlockSection> action
-   ) {
-      if (ChunkUtil.isSameChunkSection(localX, localY, localZ, targetX, targetY, targetZ)) {
-         action.accept(localSection);
-      } else {
-         ChunkStore chunkStore = accessor.getExternalData();
-         Ref<ChunkStore> section = chunkStore.getWorld().isInThread() ? chunkStore.getChunkSectionReferenceAtBlock(targetX, targetY, targetZ) : null;
-         if (section != null) {
-            BlockSection otherSection = accessor.getComponent(section, BlockSection.getComponentType());
-            if (otherSection != null) {
-               action.accept(otherSection);
-            }
-         } else {
-            CompletableFutureUtil._catch(chunkStore.getChunkSectionReferenceAtBlockAsync(targetX, targetY, targetZ).thenAcceptAsync(asyncRef -> {
-               BlockSection otherSectionx = asyncRef.getStore().getComponent((Ref<ChunkStore>)asyncRef, BlockSection.getComponentType());
-               if (otherSectionx != null) {
-                  action.accept(otherSectionx);
-               }
-            }, chunkStore.getWorld()));
-         }
-      }
-   }
-
    private static void removeFiller(
       ComponentAccessor<ChunkStore> accessor, BlockSection blockSection, int x, int y, int z, FillerBlockUtil.ChangeReason changeReason
    ) {
@@ -368,21 +334,6 @@ public class FillerBlockUtil {
       int rotation,
       FillerBlockUtil.ChangeReason changeReason
    ) {
-      removeFillerBlocksAt(accessor, blockSection, x, y, z, blockId, filler, rotation, changeReason, true);
-   }
-
-   private static void removeFillerBlocksAt(
-      @Nonnull ComponentAccessor<ChunkStore> accessor,
-      BlockSection blockSection,
-      int x,
-      int y,
-      int z,
-      int blockId,
-      int filler,
-      int rotation,
-      FillerBlockUtil.ChangeReason changeReason,
-      boolean scanForOrphans
-   ) {
       BlockType oldBlockType = BlockType.getAssetMap().getAsset(blockId);
       if (oldBlockType != null) {
          int fx = unpackX(filler);
@@ -401,109 +352,36 @@ public class FillerBlockUtil {
                int blockX = baseX + x1;
                int blockY = baseY + y1;
                int blockZ = baseZ + z1;
-               withBlockSection(accessor, blockSection, x, y, z, blockX, blockY, blockZ, section -> {
-                  if (section.get(blockX, blockY, blockZ) == blockId) {
-                     removeFiller(accessor, section, blockX, blockY, blockZ, changeReason);
+               if (ChunkUtil.isSameChunkSection(x, y, z, blockX, blockY, blockZ)) {
+                  if (blockSection.get(blockX, blockY, blockZ) == blockId) {
+                     removeFiller(accessor, blockSection, blockX, blockY, blockZ, changeReason);
                   }
-               });
-            }
-         });
-         if (scanForOrphans && oldBlockType.getHitboxTypeIndex() != 0) {
-            removeOrphanedFillers(accessor, blockSection, x, y, z, baseX, baseY, baseZ, blockId, changeReason);
-         }
-      }
-   }
-
-   private static void removeOrphanedFillers(
-      @Nonnull ComponentAccessor<ChunkStore> accessor,
-      BlockSection blockSection,
-      int x,
-      int y,
-      int z,
-      int baseX,
-      int baseY,
-      int baseZ,
-      int blockId,
-      FillerBlockUtil.ChangeReason changeReason
-   ) {
-      int scanMinX = baseX - 15;
-      int scanMaxX = baseX + 15;
-      int scanMinY = baseY - 15;
-      int scanMaxY = baseY + 15;
-      int scanMinZ = baseZ - 15;
-      int scanMaxZ = baseZ + 15;
-      int localSX = ChunkUtil.chunkCoordinate(x);
-      int localSY = ChunkUtil.chunkCoordinate(y);
-      int localSZ = ChunkUtil.chunkCoordinate(z);
-
-      for (int sx = ChunkUtil.chunkCoordinate(scanMinX); sx <= ChunkUtil.chunkCoordinate(scanMaxX); sx++) {
-         int bxMin = Math.max(scanMinX, ChunkUtil.minBlock(sx));
-         int bxMax = Math.min(scanMaxX, ChunkUtil.maxBlock(sx));
-
-         for (int sy = ChunkUtil.chunkCoordinate(scanMinY); sy <= ChunkUtil.chunkCoordinate(scanMaxY); sy++) {
-            int byMin = Math.max(scanMinY, ChunkUtil.minBlock(sy));
-            int byMax = Math.min(scanMaxY, ChunkUtil.maxBlock(sy));
-
-            for (int sz = ChunkUtil.chunkCoordinate(scanMinZ); sz <= ChunkUtil.chunkCoordinate(scanMaxZ); sz++) {
-               int bzMin = Math.max(scanMinZ, ChunkUtil.minBlock(sz));
-               int bzMax = Math.min(scanMaxZ, ChunkUtil.maxBlock(sz));
-               if (sx != localSX || sy != localSY || sz != localSZ) {
+               } else {
                   ChunkStore chunkStore = accessor.getExternalData();
-                  Ref<ChunkStore> sectionRef = chunkStore.getWorld().isInThread() ? chunkStore.getChunkSectionReferenceAtBlock(bxMin, byMin, bzMin) : null;
+                  Ref<ChunkStore> sectionRef = chunkStore.getWorld().isInThread() ? chunkStore.getChunkSectionReferenceAtBlock(blockX, blockY, blockZ) : null;
                   if (sectionRef != null) {
-                     BlockSection otherSection = accessor.getComponent(sectionRef, BlockSection.getComponentType());
-                     if (otherSection != null && otherSection.contains(blockId)) {
-                        scanSectionOrphans(accessor, otherSection, bxMin, bxMax, byMin, byMax, bzMin, bzMax, baseX, baseY, baseZ, blockId, changeReason);
+                     BlockSection otherBlockSection = accessor.getComponent(sectionRef, BlockSection.getComponentType());
+                     if (otherBlockSection == null) {
+                        return;
+                     }
+
+                     if (otherBlockSection.get(blockX, blockY, blockZ) == blockId) {
+                        removeFiller(accessor, otherBlockSection, blockX, blockY, blockZ, changeReason);
                      }
                   } else {
-                     CompletableFutureUtil._catch(chunkStore.getChunkSectionReferenceAtBlockAsync(bxMin, byMin, bzMin).thenAcceptAsync(asyncRef -> {
-                        BlockSection otherSectionx = asyncRef.getStore().getComponent((Ref<ChunkStore>)asyncRef, BlockSection.getComponentType());
-                        if (otherSectionx != null && otherSectionx.contains(blockId)) {
-                           scanSectionOrphans(accessor, otherSectionx, bxMin, bxMax, byMin, byMax, bzMin, bzMax, baseX, baseY, baseZ, blockId, changeReason);
+                     CompletableFutureUtil._catch(chunkStore.getChunkSectionReferenceAtBlockAsync(blockX, blockY, blockZ).thenAcceptAsync(asyncRef -> {
+                        BlockSection otherBlockSectionx = asyncRef.getStore().getComponent((Ref<ChunkStore>)asyncRef, BlockSection.getComponentType());
+                        if (otherBlockSectionx != null) {
+                           if (otherBlockSectionx.get(blockX, blockY, blockZ) == blockId) {
+                              removeFiller(accessor, otherBlockSectionx, blockX, blockY, blockZ, changeReason);
+                           }
                         }
                      }, chunkStore.getWorld()));
                   }
-               } else if (blockSection.contains(blockId)) {
-                  scanSectionOrphans(accessor, blockSection, bxMin, bxMax, byMin, byMax, bzMin, bzMax, baseX, baseY, baseZ, blockId, changeReason);
                }
             }
-         }
+         });
       }
-   }
-
-   private static void scanSectionOrphans(
-      ComponentAccessor<ChunkStore> accessor,
-      BlockSection section,
-      int minX,
-      int maxX,
-      int minY,
-      int maxY,
-      int minZ,
-      int maxZ,
-      int baseX,
-      int baseY,
-      int baseZ,
-      int blockId,
-      FillerBlockUtil.ChangeReason changeReason
-   ) {
-      for (int bx = minX; bx <= maxX; bx++) {
-         for (int by = minY; by <= maxY; by++) {
-            for (int bz = minZ; bz <= maxZ; bz++) {
-               if ((bx != baseX || by != baseY || bz != baseZ) && isOrphanedFiller(section, bx, by, bz, baseX, baseY, baseZ, blockId)) {
-                  removeFiller(accessor, section, bx, by, bz, changeReason);
-               }
-            }
-         }
-      }
-   }
-
-   private static boolean isOrphanedFiller(BlockSection section, int x, int y, int z, int baseX, int baseY, int baseZ, int blockId) {
-      if (section.get(x, y, z) != blockId) {
-         return false;
-      }
-
-      int filler = section.getFiller(x, y, z);
-      return filler == 0 ? false : x - unpackX(filler) == baseX && y - unpackY(filler) == baseY && z - unpackZ(filler) == baseZ;
    }
 
    private static void setFiller(
@@ -524,7 +402,7 @@ public class FillerBlockUtil {
       int oldRotation = blockSection.getRotationIndex(x, y, z);
       if (blockSection.set(x, y, z, blockId, rotation, filler)) {
          if (oldBlock != 0) {
-            removeFillerBlocksAt(accessor, blockSection, x, y, z, oldBlock, oldFiller, oldRotation, changeReason, false);
+            removeFillerBlocksAt(accessor, blockSection, x, y, z, oldBlock, oldFiller, oldRotation, changeReason);
          }
 
          Ref<ChunkStore> column = accessor.getExternalData().getChunkReference(ChunkUtil.indexChunkFromBlock(x, z));

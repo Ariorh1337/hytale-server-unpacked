@@ -5,7 +5,10 @@ import com.hypixel.hytale.assetstore.AssetKeyValidator;
 import com.hypixel.hytale.assetstore.AssetRegistry;
 import com.hypixel.hytale.assetstore.AssetStore;
 import com.hypixel.hytale.assetstore.codec.AssetBuilderCodec;
+import com.hypixel.hytale.assetstore.event.LoadedAssetsEvent;
+import com.hypixel.hytale.assetstore.event.RemovedAssetsEvent;
 import com.hypixel.hytale.assetstore.map.IndexedAssetMap;
+import com.hypixel.hytale.assetstore.map.IndexedLookupTableAssetMap;
 import com.hypixel.hytale.assetstore.map.JsonAssetWithMap;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
@@ -15,7 +18,11 @@ import com.hypixel.hytale.codec.schema.metadata.ui.UIEditorSectionStart;
 import com.hypixel.hytale.codec.validation.ValidatorCache;
 import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.common.util.ArrayUtil;
+import com.hypixel.hytale.protocol.AmbienceStateWrite;
 import com.hypixel.hytale.server.core.asset.type.audiocategory.config.AudioCategory;
+import com.hypixel.hytale.server.core.asset.type.audiostate.config.AmbienceStateWriteConfig;
+import com.hypixel.hytale.server.core.asset.type.audiostate.config.AudioState;
+import com.hypixel.hytale.server.core.asset.type.audiostate.config.AudioStateResolver;
 import com.hypixel.hytale.server.core.asset.type.musiccontainer.config.MusicContainer;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import java.lang.ref.SoftReference;
@@ -107,9 +114,39 @@ public class AmbienceFX implements JsonAssetWithMap<String, IndexedAssetMap<Stri
       .addValidator(AudioCategory.VALIDATOR_CACHE.getValidator())
       .documentation("Audio category to assign this ambienceFX to for additional property routing. Only affects ambient bed and music, not emitters.")
       .add()
+      .<AmbienceStateWriteConfig[]>append(
+         new KeyedCodec<>("SetStates", AmbienceStateWriteConfig.CODEC_ARRAY), (ambienceFX, v) -> ambienceFX.setStates = v, ambienceFX -> ambienceFX.setStates
+      )
+      .documentation(
+         "When this AmbienceFX asset becomes active on the client, these states will be set. Targets must be AudioState assets with Authority: Client."
+      )
+      .add()
       .afterDecode(ambienceFX -> {
          if (ambienceFX.audioCategoryId != null) {
             ambienceFX.audioCategoryIndex = AudioCategory.getAssetMap().getIndex(ambienceFX.audioCategoryId);
+         }
+
+         AudioStateResolver.resolveSetStates(ambienceFX.setStates);
+         if (ambienceFX.sounds != null) {
+            for (AmbienceFXSound sound : ambienceFX.sounds) {
+               AudioStateResolver.resolveBindings(sound.getStateBindings());
+            }
+         }
+
+         if (ambienceFX.ambientBed != null) {
+            AudioStateResolver.resolveBindings(ambienceFX.ambientBed.getStateBindings());
+         }
+      })
+      .validator((ambienceFX, results) -> {
+         AudioStateResolver.validateSetStates(ambienceFX.setStates, "AmbienceFX '" + ambienceFX.id + "'", results);
+         if (ambienceFX.sounds != null) {
+            for (int si = 0; si < ambienceFX.sounds.length; si++) {
+               AudioStateResolver.validateBindings(ambienceFX.sounds[si].getStateBindings(), "AmbienceFX '" + ambienceFX.id + "' Sounds[" + si + "]", results);
+            }
+         }
+
+         if (ambienceFX.ambientBed != null) {
+            AudioStateResolver.validateBindings(ambienceFX.ambientBed.getStateBindings(), "AmbienceFX '" + ambienceFX.id + "' AmbientBed", results);
          }
       })
       .build();
@@ -136,6 +173,8 @@ public class AmbienceFX implements JsonAssetWithMap<String, IndexedAssetMap<Stri
    @Nullable
    protected String audioCategoryId = null;
    protected transient int audioCategoryIndex = 0;
+   @Nullable
+   public AmbienceStateWriteConfig[] setStates;
    private SoftReference<com.hypixel.hytale.protocol.AmbienceFX> cachedPacket;
 
    public static AssetStore<String, AmbienceFX, IndexedAssetMap<String, AmbienceFX>> getAssetStore() {
@@ -194,12 +233,55 @@ public class AmbienceFX implements JsonAssetWithMap<String, IndexedAssetMap<Stri
       }
 
       packet.audioCategoryIndex = this.audioCategoryIndex;
+      if (this.setStates != null && this.setStates.length > 0) {
+         packet.setStates = new AmbienceStateWrite[this.setStates.length];
+
+         for (int i = 0; i < this.setStates.length; i++) {
+            packet.setStates[i] = this.setStates[i].toPacket();
+         }
+      }
+
       this.cachedPacket = new SoftReference<>(packet);
       return packet;
    }
 
    public String getId() {
       return this.id;
+   }
+
+   public void refreshAudioStateResolution() {
+      if (this.ambientBed != null) {
+         AudioStateResolver.resolveBindings(this.ambientBed.stateBindings);
+      }
+
+      if (this.sounds != null) {
+         for (AmbienceFXSound sound : this.sounds) {
+            if (sound != null) {
+               AudioStateResolver.resolveBindings(sound.stateBindings);
+            }
+         }
+      }
+
+      AudioStateResolver.resolveSetStates(this.setStates);
+      this.cachedPacket = null;
+   }
+
+   public static void onAudioStateLoaded(@Nonnull LoadedAssetsEvent<String, AudioState, IndexedLookupTableAssetMap<String, AudioState>> event) {
+      if (!event.isInitial()) {
+         refreshAllAudioStateResolutions();
+      }
+   }
+
+   public static void onAudioStateRemoved(@Nonnull RemovedAssetsEvent<String, AudioState, IndexedLookupTableAssetMap<String, AudioState>> event) {
+      refreshAllAudioStateResolutions();
+   }
+
+   private static void refreshAllAudioStateResolutions() {
+      for (AmbienceFX ambFX : getAssetMap().getAssetMap().values()) {
+         if (ambFX != null) {
+            ambFX.refreshAudioStateResolution();
+         }
+      }
    }
 
    public AmbienceFXConditions getConditions() {

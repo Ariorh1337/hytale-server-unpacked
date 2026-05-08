@@ -35,7 +35,7 @@ public class PaintOperation extends ToolOperation {
    }
 
    @Override
-   boolean execute0(int x, int y, int z) {
+   protected boolean executeBlock(int x, int y, int z) {
       Vector3i vector = new Vector3i(x - this.currentCenterX, y - this.currentCenterY, z - this.currentCenterZ);
       this.brushRotation.apply(vector);
       x = this.currentCenterX + vector.x;

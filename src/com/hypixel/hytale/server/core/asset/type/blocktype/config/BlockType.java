@@ -931,6 +931,7 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
    @Nonnull
    protected Opacity opacity = Opacity.Solid;
    protected boolean requiresAlphaBlending;
+   private volatile Boolean uniformTextures;
    protected Color[] tintUp;
    protected Color[] tintDown;
    protected Color[] tintNorth;
@@ -1478,6 +1479,32 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
 
    public BlockTypeTextures[] getTextures() {
       return this.textures;
+   }
+
+   public boolean hasUniformTextures() {
+      if (this.uniformTextures == null) {
+         this.uniformTextures = this.computeHasUniformTextures();
+      }
+
+      return this.uniformTextures;
+   }
+
+   private boolean computeHasUniformTextures() {
+      if (this.drawType != DrawType.Cube && this.drawType != DrawType.CubeWithModel && this.drawType != DrawType.GizmoCube) {
+         return false;
+      }
+
+      if (this.textures != null && this.textures.length != 0) {
+         for (BlockTypeTextures tex : this.textures) {
+            if (!tex.isUniform()) {
+               return false;
+            }
+         }
+
+         return true;
+      } else {
+         return false;
+      }
    }
 
    public String getTextureSideMask() {

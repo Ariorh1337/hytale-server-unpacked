@@ -41,7 +41,7 @@ public class SculptOperation extends ToolOperation {
    }
 
    @Override
-   boolean execute0(int x, int y, int z) {
+   protected boolean executeBlock(int x, int y, int z) {
       int currentBlock = this.edit.getBlock(x, y, z);
       if (this.isAltPlaySculptBrushModDown) {
          BuilderToolsPlugin.BuilderState.BlocksSampleData data = BuilderToolsPlugin.getState(this.player, this.playerRef)

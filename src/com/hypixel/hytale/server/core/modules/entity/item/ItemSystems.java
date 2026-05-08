@@ -24,6 +24,7 @@ import com.hypixel.hytale.server.core.modules.entity.component.BoundingBox;
 import com.hypixel.hytale.server.core.modules.entity.component.DynamicLight;
 import com.hypixel.hytale.server.core.modules.entity.component.EntityScaleComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.PropComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.tracker.EntityTrackerSystems;
 import com.hypixel.hytale.server.core.modules.entity.tracker.NetworkId;
@@ -52,7 +53,7 @@ public class ItemSystems {
          if (!holder.getArchetype().contains(BoundingBox.getComponentType())) {
             ModelComponent modelComponent = holder.getComponent(ModelComponent.getComponentType());
             Box modelBox = modelComponent != null && modelComponent.getModel() != null ? modelComponent.getModel().getBoundingBox() : null;
-            if (modelBox == null) {
+            if (modelBox == null && holder.getArchetype().contains(PropComponent.getComponentType())) {
                modelBox = resolveItemBounds(holder);
             }
 

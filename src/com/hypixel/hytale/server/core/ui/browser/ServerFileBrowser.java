@@ -136,23 +136,20 @@ public class ServerFileBrowser {
       }
    }
 
+   @Nonnull
+   public List<FileListProvider.FileEntry> getFileEntries() {
+      if (this.config.customProvider() != null) {
+         return this.config.customProvider().getFiles(this.currentDir, this.searchQuery);
+      } else if (this.config.assetPackMode()) {
+         return !this.searchQuery.isEmpty() && this.config.enableSearch() ? this.buildAssetPackSearchResults() : this.buildAssetPackListing();
+      } else {
+         return !this.searchQuery.isEmpty() && this.config.enableSearch() ? this.buildSearchResults() : this.buildDirectoryListing();
+      }
+   }
+
    public void buildFileList(@Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder) {
       commandBuilder.clear(this.config.listElementId());
-      List<FileListProvider.FileEntry> entries;
-      if (this.config.customProvider() != null) {
-         entries = this.config.customProvider().getFiles(this.currentDir, this.searchQuery);
-      } else if (this.config.assetPackMode()) {
-         if (!this.searchQuery.isEmpty() && this.config.enableSearch()) {
-            entries = this.buildAssetPackSearchResults();
-         } else {
-            entries = this.buildAssetPackListing();
-         }
-      } else if (!this.searchQuery.isEmpty() && this.config.enableSearch()) {
-         entries = this.buildSearchResults();
-      } else {
-         entries = this.buildDirectoryListing();
-      }
-
+      List<FileListProvider.FileEntry> entries = this.getFileEntries();
       int buttonIndex = 0;
       if (this.config.enableDirectoryNav() && !this.currentDir.toString().isEmpty() && this.searchQuery.isEmpty()) {
          commandBuilder.append(this.config.listElementId(), "Pages/BasicTextButton.ui");

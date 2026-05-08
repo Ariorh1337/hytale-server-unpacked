@@ -19,6 +19,8 @@ public abstract class TriggerVolumeShape {
 
    public abstract void getWorldAABB(@Nonnull Vector3d var1, @Nonnull Vector3d var2, @Nonnull Vector3d var3);
 
+   public abstract void rotateInPlace(float var1);
+
    @Nonnull
    public abstract TriggerVolumeShape copy();
 

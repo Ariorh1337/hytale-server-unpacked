@@ -112,6 +112,8 @@ public class BlockModule extends JavaPlugin {
       Ref<ChunkStore> blockRef = chunk.getBlockComponentEntity(x, y, z);
       if (blockRef != null) {
          return blockRef;
+      } else if (chunk.getFiller(x, y, z) != 0) {
+         return null;
       } else {
          BlockType blockType = chunk.getBlockType(x, y, z);
          if (blockType == null) {
@@ -400,6 +402,7 @@ public class BlockModule extends JavaPlugin {
             if (blockComponentChunk != null) {
                switch (reason) {
                   case REMOVE:
+                  case BUILDER_TOOLS_UNDO:
                      blockComponentChunk.removeEntityReference(blockStateInfoComponent.getIndex(), ref);
                      break;
                   case UNLOAD:

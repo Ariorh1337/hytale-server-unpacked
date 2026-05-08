@@ -15,6 +15,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.worldgen.chunk.ChunkGeneratorExecution;
 import com.hypixel.hytale.server.worldgen.loader.WorldGenPrefabSupplier;
 import com.hypixel.hytale.server.worldgen.util.condition.BlockMaskCondition;
+import java.util.Objects;
 import java.util.Random;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -82,7 +83,8 @@ public class PrefabPasteUtil {
          }
 
          Vector3i offset = new Vector3i(buffer.posWorld.x, buffer.posWorld.y + buffer.yOffset, buffer.posWorld.z);
-         buffer.execution.getEntityChunk().addEntities(offset, buffer.rotation, clone, buffer.specificSeed);
+         int prefabInstanceId = Objects.hash(buffer.posWorld.x, buffer.posWorld.y, buffer.posWorld.z, buffer.specificSeed);
+         buffer.execution.getEntityChunk().addEntities(offset, buffer.rotation, clone, buffer.specificSeed, prefabInstanceId);
       }, (cx, cy, cz, path, fitHeightmap, inheritSeed, inheritHeightCondition, weights, rotation, buffer) -> {
          if (buffer.depth < 10) {
             buffer.depth++;

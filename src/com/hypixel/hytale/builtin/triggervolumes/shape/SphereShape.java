@@ -53,6 +53,10 @@ public class SphereShape extends TriggerVolumeShape {
       outMax.set(cx + this.radius, cy + this.radius, cz + this.radius);
    }
 
+   @Override
+   public void rotateInPlace(float yawRadians) {
+   }
+
    @Nonnull
    public SphereShape copy() {
       return new SphereShape(new Vector3d(this.center), this.radius);

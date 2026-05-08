@@ -75,7 +75,6 @@ import com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap;
 import com.hypixel.hytale.server.core.modules.entitystats.EntityStatValue;
 import com.hypixel.hytale.server.core.modules.entitystats.EntityStatsSystems;
 import com.hypixel.hytale.server.core.modules.entitystats.asset.DefaultEntityStatTypes;
-import com.hypixel.hytale.server.core.modules.entitystats.modifier.StaticModifier;
 import com.hypixel.hytale.server.core.modules.entityui.EntityUIModule;
 import com.hypixel.hytale.server.core.modules.entityui.UIComponentList;
 import com.hypixel.hytale.server.core.modules.interaction.InteractionModule;
@@ -410,10 +409,10 @@ public class DamageSystems {
                Item item = itemStack.getItem();
                ItemArmor itemArmor = item.getArmor();
                if (itemArmor != null) {
-                  Map<DamageCause, StaticModifier[]> resistances = itemArmor.getDamageResistanceValues();
+                  Map<DamageCause, ResistanceModifier[]> resistances = itemArmor.getDamageResistanceValues();
                   double flatResistance = itemArmor.getBaseDamageResistance();
                   if (resistances != null) {
-                     for (Entry<DamageCause, StaticModifier[]> entry : resistances.entrySet()) {
+                     for (Entry<DamageCause, ResistanceModifier[]> entry : resistances.entrySet()) {
                         if (entry.getValue() != null) {
                            calculateResistanceEntryModifications(entry, world, result, canApplyItemStackPenalties, itemStack.isBroken(), flatResistance);
                         }
@@ -428,7 +427,7 @@ public class DamageSystems {
       }
 
       private static void calculateResistanceEntryModifications(
-         @Nonnull Entry<DamageCause, StaticModifier[]> entry,
+         @Nonnull Entry<DamageCause, ResistanceModifier[]> entry,
          @Nonnull World world,
          @Nonnull Map<DamageCause, DamageSystems.ArmorDamageReduction.ArmorResistanceModifiers> result,
          boolean canApplyItemStackPenalties,
@@ -438,11 +437,11 @@ public class DamageSystems {
          DamageSystems.ArmorDamageReduction.ArmorResistanceModifiers mods = result.computeIfAbsent(
             entry.getKey(), key -> new DamageSystems.ArmorDamageReduction.ArmorResistanceModifiers()
          );
-         StaticModifier[] valueArray = entry.getValue();
+         ResistanceModifier[] valueArray = entry.getValue();
 
          for (int x = 0; x < valueArray.length; x++) {
-            StaticModifier entryValue = valueArray[x];
-            if (entryValue.getCalculationType() == StaticModifier.CalculationType.ADDITIVE) {
+            ResistanceModifier entryValue = valueArray[x];
+            if (entryValue.getCalculationType() == ResistanceModifier.ResistanceCalculationType.FLAT) {
                mods.flatModifier = (int)(mods.flatModifier + entryValue.getAmount());
             } else {
                mods.multiplierModifier = mods.multiplierModifier + entryValue.getAmount();
@@ -470,18 +469,18 @@ public class DamageSystems {
             for (int entityEffectIndex : effectControllerComponent.getActiveEffects().keySet()) {
                EntityEffect entityEffectData = EntityEffect.getAssetMap().getAsset(entityEffectIndex);
                if (entityEffectData != null) {
-                  Map<DamageCause, StaticModifier[]> damageResistanceValues = entityEffectData.getDamageResistanceValues();
+                  Map<DamageCause, ResistanceModifier[]> damageResistanceValues = entityEffectData.getDamageResistanceValues();
                   if (damageResistanceValues != null && !damageResistanceValues.isEmpty()) {
-                     for (Entry<DamageCause, StaticModifier[]> entry : damageResistanceValues.entrySet()) {
+                     for (Entry<DamageCause, ResistanceModifier[]> entry : damageResistanceValues.entrySet()) {
                         DamageSystems.ArmorDamageReduction.ArmorResistanceModifiers modifier = resistanceModifiers.computeIfAbsent(
                            entry.getKey(), damageCause -> new DamageSystems.ArmorDamageReduction.ArmorResistanceModifiers()
                         );
 
-                        for (StaticModifier staticModifier : entry.getValue()) {
-                           if (staticModifier.getCalculationType() == StaticModifier.CalculationType.ADDITIVE) {
-                              modifier.flatModifier = (int)(modifier.flatModifier + staticModifier.getAmount());
-                           } else if (staticModifier.getCalculationType() == StaticModifier.CalculationType.MULTIPLICATIVE) {
-                              modifier.multiplierModifier = modifier.multiplierModifier + staticModifier.getAmount();
+                        for (ResistanceModifier resistanceModifier : entry.getValue()) {
+                           if (resistanceModifier.getCalculationType() == ResistanceModifier.ResistanceCalculationType.FLAT) {
+                              modifier.flatModifier = (int)(modifier.flatModifier + resistanceModifier.getAmount());
+                           } else if (resistanceModifier.getCalculationType() == ResistanceModifier.ResistanceCalculationType.PERCENT) {
+                              modifier.multiplierModifier = modifier.multiplierModifier + resistanceModifier.getAmount();
                            }
                         }
                      }

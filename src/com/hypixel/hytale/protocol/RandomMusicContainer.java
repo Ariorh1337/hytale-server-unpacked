@@ -14,13 +14,12 @@ import javax.annotation.Nullable;
 public class RandomMusicContainer extends MusicContainer {
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
    public static final int FIXED_BLOCK_SIZE = 68;
-   public static final int VARIABLE_FIELD_COUNT = 2;
-   public static final int VARIABLE_BLOCK_START = 76;
-   public static final int MAX_SIZE = 32768086;
+   public static final int VARIABLE_FIELD_COUNT = 3;
+   public static final int VARIABLE_BLOCK_START = 80;
+   public static final int MAX_SIZE = 1677721600;
    @Nonnull
    public RandomMode mode = RandomMode.Shuffle;
    public int avoidRepeatCount;
-   public float avoidRepeatMemoryDuration;
    @Nullable
    public int[] children;
 
@@ -38,12 +37,13 @@ public class RandomMusicContainer extends MusicContainer {
       @Nonnull MusicTransitionType transitionType,
       float transitionDuration,
       boolean playToCompletion,
+      float resumeMemoryDuration,
       @Nullable String nameTranslationKey,
       int audioCategoryIndex,
       @Nullable TempoSettings tempo,
+      @Nullable StateBinding[] stateBindings,
       @Nonnull RandomMode mode,
       int avoidRepeatCount,
-      float avoidRepeatMemoryDuration,
       @Nullable int[] children
    ) {
       this.volume = volume;
@@ -56,12 +56,13 @@ public class RandomMusicContainer extends MusicContainer {
       this.transitionType = transitionType;
       this.transitionDuration = transitionDuration;
       this.playToCompletion = playToCompletion;
+      this.resumeMemoryDuration = resumeMemoryDuration;
       this.nameTranslationKey = nameTranslationKey;
       this.audioCategoryIndex = audioCategoryIndex;
       this.tempo = tempo;
+      this.stateBindings = stateBindings;
       this.mode = mode;
       this.avoidRepeatCount = avoidRepeatCount;
-      this.avoidRepeatMemoryDuration = avoidRepeatMemoryDuration;
       this.children = children;
    }
 
@@ -76,19 +77,20 @@ public class RandomMusicContainer extends MusicContainer {
       this.transitionType = other.transitionType;
       this.transitionDuration = other.transitionDuration;
       this.playToCompletion = other.playToCompletion;
+      this.resumeMemoryDuration = other.resumeMemoryDuration;
       this.nameTranslationKey = other.nameTranslationKey;
       this.audioCategoryIndex = other.audioCategoryIndex;
       this.tempo = other.tempo;
+      this.stateBindings = other.stateBindings;
       this.mode = other.mode;
       this.avoidRepeatCount = other.avoidRepeatCount;
-      this.avoidRepeatMemoryDuration = other.avoidRepeatMemoryDuration;
       this.children = other.children;
    }
 
    @Nonnull
    public static RandomMusicContainer deserialize(@Nonnull ByteBuf buf, int offset) {
-      if (buf.readableBytes() - offset < 76) {
-         throw ProtocolException.bufferTooSmall("RandomMusicContainer", 76, buf.readableBytes() - offset);
+      if (buf.readableBytes() - offset < 80) {
+         throw ProtocolException.bufferTooSmall("RandomMusicContainer", 80, buf.readableBytes() - offset);
       }
 
       RandomMusicContainer obj = new RandomMusicContainer();
@@ -109,21 +111,21 @@ public class RandomMusicContainer extends MusicContainer {
       obj.transitionType = MusicTransitionType.fromValue(buf.getByte(offset + 37));
       obj.transitionDuration = buf.getFloatLE(offset + 38);
       obj.playToCompletion = buf.getByte(offset + 42) != 0;
-      obj.audioCategoryIndex = buf.getIntLE(offset + 43);
+      obj.resumeMemoryDuration = buf.getFloatLE(offset + 43);
+      obj.audioCategoryIndex = buf.getIntLE(offset + 47);
       if ((nullBits & 4) != 0) {
-         obj.tempo = TempoSettings.deserialize(buf, offset + 47);
+         obj.tempo = TempoSettings.deserialize(buf, offset + 51);
       }
 
-      obj.mode = RandomMode.fromValue(buf.getByte(offset + 59));
-      obj.avoidRepeatCount = buf.getIntLE(offset + 60);
-      obj.avoidRepeatMemoryDuration = buf.getFloatLE(offset + 64);
+      obj.mode = RandomMode.fromValue(buf.getByte(offset + 63));
+      obj.avoidRepeatCount = buf.getIntLE(offset + 64);
       if ((nullBits & 8) != 0) {
          int varPosBase0 = buf.getIntLE(offset + 68);
-         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 76) {
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 80) {
             throw ProtocolException.invalidOffset("NameTranslationKey", varPosBase0, buf.readableBytes());
          }
 
-         int varPos0 = offset + 76 + varPosBase0;
+         int varPos0 = offset + 80 + varPosBase0;
          int nameTranslationKeyLen = VarInt.peek(buf, varPos0);
          if (nameTranslationKeyLen < 0) {
             throw ProtocolException.invalidVarInt("NameTranslationKey");
@@ -143,12 +145,42 @@ public class RandomMusicContainer extends MusicContainer {
 
       if ((nullBits & 16) != 0) {
          int varPosBase1 = buf.getIntLE(offset + 72);
-         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 76) {
-            throw ProtocolException.invalidOffset("Children", varPosBase1, buf.readableBytes());
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 80) {
+            throw ProtocolException.invalidOffset("StateBindings", varPosBase1, buf.readableBytes());
          }
 
-         int varPos1 = offset + 76 + varPosBase1;
-         int childrenCount = VarInt.peek(buf, varPos1);
+         int varPos1 = offset + 80 + varPosBase1;
+         int stateBindingsCount = VarInt.peek(buf, varPos1);
+         if (stateBindingsCount < 0) {
+            throw ProtocolException.invalidVarInt("StateBindings");
+         }
+
+         int varIntLen = VarInt.size(stateBindingsCount);
+         if (stateBindingsCount > 4096000) {
+            throw ProtocolException.arrayTooLong("StateBindings", stateBindingsCount, 4096000);
+         }
+
+         if (varPos1 + varIntLen + stateBindingsCount * 5L > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("StateBindings", varPos1 + varIntLen + stateBindingsCount * 5, buf.readableBytes());
+         }
+
+         obj.stateBindings = new StateBinding[stateBindingsCount];
+         int elemPos = varPos1 + varIntLen;
+
+         for (int i = 0; i < stateBindingsCount; i++) {
+            obj.stateBindings[i] = StateBinding.deserialize(buf, elemPos);
+            elemPos += StateBinding.computeBytesConsumed(buf, elemPos);
+         }
+      }
+
+      if ((nullBits & 32) != 0) {
+         int varPosBase2 = buf.getIntLE(offset + 76);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 80) {
+            throw ProtocolException.invalidOffset("Children", varPosBase2, buf.readableBytes());
+         }
+
+         int varPos2 = offset + 80 + varPosBase2;
+         int childrenCount = VarInt.peek(buf, varPos2);
          if (childrenCount < 0) {
             throw ProtocolException.invalidVarInt("Children");
          }
@@ -158,14 +190,14 @@ public class RandomMusicContainer extends MusicContainer {
             throw ProtocolException.arrayTooLong("Children", childrenCount, 4096000);
          }
 
-         if (varPos1 + varIntLen + childrenCount * 4L > buf.readableBytes()) {
-            throw ProtocolException.bufferTooSmall("Children", varPos1 + varIntLen + childrenCount * 4, buf.readableBytes());
+         if (varPos2 + varIntLen + childrenCount * 4L > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Children", varPos2 + varIntLen + childrenCount * 4, buf.readableBytes());
          }
 
          obj.children = new int[childrenCount];
 
          for (int i = 0; i < childrenCount; i++) {
-            obj.children[i] = buf.getIntLE(varPos1 + varIntLen + i * 4);
+            obj.children[i] = buf.getIntLE(varPos2 + varIntLen + i * 4);
          }
       }
 
@@ -174,14 +206,14 @@ public class RandomMusicContainer extends MusicContainer {
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte nullBits = buf.getByte(offset);
-      int maxEnd = 76;
+      int maxEnd = 80;
       if ((nullBits & 8) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 68);
-         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 76) {
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 80) {
             throw ProtocolException.invalidOffset("NameTranslationKey", fieldOffset0, maxEnd);
          }
 
-         int pos0 = offset + 76 + fieldOffset0;
+         int pos0 = offset + 80 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
          pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
@@ -191,15 +223,34 @@ public class RandomMusicContainer extends MusicContainer {
 
       if ((nullBits & 16) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 72);
-         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 76) {
-            throw ProtocolException.invalidOffset("Children", fieldOffset1, maxEnd);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 80) {
+            throw ProtocolException.invalidOffset("StateBindings", fieldOffset1, maxEnd);
          }
 
-         int pos1 = offset + 76 + fieldOffset1;
+         int pos1 = offset + 80 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.size(arrLen) + arrLen * 4;
+         pos1 += VarInt.size(arrLen);
+
+         for (int i = 0; i < arrLen; i++) {
+            pos1 += StateBinding.computeBytesConsumed(buf, pos1);
+         }
+
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
+         }
+      }
+
+      if ((nullBits & 32) != 0) {
+         int fieldOffset2 = buf.getIntLE(offset + 76);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 80) {
+            throw ProtocolException.invalidOffset("Children", fieldOffset2, maxEnd);
+         }
+
+         int pos2 = offset + 80 + fieldOffset2;
+         int arrLen = VarInt.peek(buf, pos2);
+         pos2 += VarInt.size(arrLen) + arrLen * 4;
+         if (pos2 - offset > maxEnd) {
+            maxEnd = pos2 - offset;
          }
       }
 
@@ -207,7 +258,7 @@ public class RandomMusicContainer extends MusicContainer {
    }
 
    public static boolean isBufferTooSmall(MemorySegment mem) {
-      return mem.byteSize() < 76L;
+      return mem.byteSize() < 80L;
    }
 
    public static float getVolume(MemorySegment mem) {
@@ -294,6 +345,14 @@ public class RandomMusicContainer extends MusicContainer {
       return mem.get(PacketIO.PROTO_BOOL, offset + 42);
    }
 
+   public static float getResumeMemoryDuration(MemorySegment mem) {
+      return getResumeMemoryDuration(mem, 0);
+   }
+
+   public static float getResumeMemoryDuration(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 43);
+   }
+
    @Nullable
    public static String getNameTranslationKey(MemorySegment mem) {
       return getNameTranslationKey(mem, 0);
@@ -302,7 +361,7 @@ public class RandomMusicContainer extends MusicContainer {
    @Nullable
    public static String getNameTranslationKey(MemorySegment mem, int offset) {
       return hasNameTranslationKey(mem, offset)
-         ? PacketIO.readVarString("NameTranslationKey", mem, offset + getValidatedOffset(mem, offset, 68, 76, "NameTranslationKey"), 4096000, PacketIO.UTF8)
+         ? PacketIO.readVarString("NameTranslationKey", mem, offset + getValidatedOffset(mem, offset, 68, 80, "NameTranslationKey"), 4096000, PacketIO.UTF8)
          : null;
    }
 
@@ -311,7 +370,7 @@ public class RandomMusicContainer extends MusicContainer {
    }
 
    public static int getAudioCategoryIndex(MemorySegment mem, int offset) {
-      return mem.get(PacketIO.PROTO_INT, offset + 43);
+      return mem.get(PacketIO.PROTO_INT, offset + 47);
    }
 
    @Nullable
@@ -321,7 +380,45 @@ public class RandomMusicContainer extends MusicContainer {
 
    @Nullable
    public static TempoSettings getTempo(MemorySegment mem, int offset) {
-      return hasTempo(mem, offset) ? TempoSettings.toObject(mem, offset + 47) : null;
+      return hasTempo(mem, offset) ? TempoSettings.toObject(mem, offset + 51) : null;
+   }
+
+   @Nullable
+   public static StateBinding[] getStateBindings(MemorySegment mem) {
+      return getStateBindings(mem, 0);
+   }
+
+   @Nullable
+   public static StateBinding[] getStateBindings(MemorySegment mem, int offset) {
+      if (!hasStateBindings(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 72, 80, "StateBindings");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("StateBindings", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("StateBindings", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("StateBindings", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      StateBinding[] data = new StateBinding[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = StateBinding.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
    }
 
    public static RandomMode getMode(MemorySegment mem) {
@@ -329,7 +426,7 @@ public class RandomMusicContainer extends MusicContainer {
    }
 
    public static RandomMode getMode(MemorySegment mem, int offset) {
-      return RandomMode.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 59));
+      return RandomMode.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 63));
    }
 
    public static int getAvoidRepeatCount(MemorySegment mem) {
@@ -337,15 +434,7 @@ public class RandomMusicContainer extends MusicContainer {
    }
 
    public static int getAvoidRepeatCount(MemorySegment mem, int offset) {
-      return mem.get(PacketIO.PROTO_INT, offset + 60);
-   }
-
-   public static float getAvoidRepeatMemoryDuration(MemorySegment mem) {
-      return getAvoidRepeatMemoryDuration(mem, 0);
-   }
-
-   public static float getAvoidRepeatMemoryDuration(MemorySegment mem, int offset) {
-      return mem.get(PacketIO.PROTO_FLOAT, offset + 64);
+      return mem.get(PacketIO.PROTO_INT, offset + 64);
    }
 
    @Nullable
@@ -359,7 +448,7 @@ public class RandomMusicContainer extends MusicContainer {
          return null;
       }
 
-      int off = offset + getValidatedOffset(mem, offset, 72, 76, "Children");
+      int off = offset + getValidatedOffset(mem, offset, 76, 80, "Children");
       long packed = VarInt.getWithLength(mem, off);
       int len = (int)packed;
       if (len < 0) {
@@ -401,9 +490,14 @@ public class RandomMusicContainer extends MusicContainer {
       return (b & 8) != 0;
    }
 
-   public static boolean hasChildren(MemorySegment mem, int offset) {
+   public static boolean hasStateBindings(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
       return (b & 16) != 0;
+   }
+
+   public static boolean hasChildren(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 32) != 0;
    }
 
    private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
@@ -420,13 +514,40 @@ public class RandomMusicContainer extends MusicContainer {
    }
 
    public static RandomMusicContainer toObject(MemorySegment mem, int offset) {
-      if (offset + 76 > mem.byteSize()) {
-         throw ProtocolException.bufferTooSmall("RandomMusicContainer", offset + 76, (int)mem.byteSize());
+      if (offset + 80 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("RandomMusicContainer", offset + 80, (int)mem.byteSize());
+      }
+
+      StateBinding[] stateBindings = null;
+      if (hasStateBindings(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 72, 80, "StateBindings");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("StateBindings", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("StateBindings", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("StateBindings", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         stateBindings = new StateBinding[len];
+
+         for (int i = 0; i < len; i++) {
+            stateBindings[i] = StateBinding.toObject(mem, off);
+            off += stateBindings[i].computeSize();
+         }
       }
 
       int[] children = null;
       if (hasChildren(mem, offset)) {
-         int off = offset + getValidatedOffset(mem, offset, 72, 76, "Children");
+         int off = offset + getValidatedOffset(mem, offset, 76, 80, "Children");
          long packed = VarInt.getWithLength(mem, off);
          int len = (int)packed;
          if (len < 0) {
@@ -458,14 +579,15 @@ public class RandomMusicContainer extends MusicContainer {
          MusicTransitionType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 37)),
          mem.get(PacketIO.PROTO_FLOAT, offset + 38),
          mem.get(PacketIO.PROTO_BOOL, offset + 42),
+         mem.get(PacketIO.PROTO_FLOAT, offset + 43),
          hasNameTranslationKey(mem, offset)
-            ? PacketIO.readVarString("NameTranslationKey", mem, offset + getValidatedOffset(mem, offset, 68, 76, "NameTranslationKey"), 4096000, PacketIO.UTF8)
+            ? PacketIO.readVarString("NameTranslationKey", mem, offset + getValidatedOffset(mem, offset, 68, 80, "NameTranslationKey"), 4096000, PacketIO.UTF8)
             : null,
-         mem.get(PacketIO.PROTO_INT, offset + 43),
-         hasTempo(mem, offset) ? TempoSettings.toObject(mem, offset + 47) : null,
-         RandomMode.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 59)),
-         mem.get(PacketIO.PROTO_INT, offset + 60),
-         mem.get(PacketIO.PROTO_FLOAT, offset + 64),
+         mem.get(PacketIO.PROTO_INT, offset + 47),
+         hasTempo(mem, offset) ? TempoSettings.toObject(mem, offset + 51) : null,
+         stateBindings,
+         RandomMode.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 63)),
+         mem.get(PacketIO.PROTO_INT, offset + 64),
          children
       );
    }
@@ -490,8 +612,12 @@ public class RandomMusicContainer extends MusicContainer {
          nullBits = (byte)(nullBits | 8);
       }
 
-      if (this.children != null) {
+      if (this.stateBindings != null) {
          nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.children != null) {
+         nullBits = (byte)(nullBits | 32);
       }
 
       buf.writeByte(nullBits);
@@ -515,6 +641,7 @@ public class RandomMusicContainer extends MusicContainer {
       buf.writeByte(this.transitionType.getValue());
       buf.writeFloatLE(this.transitionDuration);
       buf.writeByte(this.playToCompletion ? 1 : 0);
+      buf.writeFloatLE(this.resumeMemoryDuration);
       buf.writeIntLE(this.audioCategoryIndex);
       if (this.tempo != null) {
          this.tempo.serialize(buf);
@@ -524,8 +651,9 @@ public class RandomMusicContainer extends MusicContainer {
 
       buf.writeByte(this.mode.getValue());
       buf.writeIntLE(this.avoidRepeatCount);
-      buf.writeFloatLE(this.avoidRepeatMemoryDuration);
       int nameTranslationKeyOffsetSlot = buf.writerIndex();
+      buf.writeIntLE(0);
+      int stateBindingsOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
       int childrenOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
@@ -535,6 +663,21 @@ public class RandomMusicContainer extends MusicContainer {
          PacketIO.writeVarString(buf, this.nameTranslationKey, 4096000);
       } else {
          buf.setIntLE(nameTranslationKeyOffsetSlot, -1);
+      }
+
+      if (this.stateBindings != null) {
+         buf.setIntLE(stateBindingsOffsetSlot, buf.writerIndex() - varBlockStart);
+         if (this.stateBindings.length > 4096000) {
+            throw ProtocolException.arrayTooLong("StateBindings", this.stateBindings.length, 4096000);
+         }
+
+         VarInt.write(buf, this.stateBindings.length);
+
+         for (StateBinding item : this.stateBindings) {
+            item.serialize(buf);
+         }
+      } else {
+         buf.setIntLE(stateBindingsOffsetSlot, -1);
       }
 
       if (this.children != null) {
@@ -574,8 +717,12 @@ public class RandomMusicContainer extends MusicContainer {
          nullBits = (byte)(nullBits | 8);
       }
 
-      if (this.children != null) {
+      if (this.stateBindings != null) {
          nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.children != null) {
+         nullBits = (byte)(nullBits | 32);
       }
 
       mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
@@ -599,26 +746,44 @@ public class RandomMusicContainer extends MusicContainer {
       mem.set(PacketIO.PROTO_BYTE, offset + 37, (byte)this.transitionType.getValue());
       mem.set(PacketIO.PROTO_FLOAT, offset + 38, this.transitionDuration);
       mem.set(PacketIO.PROTO_BOOL, offset + 42, this.playToCompletion);
-      mem.set(PacketIO.PROTO_INT, offset + 43, this.audioCategoryIndex);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 43, this.resumeMemoryDuration);
+      mem.set(PacketIO.PROTO_INT, offset + 47, this.audioCategoryIndex);
       if (this.tempo != null) {
-         this.tempo.serialize(mem, offset + 47);
+         this.tempo.serialize(mem, offset + 51);
       } else {
-         mem.asSlice(offset + 47, 12L).fill((byte)0);
+         mem.asSlice(offset + 51, 12L).fill((byte)0);
       }
 
-      mem.set(PacketIO.PROTO_BYTE, offset + 59, (byte)this.mode.getValue());
-      mem.set(PacketIO.PROTO_INT, offset + 60, this.avoidRepeatCount);
-      mem.set(PacketIO.PROTO_FLOAT, offset + 64, this.avoidRepeatMemoryDuration);
-      int varOffset = offset + 76;
+      mem.set(PacketIO.PROTO_BYTE, offset + 63, (byte)this.mode.getValue());
+      mem.set(PacketIO.PROTO_INT, offset + 64, this.avoidRepeatCount);
+      int varOffset = offset + 80;
       if (this.nameTranslationKey != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 68, varOffset - offset - 76);
+         mem.set(PacketIO.PROTO_INT, offset + 68, varOffset - offset - 80);
          varOffset += PacketIO.writeVarString(mem, varOffset, this.nameTranslationKey, 4096000);
       } else {
          mem.set(PacketIO.PROTO_INT, offset + 68, -1);
       }
 
+      if (this.stateBindings != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 72, varOffset - offset - 80);
+         if (this.stateBindings.length > 4096000) {
+            throw ProtocolException.arrayTooLong("StateBindings", this.stateBindings.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.stateBindings.length);
+         int stateBindingsValueOffset = 0;
+
+         for (int i = 0; i < this.stateBindings.length; i++) {
+            stateBindingsValueOffset += this.stateBindings[i].serialize(mem, varOffset + stateBindingsValueOffset);
+         }
+
+         varOffset += stateBindingsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 72, -1);
+      }
+
       if (this.children != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 72, varOffset - offset - 76);
+         mem.set(PacketIO.PROTO_INT, offset + 76, varOffset - offset - 80);
          if (this.children.length > 4096000) {
             throw ProtocolException.arrayTooLong("Children", this.children.length, 4096000);
          }
@@ -627,7 +792,7 @@ public class RandomMusicContainer extends MusicContainer {
          MemorySegment.copy(this.children, 0, mem, PacketIO.PROTO_INT, varOffset, this.children.length);
          varOffset += this.children.length * 4;
       } else {
-         mem.set(PacketIO.PROTO_INT, offset + 72, -1);
+         mem.set(PacketIO.PROTO_INT, offset + 76, -1);
       }
 
       return varOffset - offset;
@@ -635,9 +800,19 @@ public class RandomMusicContainer extends MusicContainer {
 
    @Override
    public int computeSize() {
-      int size = 76;
+      int size = 80;
       if (this.nameTranslationKey != null) {
          size += PacketIO.stringSize(this.nameTranslationKey);
+      }
+
+      if (this.stateBindings != null) {
+         int stateBindingsSize = 0;
+
+         for (StateBinding elem : this.stateBindings) {
+            stateBindingsSize += elem.computeSize();
+         }
+
+         size += VarInt.size(this.stateBindings.length) + stateBindingsSize;
       }
 
       if (this.children != null) {
@@ -648,8 +823,8 @@ public class RandomMusicContainer extends MusicContainer {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      if (buffer.readableBytes() - offset < 76) {
-         return ValidationResult.error("Buffer too small: expected at least 76 bytes");
+      if (buffer.readableBytes() - offset < 80) {
+         return ValidationResult.error("Buffer too small: expected at least 80 bytes");
       }
 
       byte nullBits = buffer.getByte(offset);
@@ -658,18 +833,18 @@ public class RandomMusicContainer extends MusicContainer {
          return ValidationResult.error("Invalid MusicTransitionType value for TransitionType");
       }
 
-      v = buffer.getByte(offset + 59) & 255;
+      v = buffer.getByte(offset + 63) & 255;
       if (v >= 2) {
          return ValidationResult.error("Invalid RandomMode value for Mode");
       }
 
       if ((nullBits & 8) != 0) {
          v = buffer.getIntLE(offset + 68);
-         if (v < 0 || v > buffer.writerIndex() - offset - 76) {
+         if (v < 0 || v > buffer.writerIndex() - offset - 80) {
             return ValidationResult.error("Invalid offset for NameTranslationKey");
          }
 
-         int pos = offset + 76 + v;
+         int pos = offset + 80 + v;
          int nameTranslationKeyLen = VarInt.peek(buffer, pos);
          if (nameTranslationKeyLen < 0) {
             return ValidationResult.error("Invalid string length for NameTranslationKey");
@@ -688,11 +863,39 @@ public class RandomMusicContainer extends MusicContainer {
 
       if ((nullBits & 16) != 0) {
          v = buffer.getIntLE(offset + 72);
-         if (v < 0 || v > buffer.writerIndex() - offset - 76) {
+         if (v < 0 || v > buffer.writerIndex() - offset - 80) {
+            return ValidationResult.error("Invalid offset for StateBindings");
+         }
+
+         int pos = offset + 80 + v;
+         int stateBindingsCount = VarInt.peek(buffer, pos);
+         if (stateBindingsCount < 0) {
+            return ValidationResult.error("Invalid array count for StateBindings");
+         }
+
+         if (stateBindingsCount > 4096000) {
+            return ValidationResult.error("StateBindings exceeds max length 4096000");
+         }
+
+         pos += VarInt.size(stateBindingsCount);
+
+         for (int i = 0; i < stateBindingsCount; i++) {
+            ValidationResult structResult = StateBinding.validateStructure(buffer, pos);
+            if (!structResult.isValid()) {
+               return ValidationResult.error("Invalid StateBinding in StateBindings[" + i + "]: " + structResult.error());
+            }
+
+            pos += StateBinding.computeBytesConsumed(buffer, pos);
+         }
+      }
+
+      if ((nullBits & 32) != 0) {
+         v = buffer.getIntLE(offset + 76);
+         if (v < 0 || v > buffer.writerIndex() - offset - 80) {
             return ValidationResult.error("Invalid offset for Children");
          }
 
-         int pos = offset + 76 + v;
+         int pos = offset + 80 + v;
          int childrenCount = VarInt.peek(buffer, pos);
          if (childrenCount < 0) {
             return ValidationResult.error("Invalid array count for Children");
@@ -724,12 +927,13 @@ public class RandomMusicContainer extends MusicContainer {
       copy.transitionType = this.transitionType;
       copy.transitionDuration = this.transitionDuration;
       copy.playToCompletion = this.playToCompletion;
+      copy.resumeMemoryDuration = this.resumeMemoryDuration;
       copy.nameTranslationKey = this.nameTranslationKey;
       copy.audioCategoryIndex = this.audioCategoryIndex;
       copy.tempo = this.tempo != null ? this.tempo.clone() : null;
+      copy.stateBindings = this.stateBindings != null ? Arrays.stream(this.stateBindings).map(e -> e.clone()).toArray(StateBinding[]::new) : null;
       copy.mode = this.mode;
       copy.avoidRepeatCount = this.avoidRepeatCount;
-      copy.avoidRepeatMemoryDuration = this.avoidRepeatMemoryDuration;
       copy.children = this.children != null ? Arrays.copyOf(this.children, this.children.length) : null;
       return copy;
    }
@@ -751,12 +955,13 @@ public class RandomMusicContainer extends MusicContainer {
                && Objects.equals(this.transitionType, other.transitionType)
                && this.transitionDuration == other.transitionDuration
                && this.playToCompletion == other.playToCompletion
+               && this.resumeMemoryDuration == other.resumeMemoryDuration
                && Objects.equals(this.nameTranslationKey, other.nameTranslationKey)
                && this.audioCategoryIndex == other.audioCategoryIndex
                && Objects.equals(this.tempo, other.tempo)
+               && Arrays.equals(this.stateBindings, other.stateBindings)
                && Objects.equals(this.mode, other.mode)
                && this.avoidRepeatCount == other.avoidRepeatCount
-               && this.avoidRepeatMemoryDuration == other.avoidRepeatMemoryDuration
                && Arrays.equals(this.children, other.children);
       }
    }
@@ -774,12 +979,13 @@ public class RandomMusicContainer extends MusicContainer {
       result = 31 * result + Objects.hashCode(this.transitionType);
       result = 31 * result + Float.hashCode(this.transitionDuration);
       result = 31 * result + Boolean.hashCode(this.playToCompletion);
+      result = 31 * result + Float.hashCode(this.resumeMemoryDuration);
       result = 31 * result + Objects.hashCode(this.nameTranslationKey);
       result = 31 * result + Integer.hashCode(this.audioCategoryIndex);
       result = 31 * result + Objects.hashCode(this.tempo);
+      result = 31 * result + Arrays.hashCode(this.stateBindings);
       result = 31 * result + Objects.hashCode(this.mode);
       result = 31 * result + Integer.hashCode(this.avoidRepeatCount);
-      result = 31 * result + Float.hashCode(this.avoidRepeatMemoryDuration);
       return 31 * result + Arrays.hashCode(this.children);
    }
 }

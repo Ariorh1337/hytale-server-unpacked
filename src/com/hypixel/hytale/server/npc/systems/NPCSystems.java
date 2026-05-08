@@ -252,6 +252,7 @@ public class NPCSystems {
 
          switch (reason) {
             case REMOVE:
+            case BUILDER_TOOLS_UNDO:
                npcComponent.getRole().removed();
                break;
             case UNLOAD:

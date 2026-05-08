@@ -548,7 +548,8 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
                packet.respondToHit,
                packet.placeMode != null ? packet.placeMode : "default",
                packet.creativeInteractionDistance,
-               packet.showBuilderToolNotifications
+               packet.showBuilderToolNotifications,
+               packet.noPhysics
             ),
             packet.hideHelmet,
             packet.hideCuirass,

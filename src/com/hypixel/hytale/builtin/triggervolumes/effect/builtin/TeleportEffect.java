@@ -8,6 +8,7 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
@@ -27,11 +28,21 @@ public class TeleportEffect extends TriggerEffect {
       .add()
       .append(new KeyedCodec<>("ResetVelocity", Codec.BOOLEAN, false), (e, v) -> e.resetVelocity = v, e -> e.resetVelocity)
       .add()
+      .append(new KeyedCodec<>("RelativeToEntity", Codec.BOOLEAN, false), (e, v) -> e.relativeToEntity = v, e -> e.relativeToEntity)
+      .add()
+      .append(new KeyedCodec<>("UseRotation", Codec.BOOLEAN, false), (e, v) -> e.useRotation = v, e -> e.useRotation)
+      .add()
+      .append(new KeyedCodec<>("Rotation", Vector3dUtil.CODEC, false), (e, v) -> e.rotation = v, e -> e.rotation)
+      .add()
       .build();
    private Vector3d position;
    @Nullable
    private String world;
    private boolean resetVelocity = true;
+   private boolean relativeToEntity;
+   private boolean useRotation;
+   @Nonnull
+   private Vector3d rotation = new Vector3d();
 
    @Override
    public void execute(@Nonnull TriggerContext context) {
@@ -40,7 +51,13 @@ public class TeleportEffect extends TriggerEffect {
          Store<EntityStore> store = context.getStore();
          TransformComponent transformComponent = store.getComponent(entityRef, TransformComponent.getComponentType());
          if (transformComponent != null) {
-            Teleport teleport = Teleport.createForPlayer(this.position, transformComponent.getRotation());
+            Vector3d destination = new Vector3d(this.position);
+            if (this.relativeToEntity) {
+               destination.add(transformComponent.getPosition());
+            }
+
+            Rotation3f teleportRotation = this.useRotation ? toRotation(this.rotation) : transformComponent.getRotation();
+            Teleport teleport = Teleport.createForPlayer(destination, teleportRotation);
             if (!this.resetVelocity) {
                teleport = teleport.withoutVelocityReset();
             }
@@ -53,5 +70,10 @@ public class TeleportEffect extends TriggerEffect {
             store.addComponent(entityRef, Teleport.getComponentType(), teleport);
          }
       }
+   }
+
+   @Nonnull
+   private static Rotation3f toRotation(@Nonnull Vector3d value) {
+      return new Rotation3f((float)Math.toRadians(value.y), (float)Math.toRadians(value.x), (float)Math.toRadians(value.z));
    }
 }

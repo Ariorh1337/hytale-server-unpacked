@@ -69,6 +69,7 @@ import com.hypixel.hytale.server.core.modules.entity.component.DisplayNameCompon
 import com.hypixel.hytale.server.core.modules.entity.component.DynamicLight;
 import com.hypixel.hytale.server.core.modules.entity.component.EntityScaleComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.FromPrefab;
+import com.hypixel.hytale.server.core.modules.entity.component.FromPrefabInstance;
 import com.hypixel.hytale.server.core.modules.entity.component.FromWorldGen;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.HiddenFromAdventurePlayers;
@@ -244,6 +245,7 @@ public class EntityModule extends JavaPlugin {
    private ComponentType<EntityStore, PhysicsValues> physicsValuesComponentType;
    private ComponentType<EntityStore, FromPrefab> fromPrefabComponentType;
    private ComponentType<EntityStore, FromWorldGen> fromWorldGenComponentType;
+   private ComponentType<EntityStore, FromPrefabInstance> fromPrefabInstanceComponentType;
    private ComponentType<EntityStore, WorldGenId> worldGenIdComponentType;
    private ComponentType<EntityStore, Interactable> interactableComponentType;
    private ComponentType<EntityStore, Intangible> intangibleComponentType;
@@ -427,6 +429,7 @@ public class EntityModule extends JavaPlugin {
       entityStoreRegistry.registerSystem(new PlayerHudManagerSystems.InitializeSystem());
       this.fromWorldGenComponentType = entityStoreRegistry.registerComponent(FromWorldGen.class, "FromWorldGen", FromWorldGen.CODEC);
       entityStoreRegistry.registerSystem(new EntitySystems.ClearFromWorldGenMarker(this.fromWorldGenComponentType, this.preClearMarkersGroup));
+      this.fromPrefabInstanceComponentType = entityStoreRegistry.registerComponent(FromPrefabInstance.class, "FromPrefabInstance", FromPrefabInstance.CODEC);
       this.worldGenIdComponentType = entityStoreRegistry.registerComponent(WorldGenId.class, "WorldGenId", WorldGenId.CODEC);
       entityStoreRegistry.registerSystem(
          new EntitySystems.OnLoadFromExternal(this.fromPrefabComponentType, this.fromWorldGenComponentType, this.preClearMarkersGroup)
@@ -802,6 +805,10 @@ public class EntityModule extends JavaPlugin {
 
    public ComponentType<EntityStore, FromWorldGen> getFromWorldGenComponentType() {
       return this.fromWorldGenComponentType;
+   }
+
+   public ComponentType<EntityStore, FromPrefabInstance> getFromPrefabInstanceComponentType() {
+      return this.fromPrefabInstanceComponentType;
    }
 
    public ComponentType<EntityStore, WorldGenId> getWorldGenIdComponentType() {
@@ -1221,6 +1228,7 @@ public class EntityModule extends JavaPlugin {
          T entity = holder.getComponent(this.componentType);
          switch (reason) {
             case REMOVE:
+            case BUILDER_TOOLS_UNDO:
                if (!entity.wasRemoved()) {
                   entity.remove();
                   entity.unloadFromWorld();

@@ -5,6 +5,8 @@ import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabEditingMetadat
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.saving.PrefabSaveContributor;
 import com.hypixel.hytale.builtin.triggervolumes.TriggerVolumesPlugin;
 import com.hypixel.hytale.builtin.triggervolumes.component.TriggerVolume;
+import com.hypixel.hytale.builtin.triggervolumes.component.TriggerVolumeGroup;
+import com.hypixel.hytale.builtin.triggervolumes.manager.GroupEntry;
 import com.hypixel.hytale.builtin.triggervolumes.manager.TriggerVolumeManager;
 import com.hypixel.hytale.builtin.triggervolumes.manager.VolumeEntry;
 import com.hypixel.hytale.component.ComponentType;
@@ -18,6 +20,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Level;
@@ -37,9 +40,11 @@ public class TriggerVolumePrefabContributor implements PrefabSaveContributor {
       Store<EntityStore> store = world.getEntityStore().getStore();
       TriggerVolumeManager manager = store.getResource(plugin.getManagerResourceType());
       if (manager != null) {
-         ComponentType<EntityStore, TriggerVolume> componentType = plugin.getTriggerVolumeComponentType();
+         ComponentType<EntityStore, TriggerVolume> volumeComponentType = plugin.getTriggerVolumeComponentType();
+         ComponentType<EntityStore, TriggerVolumeGroup> groupComponentType = plugin.getTriggerVolumeGroupComponentType();
          Collection<PrefabEditingMetadata> allMetadata = getAllPrefabMetadata(store);
          HashMap<String, String> groupLinkIds = new HashMap<>();
+         HashSet<String> emittedGroups = new HashSet<>();
 
          for (VolumeEntry entry : manager.getVolumes()) {
             entry.getShape().getWorldAABB(entry.getPosition(), this.tempMin, this.tempMax);
@@ -51,10 +56,23 @@ public class TriggerVolumePrefabContributor implements PrefabSaveContributor {
                holder.addComponent(TransformComponent.getComponentType(), new TransformComponent(position, Rotation3f.IDENTITY));
                TriggerVolume tv = TriggerVolume.fromVolumeEntry(entry);
                if (entry.getGroupId() != null) {
-                  tv.setGroupLinkId(groupLinkIds.computeIfAbsent(entry.getGroupId(), k -> UUID.randomUUID().toString()));
+                  String groupId = entry.getGroupId();
+                  String groupLinkId = groupLinkIds.computeIfAbsent(groupId, k -> UUID.randomUUID().toString());
+                  tv.setGroupLinkId(groupLinkId);
+                  if (emittedGroups.add(groupId)) {
+                     GroupEntry group = manager.getGroup(groupId);
+                     if (group != null) {
+                        Vector3d groupPosition = new Vector3d(group.getOrigin());
+                        groupPosition.sub(selection.getX(), selection.getY(), selection.getZ());
+                        Holder<EntityStore> groupHolder = EntityStore.REGISTRY.newHolder();
+                        groupHolder.addComponent(TransformComponent.getComponentType(), new TransformComponent(groupPosition, Rotation3f.IDENTITY));
+                        groupHolder.addComponent(groupComponentType, TriggerVolumeGroup.fromGroupEntry(groupLinkId, group));
+                        selection.addEntityHolderRaw(groupHolder);
+                     }
+                  }
                }
 
-               holder.addComponent(componentType, tv);
+               holder.addComponent(volumeComponentType, tv);
                selection.addEntityHolderRaw(holder);
             }
          }

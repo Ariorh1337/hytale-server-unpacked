@@ -87,8 +87,7 @@ public final class CommandContext {
    }
 
    public boolean isPlayer() {
-      CommandSender unwrappedSender = this.sender instanceof PermissionBypassSender bypassSender ? bypassSender.delegateSender() : this.sender;
-      return unwrappedSender instanceof PlayerRef;
+      return this.sender instanceof PlayerRef;
    }
 
    @Nonnull
@@ -102,9 +101,7 @@ public final class CommandContext {
 
    @Nullable
    public Ref<EntityStore> senderAsPlayerRef() {
-      return (this.sender instanceof PermissionBypassSender bypassSender ? bypassSender.delegateSender() : this.sender) instanceof PlayerRef playerRef
-         ? playerRef.getReference()
-         : null;
+      return this.sender instanceof PlayerRef playerRef ? playerRef.getReference() : null;
    }
 
    @Nonnull

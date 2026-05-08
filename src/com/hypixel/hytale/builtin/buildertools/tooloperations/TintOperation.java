@@ -102,7 +102,7 @@ public class TintOperation extends ToolOperation {
    }
 
    @Override
-   boolean execute0(int x, int y, int z) {
+   protected boolean executeBlock(int x, int y, int z) {
       if (this.isHoldingAltModeDown && this.blendMode) {
          return true;
       }

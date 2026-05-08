@@ -14,8 +14,8 @@ import javax.annotation.Nullable;
 public class SoundEvent {
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
    public static final int FIXED_BLOCK_SIZE = 38;
-   public static final int VARIABLE_FIELD_COUNT = 2;
-   public static final int VARIABLE_BLOCK_START = 46;
+   public static final int VARIABLE_FIELD_COUNT = 3;
+   public static final int VARIABLE_BLOCK_START = 50;
    public static final int MAX_SIZE = 1677721600;
    @Nullable
    public String id;
@@ -31,6 +31,8 @@ public class SoundEvent {
    @Nullable
    public SoundEventLayer[] layers;
    public int audioCategory;
+   @Nullable
+   public StateBinding[] stateBindings;
 
    public SoundEvent() {
    }
@@ -47,7 +49,8 @@ public class SoundEvent {
       float maxDistance,
       float spatialBlend,
       @Nullable SoundEventLayer[] layers,
-      int audioCategory
+      int audioCategory,
+      @Nullable StateBinding[] stateBindings
    ) {
       this.id = id;
       this.volume = volume;
@@ -61,6 +64,7 @@ public class SoundEvent {
       this.spatialBlend = spatialBlend;
       this.layers = layers;
       this.audioCategory = audioCategory;
+      this.stateBindings = stateBindings;
    }
 
    public SoundEvent(@Nonnull SoundEvent other) {
@@ -76,12 +80,13 @@ public class SoundEvent {
       this.spatialBlend = other.spatialBlend;
       this.layers = other.layers;
       this.audioCategory = other.audioCategory;
+      this.stateBindings = other.stateBindings;
    }
 
    @Nonnull
    public static SoundEvent deserialize(@Nonnull ByteBuf buf, int offset) {
-      if (buf.readableBytes() - offset < 46) {
-         throw ProtocolException.bufferTooSmall("SoundEvent", 46, buf.readableBytes() - offset);
+      if (buf.readableBytes() - offset < 50) {
+         throw ProtocolException.bufferTooSmall("SoundEvent", 50, buf.readableBytes() - offset);
       }
 
       SoundEvent obj = new SoundEvent();
@@ -98,11 +103,11 @@ public class SoundEvent {
       obj.audioCategory = buf.getIntLE(offset + 34);
       if ((nullBits & 1) != 0) {
          int varPosBase0 = buf.getIntLE(offset + 38);
-         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 46) {
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 50) {
             throw ProtocolException.invalidOffset("Id", varPosBase0, buf.readableBytes());
          }
 
-         int varPos0 = offset + 46 + varPosBase0;
+         int varPos0 = offset + 50 + varPosBase0;
          int idLen = VarInt.peek(buf, varPos0);
          if (idLen < 0) {
             throw ProtocolException.invalidVarInt("Id");
@@ -122,11 +127,11 @@ public class SoundEvent {
 
       if ((nullBits & 2) != 0) {
          int varPosBase1 = buf.getIntLE(offset + 42);
-         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 46) {
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 50) {
             throw ProtocolException.invalidOffset("Layers", varPosBase1, buf.readableBytes());
          }
 
-         int varPos1 = offset + 46 + varPosBase1;
+         int varPos1 = offset + 50 + varPosBase1;
          int layersCount = VarInt.peek(buf, varPos1);
          if (layersCount < 0) {
             throw ProtocolException.invalidVarInt("Layers");
@@ -150,19 +155,49 @@ public class SoundEvent {
          }
       }
 
+      if ((nullBits & 4) != 0) {
+         int varPosBase2 = buf.getIntLE(offset + 46);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 50) {
+            throw ProtocolException.invalidOffset("StateBindings", varPosBase2, buf.readableBytes());
+         }
+
+         int varPos2 = offset + 50 + varPosBase2;
+         int stateBindingsCount = VarInt.peek(buf, varPos2);
+         if (stateBindingsCount < 0) {
+            throw ProtocolException.invalidVarInt("StateBindings");
+         }
+
+         int varIntLen = VarInt.size(stateBindingsCount);
+         if (stateBindingsCount > 4096000) {
+            throw ProtocolException.arrayTooLong("StateBindings", stateBindingsCount, 4096000);
+         }
+
+         if (varPos2 + varIntLen + stateBindingsCount * 5L > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("StateBindings", varPos2 + varIntLen + stateBindingsCount * 5, buf.readableBytes());
+         }
+
+         obj.stateBindings = new StateBinding[stateBindingsCount];
+         int elemPos = varPos2 + varIntLen;
+
+         for (int i = 0; i < stateBindingsCount; i++) {
+            obj.stateBindings[i] = StateBinding.deserialize(buf, elemPos);
+            elemPos += StateBinding.computeBytesConsumed(buf, elemPos);
+         }
+      }
+
       return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte nullBits = buf.getByte(offset);
-      int maxEnd = 46;
+      int maxEnd = 50;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 38);
-         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 46) {
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 50) {
             throw ProtocolException.invalidOffset("Id", fieldOffset0, maxEnd);
          }
 
-         int pos0 = offset + 46 + fieldOffset0;
+         int pos0 = offset + 50 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
          pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
@@ -172,11 +207,11 @@ public class SoundEvent {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 42);
-         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 46) {
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 50) {
             throw ProtocolException.invalidOffset("Layers", fieldOffset1, maxEnd);
          }
 
-         int pos1 = offset + 46 + fieldOffset1;
+         int pos1 = offset + 50 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
          pos1 += VarInt.size(arrLen);
 
@@ -189,11 +224,30 @@ public class SoundEvent {
          }
       }
 
+      if ((nullBits & 4) != 0) {
+         int fieldOffset2 = buf.getIntLE(offset + 46);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 50) {
+            throw ProtocolException.invalidOffset("StateBindings", fieldOffset2, maxEnd);
+         }
+
+         int pos2 = offset + 50 + fieldOffset2;
+         int arrLen = VarInt.peek(buf, pos2);
+         pos2 += VarInt.size(arrLen);
+
+         for (int i = 0; i < arrLen; i++) {
+            pos2 += StateBinding.computeBytesConsumed(buf, pos2);
+         }
+
+         if (pos2 - offset > maxEnd) {
+            maxEnd = pos2 - offset;
+         }
+      }
+
       return maxEnd;
    }
 
    public static boolean isBufferTooSmall(MemorySegment mem) {
-      return mem.byteSize() < 46L;
+      return mem.byteSize() < 50L;
    }
 
    @Nullable
@@ -203,7 +257,7 @@ public class SoundEvent {
 
    @Nullable
    public static String getId(MemorySegment mem, int offset) {
-      return hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 38, 46, "Id"), 4096000, PacketIO.UTF8) : null;
+      return hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 38, 50, "Id"), 4096000, PacketIO.UTF8) : null;
    }
 
    public static float getVolume(MemorySegment mem) {
@@ -289,7 +343,7 @@ public class SoundEvent {
          return null;
       }
 
-      int off = offset + getValidatedOffset(mem, offset, 42, 46, "Layers");
+      int off = offset + getValidatedOffset(mem, offset, 42, 50, "Layers");
       long packed = VarInt.getWithLength(mem, off);
       int len = (int)packed;
       if (len < 0) {
@@ -324,6 +378,44 @@ public class SoundEvent {
       return mem.get(PacketIO.PROTO_INT, offset + 34);
    }
 
+   @Nullable
+   public static StateBinding[] getStateBindings(MemorySegment mem) {
+      return getStateBindings(mem, 0);
+   }
+
+   @Nullable
+   public static StateBinding[] getStateBindings(MemorySegment mem, int offset) {
+      if (!hasStateBindings(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 46, 50, "StateBindings");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("StateBindings", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("StateBindings", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("StateBindings", off + lenOffset + len, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      StateBinding[] data = new StateBinding[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = StateBinding.toObject(mem, off);
+         off += data[i].computeSize();
+      }
+
+      return data;
+   }
+
    public static boolean hasId(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
       return (b & 1) != 0;
@@ -332,6 +424,11 @@ public class SoundEvent {
    public static boolean hasLayers(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
       return (b & 2) != 0;
+   }
+
+   public static boolean hasStateBindings(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
    }
 
    private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
@@ -348,13 +445,13 @@ public class SoundEvent {
    }
 
    public static SoundEvent toObject(MemorySegment mem, int offset) {
-      if (offset + 46 > mem.byteSize()) {
-         throw ProtocolException.bufferTooSmall("SoundEvent", offset + 46, (int)mem.byteSize());
+      if (offset + 50 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("SoundEvent", offset + 50, (int)mem.byteSize());
       }
 
       SoundEventLayer[] layers = null;
       if (hasLayers(mem, offset)) {
-         int off = offset + getValidatedOffset(mem, offset, 42, 46, "Layers");
+         int off = offset + getValidatedOffset(mem, offset, 42, 50, "Layers");
          long packed = VarInt.getWithLength(mem, off);
          int len = (int)packed;
          if (len < 0) {
@@ -379,8 +476,35 @@ public class SoundEvent {
          }
       }
 
+      StateBinding[] stateBindings = null;
+      if (hasStateBindings(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 46, 50, "StateBindings");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("StateBindings", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("StateBindings", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("StateBindings", off + lenOffset + len, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         stateBindings = new StateBinding[len];
+
+         for (int i = 0; i < len; i++) {
+            stateBindings[i] = StateBinding.toObject(mem, off);
+            off += stateBindings[i].computeSize();
+         }
+      }
+
       return new SoundEvent(
-         hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 38, 46, "Id"), 4096000, PacketIO.UTF8) : null,
+         hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 38, 50, "Id"), 4096000, PacketIO.UTF8) : null,
          mem.get(PacketIO.PROTO_FLOAT, offset + 1),
          mem.get(PacketIO.PROTO_FLOAT, offset + 5),
          mem.get(PacketIO.PROTO_FLOAT, offset + 9),
@@ -391,7 +515,8 @@ public class SoundEvent {
          mem.get(PacketIO.PROTO_FLOAT, offset + 26),
          mem.get(PacketIO.PROTO_FLOAT, offset + 30),
          layers,
-         mem.get(PacketIO.PROTO_INT, offset + 34)
+         mem.get(PacketIO.PROTO_INT, offset + 34),
+         stateBindings
       );
    }
 
@@ -404,6 +529,10 @@ public class SoundEvent {
 
       if (this.layers != null) {
          nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.stateBindings != null) {
+         nullBits = (byte)(nullBits | 4);
       }
 
       buf.writeByte(nullBits);
@@ -420,6 +549,8 @@ public class SoundEvent {
       int idOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
       int layersOffsetSlot = buf.writerIndex();
+      buf.writeIntLE(0);
+      int stateBindingsOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
       int varBlockStart = buf.writerIndex();
       if (this.id != null) {
@@ -443,6 +574,21 @@ public class SoundEvent {
       } else {
          buf.setIntLE(layersOffsetSlot, -1);
       }
+
+      if (this.stateBindings != null) {
+         buf.setIntLE(stateBindingsOffsetSlot, buf.writerIndex() - varBlockStart);
+         if (this.stateBindings.length > 4096000) {
+            throw ProtocolException.arrayTooLong("StateBindings", this.stateBindings.length, 4096000);
+         }
+
+         VarInt.write(buf, this.stateBindings.length);
+
+         for (StateBinding item : this.stateBindings) {
+            item.serialize(buf);
+         }
+      } else {
+         buf.setIntLE(stateBindingsOffsetSlot, -1);
+      }
    }
 
    public int serialize(@Nonnull MemorySegment mem, int offset) {
@@ -453,6 +599,10 @@ public class SoundEvent {
 
       if (this.layers != null) {
          nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.stateBindings != null) {
+         nullBits = (byte)(nullBits | 4);
       }
 
       mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
@@ -466,16 +616,16 @@ public class SoundEvent {
       mem.set(PacketIO.PROTO_FLOAT, offset + 26, this.maxDistance);
       mem.set(PacketIO.PROTO_FLOAT, offset + 30, this.spatialBlend);
       mem.set(PacketIO.PROTO_INT, offset + 34, this.audioCategory);
-      int varOffset = offset + 46;
+      int varOffset = offset + 50;
       if (this.id != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 38, varOffset - offset - 46);
+         mem.set(PacketIO.PROTO_INT, offset + 38, varOffset - offset - 50);
          varOffset += PacketIO.writeVarString(mem, varOffset, this.id, 4096000);
       } else {
          mem.set(PacketIO.PROTO_INT, offset + 38, -1);
       }
 
       if (this.layers != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 42, varOffset - offset - 46);
+         mem.set(PacketIO.PROTO_INT, offset + 42, varOffset - offset - 50);
          if (this.layers.length > 4096000) {
             throw ProtocolException.arrayTooLong("Layers", this.layers.length, 4096000);
          }
@@ -492,11 +642,29 @@ public class SoundEvent {
          mem.set(PacketIO.PROTO_INT, offset + 42, -1);
       }
 
+      if (this.stateBindings != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 46, varOffset - offset - 50);
+         if (this.stateBindings.length > 4096000) {
+            throw ProtocolException.arrayTooLong("StateBindings", this.stateBindings.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.stateBindings.length);
+         int stateBindingsValueOffset = 0;
+
+         for (int i = 0; i < this.stateBindings.length; i++) {
+            stateBindingsValueOffset += this.stateBindings[i].serialize(mem, varOffset + stateBindingsValueOffset);
+         }
+
+         varOffset += stateBindingsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 46, -1);
+      }
+
       return varOffset - offset;
    }
 
    public int computeSize() {
-      int size = 46;
+      int size = 50;
       if (this.id != null) {
          size += PacketIO.stringSize(this.id);
       }
@@ -511,22 +679,32 @@ public class SoundEvent {
          size += VarInt.size(this.layers.length) + layersSize;
       }
 
+      if (this.stateBindings != null) {
+         int stateBindingsSize = 0;
+
+         for (StateBinding elem : this.stateBindings) {
+            stateBindingsSize += elem.computeSize();
+         }
+
+         size += VarInt.size(this.stateBindings.length) + stateBindingsSize;
+      }
+
       return size;
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      if (buffer.readableBytes() - offset < 46) {
-         return ValidationResult.error("Buffer too small: expected at least 46 bytes");
+      if (buffer.readableBytes() - offset < 50) {
+         return ValidationResult.error("Buffer too small: expected at least 50 bytes");
       }
 
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
          int idOffset = buffer.getIntLE(offset + 38);
-         if (idOffset < 0 || idOffset > buffer.writerIndex() - offset - 46) {
+         if (idOffset < 0 || idOffset > buffer.writerIndex() - offset - 50) {
             return ValidationResult.error("Invalid offset for Id");
          }
 
-         int pos = offset + 46 + idOffset;
+         int pos = offset + 50 + idOffset;
          int idLen = VarInt.peek(buffer, pos);
          if (idLen < 0) {
             return ValidationResult.error("Invalid string length for Id");
@@ -545,11 +723,11 @@ public class SoundEvent {
 
       if ((nullBits & 2) != 0) {
          int layersOffset = buffer.getIntLE(offset + 42);
-         if (layersOffset < 0 || layersOffset > buffer.writerIndex() - offset - 46) {
+         if (layersOffset < 0 || layersOffset > buffer.writerIndex() - offset - 50) {
             return ValidationResult.error("Invalid offset for Layers");
          }
 
-         int pos = offset + 46 + layersOffset;
+         int pos = offset + 50 + layersOffset;
          int layersCount = VarInt.peek(buffer, pos);
          if (layersCount < 0) {
             return ValidationResult.error("Invalid array count for Layers");
@@ -571,6 +749,34 @@ public class SoundEvent {
          }
       }
 
+      if ((nullBits & 4) != 0) {
+         int stateBindingsOffset = buffer.getIntLE(offset + 46);
+         if (stateBindingsOffset < 0 || stateBindingsOffset > buffer.writerIndex() - offset - 50) {
+            return ValidationResult.error("Invalid offset for StateBindings");
+         }
+
+         int pos = offset + 50 + stateBindingsOffset;
+         int stateBindingsCount = VarInt.peek(buffer, pos);
+         if (stateBindingsCount < 0) {
+            return ValidationResult.error("Invalid array count for StateBindings");
+         }
+
+         if (stateBindingsCount > 4096000) {
+            return ValidationResult.error("StateBindings exceeds max length 4096000");
+         }
+
+         pos += VarInt.size(stateBindingsCount);
+
+         for (int i = 0; i < stateBindingsCount; i++) {
+            ValidationResult structResult = StateBinding.validateStructure(buffer, pos);
+            if (!structResult.isValid()) {
+               return ValidationResult.error("Invalid StateBinding in StateBindings[" + i + "]: " + structResult.error());
+            }
+
+            pos += StateBinding.computeBytesConsumed(buffer, pos);
+         }
+      }
+
       return ValidationResult.OK;
    }
 
@@ -588,6 +794,7 @@ public class SoundEvent {
       copy.spatialBlend = this.spatialBlend;
       copy.layers = this.layers != null ? Arrays.stream(this.layers).map(e -> e.clone()).toArray(SoundEventLayer[]::new) : null;
       copy.audioCategory = this.audioCategory;
+      copy.stateBindings = this.stateBindings != null ? Arrays.stream(this.stateBindings).map(e -> e.clone()).toArray(StateBinding[]::new) : null;
       return copy;
    }
 
@@ -609,7 +816,8 @@ public class SoundEvent {
                && this.maxDistance == other.maxDistance
                && this.spatialBlend == other.spatialBlend
                && Arrays.equals(this.layers, other.layers)
-               && this.audioCategory == other.audioCategory;
+               && this.audioCategory == other.audioCategory
+               && Arrays.equals(this.stateBindings, other.stateBindings);
       }
    }
 
@@ -627,6 +835,7 @@ public class SoundEvent {
       result = 31 * result + Float.hashCode(this.maxDistance);
       result = 31 * result + Float.hashCode(this.spatialBlend);
       result = 31 * result + Arrays.hashCode(this.layers);
-      return 31 * result + Integer.hashCode(this.audioCategory);
+      result = 31 * result + Integer.hashCode(this.audioCategory);
+      return 31 * result + Arrays.hashCode(this.stateBindings);
    }
 }

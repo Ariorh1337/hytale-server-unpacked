@@ -101,6 +101,7 @@ public class SpawnReferenceSystems {
       ) {
          switch (reason) {
             case REMOVE:
+            case BUILDER_TOOLS_UNDO:
                SpawnBeaconReference spawnReference = store.getComponent(ref, this.spawnReferenceComponentType);
                if (spawnReference == null) {
                   return;
@@ -198,6 +199,7 @@ public class SpawnReferenceSystems {
       ) {
          switch (reason) {
             case REMOVE:
+            case BUILDER_TOOLS_UNDO:
                SpawnMarkerReference spawnReferenceComponent = store.getComponent(ref, this.spawnReferenceComponentType);
                if (spawnReferenceComponent == null) {
                   return;
@@ -207,82 +209,85 @@ public class SpawnReferenceSystems {
                      return;
                   } else {
                      SpawnMarkerEntity spawnMarkerComponent = store.getComponent(spawnMarkerRef, this.spawnMarkerEntityComponentType);
-                     assert spawnMarkerComponent != null;
-                     UUIDComponent uuidComponent = store.getComponent(ref, this.uuidComponentComponentType);
-                     assert uuidComponent != null;
-                     UUID uuid = uuidComponent.getUuid();
-                     int spawnCount = spawnMarkerComponent.decrementAndGetSpawnCount();
-                     if (spawnCount < 0) {
-                        SpawningPlugin.get()
-                           .getLogger()
-                           .at(Level.WARNING)
-                           .log("Marker %s spawn count went negative (%d) while removing NPC %s", spawnMarkerRef, spawnCount, uuid);
-                        spawnCount = 0;
-                        spawnMarkerComponent.setSpawnCount(0);
-                     }
-
-                     SpawnMarker cachedMarker = spawnMarkerComponent.getCachedMarker();
-                     if (cachedMarker.getDeactivationDistance() > 0.0) {
-                        InvalidatablePersistentRef[] npcReferences = spawnMarkerComponent.getNpcReferences();
-                        int remaining = 0;
-
-                        for (InvalidatablePersistentRef npcRef : npcReferences) {
-                           if (!uuid.equals(npcRef.getUuid())) {
-                              remaining++;
-                           }
-                        }
-
-                        InvalidatablePersistentRef[] newReferences = new InvalidatablePersistentRef[remaining];
-                        int pos = 0;
-
-                        for (InvalidatablePersistentRef npcRef : npcReferences) {
-                           if (!uuid.equals(npcRef.getUuid())) {
-                              newReferences[pos++] = npcRef;
-                           }
-                        }
-
-                        spawnMarkerComponent.setNpcReferences(newReferences);
-                        if (remaining == npcReferences.length) {
+                     if (spawnMarkerComponent == null) {
+                        return;
+                     } else {
+                        UUIDComponent uuidComponent = store.getComponent(ref, this.uuidComponentComponentType);
+                        assert uuidComponent != null;
+                        UUID uuid = uuidComponent.getUuid();
+                        int spawnCount = spawnMarkerComponent.decrementAndGetSpawnCount();
+                        if (spawnCount < 0) {
                            SpawningPlugin.get()
                               .getLogger()
                               .at(Level.WARNING)
-                              .log(
-                                 "Marker %s removed NPC %s that was not present in marker references (spawnCount=%d, refs=%d)",
-                                 spawnMarkerRef,
-                                 uuid,
-                                 spawnCount,
-                                 npcReferences.length
-                              );
+                              .log("Marker %s spawn count went negative (%d) while removing NPC %s", spawnMarkerRef, spawnCount, uuid);
+                           spawnCount = 0;
+                           spawnMarkerComponent.setSpawnCount(0);
                         }
 
-                        if (spawnCount != remaining) {
-                           SpawningPlugin.get()
-                              .getLogger()
-                              .at(Level.WARNING)
-                              .log(
-                                 "Marker %s spawn count/reference mismatch while removing NPC %s (spawnCount=%d, refsAfter=%d)",
-                                 spawnMarkerRef,
-                                 uuid,
-                                 spawnCount,
-                                 remaining
-                              );
-                           spawnCount = remaining;
-                           spawnMarkerComponent.setSpawnCount(remaining);
-                        }
-                     }
+                        SpawnMarker cachedMarker = spawnMarkerComponent.getCachedMarker();
+                        if (cachedMarker.getDeactivationDistance() > 0.0) {
+                           InvalidatablePersistentRef[] npcReferences = spawnMarkerComponent.getNpcReferences();
+                           int remaining = 0;
 
-                     if (spawnCount <= 0 && !cachedMarker.isRealtimeRespawn()) {
-                        Instant instant = store.getResource(this.worldTimeResourceResourceType).getGameTime();
-                        Duration gameTimeRespawn = spawnMarkerComponent.pollGameTimeRespawn();
-                        if (gameTimeRespawn != null) {
-                           instant = instant.plus(gameTimeRespawn);
+                           for (InvalidatablePersistentRef npcRef : npcReferences) {
+                              if (!uuid.equals(npcRef.getUuid())) {
+                                 remaining++;
+                              }
+                           }
+
+                           InvalidatablePersistentRef[] newReferences = new InvalidatablePersistentRef[remaining];
+                           int pos = 0;
+
+                           for (InvalidatablePersistentRef npcRef : npcReferences) {
+                              if (!uuid.equals(npcRef.getUuid())) {
+                                 newReferences[pos++] = npcRef;
+                              }
+                           }
+
+                           spawnMarkerComponent.setNpcReferences(newReferences);
+                           if (remaining == npcReferences.length) {
+                              SpawningPlugin.get()
+                                 .getLogger()
+                                 .at(Level.WARNING)
+                                 .log(
+                                    "Marker %s removed NPC %s that was not present in marker references (spawnCount=%d, refs=%d)",
+                                    spawnMarkerRef,
+                                    uuid,
+                                    spawnCount,
+                                    npcReferences.length
+                                 );
+                           }
+
+                           if (spawnCount != remaining) {
+                              SpawningPlugin.get()
+                                 .getLogger()
+                                 .at(Level.WARNING)
+                                 .log(
+                                    "Marker %s spawn count/reference mismatch while removing NPC %s (spawnCount=%d, refsAfter=%d)",
+                                    spawnMarkerRef,
+                                    uuid,
+                                    spawnCount,
+                                    remaining
+                                 );
+                              spawnCount = remaining;
+                              spawnMarkerComponent.setSpawnCount(remaining);
+                           }
                         }
 
-                        spawnMarkerComponent.setSpawnAfter(instant);
-                        spawnMarkerComponent.setNpcReferences(null);
-                        StoredFlock storedFlock = spawnMarkerComponent.getStoredFlock();
-                        if (storedFlock != null) {
-                           storedFlock.clear();
+                        if (spawnCount <= 0 && !cachedMarker.isRealtimeRespawn()) {
+                           Instant instant = store.getResource(this.worldTimeResourceResourceType).getGameTime();
+                           Duration gameTimeRespawn = spawnMarkerComponent.pollGameTimeRespawn();
+                           if (gameTimeRespawn != null) {
+                              instant = instant.plus(gameTimeRespawn);
+                           }
+
+                           spawnMarkerComponent.setSpawnAfter(instant);
+                           spawnMarkerComponent.setNpcReferences(null);
+                           StoredFlock storedFlock = spawnMarkerComponent.getStoredFlock();
+                           if (storedFlock != null) {
+                              storedFlock.clear();
+                           }
                         }
                      }
                   }

@@ -14,9 +14,9 @@ import javax.annotation.Nullable;
 public class AmbienceFX {
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
    public static final int FIXED_BLOCK_SIZE = 22;
-   public static final int VARIABLE_FIELD_COUNT = 5;
-   public static final int VARIABLE_BLOCK_START = 42;
-   public static final int MAX_SIZE = 405504250;
+   public static final int VARIABLE_FIELD_COUNT = 6;
+   public static final int VARIABLE_BLOCK_START = 46;
+   public static final int MAX_SIZE = 1677721600;
    @Nullable
    public String id;
    @Nullable
@@ -32,6 +32,8 @@ public class AmbienceFX {
    @Nullable
    public int[] blockedAmbienceFxIndices;
    public int audioCategoryIndex;
+   @Nullable
+   public AmbienceStateWrite[] setStates;
 
    public AmbienceFX() {
    }
@@ -45,7 +47,8 @@ public class AmbienceFX {
       @Nullable AmbienceFXSoundEffect soundEffect,
       int priority,
       @Nullable int[] blockedAmbienceFxIndices,
-      int audioCategoryIndex
+      int audioCategoryIndex,
+      @Nullable AmbienceStateWrite[] setStates
    ) {
       this.id = id;
       this.conditions = conditions;
@@ -56,6 +59,7 @@ public class AmbienceFX {
       this.priority = priority;
       this.blockedAmbienceFxIndices = blockedAmbienceFxIndices;
       this.audioCategoryIndex = audioCategoryIndex;
+      this.setStates = setStates;
    }
 
    public AmbienceFX(@Nonnull AmbienceFX other) {
@@ -68,12 +72,13 @@ public class AmbienceFX {
       this.priority = other.priority;
       this.blockedAmbienceFxIndices = other.blockedAmbienceFxIndices;
       this.audioCategoryIndex = other.audioCategoryIndex;
+      this.setStates = other.setStates;
    }
 
    @Nonnull
    public static AmbienceFX deserialize(@Nonnull ByteBuf buf, int offset) {
-      if (buf.readableBytes() - offset < 42) {
-         throw ProtocolException.bufferTooSmall("AmbienceFX", 42, buf.readableBytes() - offset);
+      if (buf.readableBytes() - offset < 46) {
+         throw ProtocolException.bufferTooSmall("AmbienceFX", 46, buf.readableBytes() - offset);
       }
 
       AmbienceFX obj = new AmbienceFX();
@@ -87,11 +92,11 @@ public class AmbienceFX {
       obj.audioCategoryIndex = buf.getIntLE(offset + 18);
       if ((nullBits & 2) != 0) {
          int varPosBase0 = buf.getIntLE(offset + 22);
-         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 42) {
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 46) {
             throw ProtocolException.invalidOffset("Id", varPosBase0, buf.readableBytes());
          }
 
-         int varPos0 = offset + 42 + varPosBase0;
+         int varPos0 = offset + 46 + varPosBase0;
          int idLen = VarInt.peek(buf, varPos0);
          if (idLen < 0) {
             throw ProtocolException.invalidVarInt("Id");
@@ -111,21 +116,21 @@ public class AmbienceFX {
 
       if ((nullBits & 4) != 0) {
          int varPosBase1 = buf.getIntLE(offset + 26);
-         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 42) {
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 46) {
             throw ProtocolException.invalidOffset("Conditions", varPosBase1, buf.readableBytes());
          }
 
-         int varPos1 = offset + 42 + varPosBase1;
+         int varPos1 = offset + 46 + varPosBase1;
          obj.conditions = AmbienceFXConditions.deserialize(buf, varPos1);
       }
 
       if ((nullBits & 8) != 0) {
          int varPosBase2 = buf.getIntLE(offset + 30);
-         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 42) {
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 46) {
             throw ProtocolException.invalidOffset("Sounds", varPosBase2, buf.readableBytes());
          }
 
-         int varPos2 = offset + 42 + varPosBase2;
+         int varPos2 = offset + 46 + varPosBase2;
          int soundsCount = VarInt.peek(buf, varPos2);
          if (soundsCount < 0) {
             throw ProtocolException.invalidVarInt("Sounds");
@@ -151,21 +156,21 @@ public class AmbienceFX {
 
       if ((nullBits & 16) != 0) {
          int varPosBase3 = buf.getIntLE(offset + 34);
-         if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 42) {
+         if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 46) {
             throw ProtocolException.invalidOffset("AmbientBed", varPosBase3, buf.readableBytes());
          }
 
-         int varPos3 = offset + 42 + varPosBase3;
+         int varPos3 = offset + 46 + varPosBase3;
          obj.ambientBed = AmbienceFXAmbientBed.deserialize(buf, varPos3);
       }
 
       if ((nullBits & 32) != 0) {
          int varPosBase4 = buf.getIntLE(offset + 38);
-         if (varPosBase4 < 0 || varPosBase4 > buf.writerIndex() - offset - 42) {
+         if (varPosBase4 < 0 || varPosBase4 > buf.writerIndex() - offset - 46) {
             throw ProtocolException.invalidOffset("BlockedAmbienceFxIndices", varPosBase4, buf.readableBytes());
          }
 
-         int varPos4 = offset + 42 + varPosBase4;
+         int varPos4 = offset + 46 + varPosBase4;
          int blockedAmbienceFxIndicesCount = VarInt.peek(buf, varPos4);
          if (blockedAmbienceFxIndicesCount < 0) {
             throw ProtocolException.invalidVarInt("BlockedAmbienceFxIndices");
@@ -187,19 +192,49 @@ public class AmbienceFX {
          }
       }
 
+      if ((nullBits & 64) != 0) {
+         int varPosBase5 = buf.getIntLE(offset + 42);
+         if (varPosBase5 < 0 || varPosBase5 > buf.writerIndex() - offset - 46) {
+            throw ProtocolException.invalidOffset("SetStates", varPosBase5, buf.readableBytes());
+         }
+
+         int varPos5 = offset + 46 + varPosBase5;
+         int setStatesCount = VarInt.peek(buf, varPos5);
+         if (setStatesCount < 0) {
+            throw ProtocolException.invalidVarInt("SetStates");
+         }
+
+         int varIntLen = VarInt.size(setStatesCount);
+         if (setStatesCount > 4096000) {
+            throw ProtocolException.arrayTooLong("SetStates", setStatesCount, 4096000);
+         }
+
+         if (varPos5 + varIntLen + setStatesCount * 24L > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("SetStates", varPos5 + varIntLen + setStatesCount * 24, buf.readableBytes());
+         }
+
+         obj.setStates = new AmbienceStateWrite[setStatesCount];
+         int elemPos = varPos5 + varIntLen;
+
+         for (int i = 0; i < setStatesCount; i++) {
+            obj.setStates[i] = AmbienceStateWrite.deserialize(buf, elemPos);
+            elemPos += AmbienceStateWrite.computeBytesConsumed(buf, elemPos);
+         }
+      }
+
       return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte nullBits = buf.getByte(offset);
-      int maxEnd = 42;
+      int maxEnd = 46;
       if ((nullBits & 2) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 22);
-         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 42) {
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 46) {
             throw ProtocolException.invalidOffset("Id", fieldOffset0, maxEnd);
          }
 
-         int pos0 = offset + 42 + fieldOffset0;
+         int pos0 = offset + 46 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
          pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
@@ -209,11 +244,11 @@ public class AmbienceFX {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 26);
-         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 42) {
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 46) {
             throw ProtocolException.invalidOffset("Conditions", fieldOffset1, maxEnd);
          }
 
-         int pos1 = offset + 42 + fieldOffset1;
+         int pos1 = offset + 46 + fieldOffset1;
          pos1 += AmbienceFXConditions.computeBytesConsumed(buf, pos1);
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
@@ -222,11 +257,11 @@ public class AmbienceFX {
 
       if ((nullBits & 8) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 30);
-         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 42) {
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 46) {
             throw ProtocolException.invalidOffset("Sounds", fieldOffset2, maxEnd);
          }
 
-         int pos2 = offset + 42 + fieldOffset2;
+         int pos2 = offset + 46 + fieldOffset2;
          int arrLen = VarInt.peek(buf, pos2);
          pos2 += VarInt.size(arrLen);
 
@@ -241,11 +276,11 @@ public class AmbienceFX {
 
       if ((nullBits & 16) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 34);
-         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 42) {
+         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 46) {
             throw ProtocolException.invalidOffset("AmbientBed", fieldOffset3, maxEnd);
          }
 
-         int pos3 = offset + 42 + fieldOffset3;
+         int pos3 = offset + 46 + fieldOffset3;
          pos3 += AmbienceFXAmbientBed.computeBytesConsumed(buf, pos3);
          if (pos3 - offset > maxEnd) {
             maxEnd = pos3 - offset;
@@ -254,11 +289,11 @@ public class AmbienceFX {
 
       if ((nullBits & 32) != 0) {
          int fieldOffset4 = buf.getIntLE(offset + 38);
-         if (fieldOffset4 < 0 || fieldOffset4 > buf.writerIndex() - offset - 42) {
+         if (fieldOffset4 < 0 || fieldOffset4 > buf.writerIndex() - offset - 46) {
             throw ProtocolException.invalidOffset("BlockedAmbienceFxIndices", fieldOffset4, maxEnd);
          }
 
-         int pos4 = offset + 42 + fieldOffset4;
+         int pos4 = offset + 46 + fieldOffset4;
          int arrLen = VarInt.peek(buf, pos4);
          pos4 += VarInt.size(arrLen) + arrLen * 4;
          if (pos4 - offset > maxEnd) {
@@ -266,11 +301,30 @@ public class AmbienceFX {
          }
       }
 
+      if ((nullBits & 64) != 0) {
+         int fieldOffset5 = buf.getIntLE(offset + 42);
+         if (fieldOffset5 < 0 || fieldOffset5 > buf.writerIndex() - offset - 46) {
+            throw ProtocolException.invalidOffset("SetStates", fieldOffset5, maxEnd);
+         }
+
+         int pos5 = offset + 46 + fieldOffset5;
+         int arrLen = VarInt.peek(buf, pos5);
+         pos5 += VarInt.size(arrLen);
+
+         for (int i = 0; i < arrLen; i++) {
+            pos5 += AmbienceStateWrite.computeBytesConsumed(buf, pos5);
+         }
+
+         if (pos5 - offset > maxEnd) {
+            maxEnd = pos5 - offset;
+         }
+      }
+
       return maxEnd;
    }
 
    public static boolean isBufferTooSmall(MemorySegment mem) {
-      return mem.byteSize() < 42L;
+      return mem.byteSize() < 46L;
    }
 
    @Nullable
@@ -280,7 +334,7 @@ public class AmbienceFX {
 
    @Nullable
    public static String getId(MemorySegment mem, int offset) {
-      return hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 22, 42, "Id"), 4096000, PacketIO.UTF8) : null;
+      return hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 22, 46, "Id"), 4096000, PacketIO.UTF8) : null;
    }
 
    @Nullable
@@ -290,7 +344,7 @@ public class AmbienceFX {
 
    @Nullable
    public static AmbienceFXConditions getConditions(MemorySegment mem, int offset) {
-      return hasConditions(mem, offset) ? AmbienceFXConditions.toObject(mem, offset + getValidatedOffset(mem, offset, 26, 42, "Conditions")) : null;
+      return hasConditions(mem, offset) ? AmbienceFXConditions.toObject(mem, offset + getValidatedOffset(mem, offset, 26, 46, "Conditions")) : null;
    }
 
    @Nullable
@@ -304,7 +358,7 @@ public class AmbienceFX {
          return null;
       }
 
-      int off = offset + getValidatedOffset(mem, offset, 30, 42, "Sounds");
+      int off = offset + getValidatedOffset(mem, offset, 30, 46, "Sounds");
       long packed = VarInt.getWithLength(mem, off);
       int len = (int)packed;
       if (len < 0) {
@@ -316,15 +370,16 @@ public class AmbienceFX {
       }
 
       int lenOffset = (int)(packed >>> 32);
-      if (off + lenOffset + len * 33L > mem.byteSize()) {
-         throw ProtocolException.bufferTooSmall("Sounds", off + lenOffset + len * 33, (int)mem.byteSize());
+      if (off + lenOffset + len > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Sounds", off + lenOffset + len, (int)mem.byteSize());
       }
 
       off += lenOffset;
       AmbienceFXSound[] data = new AmbienceFXSound[len];
 
       for (int i = 0; i < len; i++) {
-         data[i] = AmbienceFXSound.toObject(mem, off + i * 33);
+         data[i] = AmbienceFXSound.toObject(mem, off);
+         off += data[i].computeSize();
       }
 
       return data;
@@ -345,7 +400,7 @@ public class AmbienceFX {
 
    @Nullable
    public static AmbienceFXAmbientBed getAmbientBed(MemorySegment mem, int offset) {
-      return hasAmbientBed(mem, offset) ? AmbienceFXAmbientBed.toObject(mem, offset + getValidatedOffset(mem, offset, 34, 42, "AmbientBed")) : null;
+      return hasAmbientBed(mem, offset) ? AmbienceFXAmbientBed.toObject(mem, offset + getValidatedOffset(mem, offset, 34, 46, "AmbientBed")) : null;
    }
 
    @Nullable
@@ -377,7 +432,7 @@ public class AmbienceFX {
          return null;
       }
 
-      int off = offset + getValidatedOffset(mem, offset, 38, 42, "BlockedAmbienceFxIndices");
+      int off = offset + getValidatedOffset(mem, offset, 38, 46, "BlockedAmbienceFxIndices");
       long packed = VarInt.getWithLength(mem, off);
       int len = (int)packed;
       if (len < 0) {
@@ -405,6 +460,43 @@ public class AmbienceFX {
 
    public static int getAudioCategoryIndex(MemorySegment mem, int offset) {
       return mem.get(PacketIO.PROTO_INT, offset + 18);
+   }
+
+   @Nullable
+   public static AmbienceStateWrite[] getSetStates(MemorySegment mem) {
+      return getSetStates(mem, 0);
+   }
+
+   @Nullable
+   public static AmbienceStateWrite[] getSetStates(MemorySegment mem, int offset) {
+      if (!hasSetStates(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 42, 46, "SetStates");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("SetStates", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("SetStates", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 24L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("SetStates", off + lenOffset + len * 24, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      AmbienceStateWrite[] data = new AmbienceStateWrite[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = AmbienceStateWrite.toObject(mem, off + i * 24);
+      }
+
+      return data;
    }
 
    public static boolean hasSoundEffect(MemorySegment mem, int offset) {
@@ -437,6 +529,11 @@ public class AmbienceFX {
       return (b & 32) != 0;
    }
 
+   public static boolean hasSetStates(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 64) != 0;
+   }
+
    private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
       int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
       if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
@@ -451,13 +548,13 @@ public class AmbienceFX {
    }
 
    public static AmbienceFX toObject(MemorySegment mem, int offset) {
-      if (offset + 42 > mem.byteSize()) {
-         throw ProtocolException.bufferTooSmall("AmbienceFX", offset + 42, (int)mem.byteSize());
+      if (offset + 46 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AmbienceFX", offset + 46, (int)mem.byteSize());
       }
 
       AmbienceFXSound[] sounds = null;
       if (hasSounds(mem, offset)) {
-         int off = offset + getValidatedOffset(mem, offset, 30, 42, "Sounds");
+         int off = offset + getValidatedOffset(mem, offset, 30, 46, "Sounds");
          long packed = VarInt.getWithLength(mem, off);
          int len = (int)packed;
          if (len < 0) {
@@ -469,21 +566,22 @@ public class AmbienceFX {
          }
 
          int lenOffset = (int)(packed >>> 32);
-         if (off + lenOffset + len * 33L > mem.byteSize()) {
-            throw ProtocolException.bufferTooSmall("Sounds", off + lenOffset + len * 33, (int)mem.byteSize());
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Sounds", off + lenOffset + len, (int)mem.byteSize());
          }
 
          off += lenOffset;
          sounds = new AmbienceFXSound[len];
 
          for (int i = 0; i < len; i++) {
-            sounds[i] = AmbienceFXSound.toObject(mem, off + i * 33);
+            sounds[i] = AmbienceFXSound.toObject(mem, off);
+            off += sounds[i].computeSize();
          }
       }
 
       int[] blockedAmbienceFxIndices = null;
       if (hasBlockedAmbienceFxIndices(mem, offset)) {
-         int off = offset + getValidatedOffset(mem, offset, 38, 42, "BlockedAmbienceFxIndices");
+         int off = offset + getValidatedOffset(mem, offset, 38, 46, "BlockedAmbienceFxIndices");
          long packed = VarInt.getWithLength(mem, off);
          int len = (int)packed;
          if (len < 0) {
@@ -504,16 +602,43 @@ public class AmbienceFX {
          MemorySegment.copy(mem, PacketIO.PROTO_INT, off, blockedAmbienceFxIndices, 0, len);
       }
 
+      AmbienceStateWrite[] setStates = null;
+      if (hasSetStates(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 42, 46, "SetStates");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("SetStates", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("SetStates", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 24L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("SetStates", off + lenOffset + len * 24, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         setStates = new AmbienceStateWrite[len];
+
+         for (int i = 0; i < len; i++) {
+            setStates[i] = AmbienceStateWrite.toObject(mem, off + i * 24);
+         }
+      }
+
       return new AmbienceFX(
-         hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 22, 42, "Id"), 4096000, PacketIO.UTF8) : null,
-         hasConditions(mem, offset) ? AmbienceFXConditions.toObject(mem, offset + getValidatedOffset(mem, offset, 26, 42, "Conditions")) : null,
+         hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 22, 46, "Id"), 4096000, PacketIO.UTF8) : null,
+         hasConditions(mem, offset) ? AmbienceFXConditions.toObject(mem, offset + getValidatedOffset(mem, offset, 26, 46, "Conditions")) : null,
          sounds,
          mem.get(PacketIO.PROTO_INT, offset + 1),
-         hasAmbientBed(mem, offset) ? AmbienceFXAmbientBed.toObject(mem, offset + getValidatedOffset(mem, offset, 34, 42, "AmbientBed")) : null,
+         hasAmbientBed(mem, offset) ? AmbienceFXAmbientBed.toObject(mem, offset + getValidatedOffset(mem, offset, 34, 46, "AmbientBed")) : null,
          hasSoundEffect(mem, offset) ? AmbienceFXSoundEffect.toObject(mem, offset + 5) : null,
          mem.get(PacketIO.PROTO_INT, offset + 14),
          blockedAmbienceFxIndices,
-         mem.get(PacketIO.PROTO_INT, offset + 18)
+         mem.get(PacketIO.PROTO_INT, offset + 18),
+         setStates
       );
    }
 
@@ -544,6 +669,10 @@ public class AmbienceFX {
          nullBits = (byte)(nullBits | 32);
       }
 
+      if (this.setStates != null) {
+         nullBits = (byte)(nullBits | 64);
+      }
+
       buf.writeByte(nullBits);
       buf.writeIntLE(this.musicContainerIndex);
       if (this.soundEffect != null) {
@@ -563,6 +692,8 @@ public class AmbienceFX {
       int ambientBedOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
       int blockedAmbienceFxIndicesOffsetSlot = buf.writerIndex();
+      buf.writeIntLE(0);
+      int setStatesOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
       int varBlockStart = buf.writerIndex();
       if (this.id != null) {
@@ -615,6 +746,21 @@ public class AmbienceFX {
       } else {
          buf.setIntLE(blockedAmbienceFxIndicesOffsetSlot, -1);
       }
+
+      if (this.setStates != null) {
+         buf.setIntLE(setStatesOffsetSlot, buf.writerIndex() - varBlockStart);
+         if (this.setStates.length > 4096000) {
+            throw ProtocolException.arrayTooLong("SetStates", this.setStates.length, 4096000);
+         }
+
+         VarInt.write(buf, this.setStates.length);
+
+         for (AmbienceStateWrite item : this.setStates) {
+            item.serialize(buf);
+         }
+      } else {
+         buf.setIntLE(setStatesOffsetSlot, -1);
+      }
    }
 
    public int serialize(@Nonnull MemorySegment mem, int offset) {
@@ -643,6 +789,10 @@ public class AmbienceFX {
          nullBits = (byte)(nullBits | 32);
       }
 
+      if (this.setStates != null) {
+         nullBits = (byte)(nullBits | 64);
+      }
+
       mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
       mem.set(PacketIO.PROTO_INT, offset + 1, this.musicContainerIndex);
       if (this.soundEffect != null) {
@@ -653,23 +803,23 @@ public class AmbienceFX {
 
       mem.set(PacketIO.PROTO_INT, offset + 14, this.priority);
       mem.set(PacketIO.PROTO_INT, offset + 18, this.audioCategoryIndex);
-      int varOffset = offset + 42;
+      int varOffset = offset + 46;
       if (this.id != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 22, varOffset - offset - 42);
+         mem.set(PacketIO.PROTO_INT, offset + 22, varOffset - offset - 46);
          varOffset += PacketIO.writeVarString(mem, varOffset, this.id, 4096000);
       } else {
          mem.set(PacketIO.PROTO_INT, offset + 22, -1);
       }
 
       if (this.conditions != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 26, varOffset - offset - 42);
+         mem.set(PacketIO.PROTO_INT, offset + 26, varOffset - offset - 46);
          varOffset += this.conditions.serialize(mem, varOffset);
       } else {
          mem.set(PacketIO.PROTO_INT, offset + 26, -1);
       }
 
       if (this.sounds != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 30, varOffset - offset - 42);
+         mem.set(PacketIO.PROTO_INT, offset + 30, varOffset - offset - 46);
          if (this.sounds.length > 4096000) {
             throw ProtocolException.arrayTooLong("Sounds", this.sounds.length, 4096000);
          }
@@ -687,14 +837,14 @@ public class AmbienceFX {
       }
 
       if (this.ambientBed != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 34, varOffset - offset - 42);
+         mem.set(PacketIO.PROTO_INT, offset + 34, varOffset - offset - 46);
          varOffset += this.ambientBed.serialize(mem, varOffset);
       } else {
          mem.set(PacketIO.PROTO_INT, offset + 34, -1);
       }
 
       if (this.blockedAmbienceFxIndices != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 38, varOffset - offset - 42);
+         mem.set(PacketIO.PROTO_INT, offset + 38, varOffset - offset - 46);
          if (this.blockedAmbienceFxIndices.length > 4096000) {
             throw ProtocolException.arrayTooLong("BlockedAmbienceFxIndices", this.blockedAmbienceFxIndices.length, 4096000);
          }
@@ -706,11 +856,29 @@ public class AmbienceFX {
          mem.set(PacketIO.PROTO_INT, offset + 38, -1);
       }
 
+      if (this.setStates != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 42, varOffset - offset - 46);
+         if (this.setStates.length > 4096000) {
+            throw ProtocolException.arrayTooLong("SetStates", this.setStates.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.setStates.length);
+         int setStatesValueOffset = 0;
+
+         for (int i = 0; i < this.setStates.length; i++) {
+            setStatesValueOffset += this.setStates[i].serialize(mem, varOffset + setStatesValueOffset);
+         }
+
+         varOffset += setStatesValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 42, -1);
+      }
+
       return varOffset - offset;
    }
 
    public int computeSize() {
-      int size = 42;
+      int size = 46;
       if (this.id != null) {
          size += PacketIO.stringSize(this.id);
       }
@@ -720,7 +888,13 @@ public class AmbienceFX {
       }
 
       if (this.sounds != null) {
-         size += VarInt.size(this.sounds.length) + this.sounds.length * 33;
+         int soundsSize = 0;
+
+         for (AmbienceFXSound elem : this.sounds) {
+            soundsSize += elem.computeSize();
+         }
+
+         size += VarInt.size(this.sounds.length) + soundsSize;
       }
 
       if (this.ambientBed != null) {
@@ -731,22 +905,26 @@ public class AmbienceFX {
          size += VarInt.size(this.blockedAmbienceFxIndices.length) + this.blockedAmbienceFxIndices.length * 4;
       }
 
+      if (this.setStates != null) {
+         size += VarInt.size(this.setStates.length) + this.setStates.length * 24;
+      }
+
       return size;
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      if (buffer.readableBytes() - offset < 42) {
-         return ValidationResult.error("Buffer too small: expected at least 42 bytes");
+      if (buffer.readableBytes() - offset < 46) {
+         return ValidationResult.error("Buffer too small: expected at least 46 bytes");
       }
 
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 2) != 0) {
          int idOffset = buffer.getIntLE(offset + 22);
-         if (idOffset < 0 || idOffset > buffer.writerIndex() - offset - 42) {
+         if (idOffset < 0 || idOffset > buffer.writerIndex() - offset - 46) {
             return ValidationResult.error("Invalid offset for Id");
          }
 
-         int pos = offset + 42 + idOffset;
+         int pos = offset + 46 + idOffset;
          int idLen = VarInt.peek(buffer, pos);
          if (idLen < 0) {
             return ValidationResult.error("Invalid string length for Id");
@@ -765,11 +943,11 @@ public class AmbienceFX {
 
       if ((nullBits & 4) != 0) {
          int conditionsOffset = buffer.getIntLE(offset + 26);
-         if (conditionsOffset < 0 || conditionsOffset > buffer.writerIndex() - offset - 42) {
+         if (conditionsOffset < 0 || conditionsOffset > buffer.writerIndex() - offset - 46) {
             return ValidationResult.error("Invalid offset for Conditions");
          }
 
-         int pos = offset + 42 + conditionsOffset;
+         int pos = offset + 46 + conditionsOffset;
          ValidationResult conditionsResult = AmbienceFXConditions.validateStructure(buffer, pos);
          if (!conditionsResult.isValid()) {
             return ValidationResult.error("Invalid Conditions: " + conditionsResult.error());
@@ -780,11 +958,11 @@ public class AmbienceFX {
 
       if ((nullBits & 8) != 0) {
          int soundsOffset = buffer.getIntLE(offset + 30);
-         if (soundsOffset < 0 || soundsOffset > buffer.writerIndex() - offset - 42) {
+         if (soundsOffset < 0 || soundsOffset > buffer.writerIndex() - offset - 46) {
             return ValidationResult.error("Invalid offset for Sounds");
          }
 
-         int pos = offset + 42 + soundsOffset;
+         int pos = offset + 46 + soundsOffset;
          int soundsCount = VarInt.peek(buffer, pos);
          if (soundsCount < 0) {
             return ValidationResult.error("Invalid array count for Sounds");
@@ -795,19 +973,24 @@ public class AmbienceFX {
          }
 
          pos += VarInt.size(soundsCount);
-         pos += soundsCount * 33;
-         if (pos > buffer.writerIndex()) {
-            return ValidationResult.error("Buffer overflow reading Sounds");
+
+         for (int i = 0; i < soundsCount; i++) {
+            ValidationResult structResult = AmbienceFXSound.validateStructure(buffer, pos);
+            if (!structResult.isValid()) {
+               return ValidationResult.error("Invalid AmbienceFXSound in Sounds[" + i + "]: " + structResult.error());
+            }
+
+            pos += AmbienceFXSound.computeBytesConsumed(buffer, pos);
          }
       }
 
       if ((nullBits & 16) != 0) {
          int ambientBedOffset = buffer.getIntLE(offset + 34);
-         if (ambientBedOffset < 0 || ambientBedOffset > buffer.writerIndex() - offset - 42) {
+         if (ambientBedOffset < 0 || ambientBedOffset > buffer.writerIndex() - offset - 46) {
             return ValidationResult.error("Invalid offset for AmbientBed");
          }
 
-         int pos = offset + 42 + ambientBedOffset;
+         int pos = offset + 46 + ambientBedOffset;
          ValidationResult ambientBedResult = AmbienceFXAmbientBed.validateStructure(buffer, pos);
          if (!ambientBedResult.isValid()) {
             return ValidationResult.error("Invalid AmbientBed: " + ambientBedResult.error());
@@ -818,11 +1001,11 @@ public class AmbienceFX {
 
       if ((nullBits & 32) != 0) {
          int blockedAmbienceFxIndicesOffset = buffer.getIntLE(offset + 38);
-         if (blockedAmbienceFxIndicesOffset < 0 || blockedAmbienceFxIndicesOffset > buffer.writerIndex() - offset - 42) {
+         if (blockedAmbienceFxIndicesOffset < 0 || blockedAmbienceFxIndicesOffset > buffer.writerIndex() - offset - 46) {
             return ValidationResult.error("Invalid offset for BlockedAmbienceFxIndices");
          }
 
-         int pos = offset + 42 + blockedAmbienceFxIndicesOffset;
+         int pos = offset + 46 + blockedAmbienceFxIndicesOffset;
          int blockedAmbienceFxIndicesCount = VarInt.peek(buffer, pos);
          if (blockedAmbienceFxIndicesCount < 0) {
             return ValidationResult.error("Invalid array count for BlockedAmbienceFxIndices");
@@ -836,6 +1019,29 @@ public class AmbienceFX {
          pos += blockedAmbienceFxIndicesCount * 4;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading BlockedAmbienceFxIndices");
+         }
+      }
+
+      if ((nullBits & 64) != 0) {
+         int setStatesOffset = buffer.getIntLE(offset + 42);
+         if (setStatesOffset < 0 || setStatesOffset > buffer.writerIndex() - offset - 46) {
+            return ValidationResult.error("Invalid offset for SetStates");
+         }
+
+         int pos = offset + 46 + setStatesOffset;
+         int setStatesCount = VarInt.peek(buffer, pos);
+         if (setStatesCount < 0) {
+            return ValidationResult.error("Invalid array count for SetStates");
+         }
+
+         if (setStatesCount > 4096000) {
+            return ValidationResult.error("SetStates exceeds max length 4096000");
+         }
+
+         pos += VarInt.size(setStatesCount);
+         pos += setStatesCount * 24;
+         if (pos > buffer.writerIndex()) {
+            return ValidationResult.error("Buffer overflow reading SetStates");
          }
       }
 
@@ -855,6 +1061,7 @@ public class AmbienceFX {
          ? Arrays.copyOf(this.blockedAmbienceFxIndices, this.blockedAmbienceFxIndices.length)
          : null;
       copy.audioCategoryIndex = this.audioCategoryIndex;
+      copy.setStates = this.setStates != null ? Arrays.stream(this.setStates).map(e -> e.clone()).toArray(AmbienceStateWrite[]::new) : null;
       return copy;
    }
 
@@ -873,7 +1080,8 @@ public class AmbienceFX {
                && Objects.equals(this.soundEffect, other.soundEffect)
                && this.priority == other.priority
                && Arrays.equals(this.blockedAmbienceFxIndices, other.blockedAmbienceFxIndices)
-               && this.audioCategoryIndex == other.audioCategoryIndex;
+               && this.audioCategoryIndex == other.audioCategoryIndex
+               && Arrays.equals(this.setStates, other.setStates);
       }
    }
 
@@ -888,6 +1096,7 @@ public class AmbienceFX {
       result = 31 * result + Objects.hashCode(this.soundEffect);
       result = 31 * result + Integer.hashCode(this.priority);
       result = 31 * result + Arrays.hashCode(this.blockedAmbienceFxIndices);
-      return 31 * result + Integer.hashCode(this.audioCategoryIndex);
+      result = 31 * result + Integer.hashCode(this.audioCategoryIndex);
+      return 31 * result + Arrays.hashCode(this.setStates);
    }
 }

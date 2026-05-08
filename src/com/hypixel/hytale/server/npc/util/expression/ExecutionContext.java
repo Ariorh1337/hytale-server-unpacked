@@ -45,6 +45,8 @@ public class ExecutionContext {
 
    public ExecutionContext(Scope scope) {
       this.scope = scope;
+      this.stackTop = -1;
+      this.lastPushedType = ValueType.VOID;
       this.operandStack = new ExecutionContext.Operand[8];
 
       for (int i = 0; i < this.operandStack.length; i++) {
@@ -178,6 +180,7 @@ public class ExecutionContext {
    }
 
    protected ExecutionContext.Operand popPush(int popCount) {
+      this.ensureCanPopCount("popPush", popCount);
       this.stackTop -= popCount - 1;
       return this.operandStack[this.stackTop];
    }
@@ -215,6 +218,7 @@ public class ExecutionContext {
    }
 
    protected ExecutionContext.Operand pop() {
+      this.ensureCanPop("pop");
       this.lastPushedType = ValueType.VOID;
       return this.operandStack[this.stackTop--];
    }
@@ -264,7 +268,36 @@ public class ExecutionContext {
    }
 
    protected ExecutionContext.Operand get(int index) {
+      this.ensureCanAccessRelativeIndex("get", index);
       return this.operandStack[this.stackTop - index];
+   }
+
+   private void ensureCanPop(String operation) {
+      if (this.stackTop < 0) {
+         throw new IllegalStateException("Expression stack underflow in " + operation + " (stackTop=" + this.stackTop + ")");
+      }
+   }
+
+   private void ensureCanPopCount(String operation, int popCount) {
+      if (popCount <= 0) {
+         throw new IllegalStateException(
+            "Expression stack pop count must be > 0 in " + operation + " (popCount=" + popCount + ", stackTop=" + this.stackTop + ")"
+         );
+      }
+
+      if (this.stackTop - (popCount - 1) < 0) {
+         throw new IllegalStateException("Expression stack underflow in " + operation + " (popCount=" + popCount + ", stackTop=" + this.stackTop + ")");
+      }
+   }
+
+   private void ensureCanAccessRelativeIndex(String operation, int index) {
+      if (index < 0) {
+         throw new IllegalStateException("Expression stack index must be >= 0 in " + operation + " (index=" + index + ", stackTop=" + this.stackTop + ")");
+      }
+
+      if (this.stackTop - index < 0) {
+         throw new IllegalStateException("Expression stack underflow in " + operation + " (index=" + index + ", stackTop=" + this.stackTop + ")");
+      }
    }
 
    public double getNumber(int index) {

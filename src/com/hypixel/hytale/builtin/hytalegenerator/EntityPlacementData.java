@@ -11,13 +11,13 @@ public class EntityPlacementData implements MemInstrument {
    private final Vector3i offset;
    private final PrefabRotation rotation;
    private final Holder<EntityStore> entityHolder;
-   private final int objectId;
+   private final int prefabInstanceId;
 
-   public EntityPlacementData(Vector3i offset, PrefabRotation rotation, Holder<EntityStore> entityHolder, int objectId) {
+   public EntityPlacementData(Vector3i offset, PrefabRotation rotation, Holder<EntityStore> entityHolder, int prefabInstanceId) {
       this.offset = offset;
       this.rotation = rotation;
       this.entityHolder = entityHolder;
-      this.objectId = objectId;
+      this.prefabInstanceId = prefabInstanceId;
    }
 
    public Vector3i getOffset() {
@@ -32,8 +32,8 @@ public class EntityPlacementData implements MemInstrument {
       return this.entityHolder;
    }
 
-   public int getObjectId() {
-      return this.objectId;
+   public int getPrefabInstanceId() {
+      return this.prefabInstanceId;
    }
 
    @Nonnull

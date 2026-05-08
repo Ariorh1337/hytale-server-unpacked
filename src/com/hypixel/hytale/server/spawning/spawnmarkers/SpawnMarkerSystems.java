@@ -212,6 +212,19 @@ public class SpawnMarkerSystems {
       public void onEntityRemove(
          @Nonnull Ref<EntityStore> ref, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
+         if (reason == RemoveReason.BUILDER_TOOLS_UNDO) {
+            SpawnMarkerEntity spawnMarker = store.getComponent(ref, this.spawnMarkerEntityComponentType);
+            if (spawnMarker != null) {
+               for (InvalidatablePersistentRef npcRef : spawnMarker.getNpcReferences()) {
+                  if (npcRef != null) {
+                     Ref<EntityStore> npcEntityRef = npcRef.getEntity(store);
+                     if (npcEntityRef != null && npcEntityRef.isValid()) {
+                        commandBuffer.removeEntity(npcEntityRef, RemoveReason.BUILDER_TOOLS_UNDO);
+                     }
+                  }
+               }
+            }
+         }
       }
    }
 

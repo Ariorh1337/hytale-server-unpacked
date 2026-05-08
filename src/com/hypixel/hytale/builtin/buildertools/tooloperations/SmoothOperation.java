@@ -18,7 +18,7 @@ public class SmoothOperation extends ToolOperation {
    }
 
    @Override
-   boolean execute0(int x, int y, int z) {
+   protected boolean executeBlock(int x, int y, int z) {
       int currentBlock = this.edit.getBlock(x, y, z);
       BuilderToolsPlugin.BuilderState.BlocksSampleData data = BuilderToolsPlugin.getState(this.player, this.playerRef)
          .getBlocksSampleData(this.edit.getAccessor(), x, y, z, 2);
