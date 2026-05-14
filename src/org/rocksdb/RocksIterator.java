@@ -1,6 +1,5 @@
 package org.rocksdb;
 
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import org.rocksdb.util.BufferUtil;
 
@@ -35,7 +34,7 @@ public class RocksIterator extends AbstractRocksIterator<RocksDB> {
          var2 = keyByteArray0(this.nativeHandle_, var1.array(), var1.arrayOffset() + var1.position(), var1.remaining());
       }
 
-      ((Buffer)var1).limit(Math.min(var1.position() + var2, var1.limit()));
+      var1.limit(Math.min(var1.position() + var2, var1.limit()));
       return var2;
    }
 
@@ -54,7 +53,7 @@ public class RocksIterator extends AbstractRocksIterator<RocksDB> {
          var2 = valueByteArray0(this.nativeHandle_, var1.array(), var1.arrayOffset() + var1.position(), var1.remaining());
       }
 
-      ((Buffer)var1).limit(Math.min(var1.position() + var2, var1.limit()));
+      var1.limit(Math.min(var1.position() + var2, var1.limit()));
       return var2;
    }
 

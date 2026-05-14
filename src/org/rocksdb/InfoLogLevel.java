@@ -11,8 +11,8 @@ public enum InfoLogLevel {
 
    private final byte value_;
 
-   InfoLogLevel(byte var3) {
-      this.value_ = var3;
+   InfoLogLevel(final byte nullxx) {
+      this.value_ = nullxx;
    }
 
    public byte getValue() {

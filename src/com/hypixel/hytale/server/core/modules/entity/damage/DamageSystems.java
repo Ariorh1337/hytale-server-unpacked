@@ -17,6 +17,7 @@ import com.hypixel.hytale.component.dependency.SystemGroupDependency;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.spatial.SpatialResource;
 import com.hypixel.hytale.component.spatial.SpatialStructure;
+import com.hypixel.hytale.component.system.RefChangeSystem;
 import com.hypixel.hytale.component.system.tick.DelayedEntitySystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.math.random.RandomExtra;
@@ -24,7 +25,6 @@ import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.util.TrigMathUtil;
 import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.AnimationSlot;
-import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.protocol.CombatTextUpdate;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.MovementStates;
@@ -62,6 +62,7 @@ import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.meta.DynamicMetaStore;
 import com.hypixel.hytale.server.core.modules.entity.AllLegacyLivingEntityTypesQuery;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
+import com.hypixel.hytale.server.core.modules.entity.component.BreathingComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.CachedStatsComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.Intangible;
 import com.hypixel.hytale.server.core.modules.entity.component.Invulnerable;
@@ -567,17 +568,13 @@ public class DamageSystems {
       }
    }
 
-   public static class CanBreathe extends DelayedEntitySystem<EntityStore> {
-      private static final float DAMAGE_AMOUNT_DROWNING = 10.0F;
-      private static final float DAMAGE_AMOUNT_SUFFOCATION = 20.0F;
-      @Nonnull
-      private static final ComponentType<EntityStore, ModelComponent> MODEL_COMPONENT_TYPE = ModelComponent.getComponentType();
+   public static class BreathingSystem extends DelayedEntitySystem<EntityStore> {
       @Nonnull
       private static final Query<EntityStore> QUERY = Query.and(
-         AllLegacyLivingEntityTypesQuery.INSTANCE, EntityStatMap.getComponentType(), TransformComponent.getComponentType(), MODEL_COMPONENT_TYPE
+         BreathingComponent.getComponentType(), TransformComponent.getComponentType(), ModelComponent.getComponentType()
       );
 
-      public CanBreathe() {
+      public BreathingSystem() {
          super(1.0F);
       }
 
@@ -601,25 +598,65 @@ public class DamageSystems {
          @Nonnull Store<EntityStore> store,
          @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
-         LivingEntity entity = (LivingEntity)EntityUtils.getEntity(index, archetypeChunk);
-         assert entity != null;
-         EntityStatMap statMapComponent = archetypeChunk.getComponent(index, EntityStatMap.getComponentType());
-         assert statMapComponent != null;
-         EntityStatValue oxygenStatValue = statMapComponent.get(DefaultEntityStatTypes.getOxygen());
-         if (oxygenStatValue != null) {
-            Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
-            long packed = LivingEntity.getPackedMaterialAndFluidAtBreathingHeight(ref, commandBuffer);
-            BlockMaterial material = BlockMaterial.VALUES[MathUtil.unpackLeft(packed)];
-            int fluidId = MathUtil.unpackRight(packed);
-            boolean canBreathe = entity.canBreathe(ref, material, fluidId, commandBuffer);
-            CachedStatsComponent cachedStatsComponent = archetypeChunk.getComponent(index, CachedStatsComponent.getComponentType());
-            if (cachedStatsComponent != null) {
-               cachedStatsComponent.setCanBreathe(canBreathe);
-            }
+         Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
+         BreathingComponent breathingComponent = archetypeChunk.getComponent(index, BreathingComponent.getComponentType());
+         assert breathingComponent != null;
+         CachedStatsComponent cachedStatsComponent = archetypeChunk.getComponent(index, CachedStatsComponent.getComponentType());
+         boolean invulnerable = archetypeChunk.getArchetype().contains(Invulnerable.getComponentType());
+         EntityUtils.processEntityBreathing(ref, breathingComponent, cachedStatsComponent, invulnerable, false, commandBuffer);
+      }
 
-            if (!canBreathe && oxygenStatValue.get() <= oxygenStatValue.getMin()) {
+      @Override
+      public boolean isParallel(int archetypeChunkSize, int taskCount) {
+         return false;
+      }
+   }
+
+   public static class CanBreathe extends DelayedEntitySystem<EntityStore> {
+      private static final float DAMAGE_AMOUNT_DROWNING = 10.0F;
+      private static final float DAMAGE_AMOUNT_SUFFOCATION = 20.0F;
+      @Nonnull
+      private static final Query<EntityStore> QUERY = Query.and(BreathingComponent.getComponentType(), EntityStatMap.getComponentType());
+
+      public CanBreathe() {
+         super(1.0F);
+      }
+
+      @Nullable
+      @Override
+      public SystemGroup<EntityStore> getGroup() {
+         return DamageModule.get().getGatherDamageGroup();
+      }
+
+      @Nonnull
+      @Override
+      public Query<EntityStore> getQuery() {
+         return QUERY;
+      }
+
+      @Nonnull
+      @Override
+      public Set<Dependency<EntityStore>> getDependencies() {
+         return Set.of(new SystemDependency<>(Order.AFTER, DamageSystems.BreathingSystem.class));
+      }
+
+      @Override
+      public void tick(
+         float dt,
+         int index,
+         @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
+         @Nonnull Store<EntityStore> store,
+         @Nonnull CommandBuffer<EntityStore> commandBuffer
+      ) {
+         BreathingComponent breathingComponent = archetypeChunk.getComponent(index, BreathingComponent.getComponentType());
+         assert breathingComponent != null;
+         if (breathingComponent.isSuffocating()) {
+            EntityStatMap statMapComponent = archetypeChunk.getComponent(index, EntityStatMap.getComponentType());
+            assert statMapComponent != null;
+            EntityStatValue oxygenStatValue = statMapComponent.get(DefaultEntityStatTypes.getOxygen());
+            if (oxygenStatValue != null && !(oxygenStatValue.get() > oxygenStatValue.getMin())) {
                Damage damage;
-               if (fluidId != 0) {
+               if (breathingComponent.getLastFluidId() != 0) {
                   assert DamageCause.DROWNING != null;
                   damage = new Damage(Damage.NULL_SOURCE, DamageCause.DROWNING, 10.0F);
                } else {
@@ -1196,6 +1233,64 @@ public class DamageSystems {
                }
             }
          }
+      }
+   }
+
+   public static class InvulnerableBreathing extends RefChangeSystem<EntityStore, Invulnerable> {
+      @Nonnull
+      private final ComponentType<EntityStore, Invulnerable> invulnerableComponentType;
+      @Nonnull
+      private final ComponentType<EntityStore, BreathingComponent> breathingComponentType;
+
+      public InvulnerableBreathing(
+         @Nonnull ComponentType<EntityStore, Invulnerable> invulnerableComponentType,
+         @Nonnull ComponentType<EntityStore, BreathingComponent> breathingComponentType
+      ) {
+         this.invulnerableComponentType = invulnerableComponentType;
+         this.breathingComponentType = breathingComponentType;
+      }
+
+      @Nonnull
+      @Override
+      public Query<EntityStore> getQuery() {
+         return Query.and(this.invulnerableComponentType, this.breathingComponentType);
+      }
+
+      @Nonnull
+      @Override
+      public ComponentType<EntityStore, Invulnerable> componentType() {
+         return this.invulnerableComponentType;
+      }
+
+      public void onComponentAdded(
+         @Nonnull Ref<EntityStore> ref, @Nonnull Invulnerable component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
+      ) {
+         BreathingComponent breathingComponent = commandBuffer.getComponent(ref, BreathingComponent.getComponentType());
+         assert breathingComponent != null;
+         CachedStatsComponent cachedStatsComponent = commandBuffer.getComponent(ref, CachedStatsComponent.getComponentType());
+         EntityUtils.processEntityBreathing(ref, breathingComponent, cachedStatsComponent, true, true, commandBuffer);
+      }
+
+      public void onComponentSet(
+         @Nonnull Ref<EntityStore> ref,
+         Invulnerable oldComponent,
+         @Nonnull Invulnerable newComponent,
+         @Nonnull Store<EntityStore> store,
+         @Nonnull CommandBuffer<EntityStore> commandBuffer
+      ) {
+         BreathingComponent breathingComponent = commandBuffer.getComponent(ref, BreathingComponent.getComponentType());
+         assert breathingComponent != null;
+         CachedStatsComponent cachedStatsComponent = commandBuffer.getComponent(ref, CachedStatsComponent.getComponentType());
+         EntityUtils.processEntityBreathing(ref, breathingComponent, cachedStatsComponent, true, true, commandBuffer);
+      }
+
+      public void onComponentRemoved(
+         @Nonnull Ref<EntityStore> ref, @Nonnull Invulnerable component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
+      ) {
+         BreathingComponent breathingComponent = commandBuffer.getComponent(ref, BreathingComponent.getComponentType());
+         assert breathingComponent != null;
+         CachedStatsComponent cachedStatsComponent = commandBuffer.getComponent(ref, CachedStatsComponent.getComponentType());
+         EntityUtils.processEntityBreathing(ref, breathingComponent, cachedStatsComponent, false, true, commandBuffer);
       }
    }
 

@@ -129,7 +129,7 @@ public class WordList implements JsonAssetWithMap<String, DefaultAssetMap<String
 
          for (String translationKey : translationKeys) {
             String translated = I18nModule.get().getMessage(language, translationKey);
-            if (translated != null && !alreadyUsedTranslated.contains(translated)) {
+            if (translated != null && !alreadyUsedTranslated.contains(translated.toLowerCase())) {
                result.add(translationKey);
             }
          }

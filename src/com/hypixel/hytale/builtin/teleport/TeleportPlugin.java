@@ -10,6 +10,8 @@ import com.hypixel.hytale.component.AddReason;
 import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Holder;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.event.EventRegistry;
 import com.hypixel.hytale.math.util.ChunkUtil;
@@ -48,10 +50,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.bson.BsonArray;
 import org.bson.BsonDocument;
 import org.joml.Vector3d;
@@ -215,6 +219,66 @@ public class TeleportPlugin extends JavaPlugin {
       holder.ensureComponent(EntityStore.REGISTRY.getNonSerializedComponentType());
       holder.addComponent(this.warpComponentType, new TeleportPlugin.WarpComponent(warp));
       return holder;
+   }
+
+   public boolean addWarp(@Nonnull Warp warp, boolean replace) {
+      String warpId = warp.getId().toLowerCase();
+      Warp existing = replace ? this.warps.put(warpId, warp) : this.warps.putIfAbsent(warpId, warp);
+      if (!replace && existing != null) {
+         return false;
+      }
+
+      if (existing == null) {
+         createWarpEntity(warp);
+      } else {
+         removeWarpEntity(existing).thenCompose(v -> createWarpEntity(warp));
+      }
+
+      this.saveWarps();
+      return true;
+   }
+
+   public boolean removeWarp(@Nonnull String warpName) {
+      String warpId = warpName.toLowerCase();
+      Warp warp = this.warps.remove(warpId);
+      if (warp == null) {
+         return false;
+      }
+
+      removeWarpEntity(warp);
+      this.saveWarps();
+      return true;
+   }
+
+   private static CompletableFuture<Ref<EntityStore>> createWarpEntity(@Nonnull Warp warp) {
+      World world = Universe.get().getWorld(warp.getWorld());
+      return world == null ? CompletableFuture.completedFuture(null) : CompletableFuture.supplyAsync(() -> createWarpEntity(world, warp), world);
+   }
+
+   private static CompletableFuture<Void> removeWarpEntity(@Nonnull Warp warp) {
+      World world = Universe.get().getWorld(warp.getWorld());
+      return world == null ? CompletableFuture.completedFuture(null) : CompletableFuture.runAsync(() -> removeWarpEntity(world, warp), world);
+   }
+
+   @Nullable
+   private static Ref<EntityStore> createWarpEntity(@Nonnull World world, @Nonnull Warp warp) {
+      assert world.isInThread();
+      Store<EntityStore> store = world.getEntityStore().getStore();
+      TeleportPlugin plugin = get();
+      Holder<EntityStore> holder = plugin.createWarp(warp, store);
+      return store.addEntity(holder, AddReason.LOAD);
+   }
+
+   private static void removeWarpEntity(@Nonnull World world, @Nonnull Warp warp) {
+      assert world.isInThread();
+      Store<EntityStore> store = world.getEntityStore().getStore();
+      ComponentType<EntityStore, TeleportPlugin.WarpComponent> componentType = TeleportPlugin.WarpComponent.getComponentType();
+      store.forEachEntityParallel(componentType, (index, archetypeChunk, commandBuffer) -> {
+         TeleportPlugin.WarpComponent warpComponent = archetypeChunk.getComponent(index, componentType);
+         if (warpComponent != null && warpComponent.warp().getId().equals(warp.getId())) {
+            commandBuffer.removeEntity(archetypeChunk.getReferenceTo(index), RemoveReason.REMOVE);
+         }
+      });
    }
 
    public record WarpComponent(Warp warp) implements Component<EntityStore> {

@@ -268,6 +268,18 @@ public class Options
    }
 
    @Override
+   public boolean openFilesAsync() {
+      assert this.isOwningHandle();
+      return openFilesAsync(this.nativeHandle_);
+   }
+
+   public Options setOpenFilesAsync(boolean var1) {
+      assert this.isOwningHandle();
+      setOpenFilesAsync(this.nativeHandle_, var1);
+      return this;
+   }
+
+   @Override
    public int maxOpenFiles() {
       assert this.isOwningHandle();
       return maxOpenFiles(this.nativeHandle_);
@@ -667,6 +679,18 @@ public class Options
       return this;
    }
 
+   public Options setMaxCompactionTriggerWakeupSeconds(long var1) {
+      assert this.isOwningHandle();
+      setMaxCompactionTriggerWakeupSeconds(this.nativeHandle_, var1);
+      return this;
+   }
+
+   @Override
+   public long maxCompactionTriggerWakeupSeconds() {
+      assert this.isOwningHandle();
+      return maxCompactionTriggerWakeupSeconds(this.nativeHandle_);
+   }
+
    public Options setStatsPersistPeriodSec(int var1) {
       assert this.isOwningHandle();
       setStatsPersistPeriodSec(this.nativeHandle_, var1);
@@ -915,17 +939,6 @@ public class Options
    public boolean skipStatsUpdateOnDbOpen() {
       assert this.isOwningHandle();
       return skipStatsUpdateOnDbOpen(this.nativeHandle_);
-   }
-
-   public Options setSkipCheckingSstFileSizesOnDbOpen(boolean var1) {
-      setSkipCheckingSstFileSizesOnDbOpen(this.nativeHandle_, var1);
-      return this;
-   }
-
-   @Override
-   public boolean skipCheckingSstFileSizesOnDbOpen() {
-      assert this.isOwningHandle();
-      return skipCheckingSstFileSizesOnDbOpen(this.nativeHandle_);
    }
 
    public Options setWalRecoveryMode(WALRecoveryMode var1) {
@@ -1730,6 +1743,16 @@ public class Options
       return memtableMaxRangeDeletions(this.nativeHandle_);
    }
 
+   public Options setMinTombstonesForRangeConversion(int var1) {
+      setMinTombstonesForRangeConversion(this.nativeHandle_, var1);
+      return this;
+   }
+
+   @Override
+   public int minTombstonesForRangeConversion() {
+      return minTombstonesForRangeConversion(this.nativeHandle_);
+   }
+
    public Options setCompactionThreadLimiter(ConcurrentTaskLimiter var1) {
       setCompactionThreadLimiter(this.nativeHandle_, var1.nativeHandle_);
       this.compactionThreadLimiter_ = var1;
@@ -1810,6 +1833,16 @@ public class Options
    @Override
    public double blobGarbageCollectionForceThreshold() {
       return blobGarbageCollectionForceThreshold(this.nativeHandle_);
+   }
+
+   public Options setReadTriggeredCompactionThreshold(double var1) {
+      setReadTriggeredCompactionThreshold(this.nativeHandle_, var1);
+      return this;
+   }
+
+   @Override
+   public double readTriggeredCompactionThreshold() {
+      return readTriggeredCompactionThreshold(this.nativeHandle_);
    }
 
    public Options setBlobCompactionReadaheadSize(long var1) {
@@ -1896,6 +1929,10 @@ public class Options
    private static native void setParanoidChecks(long var0, boolean var2);
 
    private static native boolean paranoidChecks(long var0);
+
+   private static native void setOpenFilesAsync(long var0, boolean var2);
+
+   private static native boolean openFilesAsync(long var0);
 
    private static native void setRateLimiter(long var0, long var2);
 
@@ -2033,6 +2070,10 @@ public class Options
 
    private static native int statsDumpPeriodSec(long var0);
 
+   private static native void setMaxCompactionTriggerWakeupSeconds(long var0, long var2);
+
+   private static native long maxCompactionTriggerWakeupSeconds(long var0);
+
    private static native void setStatsPersistPeriodSec(long var0, int var2);
 
    private static native int statsPersistPeriodSec(long var0);
@@ -2118,10 +2159,6 @@ public class Options
    private static native void setSkipStatsUpdateOnDbOpen(long var0, boolean var2);
 
    private static native boolean skipStatsUpdateOnDbOpen(long var0);
-
-   private static native void setSkipCheckingSstFileSizesOnDbOpen(long var0, boolean var2);
-
-   private static native boolean skipCheckingSstFileSizesOnDbOpen(long var0);
 
    private static native void setWalRecoveryMode(long var0, byte var2);
 
@@ -2387,6 +2424,10 @@ public class Options
 
    private static native int memtableMaxRangeDeletions(long var0);
 
+   private static native void setMinTombstonesForRangeConversion(long var0, int var2);
+
+   private static native int minTombstonesForRangeConversion(long var0);
+
    private static native void setCompactionThreadLimiter(long var0, long var2);
 
    private static native void setAvoidUnnecessaryBlockingIO(long var0, boolean var2);
@@ -2444,6 +2485,10 @@ public class Options
    private static native void setBlobGarbageCollectionForceThreshold(long var0, double var2);
 
    private static native double blobGarbageCollectionForceThreshold(long var0);
+
+   private static native void setReadTriggeredCompactionThreshold(long var0, double var2);
+
+   private static native double readTriggeredCompactionThreshold(long var0);
 
    private static native void setBlobCompactionReadaheadSize(long var0, long var2);
 

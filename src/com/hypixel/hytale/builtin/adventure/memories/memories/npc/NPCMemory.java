@@ -25,6 +25,7 @@ import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.protocol.packets.entities.SpawnModelParticles;
+import com.hypixel.hytale.protocol.packets.player.UpdateMemoriesCount;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelParticle;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
@@ -253,6 +254,7 @@ public class NPCMemory extends Memory {
                               null,
                               "NotificationIcons/MemoriesIcon.png"
                            );
+                           playerRefComponent.getPacketHandler().writeNoCache(new UpdateMemoriesCount(playerMemoriesComponent.getRecordedMemories().size()));
                            temp = new NPCMemory();
                            TransformComponent npcTransformComponent = commandBuffer.getComponent(npcRef, TransformComponent.getComponentType());
                            if (npcTransformComponent != null) {

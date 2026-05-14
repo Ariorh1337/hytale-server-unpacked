@@ -19,6 +19,11 @@ public class SemverComparator implements SemverSatisfies {
    }
 
    @Nonnull
+   public Semver getCompareTo() {
+      return this.compareTo;
+   }
+
+   @Nonnull
    @Override
    public String toString() {
       return this.comparisonType.getPrefix() + this.compareTo;

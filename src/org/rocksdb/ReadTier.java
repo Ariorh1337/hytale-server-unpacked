@@ -8,8 +8,8 @@ public enum ReadTier {
 
    private final byte value;
 
-   ReadTier(byte var3) {
-      this.value = var3;
+   ReadTier(final byte nullxx) {
+      this.value = nullxx;
    }
 
    public byte getValue() {

@@ -8,8 +8,8 @@ public enum OperationType {
 
    private final byte value;
 
-   OperationType(byte var3) {
-      this.value = var3;
+   OperationType(final byte nullxx) {
+      this.value = nullxx;
    }
 
    byte getValue() {

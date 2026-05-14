@@ -62,17 +62,14 @@ public class TableFileCreationBriefInfo {
    public String toString() {
       return "TableFileCreationBriefInfo{dbName='"
          + this.dbName
-         + '\''
-         + ", columnFamilyName='"
+         + "', columnFamilyName='"
          + this.columnFamilyName
-         + '\''
-         + ", filePath='"
+         + "', filePath='"
          + this.filePath
-         + '\''
-         + ", jobId="
+         + "', jobId="
          + this.jobId
          + ", reason="
          + this.reason
-         + '}';
+         + "}";
    }
 }

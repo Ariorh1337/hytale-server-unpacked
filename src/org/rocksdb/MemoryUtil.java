@@ -34,7 +34,7 @@ public class MemoryUtil {
       HashMap var12 = new HashMap();
 
       for (Entry var9 : var11.entrySet()) {
-         var12.put(MemoryUsageType.getMemoryUsageType((Byte)var9.getKey()), var9.getValue());
+         var12.put(MemoryUsageType.getMemoryUsageType((Byte)var9.getKey()), (Long)var9.getValue());
       }
 
       return var12;

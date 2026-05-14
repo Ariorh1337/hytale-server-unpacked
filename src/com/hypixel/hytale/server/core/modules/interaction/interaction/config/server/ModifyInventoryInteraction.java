@@ -171,7 +171,7 @@ public class ModifyInventoryInteraction extends SimpleInstantInteraction {
             if (justBroke && shouldNotify) {
                PlayerRef playerRefComponent = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
                if (playerRefComponent != null) {
-                  Message itemNameMessage = Message.translation(item.getItem().getTranslationKey());
+                  Message itemNameMessage = item.getItem().getTranslationMessage();
                   String messageKey = this.notifyOnBreakMessage != null ? this.notifyOnBreakMessage : "server.general.repair.itemBroken";
                   playerRefComponent.sendMessage(Message.translation(messageKey).param("itemName", itemNameMessage).color("#ff5555"));
                   int soundEventIndex = TempAssetIdUtil.getSoundEventIndex("SFX_Item_Break");

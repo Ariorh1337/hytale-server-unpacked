@@ -63,6 +63,7 @@ import com.hypixel.hytale.server.core.inventory.InventoryUtils;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
+import com.hypixel.hytale.server.core.modules.entity.component.BreathingComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.DisplayNameComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.EntityScaleComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
@@ -457,6 +458,7 @@ public class PlayerSystems {
          holder.ensureComponent(PlayerInput.getComponentType());
          holder.ensureComponent(EffectControllerComponent.getComponentType());
          holder.ensureComponent(UniqueItemUsagesComponent.getComponentType());
+         holder.ensureComponent(BreathingComponent.getComponentType());
          Player player = holder.getComponent(Player.getComponentType());
          assert player != null;
          player.getInventory().migrateToComponents(holder);

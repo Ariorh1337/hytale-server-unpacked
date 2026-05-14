@@ -6,8 +6,8 @@ public enum WalFileType {
 
    private final byte value;
 
-   WalFileType(byte var3) {
-      this.value = var3;
+   WalFileType(final byte nullxx) {
+      this.value = nullxx;
    }
 
    byte getValue() {

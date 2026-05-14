@@ -40,6 +40,7 @@ import com.hypixel.hytale.builtin.buildertools.commands.SelectionHistoryCommand;
 import com.hypixel.hytale.builtin.buildertools.commands.SetCommand;
 import com.hypixel.hytale.builtin.buildertools.commands.SetToolHistorySizeCommand;
 import com.hypixel.hytale.builtin.buildertools.commands.ShiftCommand;
+import com.hypixel.hytale.builtin.buildertools.commands.ShrinkCommand;
 import com.hypixel.hytale.builtin.buildertools.commands.StackCommand;
 import com.hypixel.hytale.builtin.buildertools.commands.SubmergeCommand;
 import com.hypixel.hytale.builtin.buildertools.commands.TintCommand;
@@ -74,7 +75,9 @@ import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequen
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.EchoOnceOperation;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.EchoOperation;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.ErodeOperation;
+import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.FluidFixOperation;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.HeightmapLayerOperation;
+import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.KernelErosionOperation;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.LayerOperation;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.LiftOperation;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.LoadIntFromToolArgOperation;
@@ -623,6 +626,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       commandRegistry.registerCommand(new SelectionHistoryCommand());
       commandRegistry.registerCommand(new SetCommand());
       commandRegistry.registerCommand(new ShiftCommand());
+      commandRegistry.registerCommand(new ShrinkCommand());
       commandRegistry.registerCommand(new StackCommand());
       commandRegistry.registerCommand(new SubmergeCommand());
       commandRegistry.registerCommand(new TintCommand());
@@ -706,6 +710,8 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       BrushOperation.OPERATION_CODEC.register("density", SetDensity.class, SetDensity.CODEC);
       BrushOperation.OPERATION_CODEC.register("set", SetOperation.class, SetOperation.CODEC);
       BrushOperation.OPERATION_CODEC.register("smooth", SmoothOperation.class, SmoothOperation.CODEC);
+      BrushOperation.OPERATION_CODEC.register("kernelsmooth", KernelErosionOperation.class, KernelErosionOperation.CODEC);
+      BrushOperation.OPERATION_CODEC.register("fluidfix", FluidFixOperation.class, FluidFixOperation.CODEC);
       BrushOperation.OPERATION_CODEC.register("shape", ShapeOperation.class, ShapeOperation.CODEC);
       BrushOperation.OPERATION_CODEC.register("rotation", RotateOperation.class, RotateOperation.CODEC);
       BrushOperation.OPERATION_CODEC.register("clearrotation", ClearRotationOperation.class, ClearRotationOperation.CODEC);
@@ -809,7 +815,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             Item item = itemStack.getItem();
             BuilderTool builderToolData = item.getBuilderTool();
             if (builderToolData == null) {
-               Message itemMessage = Message.translation(item.getTranslationKey());
+               Message itemMessage = item.getTranslationMessage();
                MessageUtil.sendFailureReply(playerRef, packet.token, Message.translation("server.builderTools.invalidTool").param("item", itemMessage));
             } else {
                try {
@@ -3909,6 +3915,72 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          }
       }
 
+      public void unsubmerge(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+         if (this.selection == null) {
+            this.sendFeedback(Message.translation("server.builderTools.noSelection"), componentAccessor);
+         } else if (!this.selection.hasSelectionBounds()) {
+            this.sendFeedback(Message.translation("server.builderTools.noSelectionBounds"), componentAccessor);
+         } else {
+            long start = System.nanoTime();
+            Vector3i min = Vector3iUtil.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+            Vector3i max = Vector3iUtil.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+            int xMin = min.x();
+            int xMax = max.x();
+            int yMin = min.y();
+            int yMax = max.y();
+            int zMin = min.z();
+            int zMax = max.z();
+            int totalBlocks = (xMax - xMin + 1) * (zMax - zMin + 1) * (yMax - yMin + 1);
+            int width = xMax - xMin;
+            int depth = zMax - zMin;
+            int halfWidth = width / 2;
+            int halfDepth = depth / 2;
+            BlockSelection before = new BlockSelection(totalBlocks, 0);
+            before.setPosition(xMin + halfWidth, yMin, zMin + halfDepth);
+            before.setSelectionArea(min, max);
+            this.pushHistory(BuilderToolsPlugin.Action.SET, new BlockSelectionSnapshot(before));
+            BlockSelection after = new BlockSelection(totalBlocks, 0);
+            after.copyPropertiesFrom(before);
+            World world = componentAccessor.getExternalData().getWorld();
+            LocalCachedChunkAccessor accessor = LocalCachedChunkAccessor.atWorldCoords(world, xMin + halfWidth, zMin + halfDepth, Math.max(width, depth));
+            int counter = 0;
+
+            for (int x = xMin; x <= xMax; x++) {
+               for (int z = zMin; z <= zMax; z++) {
+                  WorldChunk chunk = accessor.getChunk(ChunkUtil.indexChunkFromBlock(x, z));
+
+                  for (int y = yMax; y >= yMin; y--) {
+                     int currentBlock = chunk.getBlock(x, y, z);
+                     int currentFluid = chunk.getFluidId(x, y, z);
+                     if (this.globalMask != null && this.globalMask.isExcluded(accessor, x, y, z, min, max, currentBlock, currentFluid)) {
+                        counter++;
+                     } else {
+                        if (currentFluid != 0) {
+                           byte currentFluidLevel = chunk.getFluidLevel(x, y, z);
+                           before.addFluidAtWorldPos(x, y, z, currentFluid, currentFluidLevel);
+                           after.addFluidAtWorldPos(x, y, z, 0, (byte)0);
+                        }
+
+                        this.sendFeedback("Gather 1/2", totalBlocks, ++counter, componentAccessor);
+                     }
+                  }
+               }
+            }
+
+            after.placeNoReturn("Unsubmerge 2/2", this.playerRef, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
+            BuilderToolsPlugin.invalidateWorldMapForSelection(after, world);
+            long end = System.nanoTime();
+            long diff = end - start;
+            BuilderToolsPlugin.get()
+               .getLogger()
+               .at(Level.FINE)
+               .log("Took: %dns (%dms) to execute unsubmerge of %d blocks", diff, TimeUnit.NANOSECONDS.toMillis(diff), counter);
+            this.sendUpdate();
+            this.sendArea();
+            SoundUtil.playSoundEvent2d(ref, TempAssetIdUtil.getSoundEventIndex("CREATE_SELECTION_FILL"), SoundCategory.SFX, componentAccessor);
+         }
+      }
+
       public void fill(@Nonnull BlockPattern pattern, ComponentAccessor<EntityStore> componentAccessor) {
          if (!pattern.isEmpty()) {
             if (this.selection == null) {
@@ -4820,6 +4892,82 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                direction.length() > 0.0 ? "CREATE_SCALE_INCREASE" : "CREATE_SCALE_DECREASE",
                componentAccessor
             );
+         }
+      }
+
+      public void shrink(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+         if (this.selection == null) {
+            this.sendErrorFeedback(ref, Message.translation("server.builderTools.noSelection"), componentAccessor);
+         } else if (!this.selection.hasSelectionBounds()) {
+            this.sendErrorFeedback(ref, Message.translation("server.builderTools.noSelectionBounds"), componentAccessor);
+         } else {
+            World world = componentAccessor.getExternalData().getWorld();
+            Vector3i min = Vector3iUtil.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+            Vector3i max = Vector3iUtil.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+            int xMin = min.x();
+            int xMax = max.x();
+            int yMin = min.y();
+            int yMax = max.y();
+            int zMin = min.z();
+            int zMax = max.z();
+            int width = xMax - xMin;
+            int depth = zMax - zMin;
+            int halfWidth = width / 2;
+            int halfDepth = depth / 2;
+            LocalCachedChunkAccessor accessor = LocalCachedChunkAccessor.atWorldCoords(world, xMin + halfWidth, zMin + halfDepth, Math.max(width, depth));
+            int editorBlockPrefabAir = BlockType.getAssetMap().getIndex("Editor_Empty");
+            int newXMin = Integer.MAX_VALUE;
+            int newYMin = Integer.MAX_VALUE;
+            int newZMin = Integer.MAX_VALUE;
+            int newXMax = Integer.MIN_VALUE;
+            int newYMax = Integer.MIN_VALUE;
+            int newZMax = Integer.MIN_VALUE;
+            int top = Math.max(yMin, yMax);
+            int bottom = Math.min(yMin, yMax);
+            int totalBlocks = (width + 1) * (depth + 1) * (top - bottom + 1);
+            int counter = 0;
+
+            for (int x = xMin; x <= xMax; x++) {
+               for (int z = zMin; z <= zMax; z++) {
+                  WorldChunk chunk = accessor.getChunk(ChunkUtil.indexChunkFromBlock(x, z));
+
+                  for (int y = bottom; y <= top; y++) {
+                     int block = chunk.getBlock(x, y, z);
+                     int fluid = chunk.getFluidId(x, y, z);
+                     if (block != 0 && block != editorBlockPrefabAir || fluid != 0) {
+                        newXMin = Math.min(newXMin, x);
+                        newYMin = Math.min(newYMin, y);
+                        newZMin = Math.min(newZMin, z);
+                        newXMax = Math.max(newXMax, x);
+                        newYMax = Math.max(newYMax, y);
+                        newZMax = Math.max(newZMax, z);
+                     }
+
+                     this.sendFeedback("Shrink", totalBlocks, ++counter, componentAccessor);
+                  }
+               }
+            }
+
+            if (newXMin == Integer.MAX_VALUE) {
+               this.sendFeedback(Message.translation("server.builderTools.selectionShrinkEmpty"), componentAccessor);
+            } else {
+               Vector3i newMin = new Vector3i(newXMin, newYMin, newZMin);
+               Vector3i newMax = new Vector3i(newXMax, newYMax, newZMax);
+               if (newMin.equals(min) && newMax.equals(max)) {
+                  this.sendFeedback(Message.translation("server.builderTools.selectionShrinkUnchanged"), componentAccessor);
+               } else {
+                  int oldBlockCount = (xMax - xMin + 1) * (yMax - yMin + 1) * (zMax - zMin + 1);
+                  int newBlockCount = (newXMax - newXMin + 1) * (newYMax - newYMin + 1) * (newZMax - newZMin + 1);
+                  this.pushHistory(BuilderToolsPlugin.Action.UPDATE_SELECTION, new ClipboardBoundsSnapshot(this.selection));
+                  this.selection.setSelectionArea(newMin, newMax);
+                  this.syncRawPositions();
+                  this.sendArea();
+                  this.sendFeedback(
+                     Message.translation("server.builderTools.selectionShrunk").param("oldCount", oldBlockCount).param("newCount", newBlockCount),
+                     componentAccessor
+                  );
+               }
+            }
          }
       }
 

@@ -14,6 +14,7 @@ import com.hypixel.hytale.common.plugin.Mod;
 import com.hypixel.hytale.common.plugin.ModLoadOrderException;
 import com.hypixel.hytale.common.plugin.PluginIdentifier;
 import com.hypixel.hytale.common.plugin.PluginManifest;
+import com.hypixel.hytale.common.semver.SemverRange;
 import com.hypixel.hytale.common.util.FormatUtil;
 import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.common.util.java.ManifestUtil;
@@ -119,29 +120,46 @@ public class AssetModule extends JavaPlugin {
          HytaleServer.get().shutdownServer(ShutdownReason.MISSING_ASSETS.withMessage(reasonMessage));
       } else {
          ArrayList<String> outdatedPacks = new ArrayList<>();
-         String serverVersion = ManifestUtil.getVersion();
+         String serverVersionStr = ManifestUtil.getVersion();
 
          for (AssetPack pack : this.assetPacks) {
             if (!pack.getName().equals("Hytale:Hytale")) {
                PluginManifest manifest = pack.getManifest();
-               String targetServerVersion = manifest.getServerVersion();
-               if (targetServerVersion == null || !targetServerVersion.equals(serverVersion)) {
+               SemverRange range = manifest.getServerVersion();
+               PluginManifest.ServerVersionCheck status = PluginManifest.checkServerVersionCompatibility(range, serverVersionStr);
+               if (status != PluginManifest.ServerVersionCheck.COMPATIBLE) {
                   outdatedPacks.add(pack.getName());
-                  if (targetServerVersion != null && !"*".equals(targetServerVersion)) {
-                     this.getLogger()
-                        .at(Level.WARNING)
-                        .log(
-                           "Plugin '%s' targets a different server version %s. You may encounter issues, please check for plugin updates.",
-                           pack.getName(),
-                           serverVersion
-                        );
-                  } else {
-                     this.getLogger()
-                        .at(Level.WARNING)
-                        .log(
-                           "Plugin '%s' does not specify a target server version. You may encounter issues, please check for plugin updates. This will be a hard error in the future",
-                           pack.getName()
-                        );
+                  switch (status) {
+                     case MISSING:
+                        this.getLogger()
+                           .at(Level.WARNING)
+                           .log(
+                              "Plugin '%s' does not specify a target server version. You may encounter issues, please check for plugin updates. This will be a hard error in the future",
+                              pack.getName()
+                           );
+                        break;
+                     case PARSE_FAILED:
+                        this.getLogger()
+                           .at(Level.WARNING)
+                           .log(
+                              "Plugin '%s' targets server version range '%s' but the running server version '%s' could not be parsed.",
+                              pack.getName(),
+                              range,
+                              serverVersionStr
+                           );
+                        break;
+                     case INCOMPATIBLE:
+                        this.getLogger()
+                           .at(Level.WARNING)
+                           .log(
+                              "Plugin '%s' targets server version range '%s' which does not match the running server version '%s'. You may encounter issues, please check for plugin updates.",
+                              pack.getName(),
+                              range,
+                              serverVersionStr
+                           );
+                        break;
+                     case COMPATIBLE:
+                        throw new IllegalStateException("unreachable");
                   }
                }
             }

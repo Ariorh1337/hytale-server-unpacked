@@ -7,8 +7,8 @@ public enum WriteStallCondition {
 
    private final byte value;
 
-   WriteStallCondition(byte var3) {
-      this.value = var3;
+   WriteStallCondition(final byte nullxx) {
+      this.value = nullxx;
    }
 
    byte getValue() {

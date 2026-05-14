@@ -7,8 +7,8 @@ public enum RateLimiterMode {
 
    private final byte value;
 
-   RateLimiterMode(byte var3) {
-      this.value = var3;
+   RateLimiterMode(final byte nullxx) {
+      this.value = nullxx;
    }
 
    public byte getValue() {

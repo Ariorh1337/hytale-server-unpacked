@@ -236,13 +236,21 @@ public class BlockFilter {
          BlockType blockType = BlockType.getAssetMap().getAsset(blockId);
          if (blockType != null && blockType.getBlockListAssetId() != null) {
             BlockTypeListAsset blockTypeListAsset = BlockTypeListAsset.getAssetMap().getAsset(blockType.getBlockListAssetId());
-            if (blockTypeListAsset != null && blockTypeListAsset.getBlockPattern() != null) {
-               Integer[] var12 = blockTypeListAsset.getBlockPattern().getResolvedKeys();
-               int var13 = var12.length;
+            if (blockTypeListAsset != null) {
+               for (String key : blockTypeListAsset.getBlockTypeKeys()) {
+                  Item listItem = Item.getAssetMap().getAsset(key);
+                  if (listItem != null) {
+                     int listFluidId = getFluidIdFromItem(listItem);
+                     if (listFluidId >= 0) {
+                        fluids.add(listFluidId);
+                        continue;
+                     }
+                  }
 
-               for (int var14 = 0; var14 < var13; var14++) {
-                  int resolvedKey = var12[var14];
-                  blocks.add(resolvedKey);
+                  int resolvedBlockId = BlockPattern.parseBlock(key);
+                  if (BlockPattern.canParseBlock(key)) {
+                     blocks.add(resolvedBlockId);
+                  }
                }
                continue;
             }

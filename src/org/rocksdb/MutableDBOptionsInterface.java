@@ -35,6 +35,10 @@ public interface MutableDBOptionsInterface<T extends MutableDBOptionsInterface<T
 
    int statsDumpPeriodSec();
 
+   T setMaxCompactionTriggerWakeupSeconds(long var1);
+
+   long maxCompactionTriggerWakeupSeconds();
+
    T setStatsPersistPeriodSec(int var1);
 
    int statsPersistPeriodSec();

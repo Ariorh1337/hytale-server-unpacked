@@ -4,6 +4,7 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
+import com.hypixel.hytale.server.core.modules.entity.component.BoundingBox;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -46,6 +47,8 @@ public class EntityTransformSnapshot implements EntitySnapshot<EntityTransformSn
             if (headRotationComponent != null && this.headRotation != null) {
                headRotationComponent.setRotation(this.headRotation);
             }
+
+            syncBoundingBox(this.ref, transformComponent, componentAccessor);
          }
       }
    }
@@ -64,6 +67,17 @@ public class EntityTransformSnapshot implements EntitySnapshot<EntityTransformSn
          headRotationComponent.setRotation(this.headRotation);
       }
 
+      syncBoundingBox(this.ref, transformComponent, componentAccessor);
       return new EntityTransformSnapshot(this.ref, componentAccessor);
+   }
+
+   private static void syncBoundingBox(
+      @Nonnull Ref<EntityStore> ref, @Nonnull TransformComponent transformComponent, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
+      BoundingBox boundingBox = componentAccessor.getComponent(ref, BoundingBox.getComponentType());
+      if (boundingBox != null) {
+         Rotation3f rotation = transformComponent.getRotation();
+         boundingBox.applyRotation(rotation.pitch(), rotation.yaw(), rotation.roll());
+      }
    }
 }

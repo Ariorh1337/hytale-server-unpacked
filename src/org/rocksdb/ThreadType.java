@@ -8,8 +8,8 @@ public enum ThreadType {
 
    private final byte value;
 
-   ThreadType(byte var3) {
-      this.value = var3;
+   ThreadType(final byte nullxx) {
+      this.value = nullxx;
    }
 
    byte getValue() {

@@ -25,9 +25,14 @@ public class BlockBasedTableConfig extends TableFormatConfig {
    private boolean verifyCompression;
    private int readAmpBytesPerBit;
    private int formatVersion;
+   private boolean separateKeyValueInDataBlock;
+   private double uniformCvThreshold;
    private boolean enableIndexCompression;
    private boolean blockAlign;
+   private long superBlockAlignmentSize;
+   private long superBlockAlignmentSpaceOverheadRatio;
    private IndexShorteningMode indexShortening;
+   private IndexSearchType indexSearchType;
    @Deprecated
    private long blockCacheSize;
    @Deprecated
@@ -57,10 +62,15 @@ public class BlockBasedTableConfig extends TableFormatConfig {
       this.wholeKeyFiltering = true;
       this.verifyCompression = false;
       this.readAmpBytesPerBit = 0;
-      this.formatVersion = 6;
+      this.formatVersion = 7;
+      this.separateKeyValueInDataBlock = false;
+      this.uniformCvThreshold = 0.2;
       this.enableIndexCompression = true;
       this.blockAlign = false;
+      this.superBlockAlignmentSize = 0L;
+      this.superBlockAlignmentSpaceOverheadRatio = 128L;
       this.indexShortening = IndexShorteningMode.kShortenSeparators;
+      this.indexSearchType = IndexSearchType.kBinary;
       this.blockCacheSize = 8388608L;
       this.blockCacheNumShardBits = 0;
    }
@@ -88,11 +98,16 @@ public class BlockBasedTableConfig extends TableFormatConfig {
       int var23,
       int var24,
       boolean var25,
-      boolean var26,
-      byte var27,
-      byte var28,
-      long var29,
-      double var31
+      double var26,
+      boolean var28,
+      boolean var29,
+      long var30,
+      long var32,
+      byte var34,
+      byte var35,
+      byte var36,
+      long var37,
+      double var39
    ) {
       this.cacheIndexAndFilterBlocks = var1;
       this.cacheIndexAndFilterBlocksWithHighPriority = var2;
@@ -115,14 +130,19 @@ public class BlockBasedTableConfig extends TableFormatConfig {
       this.verifyCompression = var22;
       this.readAmpBytesPerBit = var23;
       this.formatVersion = var24;
-      this.enableIndexCompression = var25;
-      this.blockAlign = var26;
-      this.indexShortening = IndexShorteningMode.values()[var27];
+      this.separateKeyValueInDataBlock = var25;
+      this.uniformCvThreshold = var26;
+      this.enableIndexCompression = var28;
+      this.blockAlign = var29;
+      this.superBlockAlignmentSize = var30;
+      this.superBlockAlignmentSpaceOverheadRatio = var32;
+      this.indexShortening = IndexShorteningMode.values()[var34];
+      this.indexSearchType = IndexSearchType.values()[var35];
 
-      try (Filter var33 = FilterPolicyType.values()[var28].createFilter(var29, var31)) {
-         if (var33 != null) {
-            var33.disOwnNativeHandle();
-            this.setFilterPolicy(var33);
+      try (Filter var41 = FilterPolicyType.values()[var36].createFilter(var37, var39)) {
+         if (var41 != null) {
+            var41.disOwnNativeHandle();
+            this.setFilterPolicy(var41);
          }
       }
    }
@@ -341,6 +361,24 @@ public class BlockBasedTableConfig extends TableFormatConfig {
       return this;
    }
 
+   public boolean separateKeyValueInDataBlock() {
+      return this.separateKeyValueInDataBlock;
+   }
+
+   public BlockBasedTableConfig setSeparateKeyValueInDataBlock(boolean var1) {
+      this.separateKeyValueInDataBlock = var1;
+      return this;
+   }
+
+   public double uniformCvThreshold() {
+      return this.uniformCvThreshold;
+   }
+
+   public BlockBasedTableConfig setUniformCvThreshold(double var1) {
+      this.uniformCvThreshold = var1;
+      return this;
+   }
+
    public boolean enableIndexCompression() {
       return this.enableIndexCompression;
    }
@@ -359,12 +397,39 @@ public class BlockBasedTableConfig extends TableFormatConfig {
       return this;
    }
 
+   public long superBlockAlignmentSize() {
+      return this.superBlockAlignmentSize;
+   }
+
+   public BlockBasedTableConfig setSuperBlockAlignmentSize(long var1) {
+      this.superBlockAlignmentSize = var1;
+      return this;
+   }
+
+   public long superBlockAlignmentSpaceOverheadRatio() {
+      return this.superBlockAlignmentSpaceOverheadRatio;
+   }
+
+   public BlockBasedTableConfig setSuperBlockAlignmentSpaceOverheadRatio(long var1) {
+      this.superBlockAlignmentSpaceOverheadRatio = var1;
+      return this;
+   }
+
    public IndexShorteningMode indexShortening() {
       return this.indexShortening;
    }
 
    public BlockBasedTableConfig setIndexShortening(IndexShorteningMode var1) {
       this.indexShortening = var1;
+      return this;
+   }
+
+   public IndexSearchType indexSearchType() {
+      return this.indexSearchType;
+   }
+
+   public BlockBasedTableConfig setIndexSearchType(IndexSearchType var1) {
+      this.indexSearchType = var1;
       return this;
    }
 
@@ -448,9 +513,14 @@ public class BlockBasedTableConfig extends TableFormatConfig {
          this.verifyCompression,
          this.readAmpBytesPerBit,
          this.formatVersion,
+         this.separateKeyValueInDataBlock,
+         this.uniformCvThreshold,
          this.enableIndexCompression,
          this.blockAlign,
+         this.superBlockAlignmentSize,
+         this.superBlockAlignmentSpaceOverheadRatio,
          this.indexShortening.getValue(),
+         this.indexSearchType.getValue(),
          this.blockCacheSize,
          this.blockCacheNumShardBits
       );
@@ -482,9 +552,14 @@ public class BlockBasedTableConfig extends TableFormatConfig {
       int var28,
       int var29,
       boolean var30,
-      boolean var31,
-      byte var32,
-      @Deprecated long var33,
-      @Deprecated int var35
+      double var31,
+      boolean var33,
+      boolean var34,
+      long var35,
+      long var37,
+      byte var39,
+      byte var40,
+      @Deprecated long var41,
+      @Deprecated int var43
    );
 }

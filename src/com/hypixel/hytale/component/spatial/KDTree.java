@@ -259,7 +259,7 @@ public class KDTree<T> implements SpatialStructure<T> {
             }
 
             double plane = get(node.vector, axis);
-            double component = get(closestState.node.vector, axis);
+            double component = get(vector, axis);
             double planeDistance = Math.abs(component - plane);
             if (planeDistance * planeDistance < closestState.distanceSq) {
                if (compare < 0) {

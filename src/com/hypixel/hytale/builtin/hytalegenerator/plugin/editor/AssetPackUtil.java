@@ -8,7 +8,7 @@ import com.hypixel.hytale.assetstore.map.JsonAssetWithMap;
 import com.hypixel.hytale.codec.ExtraInfo;
 import com.hypixel.hytale.common.plugin.PluginManifest;
 import com.hypixel.hytale.common.semver.Semver;
-import com.hypixel.hytale.common.util.java.ManifestUtil;
+import com.hypixel.hytale.common.semver.SemverRange;
 import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.plugin.PluginManager;
 import com.hypixel.hytale.sneakythrow.SneakyThrow;
@@ -41,19 +41,7 @@ public interface AssetPackUtil {
             SneakyThrow.sneakySupplier(
                () -> {
                   PluginManifest manifest = new PluginManifest(
-                     group,
-                     name,
-                     DEFAULT_VERSION,
-                     null,
-                     List.of(),
-                     null,
-                     null,
-                     ManifestUtil.getVersion() == null ? "0.0.0-dev" : ManifestUtil.getVersion(),
-                     Map.of(),
-                     Map.of(),
-                     Map.of(),
-                     List.of(),
-                     false
+                     group, name, DEFAULT_VERSION, null, List.of(), null, null, SemverRange.WILDCARD, Map.of(), Map.of(), Map.of(), List.of(), false
                   );
                   Path packPath = PluginManager.MODS_PATH.resolve(group + "." + name);
                   Path manifestPath = packPath.resolve("manifest.json");

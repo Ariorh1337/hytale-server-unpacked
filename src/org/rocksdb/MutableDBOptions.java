@@ -40,12 +40,13 @@ public class MutableDBOptions extends AbstractMutableOptions {
       wal_bytes_per_sync(MutableOptionKey.ValueType.LONG),
       strict_bytes_per_sync(MutableOptionKey.ValueType.BOOLEAN),
       compaction_readahead_size(MutableOptionKey.ValueType.LONG),
+      max_compaction_trigger_wakeup_seconds(MutableOptionKey.ValueType.LONG),
       daily_offpeak_time_utc(MutableOptionKey.ValueType.STRING);
 
       private final MutableOptionKey.ValueType valueType;
 
-      DBOption(MutableOptionKey.ValueType var3) {
-         this.valueType = var3;
+      DBOption(final MutableOptionKey.ValueType nullxx) {
+         this.valueType = nullxx;
       }
 
       @Override
@@ -150,6 +151,15 @@ public class MutableDBOptions extends AbstractMutableOptions {
       @Override
       public int statsDumpPeriodSec() {
          return this.getInt(MutableDBOptions.DBOption.stats_dump_period_sec);
+      }
+
+      public MutableDBOptions.MutableDBOptionsBuilder setMaxCompactionTriggerWakeupSeconds(long var1) {
+         return this.setLong(MutableDBOptions.DBOption.max_compaction_trigger_wakeup_seconds, var1);
+      }
+
+      @Override
+      public long maxCompactionTriggerWakeupSeconds() {
+         return this.getLong(MutableDBOptions.DBOption.max_compaction_trigger_wakeup_seconds);
       }
 
       public MutableDBOptions.MutableDBOptionsBuilder setStatsPersistPeriodSec(int var1) {

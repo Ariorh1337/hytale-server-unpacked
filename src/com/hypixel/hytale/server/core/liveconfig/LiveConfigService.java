@@ -8,11 +8,13 @@ import com.hypixel.hytale.server.core.auth.AuthConfig;
 import com.hypixel.hytale.server.core.auth.ServerAuthManager;
 import com.hypixel.hytale.server.core.util.ServiceHttpClientFactory;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpRequest.Builder;
 import java.net.http.HttpResponse.BodyHandlers;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -32,13 +34,20 @@ public class LiveConfigService {
    }
 
    @Nullable
-   public LiveConfigSnapshot fetchServerConfigs(@Nonnull String patchline, @Nonnull String os, @Nonnull String arch, @Nullable String currentEtag) {
+   public LiveConfigSnapshot fetchServerConfigs(
+      @Nonnull String patchline, @Nonnull String os, @Nonnull String arch, @Nullable String version, @Nullable String currentEtag
+   ) {
       ServerAuthManager authManager = ServerAuthManager.getInstance();
       String sessionToken = authManager.getSessionToken();
       boolean urlOverride = hasUrlOverride();
       if (urlOverride || sessionToken != null && !sessionToken.isEmpty()) {
          try {
-            URI uri = URI.create(String.format("%s/server-configs/%s?os=%s&arch=%s", this.baseUrl, patchline, os, arch));
+            StringBuilder queryBuilder = new StringBuilder("?os=").append(encode(os)).append("&arch=").append(encode(arch));
+            if (version != null && !version.isEmpty()) {
+               queryBuilder.append("&version=").append(encode(version));
+            }
+
+            URI uri = URI.create(String.format("%s/server-configs/%s%s", this.baseUrl, patchline, queryBuilder));
             String bearerToken = sessionToken != null && !sessionToken.isEmpty() ? sessionToken : "dev-test-token";
             Builder requestBuilder = HttpRequest.newBuilder()
                .uri(uri)
@@ -121,6 +130,11 @@ public class LiveConfigService {
       } else {
          return null;
       }
+   }
+
+   @Nonnull
+   private static String encode(@Nonnull String s) {
+      return URLEncoder.encode(s, StandardCharsets.UTF_8);
    }
 
    @Nonnull

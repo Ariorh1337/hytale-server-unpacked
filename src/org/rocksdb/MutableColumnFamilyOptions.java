@@ -38,8 +38,8 @@ public class MutableColumnFamilyOptions extends AbstractMutableOptions {
 
       private final MutableOptionKey.ValueType valueType;
 
-      BlobOption(MutableOptionKey.ValueType var3) {
-         this.valueType = var3;
+      BlobOption(final MutableOptionKey.ValueType nullxx) {
+         this.valueType = nullxx;
       }
 
       @Override
@@ -62,12 +62,13 @@ public class MutableColumnFamilyOptions extends AbstractMutableOptions {
       max_bytes_for_level_multiplier(MutableOptionKey.ValueType.INT),
       max_bytes_for_level_multiplier_additional(MutableOptionKey.ValueType.INT_ARRAY),
       ttl(MutableOptionKey.ValueType.LONG),
-      periodic_compaction_seconds(MutableOptionKey.ValueType.LONG);
+      periodic_compaction_seconds(MutableOptionKey.ValueType.LONG),
+      read_triggered_compaction_threshold(MutableOptionKey.ValueType.DOUBLE);
 
       private final MutableOptionKey.ValueType valueType;
 
-      CompactionOption(MutableOptionKey.ValueType var3) {
-         this.valueType = var3;
+      CompactionOption(final MutableOptionKey.ValueType nullxx) {
+         this.valueType = nullxx;
       }
 
       @Override
@@ -91,12 +92,13 @@ public class MutableColumnFamilyOptions extends AbstractMutableOptions {
       filter_deletes(MutableOptionKey.ValueType.BOOLEAN),
       max_write_buffer_number(MutableOptionKey.ValueType.INT),
       inplace_update_num_locks(MutableOptionKey.ValueType.LONG),
-      experimental_mempurge_threshold(MutableOptionKey.ValueType.DOUBLE);
+      experimental_mempurge_threshold(MutableOptionKey.ValueType.DOUBLE),
+      min_tombstones_for_range_conversion(MutableOptionKey.ValueType.INT);
 
       private final MutableOptionKey.ValueType valueType;
 
-      MemtableOption(MutableOptionKey.ValueType var3) {
-         this.valueType = var3;
+      MemtableOption(final MutableOptionKey.ValueType nullxx) {
+         this.valueType = nullxx;
       }
 
       @Override
@@ -113,8 +115,8 @@ public class MutableColumnFamilyOptions extends AbstractMutableOptions {
 
       private final MutableOptionKey.ValueType valueType;
 
-      MiscOption(MutableOptionKey.ValueType var3) {
-         this.valueType = var3;
+      MiscOption(final MutableOptionKey.ValueType nullxx) {
+         this.valueType = nullxx;
       }
 
       @Override
@@ -226,6 +228,15 @@ public class MutableColumnFamilyOptions extends AbstractMutableOptions {
       @Override
       public double experimentalMempurgeThreshold() {
          return this.getDouble(MutableColumnFamilyOptions.MemtableOption.experimental_mempurge_threshold);
+      }
+
+      public MutableColumnFamilyOptions.MutableColumnFamilyOptionsBuilder setMinTombstonesForRangeConversion(int var1) {
+         return this.setInt(MutableColumnFamilyOptions.MemtableOption.min_tombstones_for_range_conversion, var1);
+      }
+
+      @Override
+      public int minTombstonesForRangeConversion() {
+         return this.getInt(MutableColumnFamilyOptions.MemtableOption.min_tombstones_for_range_conversion);
       }
 
       public MutableColumnFamilyOptions.MutableColumnFamilyOptionsBuilder setDisableAutoCompactions(boolean var1) {
@@ -451,6 +462,15 @@ public class MutableColumnFamilyOptions extends AbstractMutableOptions {
       @Override
       public double blobGarbageCollectionForceThreshold() {
          return this.getDouble(MutableColumnFamilyOptions.BlobOption.blob_garbage_collection_force_threshold);
+      }
+
+      public MutableColumnFamilyOptions.MutableColumnFamilyOptionsBuilder setReadTriggeredCompactionThreshold(double var1) {
+         return this.setDouble(MutableColumnFamilyOptions.CompactionOption.read_triggered_compaction_threshold, var1);
+      }
+
+      @Override
+      public double readTriggeredCompactionThreshold() {
+         return this.getDouble(MutableColumnFamilyOptions.CompactionOption.read_triggered_compaction_threshold);
       }
 
       public MutableColumnFamilyOptions.MutableColumnFamilyOptionsBuilder setBlobCompactionReadaheadSize(long var1) {

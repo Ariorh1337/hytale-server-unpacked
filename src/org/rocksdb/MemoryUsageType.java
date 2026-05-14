@@ -23,7 +23,7 @@ public enum MemoryUsageType {
       throw new IllegalArgumentException("Illegal value provided for MemoryUsageType.");
    }
 
-   MemoryUsageType(byte var3) {
-      this.value_ = var3;
+   MemoryUsageType(final byte nullxx) {
+      this.value_ = nullxx;
    }
 }

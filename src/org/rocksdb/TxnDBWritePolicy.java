@@ -7,8 +7,8 @@ public enum TxnDBWritePolicy {
 
    private final byte value;
 
-   TxnDBWritePolicy(byte var3) {
-      this.value = var3;
+   TxnDBWritePolicy(final byte nullxx) {
+      this.value = nullxx;
    }
 
    public byte getValue() {

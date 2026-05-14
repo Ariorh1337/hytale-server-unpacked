@@ -7,8 +7,8 @@ public enum ReusedSynchronisationType {
 
    private final byte value;
 
-   ReusedSynchronisationType(byte var3) {
-      this.value = var3;
+   ReusedSynchronisationType(final byte nullxx) {
+      this.value = nullxx;
    }
 
    public byte getValue() {

@@ -17,6 +17,7 @@ public class BlockMask {
    public static final String MASK_SEPARATOR = ",";
    public static final String ALT_MASK_SEPARATOR = ";";
    public static final String EMPTY_MASK_CHARACTER = "-";
+   public static final String OR_MASK_SEPARATOR = "|";
    private final BlockFilter[] filters;
    private boolean inverted;
 

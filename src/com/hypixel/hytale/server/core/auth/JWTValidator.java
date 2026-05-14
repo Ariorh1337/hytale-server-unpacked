@@ -97,7 +97,6 @@ public class JWTValidator {
          claims.audience = claimsSet.getAudience() != null && !claimsSet.getAudience().isEmpty() ? claimsSet.getAudience().get(0) : null;
          claims.subject = claimsSet.getSubject();
          claims.username = claimsSet.getStringClaim("username");
-         claims.ipAddress = claimsSet.getStringClaim("ip");
          claims.issuedAt = claimsSet.getIssueTime() != null ? claimsSet.getIssueTime().toInstant().getEpochSecond() : null;
          claims.expiresAt = claimsSet.getExpirationTime() != null ? claimsSet.getExpirationTime().toInstant().getEpochSecond() : null;
          claims.notBefore = claimsSet.getNotBeforeTime() != null ? claimsSet.getNotBeforeTime().toInstant().getEpochSecond() : null;
@@ -550,7 +549,6 @@ public class JWTValidator {
       public String audience;
       public String subject;
       public String username;
-      public String ipAddress;
       public Long issuedAt;
       public Long expiresAt;
       public Long notBefore;

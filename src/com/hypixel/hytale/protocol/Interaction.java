@@ -78,6 +78,7 @@ public abstract class Interaction {
          case 42 -> SpawnDeployableFromRaycastInteraction.deserialize(buf, offset + typeIdLen);
          case 43 -> MemoriesConditionInteraction.deserialize(buf, offset + typeIdLen);
          case 44 -> ToggleGliderInteraction.deserialize(buf, offset + typeIdLen);
+         case 45 -> DurabilityConditionInteraction.deserialize(buf, offset + typeIdLen);
       };
    }
 
@@ -135,6 +136,7 @@ public abstract class Interaction {
          case 42 -> SpawnDeployableFromRaycastInteraction.toObject(mem, offset + typeIdLen);
          case 43 -> MemoriesConditionInteraction.toObject(mem, offset + typeIdLen);
          case 44 -> ToggleGliderInteraction.toObject(mem, offset + typeIdLen);
+         case 45 -> DurabilityConditionInteraction.toObject(mem, offset + typeIdLen);
       };
    }
 
@@ -188,6 +190,7 @@ public abstract class Interaction {
          case 42 -> SpawnDeployableFromRaycastInteraction.computeBytesConsumed(buf, offset + typeIdLen);
          case 43 -> MemoriesConditionInteraction.computeBytesConsumed(buf, offset + typeIdLen);
          case 44 -> ToggleGliderInteraction.computeBytesConsumed(buf, offset + typeIdLen);
+         case 45 -> DurabilityConditionInteraction.computeBytesConsumed(buf, offset + typeIdLen);
       };
    }
 
@@ -260,6 +263,8 @@ public abstract class Interaction {
          return 42;
       } else if (this instanceof ToggleGliderInteraction sub) {
          return 44;
+      } else if (this instanceof DurabilityConditionInteraction sub) {
+         return 45;
       } else if (this instanceof SimpleInteraction sub) {
          return 1;
       } else if (this instanceof ChargingInteraction sub) {
@@ -357,6 +362,7 @@ public abstract class Interaction {
          case 42 -> SpawnDeployableFromRaycastInteraction.validateStructure(buffer, offset + typeIdLen);
          case 43 -> MemoriesConditionInteraction.validateStructure(buffer, offset + typeIdLen);
          case 44 -> ToggleGliderInteraction.validateStructure(buffer, offset + typeIdLen);
+         case 45 -> DurabilityConditionInteraction.validateStructure(buffer, offset + typeIdLen);
       };
    }
 }

@@ -765,6 +765,16 @@ public class ColumnFamilyOptions
       return memtableMaxRangeDeletions(this.nativeHandle_);
    }
 
+   public ColumnFamilyOptions setMinTombstonesForRangeConversion(int var1) {
+      setMinTombstonesForRangeConversion(this.nativeHandle_, var1);
+      return this;
+   }
+
+   @Override
+   public int minTombstonesForRangeConversion() {
+      return minTombstonesForRangeConversion(this.nativeHandle_);
+   }
+
    public ColumnFamilyOptions setEnableBlobFiles(boolean var1) {
       setEnableBlobFiles(this.nativeHandle_, var1);
       return this;
@@ -833,6 +843,16 @@ public class ColumnFamilyOptions
    @Override
    public double blobGarbageCollectionForceThreshold() {
       return blobGarbageCollectionForceThreshold(this.nativeHandle_);
+   }
+
+   public ColumnFamilyOptions setReadTriggeredCompactionThreshold(double var1) {
+      setReadTriggeredCompactionThreshold(this.nativeHandle_, var1);
+      return this;
+   }
+
+   @Override
+   public double readTriggeredCompactionThreshold() {
+      return readTriggeredCompactionThreshold(this.nativeHandle_);
    }
 
    public ColumnFamilyOptions setBlobCompactionReadaheadSize(long var1) {
@@ -1113,6 +1133,10 @@ public class ColumnFamilyOptions
 
    private static native int memtableMaxRangeDeletions(long var0);
 
+   private static native void setMinTombstonesForRangeConversion(long var0, int var2);
+
+   private static native int minTombstonesForRangeConversion(long var0);
+
    private static native void setEnableBlobFiles(long var0, boolean var2);
 
    private static native boolean enableBlobFiles(long var0);
@@ -1140,6 +1164,10 @@ public class ColumnFamilyOptions
    private static native void setBlobGarbageCollectionForceThreshold(long var0, double var2);
 
    private static native double blobGarbageCollectionForceThreshold(long var0);
+
+   private static native void setReadTriggeredCompactionThreshold(long var0, double var2);
+
+   private static native double readTriggeredCompactionThreshold(long var0);
 
    private static native void setBlobCompactionReadaheadSize(long var0, long var2);
 

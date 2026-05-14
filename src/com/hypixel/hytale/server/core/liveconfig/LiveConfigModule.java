@@ -104,7 +104,8 @@ public class LiveConfigModule extends JavaPlugin {
 
       try {
          String currentEtag = this.snapshot.getEtag();
-         LiveConfigSnapshot newSnapshot = this.liveConfigService.fetchServerConfigs(this.patchline, this.os, this.arch, currentEtag);
+         LiveConfigSnapshot newSnapshot = this.liveConfigService
+            .fetchServerConfigs(this.patchline, this.os, this.arch, ManifestUtil.getImplementationVersion(), currentEtag);
          if (newSnapshot != null) {
             String previousVersion = this.snapshot.getVersion();
             this.snapshot = newSnapshot;

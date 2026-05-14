@@ -7,8 +7,8 @@ public enum StatsLevel {
 
    private final byte value;
 
-   StatsLevel(byte var3) {
-      this.value = var3;
+   StatsLevel(final byte nullxx) {
+      this.value = nullxx;
    }
 
    public byte getValue() {

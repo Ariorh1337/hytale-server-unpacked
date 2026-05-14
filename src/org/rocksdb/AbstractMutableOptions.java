@@ -232,7 +232,7 @@ public class AbstractMutableOptions {
 
                this.fromOptionString(var4, var2);
             } catch (NumberFormatException var6) {
-               throw new IllegalArgumentException("" + var4.key + "=" + var4.value + " - not a valid value for its type", var6);
+               throw new IllegalArgumentException(var4.key + "=" + var4.value + " - not a valid value for its type", var6);
             }
          }
 
@@ -249,7 +249,7 @@ public class AbstractMutableOptions {
          }
 
          if (var3 == null) {
-            throw new IllegalArgumentException("Key: " + null + " is not a known option key");
+            throw new IllegalArgumentException("Key: null is not a known option key" + "");
          }
 
          if (!var1.value.isList()) {

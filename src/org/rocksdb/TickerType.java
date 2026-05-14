@@ -131,7 +131,9 @@ public enum TickerType {
    BLOB_DB_NUM_KEYS_READ((byte)127),
    BLOB_DB_BYTES_WRITTEN((byte)-1),
    BLOB_DB_BYTES_READ((byte)-2),
+   @Deprecated
    BLOB_DB_WRITE_INLINED((byte)-3),
+   @Deprecated
    BLOB_DB_WRITE_INLINED_TTL((byte)-4),
    BLOB_DB_WRITE_BLOB((byte)-5),
    BLOB_DB_WRITE_BLOB_TTL((byte)-6),
@@ -179,10 +181,14 @@ public enum TickerType {
    REMOTE_COMPACT_WRITE_BYTES((byte)-48),
    HOT_FILE_READ_BYTES((byte)-49),
    WARM_FILE_READ_BYTES((byte)-50),
+   COOL_FILE_READ_BYTES((byte)-91),
    COLD_FILE_READ_BYTES((byte)-51),
+   ICE_FILE_READ_BYTES((byte)-89),
    HOT_FILE_READ_COUNT((byte)-52),
    WARM_FILE_READ_COUNT((byte)-53),
+   COOL_FILE_READ_COUNT((byte)-92),
    COLD_FILE_READ_COUNT((byte)-54),
+   ICE_FILE_READ_COUNT((byte)-90),
    LAST_LEVEL_READ_BYTES((byte)-55),
    LAST_LEVEL_READ_COUNT((byte)-56),
    NON_LAST_LEVEL_READ_BYTES((byte)-57),
@@ -209,18 +215,33 @@ public enum TickerType {
    READAHEAD_TRIMMED((byte)-78),
    FIFO_MAX_SIZE_COMPACTIONS((byte)-79),
    FIFO_TTL_COMPACTIONS((byte)-80),
+   FIFO_CHANGE_TEMPERATURE_COMPACTIONS((byte)-88),
    PREFETCH_BYTES((byte)-81),
    PREFETCH_BYTES_USEFUL((byte)-82),
    PREFETCH_HITS((byte)-83),
    SST_FOOTER_CORRUPTION_COUNT((byte)-85),
    FILE_READ_CORRUPTION_RETRY_COUNT((byte)-86),
    FILE_READ_CORRUPTION_RETRY_SUCCESS_COUNT((byte)-87),
+   NUMBER_WBWI_INGEST((byte)-93),
+   SST_USER_DEFINED_INDEX_LOAD_FAIL_COUNT((byte)-94),
+   REMOTE_COMPACT_RESUMED_BYTES((byte)-95),
+   MULTISCAN_PREPARE_CALLS((byte)-96),
+   MULTISCAN_PREPARE_ERRORS((byte)-97),
+   MULTISCAN_BLOCKS_PREFETCHED((byte)-98),
+   MULTISCAN_BLOCKS_FROM_CACHE((byte)-99),
+   MULTISCAN_PREFETCH_BYTES((byte)-100),
+   MULTISCAN_PREFETCH_BLOCKS_WASTED((byte)-101),
+   MULTISCAN_IO_REQUESTS((byte)-102),
+   MULTISCAN_IO_COALESCED_NONADJACENT((byte)-103),
+   MULTISCAN_SEEK_ERRORS((byte)-104),
+   READ_PATH_RANGE_TOMBSTONES_INSERTED((byte)-105),
+   READ_PATH_RANGE_TOMBSTONES_DISCARDED((byte)-106),
    TICKER_ENUM_MAX((byte)-84);
 
    private final byte value;
 
-   TickerType(byte var3) {
-      this.value = var3;
+   TickerType(final byte nullxx) {
+      this.value = nullxx;
    }
 
    public byte getValue() {

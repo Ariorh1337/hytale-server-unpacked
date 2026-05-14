@@ -15,8 +15,8 @@ public enum OperationStage {
 
    private final byte value;
 
-   OperationStage(byte var3) {
-      this.value = var3;
+   OperationStage(final byte nullxx) {
+      this.value = nullxx;
    }
 
    byte getValue() {

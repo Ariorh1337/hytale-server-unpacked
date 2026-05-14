@@ -15,7 +15,7 @@ public enum FilterPolicyType {
       return this.value_;
    }
 
-   FilterPolicyType(byte var3) {
-      this.value_ = var3;
+   FilterPolicyType(byte nullxx) {
+      this.value_ = nullxx;
    }
 }

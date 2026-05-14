@@ -28,6 +28,7 @@ public abstract class ActiveSlotInventoryComponent extends InventoryComponent {
 
    protected ActiveSlotInventoryComponent(short capacity) {
       super(capacity);
+      this.clampActiveSlot();
    }
 
    public abstract int getSectionId();

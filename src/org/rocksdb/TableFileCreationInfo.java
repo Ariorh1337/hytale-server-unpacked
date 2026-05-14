@@ -45,6 +45,6 @@ public class TableFileCreationInfo extends TableFileCreationBriefInfo {
 
    @Override
    public String toString() {
-      return "TableFileCreationInfo{fileSize=" + this.fileSize + ", tableProperties=" + this.tableProperties + ", status=" + this.status + '}';
+      return "TableFileCreationInfo{fileSize=" + this.fileSize + ", tableProperties=" + this.tableProperties + ", status=" + this.status + "}";
    }
 }

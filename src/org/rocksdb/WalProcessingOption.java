@@ -8,8 +8,8 @@ public enum WalProcessingOption {
 
    private final byte value;
 
-   WalProcessingOption(byte var3) {
-      this.value = var3;
+   WalProcessingOption(final byte nullxx) {
+      this.value = nullxx;
    }
 
    byte getValue() {

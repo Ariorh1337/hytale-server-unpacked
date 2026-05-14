@@ -64,6 +64,7 @@ import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.asset.type.soundevent.validator.SoundEventValidators;
 import com.hypixel.hytale.server.core.asset.util.ColorParseUtil;
 import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
+import com.hypixel.hytale.server.core.entity.ExplosionConfig;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.InteractionTypeUtils;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.RootInteraction;
@@ -778,6 +779,14 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
          new KeyedCodec<>("Rail", ProtocolCodecs.RAIL_CONFIG_CODEC), (o, v) -> o.railConfig = v, o -> o.railConfig, (o, p) -> o.railConfig = p.railConfig
       )
       .add()
+      .<ExplosionConfig>appendInherited(
+         new KeyedCodec<>("ExplosionConfig", ExplosionConfig.CODEC),
+         (blockType, s) -> blockType.explosionConfig = s,
+         blockType -> blockType.explosionConfig,
+         (blockType, parent) -> blockType.explosionConfig = parent.explosionConfig
+      )
+      .documentation("The explosion config associated with this block.")
+      .add()
       .afterDecode(BlockType::processConfig)
       .build();
    public static final String[] EMPTY_ALIAS_LIST = new String[0];
@@ -1007,6 +1016,8 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
    protected RailConfig railConfig;
    @Nullable
    protected RailConfig[] rotatedRailConfig;
+   @Nullable
+   protected ExplosionConfig explosionConfig;
    protected String[] aliases = EMPTY_ALIAS_LIST;
    @Nullable
    private transient String defaultStateKey;
@@ -1868,6 +1879,11 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
       } else {
          return this.railConfig;
       }
+   }
+
+   @Nullable
+   public ExplosionConfig getExplosionConfig() {
+      return this.explosionConfig;
    }
 
    @Deprecated

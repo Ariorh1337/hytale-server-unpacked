@@ -48,11 +48,10 @@ public class WriteStallInfo {
    public String toString() {
       return "WriteStallInfo{columnFamilyName='"
          + this.columnFamilyName
-         + '\''
-         + ", currentCondition="
+         + "', currentCondition="
          + this.currentCondition
          + ", previousCondition="
          + this.previousCondition
-         + '}';
+         + "}";
    }
 }

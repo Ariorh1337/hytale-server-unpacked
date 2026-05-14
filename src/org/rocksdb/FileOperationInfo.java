@@ -69,8 +69,7 @@ public class FileOperationInfo {
    public String toString() {
       return "FileOperationInfo{path='"
          + this.path
-         + '\''
-         + ", offset="
+         + "', offset="
          + this.offset
          + ", length="
          + this.length
@@ -80,6 +79,6 @@ public class FileOperationInfo {
          + this.duration
          + ", status="
          + this.status
-         + '}';
+         + "}";
    }
 }

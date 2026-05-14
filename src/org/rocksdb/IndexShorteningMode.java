@@ -7,8 +7,8 @@ public enum IndexShorteningMode {
 
    private final byte value;
 
-   IndexShorteningMode(byte var3) {
-      this.value = var3;
+   IndexShorteningMode(final byte nullxx) {
+      this.value = nullxx;
    }
 
    byte getValue() {

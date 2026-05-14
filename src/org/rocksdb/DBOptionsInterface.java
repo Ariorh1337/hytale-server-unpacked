@@ -28,6 +28,10 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
 
    boolean paranoidChecks();
 
+   T setOpenFilesAsync(boolean var1);
+
+   boolean openFilesAsync();
+
    T setRateLimiter(RateLimiter var1);
 
    T setSstFileManager(SstFileManager var1);
@@ -191,10 +195,6 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
    T setSkipStatsUpdateOnDbOpen(boolean var1);
 
    boolean skipStatsUpdateOnDbOpen();
-
-   T setSkipCheckingSstFileSizesOnDbOpen(boolean var1);
-
-   boolean skipCheckingSstFileSizesOnDbOpen();
 
    T setWalRecoveryMode(WALRecoveryMode var1);
 

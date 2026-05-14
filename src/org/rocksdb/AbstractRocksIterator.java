@@ -1,6 +1,5 @@
 package org.rocksdb;
 
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 
 public abstract class AbstractRocksIterator<P extends RocksObject> extends RocksObject implements RocksIteratorInterface {
@@ -51,7 +50,7 @@ public abstract class AbstractRocksIterator<P extends RocksObject> extends Rocks
          this.seekByteArray0(this.nativeHandle_, var1.array(), var1.arrayOffset() + var1.position(), var1.remaining());
       }
 
-      ((Buffer)var1).position(var1.limit());
+      var1.position(var1.limit());
    }
 
    @Override
@@ -63,7 +62,7 @@ public abstract class AbstractRocksIterator<P extends RocksObject> extends Rocks
          this.seekForPrevByteArray0(this.nativeHandle_, var1.array(), var1.arrayOffset() + var1.position(), var1.remaining());
       }
 
-      ((Buffer)var1).position(var1.limit());
+      var1.position(var1.limit());
    }
 
    @Override

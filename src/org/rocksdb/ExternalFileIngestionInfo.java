@@ -62,17 +62,14 @@ public class ExternalFileIngestionInfo {
    public String toString() {
       return "ExternalFileIngestionInfo{columnFamilyName='"
          + this.columnFamilyName
-         + '\''
-         + ", externalFilePath='"
+         + "', externalFilePath='"
          + this.externalFilePath
-         + '\''
-         + ", internalFilePath='"
+         + "', internalFilePath='"
          + this.internalFilePath
-         + '\''
-         + ", globalSeqno="
+         + "', globalSeqno="
          + this.globalSeqno
          + ", tableProperties="
          + this.tableProperties
-         + '}';
+         + "}";
    }
 }

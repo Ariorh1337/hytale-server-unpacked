@@ -64,7 +64,7 @@ public class RepairItemInteraction extends ChoiceInteraction {
                SimpleItemContainer.addOrDropItemStack(store, ref, heldItemContainer, heldItemSlot, heldItemStack.withQuantity(1));
                pageManager.setPage(ref, store, Page.None);
             } else {
-               Message newItemStackMessage = Message.translation(newItemStack.getItem().getTranslationKey());
+               Message newItemStackMessage = newItemStack.getItem().getTranslationMessage();
                playerRef.sendMessage(Message.translation("server.general.repair.successful").param("itemName", newItemStackMessage));
                pageManager.setPage(ref, store, Page.None);
                SoundUtil.playSoundEvent2d(ref, TempAssetIdUtil.getSoundEventIndex("SFX_Item_Repair"), SoundCategory.UI, store);

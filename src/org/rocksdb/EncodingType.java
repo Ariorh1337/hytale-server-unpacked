@@ -10,7 +10,7 @@ public enum EncodingType {
       return this.value_;
    }
 
-   EncodingType(byte var3) {
-      this.value_ = var3;
+   EncodingType(final byte nullxx) {
+      this.value_ = nullxx;
    }
 }

@@ -9,8 +9,8 @@ public enum CompactionPriority {
 
    private final byte value;
 
-   CompactionPriority(byte var3) {
-      this.value = var3;
+   CompactionPriority(final byte nullxx) {
+      this.value = nullxx;
    }
 
    public byte getValue() {

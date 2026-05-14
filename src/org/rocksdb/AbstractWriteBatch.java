@@ -1,6 +1,5 @@
 package org.rocksdb;
 
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 
 public abstract class AbstractWriteBatch extends RocksObject implements WriteBatchInterface {
@@ -37,16 +36,16 @@ public abstract class AbstractWriteBatch extends RocksObject implements WriteBat
    public void put(ByteBuffer var1, ByteBuffer var2) throws RocksDBException {
       assert var1.isDirect() && var2.isDirect();
       this.putDirect(this.nativeHandle_, var1, var1.position(), var1.remaining(), var2, var2.position(), var2.remaining(), 0L);
-      ((Buffer)var1).position(var1.limit());
-      ((Buffer)var2).position(var2.limit());
+      var1.position(var1.limit());
+      var2.position(var2.limit());
    }
 
    @Override
    public void put(ColumnFamilyHandle var1, ByteBuffer var2, ByteBuffer var3) throws RocksDBException {
       assert var2.isDirect() && var3.isDirect();
       this.putDirect(this.nativeHandle_, var2, var2.position(), var2.remaining(), var3, var3.position(), var3.remaining(), var1.nativeHandle_);
-      ((Buffer)var2).position(var2.limit());
-      ((Buffer)var3).position(var3.limit());
+      var2.position(var2.limit());
+      var3.position(var3.limit());
    }
 
    @Override
@@ -62,13 +61,13 @@ public abstract class AbstractWriteBatch extends RocksObject implements WriteBat
    @Override
    public void delete(ByteBuffer var1) throws RocksDBException {
       this.deleteDirect(this.nativeHandle_, var1, var1.position(), var1.remaining(), 0L);
-      ((Buffer)var1).position(var1.limit());
+      var1.position(var1.limit());
    }
 
    @Override
    public void delete(ColumnFamilyHandle var1, ByteBuffer var2) throws RocksDBException {
       this.deleteDirect(this.nativeHandle_, var2, var2.position(), var2.remaining(), var1.nativeHandle_);
-      ((Buffer)var2).position(var2.limit());
+      var2.position(var2.limit());
    }
 
    @Override

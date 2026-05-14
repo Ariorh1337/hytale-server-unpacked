@@ -15,7 +15,6 @@ import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.inventory.transaction.ItemStackSlotTransaction;
 import com.hypixel.hytale.server.core.modules.collision.WorldUtil;
-import com.hypixel.hytale.server.core.modules.entity.component.Invulnerable;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
@@ -51,13 +50,6 @@ public abstract class LivingEntity extends Entity {
    public LivingEntity(@Nonnull World world) {
       super(world);
       this.setInventory(new Inventory());
-   }
-
-   public boolean canBreathe(
-      @Nonnull Ref<EntityStore> ref, @Nonnull BlockMaterial breathingMaterial, int fluidId, @Nonnull ComponentAccessor<EntityStore> componentAccessor
-   ) {
-      boolean invulnerable = componentAccessor.getArchetype(ref).contains(Invulnerable.getComponentType());
-      return invulnerable || breathingMaterial == BlockMaterial.Empty && fluidId == 0;
    }
 
    public static long getPackedMaterialAndFluidAtBreathingHeight(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {

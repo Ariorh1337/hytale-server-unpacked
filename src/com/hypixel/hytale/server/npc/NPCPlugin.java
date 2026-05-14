@@ -112,8 +112,14 @@ import com.hypixel.hytale.server.npc.corecomponents.audiovisual.builders.Builder
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderWeightedAction;
 import com.hypixel.hytale.server.npc.corecomponents.combat.builders.BuilderActionApplyEntityEffect;
 import com.hypixel.hytale.server.npc.corecomponents.combat.builders.BuilderActionAttack;
+import com.hypixel.hytale.server.npc.corecomponents.combat.builders.BuilderActionBlockHitInteraction;
+import com.hypixel.hytale.server.npc.corecomponents.combat.builders.BuilderActionEntityHitInteraction;
 import com.hypixel.hytale.server.npc.corecomponents.combat.builders.BuilderBodyMotionAimCharge;
+import com.hypixel.hytale.server.npc.corecomponents.combat.builders.BuilderBodyMotionCharge;
 import com.hypixel.hytale.server.npc.corecomponents.combat.builders.BuilderHeadMotionAim;
+import com.hypixel.hytale.server.npc.corecomponents.combat.builders.BuilderSensorChargeBlockCollisions;
+import com.hypixel.hytale.server.npc.corecomponents.combat.builders.BuilderSensorChargeEntityCollisions;
+import com.hypixel.hytale.server.npc.corecomponents.combat.builders.BuilderSensorChargeState;
 import com.hypixel.hytale.server.npc.corecomponents.combat.builders.BuilderSensorDamage;
 import com.hypixel.hytale.server.npc.corecomponents.combat.builders.BuilderSensorIsBackingAway;
 import com.hypixel.hytale.server.npc.corecomponents.debug.builders.BuilderActionLog;
@@ -622,6 +628,7 @@ public class NPCPlugin extends JavaPlugin {
       entityStoreRegistry.registerSystem(new NPCSystems.KillFeedKillerEventSystem());
       entityStoreRegistry.registerSystem(new NPCSystems.KillFeedDecedentEventSystem());
       entityStoreRegistry.registerSystem(new NPCSystems.PrefabPlaceEntityEventSystem());
+      entityStoreRegistry.registerSystem(new NPCSystems.BreathingCheckEventSystem());
       entityStoreRegistry.registerSystem(new NPCVelocityInstructionSystem());
       entityStoreRegistry.registerSystem(new NPCPlugin.NPCEntityRegenerateStatsSystem());
    }
@@ -743,7 +750,8 @@ public class NPCPlugin extends JavaPlugin {
          .registerCoreComponentType("Land", BuilderBodyMotionLand::new)
          .registerCoreComponentType("MatchLook", BuilderBodyMotionMatchLook::new)
          .registerCoreComponentType("MaintainDistance", BuilderBodyMotionMaintainDistance::new)
-         .registerCoreComponentType("AimCharge", BuilderBodyMotionAimCharge::new);
+         .registerCoreComponentType("AimCharge", BuilderBodyMotionAimCharge::new)
+         .registerCoreComponentType("Charge", BuilderBodyMotionCharge::new);
       this.registerCoreComponentType("Aim", BuilderHeadMotionAim::new)
          .registerCoreComponentType("Watch", BuilderHeadMotionWatch::new)
          .registerCoreComponentType("Observe", BuilderHeadMotionObserve::new)
@@ -805,7 +813,9 @@ public class NPCPlugin extends JavaPlugin {
          .registerCoreComponentType("Remove", BuilderActionRemove::new)
          .registerCoreComponentType("ApplyEntityEffect", BuilderActionApplyEntityEffect::new)
          .registerCoreComponentType("ResetPath", BuilderActionResetPath::new)
-         .registerCoreComponentType("SetStat", BuilderActionSetStat::new);
+         .registerCoreComponentType("SetStat", BuilderActionSetStat::new)
+         .registerCoreComponentType("BlockHitInteraction", BuilderActionBlockHitInteraction::new)
+         .registerCoreComponentType("EntityHitInteraction", BuilderActionEntityHitInteraction::new);
       this.registerCoreComponentType("Any", BuilderSensorAny::new)
          .registerCoreComponentType("And", BuilderSensorAnd::new)
          .registerCoreComponentType("Or", BuilderSensorOr::new)
@@ -817,6 +827,9 @@ public class NPCPlugin extends JavaPlugin {
          .registerCoreComponentType("OnGround", BuilderSensorOnGround::new)
          .registerCoreComponentType("Eval", BuilderSensorEval::new)
          .registerCoreComponentType("Damage", BuilderSensorDamage::new)
+         .registerCoreComponentType("ChargeState", BuilderSensorChargeState::new)
+         .registerCoreComponentType("ChargeBlockCollisions", BuilderSensorChargeBlockCollisions::new)
+         .registerCoreComponentType("ChargeEntityCollisions", BuilderSensorChargeEntityCollisions::new)
          .registerCoreComponentType("IsBackingAway", BuilderSensorIsBackingAway::new)
          .registerCoreComponentType("Kill", BuilderSensorKill::new)
          .registerCoreComponentType("Beacon", BuilderSensorBeacon::new)

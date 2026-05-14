@@ -27,6 +27,7 @@ import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolAction;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolArgUpdate;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolEntityAction;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolExtrudeAction;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolGMaskPresetLoadResponse;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolGeneralAction;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolLineAction;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolOnUseInteraction;
@@ -83,6 +84,7 @@ import com.hypixel.hytale.server.core.modules.entity.hitboxcollision.HitboxColli
 import com.hypixel.hytale.server.core.modules.entity.item.ItemComponent;
 import com.hypixel.hytale.server.core.permissions.HytalePermissions;
 import com.hypixel.hytale.server.core.permissions.PermissionsModule;
+import com.hypixel.hytale.server.core.prefab.selection.mask.BlockMask;
 import com.hypixel.hytale.server.core.prefab.selection.mask.BlockPattern;
 import com.hypixel.hytale.server.core.prefab.selection.standard.BlockSelection;
 import com.hypixel.hytale.server.core.prefab.selection.standard.RotateBlockMode;
@@ -198,6 +200,7 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
             this.packetHandler, 404, this::handleBuilderToolStackArea, p -> hasPermission(p, HytalePermissions.EDITOR_SELECTION_CLIPBOARD)
          );
          IWorldPacketHandler.registerHandler(this.packetHandler, 412, this::handleBuilderToolGeneralAction);
+         IWorldPacketHandler.registerHandler(this.packetHandler, 431, this::handleGMaskPresetLoadResponse, BuilderToolsPacketHandler::hasPermission);
       }
    }
 
@@ -1261,6 +1264,30 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
                });
             }
          }
+      }
+   }
+
+   public void handleGMaskPresetLoadResponse(
+      @Nonnull BuilderToolGMaskPresetLoadResponse packet,
+      @Nonnull PlayerRef playerRef,
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull World world,
+      @Nonnull Store<EntityStore> store
+   ) {
+      Player playerComponent = store.getComponent(ref, Player.getComponentType());
+      if (playerComponent != null) {
+         BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> {
+            if (packet.maskData != null && !packet.maskData.isEmpty()) {
+               try {
+                  BlockMask mask = BlockMask.parse(packet.maskData);
+                  s.setGlobalMask(mask, componentAccessor);
+               } catch (Exception e) {
+                  playerRef.sendMessage(Message.translation("server.builderTools.globalmask.load.failed").param("reason", e.getMessage()));
+               }
+            } else {
+               playerRef.sendMessage(Message.translation("server.builderTools.globalmask.load.empty"));
+            }
+         });
       }
    }
 }

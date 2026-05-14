@@ -108,10 +108,6 @@ public class PrefabCommand extends AbstractCommandCollection {
 
    private static class PrefabListCommand extends CommandBase {
       @Nonnull
-      private final DefaultArg<String> storeTypeArg = this.withDefaultArg(
-         "storeType", "server.commands.prefab.list.storeType.desc", ArgTypes.STRING, "asset", "server.commands.prefab.list.storeType.desc"
-      );
-      @Nonnull
       private final FlagArg textFlag = this.withFlagArg("text", "server.commands.prefab.list.text.desc");
 
       public PrefabListCommand() {
@@ -120,60 +116,31 @@ public class PrefabCommand extends AbstractCommandCollection {
 
       @Override
       protected void executeSync(@Nonnull CommandContext context) {
-         String storeType = this.storeTypeArg.get(context);
-
-         Path prefabStorePath = switch (storeType) {
-            case "server" -> PrefabStore.get().getServerPrefabsPath();
-            case "asset" -> {
-               List<PrefabStore.AssetPackPrefabPath> assetPaths = PrefabStore.get().getAllAssetPrefabPaths();
-               yield assetPaths.isEmpty() ? PrefabStore.get().getAssetPrefabsPath() : assetPaths.getFirst().prefabsPath();
-            }
-            case "worldgen" -> PrefabStore.get().getWorldGenPrefabsPath();
-            default -> throw new IllegalStateException("Unexpected value: " + storeType);
-         };
          Ref<EntityStore> ref = context.senderAsPlayerRef();
          if (ref != null && ref.isValid() && !this.textFlag.get(context)) {
             Store<EntityStore> store = ref.getStore();
             World world = store.getExternalData().getWorld();
-            Path finalPrefabStorePath = prefabStorePath;
             world.execute(() -> {
                Player playerComponent = store.getComponent(ref, Player.getComponentType());
                assert playerComponent != null;
                PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
                assert playerRefComponent != null;
                BuilderToolsPlugin.BuilderState builderState = BuilderToolsPlugin.getState(playerComponent, playerRefComponent);
-               playerComponent.getPageManager().openCustomPage(ref, store, new PrefabPage(playerRefComponent, finalPrefabStorePath, builderState));
+               playerComponent.getPageManager().openCustomPage(ref, store, new PrefabPage(playerRefComponent, builderState));
             });
          } else {
             try {
                final List<Message> prefabFiles = new ObjectArrayList<>();
-               if ("asset".equals(storeType)) {
-                  for (PrefabStore.AssetPackPrefabPath packPath : PrefabStore.get().getAllAssetPrefabPaths()) {
-                     final Path path = packPath.prefabsPath();
-                     final String packPrefix = packPath.isBasePack() ? "" : "[" + packPath.getPackName() + "] ";
-                     if (Files.isDirectory(path)) {
-                        Files.walkFileTree(path, FileUtil.DEFAULT_WALK_TREE_OPTIONS_SET, Integer.MAX_VALUE, new SimpleFileVisitor<Path>() {
-                           @Nonnull
-                           public FileVisitResult visitFile(@Nonnull Path file, @Nonnull BasicFileAttributes attrs) {
-                              String fileName = file.getFileName().toString();
-                              if (fileName.endsWith(".prefab.json")) {
-                                 prefabFiles.add(Message.raw(packPrefix + PathUtil.relativize(path, file).toString()));
-                              }
 
-                              return FileVisitResult.CONTINUE;
-                           }
-                        });
-                     }
-                  }
-               } else {
-                  final Path path = prefabStorePath;
+               for (PrefabStore.AssetPackPrefabPath packPath : PrefabStore.get().getAllBrowsablePrefabPaths()) {
+                  final Path path = packPath.prefabsPath();
+                  final String packPrefix = "[" + packPath.getDisplayName() + "] ";
                   if (Files.isDirectory(path)) {
                      Files.walkFileTree(path, FileUtil.DEFAULT_WALK_TREE_OPTIONS_SET, Integer.MAX_VALUE, new SimpleFileVisitor<Path>() {
                         @Nonnull
                         public FileVisitResult visitFile(@Nonnull Path file, @Nonnull BasicFileAttributes attrs) {
-                           String fileName = file.getFileName().toString();
-                           if (fileName.endsWith(".prefab.json")) {
-                              prefabFiles.add(Message.raw(PathUtil.relativize(path, file).toString()));
+                           if (file.getFileName().toString().endsWith(".prefab.json")) {
+                              prefabFiles.add(Message.raw(packPrefix + PathUtil.relativize(path, file)));
                            }
 
                            return FileVisitResult.CONTINUE;
@@ -283,10 +250,8 @@ public class PrefabCommand extends AbstractCommandCollection {
       ) {
          Player playerComponent = store.getComponent(ref, Player.getComponentType());
          assert playerComponent != null;
-         List<PrefabStore.AssetPackPrefabPath> assetPaths = PrefabStore.get().getAllAssetPrefabPaths();
-         Path defaultRoot = assetPaths.isEmpty() ? PrefabStore.get().getServerPrefabsPath() : assetPaths.getFirst().prefabsPath();
          BuilderToolsPlugin.BuilderState builderState = BuilderToolsPlugin.getState(playerComponent, playerRef);
-         playerComponent.getPageManager().openCustomPage(ref, store, new PrefabPage(playerRef, defaultRoot, builderState));
+         playerComponent.getPageManager().openCustomPage(ref, store, new PrefabPage(playerRef, builderState));
       }
    }
 

@@ -19,6 +19,9 @@ import com.hypixel.hytale.server.core.asset.type.model.config.camera.CameraSetti
 import com.hypixel.hytale.server.core.entity.InteractionManager;
 import com.hypixel.hytale.server.core.entity.entities.player.movement.MovementManager;
 import com.hypixel.hytale.server.core.modules.collision.BlockCollisionData;
+import com.hypixel.hytale.server.core.modules.collision.CharacterCollisionData;
+import com.hypixel.hytale.server.core.modules.collision.CollisionConfig;
+import com.hypixel.hytale.server.core.modules.collision.CollisionDataArray;
 import com.hypixel.hytale.server.core.modules.collision.CollisionModule;
 import com.hypixel.hytale.server.core.modules.collision.CollisionModuleConfig;
 import com.hypixel.hytale.server.core.modules.collision.CollisionResult;
@@ -55,6 +58,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.BiPredicate;
+import java.util.function.Predicate;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -66,6 +70,8 @@ public abstract class MotionControllerBase implements MotionController {
    public static final double BISECT_DIST = 0.05;
    public static final double FILTER_COEFFICIENT = 0.7;
    public static final double DOT_PRODUCT_EPSILON = 0.1;
+   private static final double RAIL_GRAZING_EPSILON = 1.0E-6;
+   private static final double RAIL_GRAZING_RATIO = 0.05;
    public static final double DEFAULT_BLOCK_DRAG = 0.82;
    protected static final HytaleLogger LOGGER = NPCPlugin.get().getLogger();
    public static final boolean DEBUG_APPLIED_FORCES = false;
@@ -109,6 +115,7 @@ public abstract class MotionControllerBase implements MotionController {
    protected double throttleDuration;
    protected double targetDeltaSquared;
    protected boolean recomputePath;
+   private boolean railStepAppliedThisTick;
    protected final Vector3dc worldNormal = Vector3dUtil.UP;
    protected final Vector3dc worldAntiNormal = Vector3dUtil.DOWN;
    protected final Vector3d componentSelector = new Vector3d(1.0, 0.0, 1.0);
@@ -395,31 +402,35 @@ public abstract class MotionControllerBase implements MotionController {
       double interval,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
-      this.readEntityPosition(ref, componentAccessor);
-      if (this.debugModeSteer) {
-         double dx = this.position.x;
-         double dz = this.position.z;
-         double st = this.steer0(ref, role, bodySteering, headSteering, interval, componentAccessor);
-         double t = interval - st;
-         dx = this.position.x - dx;
-         dz = this.position.z - dz;
-         double l = Math.sqrt(dx * dx + dz * dz);
-         double v = t > 0.0 ? l / t : 0.0;
-         LOGGER.at(Level.INFO)
-            .log(
-               "==  Steer %s  = t =%.4f dt=%.4f h =%.4f l =%.4f v =%.4f obstr=%s motion=%s",
-               this.getType(),
-               interval,
-               t,
-               (180.0F / (float)Math.PI) * this.yaw,
-               l,
-               v,
-               this.isObstructed ? "yes" : "no",
-               role.getSteeringMotionName()
-            );
-         return st;
+      if (this.railStepAppliedThisTick) {
+         return interval;
       } else {
-         return this.steer0(ref, role, bodySteering, headSteering, interval, componentAccessor);
+         this.readEntityPosition(ref, componentAccessor);
+         if (this.debugModeSteer) {
+            double dx = this.position.x;
+            double dz = this.position.z;
+            double st = this.steer0(ref, role, bodySteering, headSteering, interval, componentAccessor);
+            double t = interval - st;
+            dx = this.position.x - dx;
+            dz = this.position.z - dz;
+            double l = Math.sqrt(dx * dx + dz * dz);
+            double v = t > 0.0 ? l / t : 0.0;
+            LOGGER.at(Level.INFO)
+               .log(
+                  "==  Steer %s  = t =%.4f dt=%.4f h =%.4f l =%.4f v =%.4f obstr=%s motion=%s",
+                  this.getType(),
+                  interval,
+                  t,
+                  (180.0F / (float)Math.PI) * this.yaw,
+                  l,
+                  v,
+                  this.isObstructed ? "yes" : "no",
+                  role.getSteeringMotionName()
+               );
+            return st;
+         } else {
+            return this.steer0(ref, role, bodySteering, headSteering, interval, componentAccessor);
+         }
       }
    }
 
@@ -550,7 +561,12 @@ public abstract class MotionControllerBase implements MotionController {
          }
       }
 
-      this.appliedVelocities.removeIf(v -> v.velocity.lengthSquared() < 0.001);
+      for (int i = this.appliedVelocities.size() - 1; i >= 0; i--) {
+         if (this.appliedVelocities.get(i).velocity.lengthSquared() < 0.001) {
+            this.appliedVelocities.remove(i);
+         }
+      }
+
       return interval;
    }
 
@@ -751,13 +767,140 @@ public abstract class MotionControllerBase implements MotionController {
    @Override
    public double probeMove(
       @Nonnull Ref<EntityStore> ref,
-      @Nonnull Vector3d position,
-      @Nonnull Vector3d direction,
+      @Nonnull Vector3dc position,
+      @Nonnull Vector3dc direction,
       @Nonnull ProbeMoveData probeMoveData,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       probeMoveData.setPosition(position).setDirection(direction);
       return this.probeMove(ref, probeMoveData, componentAccessor);
+   }
+
+   @Override
+   public void applyRailStep(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull Role role,
+      @Nonnull Vector3dc translation,
+      @Nonnull RailStepConfig config,
+      @Nonnull RailStepResult result,
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
+      this.readEntityPosition(ref, componentAccessor);
+      result.reset();
+      this.translation.set(translation);
+      if (this.translation.lengthSquared() == 0.0) {
+         result.appliedFraction = 0.0;
+      } else {
+         this.setMotionKind(MotionKind.MOVING);
+         this.railStepAppliedThisTick = true;
+         Predicate<CollisionConfig> prevFilter = this.collisionResult.setBlockCollisionFilter(config.ignoredBlockFilter);
+         boolean prevCharEnabled = this.collisionResult.isCheckingForCharacterCollisions();
+         boolean prevRecord = this.collisionResult.isRecordingPassThrough();
+         List<Ref<EntityStore>> prevEntities = this.collisionResult.getCollisionEntities();
+         if (config.candidateEntities != null) {
+            this.collisionResult.setCollisionEntities(config.candidateEntities);
+            this.collisionResult.enableCharacterCollsions();
+         } else {
+            this.collisionResult.disableCharacterCollisions();
+         }
+
+         this.collisionResult.setRecordPassThrough(config.ignoredBlockFilter != null);
+
+         try {
+            CollisionModule.findCollisions(this.collisionBoundingBox, this.position, this.translation, false, this.collisionResult, componentAccessor);
+            boolean isSliding = this.collisionResult.isSliding;
+            double slideEnd = this.collisionResult.slideEnd;
+            Vector3dc worldNormal = this.getWorldNormal();
+            double stopT = 1.0;
+            int blockCollisionCount = this.collisionResult.getBlockCollisionCount();
+            double grazingThreshold = Math.max(1.0E-6, 0.05 * this.translation.length());
+
+            for (int i = 0; i < blockCollisionCount; i++) {
+               BlockCollisionData hit = this.collisionResult.getBlockCollision(i);
+               boolean inSlideWindow = isSliding && hit.collisionStart <= slideEnd && hit.collisionNormal.equals(worldNormal);
+               if (!inSlideWindow) {
+                  double dotApproach = this.translation.dot(hit.collisionNormal);
+                  if (!(dotApproach >= -grazingThreshold)) {
+                     double clampedStart = Math.max(0.0, hit.collisionStart);
+                     if (clampedStart < 0.999999) {
+                        stopT = clampedStart;
+                        this.isObstructed = true;
+                        result.obstructed = true;
+                     }
+                     break;
+                  }
+               }
+            }
+
+            if (config.stopOnEntityHit && this.collisionResult.getCharacterCollisionCount() > 0) {
+               CharacterCollisionData firstChar = this.collisionResult.getFirstCharacterCollision();
+               if (firstChar != null) {
+                  double t = firstChar.collisionStart;
+                  if (t < stopT) {
+                     stopT = Math.max(0.0, t);
+                     result.obstructed = true;
+                  }
+               }
+            }
+
+            int passThroughCount = this.collisionResult.getPassThroughCount();
+
+            for (int i = 0; i < passThroughCount; i++) {
+               BlockCollisionData passThroughBlock = this.collisionResult.getPassThrough(i);
+               if (passThroughBlock.collisionStart > stopT) {
+                  break;
+               }
+
+               result.nextPassThrough()
+                  .assign(
+                     passThroughBlock.x,
+                     passThroughBlock.y,
+                     passThroughBlock.z,
+                     passThroughBlock.blockId,
+                     passThroughBlock.collisionPoint,
+                     passThroughBlock.collisionNormal,
+                     passThroughBlock.collisionStart
+                  );
+            }
+
+            int characterCollisionCount = this.collisionResult.getCharacterCollisionCount();
+
+            for (int i = 0; i < characterCollisionCount; i++) {
+               CharacterCollisionData characterCollision = this.collisionResult.getCharacterCollision(i);
+               if (characterCollision.collisionStart > stopT) {
+                  break;
+               }
+
+               result.nextEntityHit()
+                  .assign(
+                     characterCollision.entityReference,
+                     characterCollision.isPlayer,
+                     characterCollision.sourcePosition,
+                     characterCollision.targetPosition,
+                     characterCollision.collisionStart
+                  );
+            }
+
+            result.appliedFraction = stopT;
+            this.position.fma(stopT, this.translation);
+            if (config.ignoredBlockFilter != null && !config.ignoredBlocksFireTriggers) {
+               pruneFilteredTriggerBlocks(this.collisionResult);
+            }
+
+            this.processTriggers(ref, this.collisionResult, stopT, componentAccessor);
+            this.moveEntity(ref, 0.0, componentAccessor);
+         } finally {
+            this.collisionResult.setBlockCollisionFilter(prevFilter);
+            if (prevCharEnabled) {
+               this.collisionResult.enableCharacterCollsions();
+            } else {
+               this.collisionResult.disableCharacterCollisions();
+            }
+
+            this.collisionResult.setRecordPassThrough(prevRecord);
+            this.collisionResult.setCollisionEntities(prevEntities);
+         }
+      }
    }
 
    protected void postExecuteMove() {
@@ -814,6 +957,7 @@ public abstract class MotionControllerBase implements MotionController {
    @Override
    public void beforeInstructionSensorsAndActions(double physicsTickDuration) {
       this.recomputePath = false;
+      this.railStepAppliedThisTick = false;
    }
 
    @Override
@@ -825,7 +969,8 @@ public abstract class MotionControllerBase implements MotionController {
       return speed == 0.0;
    }
 
-   protected boolean isForcePushed() {
+   @Override
+   public boolean isForcePushed() {
       return !this.forceVelocity.equals(Vector3dUtil.ZERO) || !this.appliedVelocities.isEmpty();
    }
 
@@ -1076,6 +1221,16 @@ public abstract class MotionControllerBase implements MotionController {
       }
    }
 
+   private static void pruneFilteredTriggerBlocks(@Nonnull CollisionResult collisionResult) {
+      CollisionDataArray<BlockCollisionData> triggerBlocks = collisionResult.getTriggerBlocks();
+
+      for (int i = triggerBlocks.size() - 1; i >= 0; i--) {
+         if (triggerBlocks.get(i).filteredByCollisionFilter) {
+            triggerBlocks.remove(i);
+         }
+      }
+   }
+
    public boolean isProcessTriggersHasMoved() {
       return this.processTriggersHasMoved;
    }
@@ -1182,12 +1337,12 @@ public abstract class MotionControllerBase implements MotionController {
    }
 
    @Override
-   public boolean isValidPosition(@Nonnull Vector3d position, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+   public boolean isValidPosition(@Nonnull Vector3dc position, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       return this.isValidPosition(position, this.collisionResult, componentAccessor);
    }
 
    public boolean isValidPosition(
-      @Nonnull Vector3d position, @Nonnull CollisionResult collisionResult, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+      @Nonnull Vector3dc position, @Nonnull CollisionResult collisionResult, @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       World world = componentAccessor.getExternalData().getWorld();
       CollisionModule module = CollisionModule.get();

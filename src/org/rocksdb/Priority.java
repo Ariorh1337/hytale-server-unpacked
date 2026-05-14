@@ -8,8 +8,8 @@ public enum Priority {
 
    private final byte value;
 
-   Priority(byte var3) {
-      this.value = var3;
+   Priority(final byte nullxx) {
+      this.value = nullxx;
    }
 
    byte getValue() {

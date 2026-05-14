@@ -8,6 +8,7 @@ import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.util.TrigMathUtil;
 import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.core.modules.collision.BlockCollisionData;
+import com.hypixel.hytale.server.core.modules.collision.CollisionConfig;
 import com.hypixel.hytale.server.core.modules.collision.CollisionModule;
 import com.hypixel.hytale.server.core.modules.collision.WorldUtil;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -26,6 +27,7 @@ import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.util.NPCPhysicsMath;
 import com.hypixel.hytale.server.npc.util.PositionProbeAir;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -305,8 +307,14 @@ public class MotionControllerFly extends MotionControllerBase {
 
    @Override
    public double probeMove(@Nonnull Ref<EntityStore> ref, @Nonnull ProbeMoveData probeMoveData, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      return probeMoveData.probeDirection.length()
-         * this.doMove(ref, probeMoveData.probePosition, probeMoveData.probeDirection, this.probeMoveProbe, probeMoveData, componentAccessor);
+      Predicate<CollisionConfig> previousBlockCollisionFilter = this.collisionResult.setBlockCollisionFilter(probeMoveData.getBlockCollisionFilter());
+
+      try {
+         return probeMoveData.probeDirection.length()
+            * this.doMove(ref, probeMoveData.probePosition, probeMoveData.probeDirection, this.probeMoveProbe, probeMoveData, componentAccessor);
+      } finally {
+         this.collisionResult.setBlockCollisionFilter(previousBlockCollisionFilter);
+      }
    }
 
    @Override

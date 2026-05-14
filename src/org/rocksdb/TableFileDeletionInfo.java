@@ -53,16 +53,6 @@ public class TableFileDeletionInfo {
 
    @Override
    public String toString() {
-      return "TableFileDeletionInfo{dbName='"
-         + this.dbName
-         + '\''
-         + ", filePath='"
-         + this.filePath
-         + '\''
-         + ", jobId="
-         + this.jobId
-         + ", status="
-         + this.status
-         + '}';
+      return "TableFileDeletionInfo{dbName='" + this.dbName + "', filePath='" + this.filePath + "', jobId=" + this.jobId + ", status=" + this.status + "}";
    }
 }

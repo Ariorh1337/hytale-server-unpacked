@@ -23,6 +23,24 @@ public class CompactionOptionsFIFO extends RocksObject {
       return allowCompaction(this.nativeHandle_);
    }
 
+   public CompactionOptionsFIFO setMaxDataFilesSize(long var1) {
+      setMaxDataFilesSize(this.nativeHandle_, var1);
+      return this;
+   }
+
+   public long maxDataFilesSize() {
+      return maxDataFilesSize(this.nativeHandle_);
+   }
+
+   public CompactionOptionsFIFO setUseKvRatioCompaction(boolean var1) {
+      setUseKvRatioCompaction(this.nativeHandle_, var1);
+      return this;
+   }
+
+   public boolean useKvRatioCompaction() {
+      return useKvRatioCompaction(this.nativeHandle_);
+   }
+
    private static native long newCompactionOptionsFIFO();
 
    @Override
@@ -39,4 +57,12 @@ public class CompactionOptionsFIFO extends RocksObject {
    private static native void setAllowCompaction(long var0, boolean var2);
 
    private static native boolean allowCompaction(long var0);
+
+   private static native void setMaxDataFilesSize(long var0, long var2);
+
+   private static native long maxDataFilesSize(long var0);
+
+   private static native void setUseKvRatioCompaction(long var0, boolean var2);
+
+   private static native boolean useKvRatioCompaction(long var0);
 }

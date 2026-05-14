@@ -247,11 +247,14 @@ public class BuilderRole extends SpawnableWithModelBuilder<Role> implements Spaw
          }
       }
 
+      validationHelper.pushPrecedingScope();
+      boolean instructionListValid = this.instructionList.validate(configName, validationHelper, this.builderManager, context, globalScope, errors);
+      validationHelper.popPrecedingScope();
       return super.validate(configName, validationHelper, context, globalScope, errors)
          & hotbarValid
          & offHandValid
          & validInitialMotionController
-         & this.instructionList.validate(configName, validationHelper, this.builderManager, context, globalScope, errors)
+         & instructionListValid
          & this.interactionInstruction.validate(configName, validationHelper, this.builderManager, context, globalScope, errors)
          & this.deathInstruction.validate(configName, validationHelper, this.builderManager, context, globalScope, errors)
          & this.stateTransitionController.validate(configName, validationHelper, this.builderManager, context, globalScope, errors)

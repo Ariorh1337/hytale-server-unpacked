@@ -62,8 +62,7 @@ public class MemTableInfo {
    public String toString() {
       return "MemTableInfo{columnFamilyName='"
          + this.columnFamilyName
-         + '\''
-         + ", firstSeqno="
+         + "', firstSeqno="
          + this.firstSeqno
          + ", earliestSeqno="
          + this.earliestSeqno
@@ -71,6 +70,6 @@ public class MemTableInfo {
          + this.numEntries
          + ", numDeletes="
          + this.numDeletes
-         + '}';
+         + "}";
    }
 }

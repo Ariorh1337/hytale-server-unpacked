@@ -19,8 +19,8 @@ public enum FlushReason {
 
    private final byte value;
 
-   FlushReason(byte var3) {
-      this.value = var3;
+   FlushReason(final byte nullxx) {
+      this.value = nullxx;
    }
 
    byte getValue() {

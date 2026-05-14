@@ -2,11 +2,14 @@ package com.hypixel.hytale.server.npc.movement.controllers;
 
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
+import com.hypixel.hytale.server.core.modules.collision.CollisionConfig;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.movement.constraints.RelaxedConstraint;
 import com.hypixel.hytale.server.npc.util.NPCPhysicsMath;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.function.Predicate;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.joml.Vector3d;
@@ -24,11 +27,14 @@ public class ProbeMoveData {
    @Nonnull
    public final Vector3d directionComponentSelector;
    private final EnumSet<RelaxedConstraint> relaxedConstraints = EnumSet.noneOf(RelaxedConstraint.class);
-   public boolean edgeBlocked;
-   public boolean isSavingSegments = false;
-   public int segmentCount = 0;
    @Nullable
-   public ProbeMoveData.Segment[] segments = null;
+   private Predicate<CollisionConfig> blockCollisionFilter;
+   public boolean edgeBlocked;
+   public boolean isSavingSegments;
+   public int segmentCount;
+   @Nullable
+   public ProbeMoveData.Segment[] segments;
+   public boolean debugCollision;
 
    public ProbeMoveData() {
       this.probeDirection = new Vector3d();
@@ -59,22 +65,31 @@ public class ProbeMoveData {
       this.relaxedConstraints.addAll(constraints);
    }
 
+   @Nullable
+   public Predicate<CollisionConfig> getBlockCollisionFilter() {
+      return this.blockCollisionFilter;
+   }
+
+   public void setBlockCollisionFilter(@Nullable Predicate<CollisionConfig> filter) {
+      this.blockCollisionFilter = filter;
+   }
+
    @Nonnull
-   public ProbeMoveData setPosition(@Nonnull Vector3d position) {
+   public ProbeMoveData setPosition(@Nonnull Vector3dc position) {
       this.probePosition.set(position);
       this.initialPosition.set(position);
       return this;
    }
 
    @Nonnull
-   public ProbeMoveData setDirection(@Nonnull Vector3d direction) {
+   public ProbeMoveData setDirection(@Nonnull Vector3dc direction) {
       this.probeDirection.set(direction);
       this.targetPosition.set(this.probePosition).add(this.probeDirection);
       return this;
    }
 
    @Nonnull
-   public ProbeMoveData setTargetPosition(@Nonnull Vector3d targetPosition) {
+   public ProbeMoveData setTargetPosition(@Nonnull Vector3dc targetPosition) {
       this.targetPosition.set(targetPosition);
       this.probeDirection.set(targetPosition).sub(this.probePosition);
       return this;
@@ -221,6 +236,75 @@ public class ProbeMoveData {
 
    public double getLastDistance() {
       return this.segments[this.segmentCount - 1].distance;
+   }
+
+   @Nonnull
+   public String dump() {
+      StringBuilder sb = new StringBuilder();
+      sb.append("ProbeMoveData")
+         .append("\nprobePosition=")
+         .append(Vector3dUtil.formatShortString(this.probePosition))
+         .append(", probeDirection=")
+         .append(Vector3dUtil.formatShortString(this.probeDirection))
+         .append(", initialPosition=")
+         .append(Vector3dUtil.formatShortString(this.initialPosition))
+         .append(", targetPosition=")
+         .append(Vector3dUtil.formatShortString(this.targetPosition))
+         .append("\ndirectionComponentSelector=")
+         .append(Vector3dUtil.formatShortString(this.directionComponentSelector))
+         .append(", edgeBlocked=")
+         .append(this.edgeBlocked)
+         .append(", isSavingSegments=")
+         .append(this.isSavingSegments)
+         .append(", segmentCount=")
+         .append(this.segmentCount)
+         .append("\nrelaxedConstraints=")
+         .append(this.relaxedConstraints)
+         .append(", blockCollisionFilter=")
+         .append(this.blockCollisionFilter != null ? "set" : "none");
+      if (this.segments != null && this.segmentCount > 0) {
+         int maxIndex = Math.min(this.segmentCount, this.segments.length);
+         if (maxIndex <= 0) {
+            sb.append("\nsegments=none");
+            return sb.toString();
+         }
+
+         sb.append("\nsegments:");
+
+         for (int i = 0; i < maxIndex; i++) {
+            ProbeMoveData.Segment segment = this.segments[i];
+            if (segment == null) {
+               sb.append("\nsegment[").append(i).append("]=null");
+            } else {
+               sb.append("\nsegment[")
+                  .append(i)
+                  .append("]: type=")
+                  .append(segment.type)
+                  .append(", distance=")
+                  .append(segment.distance)
+                  .append(", onGround=")
+                  .append(segment.onGround)
+                  .append(", blockId=")
+                  .append(segment.blockId)
+                  .append(", position=")
+                  .append(Vector3dUtil.formatShortString(segment.position))
+                  .append(", normal=")
+                  .append(Vector3dUtil.formatShortString(segment.normal));
+               if (segment.type == ProbeMoveData.Segment.Type.CLIMB
+                  || segment.type == ProbeMoveData.Segment.Type.DROP
+                  || segment.type == ProbeMoveData.Segment.Type.BLOCKED_DROP) {
+                  ProbeMoveData.Segment previousSegment = i > 0 ? this.segments[i - 1] : null;
+                  double previousY = previousSegment != null ? previousSegment.position.y : this.initialPosition.y;
+                  sb.append(", dy=").append(segment.position.y - previousY);
+               }
+            }
+         }
+
+         return sb.toString();
+      } else {
+         sb.append("\nsegments=none");
+         return sb.toString();
+      }
    }
 
    protected ProbeMoveData.Segment newSegment() {

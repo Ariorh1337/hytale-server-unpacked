@@ -73,7 +73,7 @@ public class PositionCache {
    public static final String FUNCTION_CAN_BE_ONLY_CALLED_WHILE_CONFIGURING_POSITION_CACHE = "function can be only called while configuring PositionCache";
    private static final float LOS_CACHE_TTL_MIN_SECONDS = 0.09F;
    private static final float LOS_CACHE_TTL_MAX_SECONDS = 0.11F;
-   private static final float POSITION_CACHE_TTL_SECONDS = 0.2F;
+   public static final float POSITION_CACHE_TTL_SECONDS = 0.2F;
    private static final ComponentType<EntityStore, TransformComponent> TRANSFORM_COMPONENT_TYPE = TransformComponent.getComponentType();
    private static final ComponentType<EntityStore, ItemComponent> ITEM_COMPONENT_TYPE = ItemComponent.getComponentType();
    private static final ComponentType<EntityStore, ModelComponent> MODEL_COMPONENT_TYPE = ModelComponent.getComponentType();

@@ -212,7 +212,7 @@ public class TeleporterSettingsPage extends InteractiveCustomUIPage<TeleporterSe
                   }
 
                   if (oldOwnedWarp != null && !oldOwnedWarp.isEmpty()) {
-                     TeleportPlugin.get().getWarps().remove(oldOwnedWarp.toLowerCase());
+                     TeleportPlugin.get().removeWarp(oldOwnedWarp);
                   }
 
                   playerComponent.getPageManager().setPage(ref, store, Page.None);

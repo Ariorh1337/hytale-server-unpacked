@@ -6,6 +6,7 @@ import com.hypixel.hytale.server.core.asset.common.CommonAssetModule;
 import com.hypixel.hytale.server.core.blocktype.BlockTypeModule;
 import com.hypixel.hytale.server.core.console.ConsoleModule;
 import com.hypixel.hytale.server.core.cosmetics.CosmeticsModule;
+import com.hypixel.hytale.server.core.discovery.DiscoveryModule;
 import com.hypixel.hytale.server.core.io.ServerManager;
 import com.hypixel.hytale.server.core.liveconfig.LiveConfigModule;
 import com.hypixel.hytale.server.core.modules.LegacyModule;
@@ -94,7 +95,8 @@ public final class Constants {
       SingleplayerModule.MANIFEST,
       Universe.MANIFEST,
       TelemetryModule.MANIFEST,
-      ConnectedBlocksModule.MANIFEST
+      ConnectedBlocksModule.MANIFEST,
+      DiscoveryModule.MANIFEST
    };
 
    public static void init() {

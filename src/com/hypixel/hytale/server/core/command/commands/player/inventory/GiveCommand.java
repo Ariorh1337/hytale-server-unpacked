@@ -67,7 +67,7 @@ public class GiveCommand extends AbstractPlayerCommand {
       ItemStack stack = new ItemStack(item.getId(), quantity, metadata).withDurability(durability);
       ItemStackTransaction transaction = Player.giveItem(stack, ref, store);
       ItemStack remainder = transaction.getRemainder();
-      Message itemNameMessage = Message.translation(item.getTranslationKey());
+      Message itemNameMessage = item.getTranslationMessage();
       if (remainder != null && !remainder.isEmpty()) {
          context.sendMessage(Message.translation("server.commands.give.insufficientInvSpace").param("quantity", quantity).param("item", itemNameMessage));
       } else {
@@ -132,7 +132,7 @@ public class GiveCommand extends AbstractPlayerCommand {
                      ItemStack stack = new ItemStack(item.getId(), quantity, metadata).withDurability(durability);
                      ItemStackTransaction transaction = Player.giveItem(stack, ref, store);
                      ItemStack remainder = transaction.getRemainder();
-                     Message itemNameMessage = Message.translation(item.getTranslationKey());
+                     Message itemNameMessage = item.getTranslationMessage();
                      if (remainder != null && !remainder.isEmpty()) {
                         context.sendMessage(
                            Message.translation("server.commands.give.insufficientInvSpace").param("quantity", quantity).param("item", itemNameMessage)

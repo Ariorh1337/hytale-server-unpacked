@@ -12,7 +12,7 @@ public enum IndexType {
       return this.value_;
    }
 
-   IndexType(byte var3) {
-      this.value_ = var3;
+   IndexType(final byte nullxx) {
+      this.value_ = nullxx;
    }
 }

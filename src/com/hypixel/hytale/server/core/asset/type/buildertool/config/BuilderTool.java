@@ -60,8 +60,8 @@ public class BuilderTool implements JsonAssetWithMap<String, DefaultAssetMap<Str
    public static final String MASK_BELOW_KEY = "builtin_MaskBelow";
    public static final String MASK_ADJACENT_KEY = "builtin_MaskAdjacent";
    public static final String MASK_NEIGHBOR_KEY = "builtin_MaskNeighbor";
+   public static final String MASK_ENTRIES_KEY = "builtin_MaskEntries";
    public static final String MASK_COMMANDS_KEY = "builtin_MaskCommands";
-   public static final String USE_MASK_COMMANDS_KEY = "builtin_UseMaskCommands";
    public static final String INVERT_MASK_KEY = "builtin_InvertMask";
    public static HashSet<String> MASK_ARGS = setMandatoryToolArgs();
    public static final BuilderTool DEFAULT = new BuilderTool();
@@ -96,12 +96,12 @@ public class BuilderTool implements JsonAssetWithMap<String, DefaultAssetMap<Str
             allArgs.put("builtin_InvertMask", new BoolArg(false));
          }
 
-         if (!allArgs.containsKey("builtin_UseMaskCommands")) {
-            allArgs.put("builtin_UseMaskCommands", new BoolArg(false));
-         }
-
          if (!allArgs.containsKey("builtin_MaskCommands")) {
             allArgs.put("builtin_MaskCommands", new StringArg(""));
+         }
+
+         if (!allArgs.containsKey("builtin_MaskEntries")) {
+            allArgs.put("builtin_MaskEntries", new StringArg(""));
          }
 
          builderTool.argsCodec = new MapProvidedMapCodec<>(allArgs, ToolArg::getCodec, HashMap::new);
@@ -207,7 +207,7 @@ public class BuilderTool implements JsonAssetWithMap<String, DefaultAssetMap<Str
    @Nonnull
    public ItemStack updateArgMetadata(@Nonnull ItemStack itemStack, @Nonnull String id, @Nullable String value) throws ToolArgException {
       BuilderTool.ArgData argData = this.getItemArgData(itemStack);
-      if (!MASK_ARGS.contains(id) && !id.equals("builtin_UseMaskCommands") && !id.equals("builtin_InvertMask") && !id.equals("builtin_MaskCommands")) {
+      if (!id.equals("builtin_MaskEntries") && !MASK_ARGS.contains(id) && !id.equals("builtin_InvertMask") && !id.equals("builtin_MaskCommands")) {
          ToolArg arg = this.args.get(id);
          if (arg == null) {
             throw new ToolArgException(Message.translation("server.builderTools.toolUnknownArg").param("arg", id));
@@ -225,11 +225,11 @@ public class BuilderTool implements JsonAssetWithMap<String, DefaultAssetMap<Str
          }
       } else if (value == null) {
          argData = BuilderTool.ArgData.removeToolArg(argData, id);
+      } else if (id.equals("builtin_MaskEntries")) {
+         argData = BuilderTool.ArgData.setToolArg(argData, id, value);
       } else if (MASK_ARGS.contains(id)) {
          BlockMask mask = BlockMask.parse(value);
          argData = BuilderTool.ArgData.setToolArg(argData, id, mask);
-      } else if (id.equals("builtin_UseMaskCommands")) {
-         argData = BuilderTool.ArgData.setToolArg(argData, id, Boolean.parseBoolean(value));
       } else if (id.equals("builtin_InvertMask")) {
          argData = BuilderTool.ArgData.setToolArg(argData, id, Boolean.parseBoolean(value));
       } else if (id.equals("builtin_MaskCommands")) {

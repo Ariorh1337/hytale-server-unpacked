@@ -63,6 +63,7 @@ import com.hypixel.hytale.server.core.modules.collision.TangiableEntitySpatialSy
 import com.hypixel.hytale.server.core.modules.entity.component.ActiveAnimationComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.AudioComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.BoundingBox;
+import com.hypixel.hytale.server.core.modules.entity.component.BreathingComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.CachedStatsComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.CollisionResultComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.DisplayNameComponent;
@@ -108,6 +109,7 @@ import com.hypixel.hytale.server.core.modules.entity.condition.StatCondition;
 import com.hypixel.hytale.server.core.modules.entity.condition.SuffocatingCondition;
 import com.hypixel.hytale.server.core.modules.entity.condition.WieldingCondition;
 import com.hypixel.hytale.server.core.modules.entity.damage.DamageCause;
+import com.hypixel.hytale.server.core.modules.entity.damage.DamageSystems;
 import com.hypixel.hytale.server.core.modules.entity.dynamiclight.DynamicLightSystems;
 import com.hypixel.hytale.server.core.modules.entity.hitboxcollision.HitboxCollision;
 import com.hypixel.hytale.server.core.modules.entity.hitboxcollision.HitboxCollisionConfig;
@@ -275,6 +277,7 @@ public class EntityModule extends JavaPlugin {
    private ComponentType<EntityStore, PositionDataComponent> positionDataComponentType;
    private ComponentType<EntityStore, ActiveAnimationComponent> activeAnimationComponentType;
    private ComponentType<EntityStore, CachedStatsComponent> cachedStatsComponentType;
+   private ComponentType<EntityStore, BreathingComponent> breathingComponentType;
    private ComponentType<EntityStore, NewSpawnComponent> newSpawnComponentType;
    private ComponentType<EntityStore, ItemComponent> itemComponentType;
    private ComponentType<EntityStore, PickupItemComponent> pickupItemComponentType;
@@ -334,6 +337,7 @@ public class EntityModule extends JavaPlugin {
       this.positionDataComponentType = entityStoreRegistry.registerComponent(PositionDataComponent.class, PositionDataComponent::new);
       this.activeAnimationComponentType = entityStoreRegistry.registerComponent(ActiveAnimationComponent.class, ActiveAnimationComponent::new);
       this.cachedStatsComponentType = entityStoreRegistry.registerComponent(CachedStatsComponent.class, CachedStatsComponent::new);
+      this.breathingComponentType = entityStoreRegistry.registerComponent(BreathingComponent.class, BreathingComponent::new);
       this.newSpawnComponentType = entityStoreRegistry.registerComponent(NewSpawnComponent.class, () -> {
          throw new UnsupportedOperationException("Not implemented");
       });
@@ -579,6 +583,7 @@ public class EntityModule extends JavaPlugin {
          new RepulsionSystems.RepulsionTicker(this.repulsionComponentType, this.transformComponentType, this.entitySpatialResourceType)
       );
       entityStoreRegistry.registerSystem(new EntitySystems.NewSpawnTick());
+      entityStoreRegistry.registerSystem(new DamageSystems.InvulnerableBreathing(this.invulnerableComponentType, this.breathingComponentType));
       AssetRegistry.register(
          ((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(
                                  MovementConfig.class, new IndexedLookupTableAssetMap<>(MovementConfig[]::new)
@@ -1095,6 +1100,10 @@ public class EntityModule extends JavaPlugin {
 
    public ComponentType<EntityStore, CachedStatsComponent> getCachedStatsComponentType() {
       return this.cachedStatsComponentType;
+   }
+
+   public ComponentType<EntityStore, BreathingComponent> getBreathingComponentType() {
+      return this.breathingComponentType;
    }
 
    @Nullable

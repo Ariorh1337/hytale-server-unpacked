@@ -6,8 +6,8 @@ public enum CompactionStopStyle {
 
    private final byte value;
 
-   CompactionStopStyle(byte var3) {
-      this.value = var3;
+   CompactionStopStyle(final byte nullxx) {
+      this.value = nullxx;
    }
 
    public byte getValue() {

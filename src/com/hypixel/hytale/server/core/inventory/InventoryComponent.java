@@ -301,6 +301,7 @@ public abstract class InventoryComponent implements Component<EntityStore> {
    }
 
    public static class Armor extends InventoryComponent {
+      @Nonnull
       public static final BuilderCodec<InventoryComponent.Armor> CODEC = BuilderCodec.<InventoryComponent>builder(
             InventoryComponent.Armor.class, InventoryComponent.Armor::new, InventoryComponent.CODEC
          )
@@ -428,6 +429,7 @@ public abstract class InventoryComponent implements Component<EntityStore> {
    }
 
    public static class Hotbar extends ActiveSlotInventoryComponent {
+      @Nonnull
       public static final BuilderCodec<InventoryComponent.Hotbar> CODEC = BuilderCodec.builder(
             InventoryComponent.Hotbar.class, InventoryComponent.Hotbar::new, ActiveSlotInventoryComponent.CODEC
          )
@@ -486,6 +488,7 @@ public abstract class InventoryComponent implements Component<EntityStore> {
    }
 
    public static class Storage extends InventoryComponent {
+      @Nonnull
       public static final BuilderCodec<InventoryComponent.Storage> CODEC = BuilderCodec.builder(
             InventoryComponent.Storage.class, InventoryComponent.Storage::new, InventoryComponent.CODEC
          )

@@ -20,6 +20,7 @@ import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.modules.blockset.BlockSetModule;
 import com.hypixel.hytale.server.core.modules.collision.BlockCollisionData;
 import com.hypixel.hytale.server.core.modules.collision.BoxBlockIntersectionEvaluator;
+import com.hypixel.hytale.server.core.modules.collision.CollisionConfig;
 import com.hypixel.hytale.server.core.modules.collision.CollisionMath;
 import com.hypixel.hytale.server.core.modules.collision.CollisionModule;
 import com.hypixel.hytale.server.core.modules.collision.CollisionResult;
@@ -47,6 +48,7 @@ import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.util.NPCPhysicsMath;
 import java.util.EnumSet;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
@@ -520,6 +522,16 @@ public class MotionControllerWalk extends MotionControllerBase {
    }
 
    @Override
+   public double getMaxClimbHeight() {
+      return this.maxClimbHeight;
+   }
+
+   @Override
+   public double getMaxDropHeight() {
+      return this.maxDropHeight;
+   }
+
+   @Override
    public double getMaximumSpeed() {
       return this.maxHorizontalSpeed * this.horizontalSpeedMultiplier * this.effectHorizontalSpeedMultiplier;
    }
@@ -634,11 +646,11 @@ public class MotionControllerWalk extends MotionControllerBase {
             this.belowBlockTypeId = 0;
             BoxBlockIntersectionEvaluator boxBlockIntersectionEvaluator = this.collisionResult.getBoxBlockIntersection();
             boxBlockIntersectionEvaluator.setBox(this.collisionBoundingBox, this.footingPosition);
-            Vector3d worldUp = boxBlockIntersectionEvaluator.getWorldUp();
+            Vector3dc worldUp = boxBlockIntersectionEvaluator.getWorldUp();
             int horizontalOverlapMask;
-            if (worldUp.y != 0.0) {
+            if (worldUp.y() != 0.0) {
                horizontalOverlapMask = 40;
-            } else if (worldUp.x != 0.0) {
+            } else if (worldUp.x() != 0.0) {
                horizontalOverlapMask = 48;
             } else {
                horizontalOverlapMask = 24;
@@ -1953,184 +1965,194 @@ public class MotionControllerWalk extends MotionControllerBase {
       boolean allowWade = probeConstraints.contains(RelaxedConstraint.WADE);
       double effectiveDropHeight = this.effectiveMaxDropHeight(probeConstraints);
       this.collisionResult.setCollisionByMaterial(4, allowWade ? 13 : 5);
-      Vector3d probePosition = probeMoveData.probePosition;
-      Vector3d initialPosition = probeMoveData.initialPosition;
-      Vector3d targetPosition = probeMoveData.targetPosition;
-      Vector3d directionComponentSelector = probeMoveData.directionComponentSelector;
-      CollisionModule collisionModule = CollisionModule.get();
-      boolean onGround;
-      if (initialPosition.equals(this.position)) {
-         onGround = this.onGround;
-      } else {
-         onGround = collisionModule.validatePosition(world, this.collisionBoundingBox, probePosition, this.collisionResult) == 1;
-      }
+      Predicate<CollisionConfig> previousBlockCollisionFilter = this.collisionResult.setBlockCollisionFilter(probeMoveData.getBlockCollisionFilter());
 
-      directionComponentSelector.set(this.getComponentSelector());
-      probeMovement.mul(directionComponentSelector);
-      if (saveSegments) {
-         probeMoveData.addStartSegment(initialPosition, true);
-      }
-
-      if (!onGround) {
-         if (this.isDropBlocked(probePosition, effectiveDropHeight, true, probeConstraints, componentAccessor)) {
-            if (saveSegments) {
-               probeMoveData.addBlockedDropSegment(probePosition, this.waypointDistance(initialPosition, probePosition));
-               return probeMoveData.getLastDistance();
-            }
-
-            probeMoveData.edgeBlocked = true;
-            return this.waypointDistance(initialPosition, probePosition);
-         }
-
-         if (saveSegments) {
-            probeMoveData.addDropSegment(probePosition, this.waypointDistance(initialPosition, probePosition));
-         }
-      }
-
-      while (distanceLeftSquared > 0.0) {
-         if (this.debugModeProbeBlockCollisions) {
-            this.collisionResult.setLogger(LOGGER);
-         }
-
-         boolean oldState = this.collisionResult.setDamageBlocking(avoidDamage);
-         boolean shortMove = !CollisionModule.findCollisions(this.collisionBoundingBox, probePosition, probeMovement, this.collisionResult, componentAccessor);
-         this.collisionResult.setDamageBlocking(oldState);
-         if (this.debugModeProbeBlockCollisions) {
-            this.collisionResult.setLogger(null);
-         }
-
-         if (this.debugModeMove) {
-            LOGGER.at(Level.INFO)
-               .log(
-                  "Probe Step: pos=%s mov=%s left=%s",
-                  Vector3dUtil.formatShortString(probePosition),
-                  Vector3dUtil.formatShortString(probeMovement),
-                  Math.sqrt(distanceLeftSquared)
-               );
-         }
-
-         if (this.debugModeCollisions) {
-            this.dumpCollisionResults();
-         }
-
-         BlockCollisionData collision = this.collisionResult.getFirstBlockCollision();
-         double endSlide = this.collisionResult.isSliding ? this.collisionResult.slideEnd : Double.MAX_VALUE;
-         if (this.collisionResult.isSliding) {
-            collision = this.discardIgnorableSlideCollisions(this.collisionResult, collision, probeConstraints);
-         }
-
-         if (collision != null && collision.collisionStart <= endSlide) {
-            if (avoidDamage && collision.willDamage) {
-               this.shortenMovement(probePosition, collision.collisionPoint, probePosition);
-               distanceLeftSquared = 0.0;
-            } else {
-               probePosition.set(collision.collisionPoint);
-               distanceLeftSquared = this.updateMovementVector(probePosition, probeMovement, targetPosition, directionComponentSelector);
-            }
-
-            if (collision.collisionNormal.equals(this.getWorldNormal())) {
-               double distance = this.waypointDistance(initialPosition, probePosition);
-               if (saveSegments) {
-                  probeMoveData.addBlockedGroundSegment(probePosition, distance, collision.collisionNormal, collision.blockId);
-               }
-
-               return distance;
-            }
-
-            if (saveSegments) {
-               probeMoveData.addHitWallSegment(
-                  probePosition, true, this.waypointDistance(initialPosition, probePosition), collision.collisionNormal, collision.blockId
-               );
-            }
-
-            int blockId = collision.blockId;
-            if (collision.blockType == null
-               || distanceLeftSquared < 0.010000000000000002
-               || !this.isClimbable(collision.blockType, collision.fluid, probeConstraints)) {
-               if (saveSegments) {
-                  probeMoveData.changeSegmentToBlockedWall();
-               }
-
-               return this.waypointDistance(initialPosition, probePosition);
-            }
-
-            double climbHeight = shortMove
-               ? 0.0
-               : this.computeClimbHeight(
-                  probePosition, probeMovement, this.maxClimbHeight, 0.1, null, this.tmpClimbHeightResults, probeConstraints, componentAccessor
-               );
-            if (climbHeight <= 0.0) {
-               if (saveSegments) {
-                  probeMoveData.changeSegmentToBlockedWall();
-               }
-
-               return this.waypointDistance(initialPosition, probePosition);
-            }
-
-            probePosition.fma(climbHeight, this.getWorldNormal());
-            if (saveSegments) {
-               probeMoveData.addClimbSegment(probePosition, this.waypointDistance(initialPosition, probePosition), blockId);
-            }
-
-            distanceLeftSquared = this.updateMovementVector(probePosition, probeMovement, targetPosition, directionComponentSelector);
+      try {
+         Vector3d probePosition = probeMoveData.probePosition;
+         Vector3d initialPosition = probeMoveData.initialPosition;
+         Vector3d targetPosition = probeMoveData.targetPosition;
+         Vector3d directionComponentSelector = probeMoveData.directionComponentSelector;
+         CollisionModule collisionModule = CollisionModule.get();
+         boolean onGround;
+         if (initialPosition.equals(this.position)) {
+            onGround = this.onGround;
          } else {
-            if (endSlide >= 1.0) {
-               probePosition.add(probeMovement);
-               if (!allowWade) {
-                  ChunkStore chunkStore = componentAccessor.getExternalData().getWorld().getChunkStore();
-                  if (!this.isValidWalkPosition(chunkStore, probePosition.x, probePosition.y, probePosition.z, probeConstraints)
-                     && this.isValidWalkPosition(chunkStore, initialPosition.x, initialPosition.y, initialPosition.z, probeConstraints)) {
-                     probePosition.sub(probeMovement);
-                     if (saveSegments) {
-                        probeMoveData.addBlockedGroundSegment(probePosition, this.waypointDistance(initialPosition, probePosition), this.getWorldNormal(), -1);
-                     }
+            onGround = collisionModule.validatePosition(world, this.collisionBoundingBox, probePosition, this.collisionResult) == 1;
+         }
 
-                     return this.waypointDistance(initialPosition, probePosition);
-                  }
-               }
+         directionComponentSelector.set(this.getComponentSelector());
+         probeMovement.mul(directionComponentSelector);
+         if (saveSegments) {
+            probeMoveData.addStartSegment(initialPosition, true);
+         }
 
-               probeMovement.set(Vector3dUtil.ZERO);
-               double distance = this.waypointDistance(initialPosition, probePosition);
-               if (saveSegments) {
-                  probeMoveData.addMoveSegment(probePosition, true, distance);
-               }
-
-               return distance;
-            }
-
-            probePosition.fma(endSlide, probeMovement);
-            if (saveSegments) {
-               probeMoveData.addHitEdgeSegment(probePosition, this.waypointDistance(initialPosition, probePosition));
-            }
-
+         if (!onGround) {
             if (this.isDropBlocked(probePosition, effectiveDropHeight, true, probeConstraints, componentAccessor)) {
-               ChunkStore chunkStore = componentAccessor.getExternalData().getWorld().getChunkStore();
-               if (allowWade || this.isValidWalkPosition(chunkStore, initialPosition.x, initialPosition.y, initialPosition.z, probeConstraints)) {
-                  probeMovement.set(targetPosition).sub(probePosition).mul(directionComponentSelector);
-                  if (saveSegments) {
-                     probeMoveData.changeSegmentToBlockedEdge();
-                     return probeMoveData.getLastDistance();
-                  }
-
-                  probeMoveData.edgeBlocked = true;
-                  return this.waypointDistance(initialPosition, probePosition);
+               if (saveSegments) {
+                  probeMoveData.addBlockedDropSegment(probePosition, this.waypointDistance(initialPosition, probePosition));
+                  return probeMoveData.getLastDistance();
                }
+
+               probeMoveData.edgeBlocked = true;
+               return this.waypointDistance(initialPosition, probePosition);
             }
 
             if (saveSegments) {
                probeMoveData.addDropSegment(probePosition, this.waypointDistance(initialPosition, probePosition));
             }
-
-            distanceLeftSquared = this.updateMovementVector(probePosition, probeMovement, targetPosition, directionComponentSelector);
          }
-      }
 
-      double distance = this.waypointDistance(initialPosition, probePosition);
-      if (saveSegments) {
-         probeMoveData.addEndSegment(probePosition, true, distance);
-      }
+         while (distanceLeftSquared > 0.0) {
+            if (this.debugModeProbeBlockCollisions || probeMoveData.debugCollision) {
+               this.collisionResult.setLogger(LOGGER);
+            }
 
-      return distance;
+            boolean oldState = this.collisionResult.setDamageBlocking(avoidDamage);
+            boolean shortMove = !CollisionModule.findCollisions(
+               this.collisionBoundingBox, probePosition, probeMovement, this.collisionResult, componentAccessor
+            );
+            this.collisionResult.setDamageBlocking(oldState);
+            if (this.debugModeProbeBlockCollisions || probeMoveData.debugCollision) {
+               this.collisionResult.setLogger(null);
+            }
+
+            if (this.debugModeMove) {
+               LOGGER.at(Level.INFO)
+                  .log(
+                     "Probe Step: pos=%s mov=%s left=%s",
+                     Vector3dUtil.formatShortString(probePosition),
+                     Vector3dUtil.formatShortString(probeMovement),
+                     Math.sqrt(distanceLeftSquared)
+                  );
+            }
+
+            if (this.debugModeCollisions) {
+               this.dumpCollisionResults();
+            }
+
+            BlockCollisionData collision = this.collisionResult.getFirstBlockCollision();
+            double endSlide = this.collisionResult.isSliding ? this.collisionResult.slideEnd : Double.MAX_VALUE;
+            if (this.collisionResult.isSliding) {
+               collision = this.discardIgnorableSlideCollisions(this.collisionResult, collision, probeConstraints);
+            }
+
+            if (collision != null && collision.collisionStart <= endSlide) {
+               if (avoidDamage && collision.willDamage) {
+                  this.shortenMovement(probePosition, collision.collisionPoint, probePosition);
+                  distanceLeftSquared = 0.0;
+               } else {
+                  probePosition.set(collision.collisionPoint);
+                  distanceLeftSquared = this.updateMovementVector(probePosition, probeMovement, targetPosition, directionComponentSelector);
+               }
+
+               if (collision.collisionNormal.equals(this.getWorldNormal())) {
+                  double distance = this.waypointDistance(initialPosition, probePosition);
+                  if (saveSegments) {
+                     probeMoveData.addBlockedGroundSegment(probePosition, distance, collision.collisionNormal, collision.blockId);
+                  }
+
+                  return distance;
+               }
+
+               if (saveSegments) {
+                  probeMoveData.addHitWallSegment(
+                     probePosition, true, this.waypointDistance(initialPosition, probePosition), collision.collisionNormal, collision.blockId
+                  );
+               }
+
+               int blockId = collision.blockId;
+               if (collision.blockType == null
+                  || distanceLeftSquared < 0.010000000000000002
+                  || !this.isClimbable(collision.blockType, collision.fluid, probeConstraints)) {
+                  if (saveSegments) {
+                     probeMoveData.changeSegmentToBlockedWall();
+                  }
+
+                  return this.waypointDistance(initialPosition, probePosition);
+               }
+
+               double climbHeight = shortMove
+                  ? 0.0
+                  : this.computeClimbHeight(
+                     probePosition, probeMovement, this.maxClimbHeight, 0.1, null, this.tmpClimbHeightResults, probeConstraints, componentAccessor
+                  );
+               if (climbHeight <= 0.0) {
+                  if (saveSegments) {
+                     probeMoveData.changeSegmentToBlockedWall();
+                  }
+
+                  return this.waypointDistance(initialPosition, probePosition);
+               }
+
+               probePosition.fma(climbHeight, this.getWorldNormal());
+               if (saveSegments) {
+                  probeMoveData.addClimbSegment(probePosition, this.waypointDistance(initialPosition, probePosition), blockId);
+               }
+
+               distanceLeftSquared = this.updateMovementVector(probePosition, probeMovement, targetPosition, directionComponentSelector);
+            } else {
+               if (endSlide >= 1.0) {
+                  probePosition.add(probeMovement);
+                  if (!allowWade) {
+                     ChunkStore chunkStore = componentAccessor.getExternalData().getWorld().getChunkStore();
+                     if (!this.isValidWalkPosition(chunkStore, probePosition.x, probePosition.y, probePosition.z, probeConstraints)
+                        && this.isValidWalkPosition(chunkStore, initialPosition.x, initialPosition.y, initialPosition.z, probeConstraints)) {
+                        probePosition.sub(probeMovement);
+                        if (saveSegments) {
+                           probeMoveData.addBlockedGroundSegment(
+                              probePosition, this.waypointDistance(initialPosition, probePosition), this.getWorldNormal(), -1
+                           );
+                        }
+
+                        return this.waypointDistance(initialPosition, probePosition);
+                     }
+                  }
+
+                  probeMovement.set(Vector3dUtil.ZERO);
+                  double distance = this.waypointDistance(initialPosition, probePosition);
+                  if (saveSegments) {
+                     probeMoveData.addMoveSegment(probePosition, true, distance);
+                  }
+
+                  return distance;
+               }
+
+               probePosition.fma(endSlide, probeMovement);
+               if (saveSegments) {
+                  probeMoveData.addHitEdgeSegment(probePosition, this.waypointDistance(initialPosition, probePosition));
+               }
+
+               if (this.isDropBlocked(probePosition, effectiveDropHeight, true, probeConstraints, componentAccessor)) {
+                  ChunkStore chunkStore = componentAccessor.getExternalData().getWorld().getChunkStore();
+                  if (allowWade || this.isValidWalkPosition(chunkStore, initialPosition.x, initialPosition.y, initialPosition.z, probeConstraints)) {
+                     probeMovement.set(targetPosition).sub(probePosition).mul(directionComponentSelector);
+                     if (saveSegments) {
+                        probeMoveData.changeSegmentToBlockedEdge();
+                        return probeMoveData.getLastDistance();
+                     }
+
+                     probeMoveData.edgeBlocked = true;
+                     return this.waypointDistance(initialPosition, probePosition);
+                  }
+               }
+
+               if (saveSegments) {
+                  probeMoveData.addDropSegment(probePosition, this.waypointDistance(initialPosition, probePosition));
+               }
+
+               distanceLeftSquared = this.updateMovementVector(probePosition, probeMovement, targetPosition, directionComponentSelector);
+            }
+         }
+
+         double distance = this.waypointDistance(initialPosition, probePosition);
+         if (saveSegments) {
+            probeMoveData.addEndSegment(probePosition, true, distance);
+         }
+
+         return distance;
+      } finally {
+         this.collisionResult.setBlockCollisionFilter(previousBlockCollisionFilter);
+      }
    }
 
    @Override

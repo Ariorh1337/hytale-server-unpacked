@@ -1,6 +1,5 @@
 package org.rocksdb.util;
 
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import org.rocksdb.AbstractComparator;
 import org.rocksdb.ComparatorOptions;
@@ -58,7 +57,7 @@ public final class BytewiseComparator extends AbstractComparator {
             while (var4 < var1.remaining()) {
                if ((var1.get(var4) & 255) < 255) {
                   var1.put(var4, (byte)((var1.get(var4) & 255) + 1));
-                  ((Buffer)var1).limit(var4 + 1);
+                  var1.limit(var4 + 1);
                   break;
                }
 
@@ -66,7 +65,7 @@ public final class BytewiseComparator extends AbstractComparator {
             }
          } else {
             var1.put(var4, (byte)((var1.get(var4) & 255) + 1));
-            ((Buffer)var1).limit(var4 + 1);
+            var1.limit(var4 + 1);
          }
 
          assert this.compare(var1.duplicate(), var2.duplicate()) < 0;
@@ -81,7 +80,7 @@ public final class BytewiseComparator extends AbstractComparator {
          int var4 = var1.get(var3) & 255;
          if (var4 != 255) {
             var1.put(var3, (byte)(var4 + 1));
-            ((Buffer)var1).limit(var3 + 1);
+            var1.limit(var3 + 1);
             return;
          }
       }

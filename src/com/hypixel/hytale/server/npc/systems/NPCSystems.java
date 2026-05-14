@@ -26,8 +26,10 @@ import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.entity.Frozen;
 import com.hypixel.hytale.server.core.entity.effect.EffectControllerComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.event.events.ecs.BreathingCheckEvent;
 import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
+import com.hypixel.hytale.server.core.modules.entity.component.BreathingComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.DisplayNameComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.FromPrefab;
 import com.hypixel.hytale.server.core.modules.entity.component.FromWorldGen;
@@ -232,6 +234,7 @@ public class NPCSystems {
             commandBuffer.ensureComponent(ref, NPCMarkerComponent.getComponentType());
             commandBuffer.ensureComponent(ref, PositionDataComponent.getComponentType());
             commandBuffer.ensureComponent(ref, MovementAudioComponent.getComponentType());
+            commandBuffer.ensureComponent(ref, BreathingComponent.getComponentType());
             if (reason == AddReason.SPAWN) {
                NewSpawnComponent newSpawnComponent = new NewSpawnComponent(role.getSpawnLockTime());
                commandBuffer.addComponent(ref, NewSpawnComponent.getComponentType(), newSpawnComponent);
@@ -257,6 +260,36 @@ public class NPCSystems {
                break;
             case UNLOAD:
                npcComponent.getRole().unloaded();
+         }
+      }
+
+      @Nonnull
+      @Override
+      public Query<EntityStore> getQuery() {
+         return this.npcComponentType;
+      }
+   }
+
+   public static class BreathingCheckEventSystem extends EntityEventSystem<EntityStore, BreathingCheckEvent> {
+      @Nonnull
+      private final ComponentType<EntityStore, NPCEntity> npcComponentType = NPCEntity.getComponentType();
+
+      public BreathingCheckEventSystem() {
+         super(BreathingCheckEvent.class);
+      }
+
+      public void handle(
+         int index,
+         @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
+         @Nonnull Store<EntityStore> store,
+         @Nonnull CommandBuffer<EntityStore> commandBuffer,
+         @Nonnull BreathingCheckEvent event
+      ) {
+         NPCEntity npcComponent = archetypeChunk.getComponent(index, this.npcComponentType);
+         assert npcComponent != null;
+         Role role = npcComponent.getRole();
+         if (role != null) {
+            event.setCanBreathe(role.canBreathe(event.getBreathingMaterial(), event.getFluidId()));
          }
       }
 

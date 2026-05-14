@@ -61,11 +61,11 @@ public class PrefabPage extends InteractiveCustomUIPage<FileBrowserEventData> {
    private static final int DEFAULT_BIOME_TINT = ColorParseUtil.colorToARGBInt(PrefabEditSessionManager.DEFAULT_TINT) & 16777215;
    private static final int DEFAULT_WATER_TINT = ColorParseUtil.colorToARGBInt(Environment.getUnknownFor("").getWaterTint()) & 16777215;
 
-   public PrefabPage(@Nonnull PlayerRef playerRef, Path defaultRoot, @Nonnull BuilderToolsPlugin.BuilderState builderState) {
+   public PrefabPage(@Nonnull PlayerRef playerRef, @Nonnull BuilderToolsPlugin.BuilderState builderState) {
       super(playerRef, CustomPageLifetime.CanDismiss, FileBrowserEventData.CODEC);
       this.builderState = builderState;
       this.assetProvider = new AssetPrefabFileProvider();
-      boolean multiplePacks = PrefabStore.get().getAllAssetPrefabPaths().size() > 1;
+      boolean multiplePacks = PrefabStore.get().getAllBrowsablePrefabPaths().size() > 1;
       this.assetsCurrentDir = multiplePacks ? Paths.get("") : Paths.get("HytaleAssets");
       FileBrowserConfig config = FileBrowserConfig.builder()
          .listElementId("#FileList")
@@ -125,7 +125,7 @@ public class PrefabPage extends InteractiveCustomUIPage<FileBrowserEventData> {
 
    private void handleAssetsNavigation(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull String selectedPath, boolean isSearchResult) {
       if ("~".equals(selectedPath)) {
-         boolean multiplePacks = PrefabStore.get().getAllAssetPrefabPaths().size() > 1;
+         boolean multiplePacks = PrefabStore.get().getAllBrowsablePrefabPaths().size() > 1;
          this.assetsCurrentDir = multiplePacks ? Paths.get("") : Paths.get("HytaleAssets");
          this.sendListingUpdate();
       } else if ("..".equals(selectedPath)) {

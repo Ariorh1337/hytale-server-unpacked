@@ -184,7 +184,7 @@ public class ItemUtils {
       if (transaction.getSlotAfter().isBroken() && !itemStack.isBroken()) {
          PlayerRef playerRefComponent = componentAccessor.getComponent(ref, PlayerRef.getComponentType());
          if (playerRefComponent != null) {
-            Message itemNameMessage = Message.translation(itemStack.getItem().getTranslationKey());
+            Message itemNameMessage = itemStack.getItem().getTranslationMessage();
             playerRefComponent.sendMessage(Message.translation("server.general.repair.itemBroken").param("itemName", itemNameMessage).color("#ff5555"));
             int soundEventIndex = TempAssetIdUtil.getSoundEventIndex("SFX_Item_Break");
             SoundUtil.playSoundEvent2dToPlayer(playerRefComponent, soundEventIndex, SoundCategory.UI);

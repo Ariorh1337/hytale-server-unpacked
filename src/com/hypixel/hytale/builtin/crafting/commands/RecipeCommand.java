@@ -117,7 +117,7 @@ public class RecipeCommand extends AbstractCommandCollection {
       ) {
          Item item = this.itemArg.get(context);
          String itemId = item.getId();
-         Message itemMessage = Message.translation(item.getTranslationKey());
+         Message itemMessage = item.getTranslationMessage();
          if (CraftingPlugin.learnRecipe(ref, itemId, store)) {
             context.sendMessage(Message.translation("server.modules.learnrecipe.success").param("name", itemMessage).color(Color.GREEN));
          } else {
@@ -150,7 +150,7 @@ public class RecipeCommand extends AbstractCommandCollection {
                      } else {
                         Item item = this.itemArg.get(context);
                         String itemId = item.getId();
-                        Message itemMessage = Message.translation(item.getTranslationKey());
+                        Message itemMessage = item.getTranslationMessage();
                         if (CraftingPlugin.learnRecipe(ref, itemId, store)) {
                            context.sendMessage(
                               Message.translation("server.commands.recipe.learn.success.other")

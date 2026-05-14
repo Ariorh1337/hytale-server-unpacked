@@ -33,6 +33,7 @@ import com.hypixel.hytale.component.dependency.Order;
 import com.hypixel.hytale.component.dependency.SystemDependency;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.RefSystem;
+import com.hypixel.hytale.protocol.packets.player.UpdateMemoriesCount;
 import com.hypixel.hytale.protocol.packets.player.UpdateMemoriesFeatureStatus;
 import com.hypixel.hytale.protocol.packets.window.WindowType;
 import com.hypixel.hytale.server.core.Constants;
@@ -374,6 +375,8 @@ public class MemoriesPlugin extends JavaPlugin {
          boolean isFeatureUnlockedByPlayer = playerMemoriesComponent != null;
          PacketHandler playerConnection = playerRefComponent.getPacketHandler();
          playerConnection.writeNoCache(new UpdateMemoriesFeatureStatus(isFeatureUnlockedByPlayer));
+         int memoriesCount = playerMemoriesComponent != null ? playerMemoriesComponent.getRecordedMemories().size() : 0;
+         playerConnection.writeNoCache(new UpdateMemoriesCount(memoriesCount));
       }
 
       @Override

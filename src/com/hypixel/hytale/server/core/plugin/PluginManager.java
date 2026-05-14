@@ -413,23 +413,39 @@ public class PluginManager {
    }
 
    private void validatePluginDeps(@Nonnull PendingLoadPlugin pendingLoadPlugin, @Nullable Map<PluginIdentifier, PendingLoadPlugin> pending) {
-      String serverVersion = ManifestUtil.getVersion();
+      String serverVersionStr = ManifestUtil.getVersion();
       if (!pendingLoadPlugin.getManifest().getGroup().equals("Hytale")) {
-         String targetServerVersion = pendingLoadPlugin.getManifest().getServerVersion();
-         if (targetServerVersion == null || serverVersion != null && !targetServerVersion.equals(serverVersion)) {
-            if (targetServerVersion != null && !"*".equals(targetServerVersion)) {
-               LOGGER.at(Level.WARNING)
-                  .log(
-                     "Plugin '%s' targets a different server version %s. You may encounter issues, please check for plugin updates.",
-                     pendingLoadPlugin.getIdentifier(),
-                     serverVersion
-                  );
-            } else {
-               LOGGER.at(Level.WARNING)
-                  .log(
-                     "Plugin '%s' does not specify a target server version. You may encounter issues, please check for plugin updates. This will be a hard error in the future",
-                     pendingLoadPlugin.getIdentifier()
-                  );
+         SemverRange range = pendingLoadPlugin.getManifest().getServerVersion();
+         PluginManifest.ServerVersionCheck status = PluginManifest.checkServerVersionCompatibility(range, serverVersionStr);
+         if (status != PluginManifest.ServerVersionCheck.COMPATIBLE) {
+            switch (status) {
+               case MISSING:
+                  LOGGER.at(Level.WARNING)
+                     .log(
+                        "Plugin '%s' does not specify a target server version. You may encounter issues, please check for plugin updates. This will be a hard error in the future",
+                        pendingLoadPlugin.getIdentifier()
+                     );
+                  break;
+               case PARSE_FAILED:
+                  LOGGER.at(Level.WARNING)
+                     .log(
+                        "Plugin '%s' targets server version range '%s' but the running server version '%s' could not be parsed.",
+                        pendingLoadPlugin.getIdentifier(),
+                        range,
+                        serverVersionStr
+                     );
+                  break;
+               case INCOMPATIBLE:
+                  LOGGER.at(Level.WARNING)
+                     .log(
+                        "Plugin '%s' targets server version range '%s' which does not match the running server version '%s'. You may encounter issues, please check for plugin updates.",
+                        pendingLoadPlugin.getIdentifier(),
+                        range,
+                        serverVersionStr
+                     );
+                  break;
+               case COMPATIBLE:
+                  throw new IllegalStateException("unreachable");
             }
 
             this.outdatedPlugins.add(pendingLoadPlugin.getIdentifier());

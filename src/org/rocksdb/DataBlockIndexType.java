@@ -6,8 +6,8 @@ public enum DataBlockIndexType {
 
    private final byte value;
 
-   DataBlockIndexType(byte var3) {
-      this.value = var3;
+   DataBlockIndexType(final byte nullxx) {
+      this.value = nullxx;
    }
 
    byte getValue() {

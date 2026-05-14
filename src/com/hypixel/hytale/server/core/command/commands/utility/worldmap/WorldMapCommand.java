@@ -13,8 +13,6 @@ public class WorldMapCommand extends AbstractCommandCollection {
       this.addAliases("map");
       this.setPermissionGroups("hytale:WorldEditor");
       this.addSubCommand(new WorldMapReloadCommand());
-      this.addSubCommand(new WorldMapDiscoverCommand());
-      this.addSubCommand(new WorldMapUndiscoverCommand());
       this.addSubCommand(new WorldMapClearMarkersCommand());
       this.addSubCommand(new WorldMapViewRadiusSubCommand());
       this.addSubCommand(new WorldMapCommand.QuantizeCommand());

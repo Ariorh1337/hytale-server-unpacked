@@ -88,16 +88,10 @@ public final class WorldUtil {
          BlockType blockType = BlockType.getAssetMap().getAsset(blockId);
          if (blockType != null && !blockType.isUnknown()) {
             double relativeY = y - blockY;
-            String blockTypeKey = blockType.getId();
-            BlockType blockTypeAsset = BlockType.getAssetMap().getAsset(blockTypeKey);
-            if (blockTypeAsset == null) {
-               return MathUtil.packLong(BlockMaterial.Empty.ordinal(), fluidId);
-            }
-
             BlockMaterial blockTypeMaterial = blockType.getMaterial();
             int filler = blockSection.getFiller(blockX, blockY, blockZ);
             int rotation = blockSection.getRotationIndex(blockX, blockY, blockZ);
-            if (filler != 0 && blockTypeAsset.getMaterial() == BlockMaterial.Solid) {
+            if (filler != 0 && blockTypeMaterial == BlockMaterial.Solid) {
                BlockBoundingBoxes boundingBoxes = BlockBoundingBoxes.getAssetMap().getAsset(blockType.getHitboxTypeIndex());
                if (boundingBoxes == null) {
                   return MathUtil.packLong(BlockMaterial.Empty.ordinal(), fluidId);

@@ -31,6 +31,7 @@ import com.hypixel.hytale.common.plugin.AuthorInfo;
 import com.hypixel.hytale.common.plugin.PluginIdentifier;
 import com.hypixel.hytale.common.plugin.PluginManifest;
 import com.hypixel.hytale.common.semver.Semver;
+import com.hypixel.hytale.common.semver.SemverRange;
 import com.hypixel.hytale.common.util.ArrayUtil;
 import com.hypixel.hytale.common.util.FormatUtil;
 import com.hypixel.hytale.common.util.PathUtil;
@@ -801,7 +802,20 @@ public class AssetEditorPlugin extends JavaPlugin {
                }
 
                if (packetManifest.serverVersion != null) {
-                  manifest.setServerVersion(packetManifest.serverVersion);
+                  if (packetManifest.serverVersion.isBlank()) {
+                     manifest.setServerVersion(SemverRange.WILDCARD);
+                  } else {
+                     try {
+                        manifest.setServerVersion(SemverRange.fromString(packetManifest.serverVersion));
+                     } catch (IllegalArgumentException e) {
+                        this.getLogger()
+                           .at(Level.WARNING)
+                           .withCause(e)
+                           .log("Rejected manifest update for pack %s: invalid ServerVersion range '%s'", packId, packetManifest.serverVersion);
+                        editorClient.sendPopupNotification(AssetEditorPopupNotificationType.Error, Messages.INVALID_SERVER_VERSION);
+                        return;
+                     }
+                  }
                }
 
                Path manifestPath = dataSource.getRootPath().resolve("manifest.json");
@@ -891,7 +905,18 @@ public class AssetEditorPlugin extends JavaPlugin {
             manifest.setAuthors(authors);
          }
 
-         manifest.setServerVersion(packetManifest.serverVersion);
+         if (packetManifest.serverVersion != null && !packetManifest.serverVersion.isBlank()) {
+            try {
+               manifest.setServerVersion(SemverRange.fromString(packetManifest.serverVersion));
+            } catch (IllegalArgumentException e) {
+               this.getLogger().at(Level.WARNING).withCause(e).log("Rejected pack creation: invalid ServerVersion range '%s'", packetManifest.serverVersion);
+               editorClient.sendFailureReply(requestToken, Messages.INVALID_SERVER_VERSION);
+               return;
+            }
+         } else {
+            manifest.setServerVersion(SemverRange.WILDCARD);
+         }
+
          String packId = new PluginIdentifier(manifest).toString();
          if (this.assetPackDataSources.containsKey(packId)) {
             editorClient.sendFailureReply(requestToken, Messages.PACK_ALREADY_EXISTS);
@@ -953,7 +978,7 @@ public class AssetEditorPlugin extends JavaPlugin {
       packet.group = manifest.getGroup();
       packet.version = manifest.getVersion() != null ? manifest.getVersion().toString() : "";
       packet.website = manifest.getWebsite() != null ? manifest.getWebsite() : "";
-      packet.serverVersion = manifest.getServerVersion() != null ? manifest.getServerVersion() : "";
+      packet.serverVersion = manifest.getServerVersion() != null ? manifest.getServerVersion().toString() : "";
       List<com.hypixel.hytale.protocol.packets.asseteditor.AuthorInfo> authors = new ObjectArrayList<>();
 
       for (AuthorInfo a : manifest.getAuthors()) {

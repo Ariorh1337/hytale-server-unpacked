@@ -48,9 +48,9 @@ public enum PrepopulateBlobCache {
       return this.libraryName_;
    }
 
-   PrepopulateBlobCache(byte var3, String var4, String var5) {
-      this.value_ = var3;
-      this.libraryName_ = var4;
-      this.internalName_ = var5;
+   PrepopulateBlobCache(final byte nullxx, final String nullxxx, final String nullxxxx) {
+      this.value_ = nullxx;
+      this.libraryName_ = nullxxx;
+      this.internalName_ = nullxxxx;
    }
 }

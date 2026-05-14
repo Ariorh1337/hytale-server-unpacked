@@ -12,8 +12,8 @@ public enum PerfLevel {
 
    private final byte _value;
 
-   PerfLevel(byte var3) {
-      this._value = var3;
+   PerfLevel(byte nullxx) {
+      this._value = nullxx;
    }
 
    public byte getValue() {

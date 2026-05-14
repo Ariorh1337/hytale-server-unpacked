@@ -8,8 +8,8 @@ public enum BackgroundErrorReason {
 
    private final byte value;
 
-   BackgroundErrorReason(byte var3) {
-      this.value = var3;
+   BackgroundErrorReason(final byte nullxx) {
+      this.value = nullxx;
    }
 
    byte getValue() {

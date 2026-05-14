@@ -8,6 +8,7 @@ import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.modules.collision.BlockCollisionData;
+import com.hypixel.hytale.server.core.modules.collision.CollisionConfig;
 import com.hypixel.hytale.server.core.modules.collision.CollisionModule;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.physics.component.Velocity;
@@ -23,6 +24,7 @@ import com.hypixel.hytale.server.npc.util.NPCPhysicsMath;
 import com.hypixel.hytale.server.npc.util.PositionProbeWater;
 import java.util.EnumSet;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -498,128 +500,134 @@ public class MotionControllerDive extends MotionControllerBase {
    public double probeMove(@Nonnull Ref<EntityStore> ref, @Nonnull ProbeMoveData probeMoveData, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       boolean saveSegments = probeMoveData.startProbing();
       this.collisionResult.setCollisionByMaterial(5);
-      Vector3d probePosition = probeMoveData.probePosition;
-      Vector3d probeMovement = probeMoveData.probeDirection;
-      CollisionModule collisionModule = CollisionModule.get();
-      if (saveSegments) {
-         probeMoveData.addStartSegment(probePosition, false);
-      }
+      Predicate<CollisionConfig> previousBlockCollisionFilter = this.collisionResult.setBlockCollisionFilter(probeMoveData.getBlockCollisionFilter());
 
-      if (!this.probeMoveProbe.probePosition(ref, this.collisionBoundingBox, probePosition, this.collisionResult, this.swimDepth, componentAccessor)) {
+      try {
+         Vector3d probePosition = probeMoveData.probePosition;
+         Vector3d probeMovement = probeMoveData.probeDirection;
+         CollisionModule collisionModule = CollisionModule.get();
          if (saveSegments) {
-            probeMoveData.addEndSegment(probePosition, false, 0.0);
+            probeMoveData.addStartSegment(probePosition, false);
          }
 
-         return 0.0;
-      } else {
-         double maxDistance = probeMovement.length();
-         CollisionModule.findCollisions(this.collisionBoundingBox, probePosition, probeMovement, this.collisionResult, componentAccessor);
-         if (this.debugModeMove) {
-            LOGGER.at(Level.INFO)
-               .log(
-                  "Probe Step: pos=%s mov=%s left=%s",
-                  Vector3dUtil.formatShortString(probePosition),
-                  Vector3dUtil.formatShortString(probeMovement),
-                  maxDistance
-               );
-         }
-
-         if (this.debugModeCollisions) {
-            this.dumpCollisionResults();
-         }
-
-         BlockCollisionData collision = this.collisionResult.getFirstBlockCollision();
-         this.tempPosition.set(probePosition);
-         if (collision == null) {
-            probePosition.add(probeMovement);
-            probeMovement.zero();
-            double distanceTravelled;
-            if (this.probeMoveProbe.probePosition(ref, this.collisionBoundingBox, probePosition, this.collisionResult, this.swimDepth, componentAccessor)
-               && this.probeMoveProbe.isInWater()) {
-               distanceTravelled = maxDistance;
-               if (this.debugModeMove) {
-                  LOGGER.at(Level.INFO)
-                     .log(
-                        "Probe - Dive: No Collision, valid pos=%s, distanceLeft=%s",
-                        Vector3dUtil.formatShortString(probePosition),
-                        maxDistance - distanceTravelled
-                     );
-               }
-            } else {
-               distanceTravelled = this.bisect(ref, this.tempPosition, 0.0, probePosition, maxDistance, probePosition, componentAccessor);
-               if (this.debugModeMove) {
-                  LOGGER.at(Level.INFO)
-                     .log(
-                        "Probe - Dive: No Collision, Bisect pos=%s, distanceLeft=%s",
-                        Vector3dUtil.formatShortString(probePosition),
-                        maxDistance - distanceTravelled
-                     );
-               }
-            }
-
-            if (this.debugModeValidatePositions && !this.isValidPosition(this.tempPosition, this.collisionResult, componentAccessor)) {
-               throw new IllegalStateException("Invalid position");
-            }
-
+         if (!this.probeMoveProbe.probePosition(ref, this.collisionBoundingBox, probePosition, this.collisionResult, this.swimDepth, componentAccessor)) {
             if (saveSegments) {
-               probeMoveData.addMoveSegment(probePosition, false, distanceTravelled);
-               probeMoveData.addEndSegment(probePosition, false, distanceTravelled);
+               probeMoveData.addEndSegment(probePosition, false, 0.0);
             }
 
+            return 0.0;
+         } else {
+            double maxDistance = probeMovement.length();
+            CollisionModule.findCollisions(this.collisionBoundingBox, probePosition, probeMovement, this.collisionResult, componentAccessor);
             if (this.debugModeMove) {
                LOGGER.at(Level.INFO)
-                  .log("Probe Move done: No collision - maxDistance=%s distanceLeft=%s", (double)maxDistance, (double)(maxDistance - distanceTravelled));
+                  .log(
+                     "Probe Step: pos=%s mov=%s left=%s",
+                     Vector3dUtil.formatShortString(probePosition),
+                     Vector3dUtil.formatShortString(probeMovement),
+                     maxDistance
+                  );
             }
 
-            return distanceTravelled;
-         } else {
-            double collisionStart = collision.collisionStart;
-            double distanceTravelled = maxDistance * collisionStart;
-            probePosition.set(collision.collisionPoint);
-            if (!this.probeMoveProbe.probePosition(ref, this.collisionBoundingBox, probePosition, this.collisionResult, this.swimDepth, componentAccessor)
-               || !this.probeMoveProbe.isInWater()) {
-               distanceTravelled = this.bisect(ref, this.tempPosition, 0.0, probePosition, distanceTravelled, probePosition, componentAccessor);
+            if (this.debugModeCollisions) {
+               this.dumpCollisionResults();
+            }
+
+            BlockCollisionData collision = this.collisionResult.getFirstBlockCollision();
+            this.tempPosition.set(probePosition);
+            if (collision == null) {
+               probePosition.add(probeMovement);
+               probeMovement.zero();
+               double distanceTravelled;
+               if (this.probeMoveProbe.probePosition(ref, this.collisionBoundingBox, probePosition, this.collisionResult, this.swimDepth, componentAccessor)
+                  && this.probeMoveProbe.isInWater()) {
+                  distanceTravelled = maxDistance;
+                  if (this.debugModeMove) {
+                     LOGGER.at(Level.INFO)
+                        .log(
+                           "Probe - Dive: No Collision, valid pos=%s, distanceLeft=%s",
+                           Vector3dUtil.formatShortString(probePosition),
+                           maxDistance - distanceTravelled
+                        );
+                  }
+               } else {
+                  distanceTravelled = this.bisect(ref, this.tempPosition, 0.0, probePosition, maxDistance, probePosition, componentAccessor);
+                  if (this.debugModeMove) {
+                     LOGGER.at(Level.INFO)
+                        .log(
+                           "Probe - Dive: No Collision, Bisect pos=%s, distanceLeft=%s",
+                           Vector3dUtil.formatShortString(probePosition),
+                           maxDistance - distanceTravelled
+                        );
+                  }
+               }
+
+               if (this.debugModeValidatePositions && !this.isValidPosition(this.tempPosition, this.collisionResult, componentAccessor)) {
+                  throw new IllegalStateException("Invalid position");
+               }
+
+               if (saveSegments) {
+                  probeMoveData.addMoveSegment(probePosition, false, distanceTravelled);
+                  probeMoveData.addEndSegment(probePosition, false, distanceTravelled);
+               }
+
                if (this.debugModeMove) {
                   LOGGER.at(Level.INFO)
+                     .log("Probe Move done: No collision - maxDistance=%s distanceLeft=%s", (double)maxDistance, (double)(maxDistance - distanceTravelled));
+               }
+
+               return distanceTravelled;
+            } else {
+               double collisionStart = collision.collisionStart;
+               double distanceTravelled = maxDistance * collisionStart;
+               probePosition.set(collision.collisionPoint);
+               if (!this.probeMoveProbe.probePosition(ref, this.collisionBoundingBox, probePosition, this.collisionResult, this.swimDepth, componentAccessor)
+                  || !this.probeMoveProbe.isInWater()) {
+                  distanceTravelled = this.bisect(ref, this.tempPosition, 0.0, probePosition, distanceTravelled, probePosition, componentAccessor);
+                  if (this.debugModeMove) {
+                     LOGGER.at(Level.INFO)
+                        .log(
+                           "Probe - Dive: Collision, Bisect pos=%s, distanceLeft=%s, collision start=%s",
+                           Vector3dUtil.formatShortString(probePosition),
+                           maxDistance - distanceTravelled,
+                           collisionStart
+                        );
+                  }
+               } else if (this.debugModeMove) {
+                  LOGGER.at(Level.INFO)
                      .log(
-                        "Probe - Dive: Collision, Bisect pos=%s, distanceLeft=%s, collision start=%s",
+                        "Probe - Dive: Collision, valid pos=%s, distanceLeft=%s, collision start=%s",
                         Vector3dUtil.formatShortString(probePosition),
                         maxDistance - distanceTravelled,
                         collisionStart
                      );
                }
-            } else if (this.debugModeMove) {
-               LOGGER.at(Level.INFO)
-                  .log(
-                     "Probe - Dive: Collision, valid pos=%s, distanceLeft=%s, collision start=%s",
-                     Vector3dUtil.formatShortString(probePosition),
-                     maxDistance - distanceTravelled,
-                     collisionStart
-                  );
-            }
 
-            if (this.debugModeValidatePositions && !this.isValidPosition(probePosition, this.collisionResult, componentAccessor)) {
-               throw new IllegalStateException("Invalid position");
-            }
-
-            if (saveSegments) {
-               if (this.getWorldNormal().equals(collision.collisionNormal)) {
-                  probeMoveData.addHitGroundSegment(probePosition, distanceTravelled, collision.collisionNormal, collision.blockId);
-               } else {
-                  probeMoveData.addHitWallSegment(probePosition, false, distanceTravelled, collision.collisionNormal, collision.blockId);
+               if (this.debugModeValidatePositions && !this.isValidPosition(probePosition, this.collisionResult, componentAccessor)) {
+                  throw new IllegalStateException("Invalid position");
                }
-            }
 
-            if (saveSegments) {
-               probeMoveData.addEndSegment(probePosition, false, distanceTravelled);
-            }
+               if (saveSegments) {
+                  if (this.getWorldNormal().equals(collision.collisionNormal)) {
+                     probeMoveData.addHitGroundSegment(probePosition, distanceTravelled, collision.collisionNormal, collision.blockId);
+                  } else {
+                     probeMoveData.addHitWallSegment(probePosition, false, distanceTravelled, collision.collisionNormal, collision.blockId);
+                  }
+               }
 
-            if (this.debugModeMove) {
-               LOGGER.at(Level.INFO).log("Probe Move done: maxDistance=%s distanceLeft=%s", (double)maxDistance, (double)(maxDistance - distanceTravelled));
-            }
+               if (saveSegments) {
+                  probeMoveData.addEndSegment(probePosition, false, distanceTravelled);
+               }
 
-            return distanceTravelled;
+               if (this.debugModeMove) {
+                  LOGGER.at(Level.INFO).log("Probe Move done: maxDistance=%s distanceLeft=%s", (double)maxDistance, (double)(maxDistance - distanceTravelled));
+               }
+
+               return distanceTravelled;
+            }
          }
+      } finally {
+         this.collisionResult.setBlockCollisionFilter(previousBlockCollisionFilter);
       }
    }
 

@@ -16,6 +16,7 @@ import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
+import com.hypixel.hytale.protocol.packets.player.UpdateMemoriesCount;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
@@ -247,6 +248,11 @@ public class MemoriesPage extends InteractiveCustomUIPage<MemoriesPage.PageEvent
             if (!MemoriesPlugin.get().recordPlayerMemories(playerMemories)) {
                this.rebuild();
                return;
+            }
+
+            PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+            if (playerRef != null) {
+               playerRef.getPacketHandler().writeNoCache(new UpdateMemoriesCount(0));
             }
 
             MemoriesGameplayConfig memoriesGameplayConfig = MemoriesGameplayConfig.get(store.getExternalData().getWorld().getGameplayConfig());

@@ -46,6 +46,8 @@ public class CollisionResult implements BoxBlockIterator.BoxIterationConsumer {
    @Nonnull
    private final CollisionDataArray<BlockCollisionData> blockTriggers;
    @Nonnull
+   private final CollisionDataArray<BlockCollisionData> passThroughBlocks;
+   @Nonnull
    private final CollisionDataArray<CharacterCollisionData> characterCollisions;
    @Nonnull
    private final MovingBoxBoxCollisionEvaluator movingBoxBoxCollision;
@@ -60,6 +62,7 @@ public class CollisionResult implements BoxBlockIterator.BoxIterationConsumer {
    public boolean isSliding;
    public int validate;
    private boolean checkForCharacterCollisions;
+   private boolean recordPassThrough;
    private int walkableMaterialMask;
    public Predicate<CollisionConfig> isNonWalkable;
    private LongSet lastTriggers = new LongOpenHashSet();
@@ -75,6 +78,7 @@ public class CollisionResult implements BoxBlockIterator.BoxIterationConsumer {
       this.blockCollisions = new CollisionDataArray<>(BlockCollisionData::new, BlockCollisionData::clear, blockCollisionDataFreePool);
       this.blockSlides = new CollisionDataArray<>(BlockCollisionData::new, BlockCollisionData::clear, blockCollisionDataFreePool);
       this.blockTriggers = new CollisionDataArray<>(BlockCollisionData::new, BlockCollisionData::clear, blockCollisionDataFreePool);
+      this.passThroughBlocks = new CollisionDataArray<>(BlockCollisionData::new, BlockCollisionData::clear, blockCollisionDataFreePool);
       this.characterCollisions = new CollisionDataArray<>(CharacterCollisionData::new, null, characterCollisionDataFreePool);
       this.collisionConfig = new CollisionConfig();
       this.collisionConfig.setDefaultCollisionBehaviour();
@@ -142,16 +146,28 @@ public class CollisionResult implements BoxBlockIterator.BoxIterationConsumer {
       return this.blockTriggers.alloc();
    }
 
+   public void addPassThrough(@Nonnull IBlockCollisionEvaluator blockCollisionEvaluator, int index) {
+      if (!(blockCollisionEvaluator.getCollisionStart() > 1.0)) {
+         blockCollisionEvaluator.setCollisionData(this.newPassThrough(), this.collisionConfig, index);
+      }
+   }
+
+   public BlockCollisionData newPassThrough() {
+      return this.passThroughBlocks.alloc();
+   }
+
    public void reset() {
       this.blockCollisions.reset();
       this.blockSlides.reset();
       this.blockTriggers.reset();
+      this.passThroughBlocks.reset();
       this.characterCollisions.reset();
    }
 
    public void process() {
       this.blockCollisions.sort(BasicCollisionData.COLLISION_START_COMPARATOR);
       this.blockTriggers.sort(BasicCollisionData.COLLISION_START_COMPARATOR);
+      this.passThroughBlocks.sort(BasicCollisionData.COLLISION_START_COMPARATOR);
       this.characterCollisions.sort(BasicCollisionData.COLLISION_START_COMPARATOR);
       if (this.blockSlides.getCount() > 0) {
          this.blockSlides.sort(BLOCK_COLLISION_DATA_COMPARATOR);
@@ -197,6 +213,10 @@ public class CollisionResult implements BoxBlockIterator.BoxIterationConsumer {
       return this.characterCollisions.getCount();
    }
 
+   public CharacterCollisionData getCharacterCollision(int i) {
+      return this.characterCollisions.get(i);
+   }
+
    @Nullable
    public CharacterCollisionData getFirstCharacterCollision() {
       return this.characterCollisions.getFirst();
@@ -205,6 +225,14 @@ public class CollisionResult implements BoxBlockIterator.BoxIterationConsumer {
    @Nullable
    public CharacterCollisionData forgetFirstCharacterCollision() {
       return this.characterCollisions.forgetFirst();
+   }
+
+   public int getPassThroughCount() {
+      return this.passThroughBlocks.getCount();
+   }
+
+   public BlockCollisionData getPassThrough(int i) {
+      return this.passThroughBlocks.get(i);
    }
 
    public void pruneTriggerBlocks(double distance) {
@@ -368,6 +396,24 @@ public class CollisionResult implements BoxBlockIterator.BoxIterationConsumer {
                this.processCollisionResult(haveCollision, i);
             }
          }
+      } else if (this.recordPassThrough && this.collisionConfig.blockFilteredOut) {
+         x += this.collisionConfig.getBoundingBoxOffsetX();
+         y += this.collisionConfig.getBoundingBoxOffsetY();
+         z += this.collisionConfig.getBoundingBoxOffsetZ();
+         int numDetails = this.collisionConfig.getDetailCount();
+         boolean haveCollision = this.movingBoxBoxCollision.isBoundingBoxColliding(this.collisionConfig.getBoundingBox(), x, y, z);
+         if (numDetails <= 1) {
+            if (haveCollision) {
+               this.addPassThrough(this.movingBoxBoxCollision, 0);
+            }
+         } else if (haveCollision || this.movingBoxBoxCollision.isOverlapping() || this.movingBoxBoxCollision.isTouching()) {
+            for (int i = 0; i < numDetails; i++) {
+               haveCollision = this.movingBoxBoxCollision.isBoundingBoxColliding(this.collisionConfig.getBoundingBox(i), x, y, z);
+               if (haveCollision) {
+                  this.addPassThrough(this.movingBoxBoxCollision, i);
+               }
+            }
+         }
       } else if (this.logger != null) {
          Object arg4 = this.collisionConfig.blockType != null ? this.collisionConfig.blockType.getId() : "null";
          this.logger.at(Level.INFO).log("-- Ignoring block at %s/%s/%s blockType=%s", x, y, z, arg4);
@@ -463,9 +509,28 @@ public class CollisionResult implements BoxBlockIterator.BoxIterationConsumer {
       }
    }
 
-   public void iterateBlocks(@Nonnull Box collider, @Nonnull Vector3d pos, @Nonnull Vector3d direction, double length, boolean stopOnCollisionFound) {
+   public void iterateBlocks(
+      @Nonnull Box collider, @Nonnull Vector3d pos, @Nonnull Vector3d direction, double length, boolean stopOnCollisionFound, double extent
+   ) {
       this.continueAfterCollision = !stopOnCollisionFound;
-      BoxBlockIterator.iterate(collider, pos, direction, length, this);
+      Vector3d min = collider.getMin();
+      Vector3d max = collider.getMax();
+      BoxBlockIterator.iterate(
+         min.x - extent,
+         min.y - extent,
+         min.z - extent,
+         max.x + extent,
+         max.y + extent,
+         max.z + extent,
+         pos.x,
+         pos.y,
+         pos.z,
+         direction.x,
+         direction.y,
+         direction.z,
+         length,
+         this
+      );
    }
 
    public void acquireCollisionModule() {
@@ -490,6 +555,14 @@ public class CollisionResult implements BoxBlockIterator.BoxIterationConsumer {
 
    public boolean isCheckingForCharacterCollisions() {
       return this.checkForCharacterCollisions;
+   }
+
+   public boolean isRecordingPassThrough() {
+      return this.recordPassThrough;
+   }
+
+   public void setRecordPassThrough(boolean recordPassThrough) {
+      this.recordPassThrough = recordPassThrough;
    }
 
    public void enableTriggerBlocks() {
@@ -524,6 +597,18 @@ public class CollisionResult implements BoxBlockIterator.BoxIterationConsumer {
 
    public boolean isDamageBlocking() {
       return this.collisionConfig.isCollidingWithDamageBlocks();
+   }
+
+   @Nullable
+   public Predicate<CollisionConfig> getBlockCollisionFilter() {
+      return this.collisionConfig.extraBlockCollisionFilter;
+   }
+
+   @Nullable
+   public Predicate<CollisionConfig> setBlockCollisionFilter(@Nullable Predicate<CollisionConfig> filter) {
+      Predicate<CollisionConfig> previous = this.collisionConfig.extraBlockCollisionFilter;
+      this.collisionConfig.extraBlockCollisionFilter = filter;
+      return previous;
    }
 
    public void setCollisionByMaterial(int collidingMaterials) {

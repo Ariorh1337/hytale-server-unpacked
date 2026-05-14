@@ -64,12 +64,15 @@ public enum HistogramType {
    ASYNC_PREFETCH_ABORT_MICROS((byte)60),
    TABLE_OPEN_PREFETCH_TAIL_READ_BYTES((byte)61),
    COMPACTION_PREFETCH_BYTES((byte)63),
+   MULTISCAN_PREPARE_MICROS((byte)64),
+   MULTISCAN_BLOCKS_PER_PREPARE((byte)65),
+   BLOCK_KEY_DISTRIBUTION_CV((byte)66),
    HISTOGRAM_ENUM_MAX((byte)62);
 
    private final byte value;
 
-   HistogramType(byte var3) {
-      this.value = var3;
+   HistogramType(final byte nullxx) {
+      this.value = nullxx;
    }
 
    public byte getValue() {

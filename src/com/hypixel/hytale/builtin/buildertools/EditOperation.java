@@ -104,6 +104,9 @@ public class EditOperation {
                blocks.getSupportValue(x, y, z),
                blocks.getBlockComponentHolder(x, y, z)
             );
+         if (this.before.getFluidAtWorldPos(x, y, z) < 0 && currentFluid != 0) {
+            this.before.addFluidAtWorldPos(x, y, z, currentFluid, blocks.getFluidLevel(x, y, z));
+         }
       }
 
       this.after.addBlockAtWorldPos(x, y, z, blockId, rotation, 0, 0);
@@ -135,6 +138,10 @@ public class EditOperation {
 
       this.after.addFluidAtWorldPos(x, y, z, fluidId, fluidLevel);
       return true;
+   }
+
+   public boolean clearFluid(int x, int y, int z) {
+      return this.getFluid(x, y, z) == 0 ? false : this.setFluid(x, y, z, 0, (byte)0);
    }
 
    public int getFluid(int x, int y, int z) {

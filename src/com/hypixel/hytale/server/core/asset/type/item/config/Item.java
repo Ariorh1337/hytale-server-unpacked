@@ -36,6 +36,7 @@ import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.ItemBase;
 import com.hypixel.hytale.protocol.ItemResourceType;
 import com.hypixel.hytale.protocol.ModelTrail;
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.common.CommonAssetValidator;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.buildertool.config.BuilderTool;
@@ -901,6 +902,21 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
    }
 
    @Nonnull
+   public Message getTranslationMessage() {
+      Message msg = Message.translation(this.getTranslationKey());
+      if (this.translationProperties != null) {
+         Map<String, Message> args = this.translationProperties.getNameArguments();
+         if (args != null) {
+            for (Entry<String, Message> entry : args.entrySet()) {
+               msg.param(entry.getKey(), entry.getValue());
+            }
+         }
+      }
+
+      return msg;
+   }
+
+   @Nonnull
    public String getDescriptionTranslationKey() {
       if (this.translationProperties != null) {
          String descriptionTranslation = this.translationProperties.getDescription();
@@ -910,6 +926,21 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
       }
 
       return "server.items." + this.id + ".description";
+   }
+
+   @Nonnull
+   public Message getDescriptionTranslationMessage() {
+      Message msg = Message.translation(this.getDescriptionTranslationKey());
+      if (this.translationProperties != null) {
+         Map<String, Message> args = this.translationProperties.getDescriptionArguments();
+         if (args != null) {
+            for (Entry<String, Message> entry : args.entrySet()) {
+               msg.param(entry.getKey(), entry.getValue());
+            }
+         }
+      }
+
+      return msg;
    }
 
    public String getModel() {

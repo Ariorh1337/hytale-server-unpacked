@@ -78,8 +78,8 @@ public class Status implements Serializable {
 
       private final byte value;
 
-      Code(byte var3) {
-         this.value = var3;
+      Code(final byte nullxx) {
+         this.value = nullxx;
       }
 
       public static Status.Code getCode(byte var0) {
@@ -110,8 +110,8 @@ public class Status implements Serializable {
 
       private final byte value;
 
-      SubCode(byte var3) {
-         this.value = var3;
+      SubCode(final byte nullxx) {
+         this.value = nullxx;
       }
 
       public static Status.SubCode getSubCode(byte var0) {

@@ -118,11 +118,9 @@ public class FlushJobInfo {
          + this.columnFamilyId
          + ", columnFamilyName='"
          + this.columnFamilyName
-         + '\''
-         + ", filePath='"
+         + "', filePath='"
          + this.filePath
-         + '\''
-         + ", threadId="
+         + "', threadId="
          + this.threadId
          + ", jobId="
          + this.jobId
@@ -138,6 +136,6 @@ public class FlushJobInfo {
          + this.tableProperties
          + ", flushReason="
          + this.flushReason
-         + '}';
+         + "}";
    }
 }

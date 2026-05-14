@@ -366,7 +366,7 @@ public class Player extends LivingEntity implements MetricProvider {
       if (world.getGameplayConfig().getShowItemPickupNotifications()) {
          PlayerRef playerRefComponent = componentAccessor.getComponent(ref, PlayerRef.getComponentType());
          assert playerRefComponent != null;
-         Message itemNameMessage = Message.translation(itemStack.getItem().getTranslationKey());
+         Message itemNameMessage = itemStack.getItem().getTranslationMessage();
          NotificationUtil.sendNotification(
             playerRefComponent.getPacketHandler(),
             Message.translation("server.general.pickedUpItem").param("item", itemNameMessage),

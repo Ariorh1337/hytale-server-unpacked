@@ -3,15 +3,21 @@ package com.hypixel.hytale.server.core.entity;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.spatial.SpatialResource;
 import com.hypixel.hytale.math.block.BlockSphereUtil;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Vector3iUtil;
+import com.hypixel.hytale.protocol.Direction;
+import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockGathering;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemTool;
+import com.hypixel.hytale.server.core.asset.type.model.config.ModelParticle;
 import com.hypixel.hytale.server.core.entity.knockback.KnockbackComponent;
+import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.entity.component.BoundingBox;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.damage.Damage;
@@ -21,6 +27,8 @@ import com.hypixel.hytale.server.core.modules.interaction.BlockHarvestUtils;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.selector.Selector;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.combat.Knockback;
 import com.hypixel.hytale.server.core.modules.physics.component.Velocity;
+import com.hypixel.hytale.server.core.universe.world.ParticleUtil;
+import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -64,7 +72,45 @@ public class ExplosionUtils {
          if (config.damageEntities) {
             processTargetEntities(config, position, damageSource, ignoreRef, targetRefs, componentAccessor);
          }
+
+         performExplosionEffects(position, new Rotation3f(0.0F, 0.0F, 0.0F), config, componentAccessor);
       }
+   }
+
+   private static void performExplosionEffects(
+      @Nonnull Vector3d position, @Nonnull Rotation3f rotation, @Nonnull ExplosionConfig config, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
+      SpatialResource<Ref<EntityStore>, EntityStore> playerSpatialResource = componentAccessor.getResource(EntityModule.get().getPlayerSpatialResourceType());
+      List<Ref<EntityStore>> playerRefs = SpatialResource.getThreadLocalReferenceList();
+      playerSpatialResource.getSpatialStructure().collect(position, 75.0, playerRefs);
+      if (config.particles != null) {
+         for (ModelParticle particle : config.particles) {
+            Direction particleRotation = new Direction(rotation.yaw(), rotation.pitch(), rotation.roll());
+            Direction particleRotationOffset = particle.getRotationOffset();
+            if (particleRotationOffset != null) {
+               particleRotation.yaw = particleRotation.yaw + (float)Math.toRadians(particleRotationOffset.yaw);
+               particleRotation.pitch = particleRotation.pitch + (float)Math.toRadians(particleRotationOffset.pitch);
+               particleRotation.roll = particleRotation.roll + (float)Math.toRadians(particleRotationOffset.roll);
+            }
+
+            ParticleUtil.spawnParticleEffect(
+               particle.getSystemId(),
+               position.x,
+               position.y,
+               position.z,
+               particleRotation.yaw,
+               particleRotation.pitch,
+               particleRotation.roll,
+               particle.getScale(),
+               particle.getColor(),
+               null,
+               playerRefs,
+               componentAccessor
+            );
+         }
+      }
+
+      SoundUtil.playSoundEvent3d(config.soundEventIndex, SoundCategory.SFX, position.x, position.y, position.z, componentAccessor);
    }
 
    private static void processTargetBlocks(

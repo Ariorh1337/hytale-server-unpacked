@@ -52,6 +52,7 @@ public class FallingBlocksPlugin extends JavaPlugin {
       );
       FallingBlockImpact.CODEC.register(Priority.DEFAULT, "Place", PlaceFallingBlockImpact.class, PlaceFallingBlockImpact.CODEC);
       FallingBlockImpact.CODEC.register("Break", BreakFallingBlockImpact.class, BreakFallingBlockImpact.CODEC);
+      FallingBlockImpact.CODEC.register("Explode", ExplodeFallingBlockImpact.class, ExplodeFallingBlockImpact.CODEC);
    }
 
    public ComponentType<EntityStore, FallingBlock> getFallingBlockComponentType() {

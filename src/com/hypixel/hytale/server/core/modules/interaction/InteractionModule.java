@@ -84,6 +84,7 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.non
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.ChainFlagInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.ChangeActiveSlotInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.ConditionInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.DurabilityConditionInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.EffectConditionInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.ParallelInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.RepeatInteraction;
@@ -262,6 +263,7 @@ public class InteractionModule extends JavaPlugin {
       Interaction.CODEC.register("Replace", ReplaceInteraction.class, ReplaceInteraction.CODEC);
       Interaction.CODEC.register("StatsCondition", StatsConditionInteraction.class, StatsConditionInteraction.CODEC);
       Interaction.CODEC.register("StatsConditionWithModifier", StatsConditionWithModifierInteraction.class, StatsConditionWithModifierInteraction.CODEC);
+      Interaction.CODEC.register("DurabilityCondition", DurabilityConditionInteraction.class, DurabilityConditionInteraction.CODEC);
       Interaction.CODEC.register("SpawnPrefab", SpawnPrefabInteraction.class, SpawnPrefabInteraction.CODEC);
       Interaction.CODEC.register("SendMessage", SendMessageInteraction.class, SendMessageInteraction.CODEC);
       Interaction.CODEC.register("EquipItem", EquipItemInteraction.class, EquipItemInteraction.CODEC);

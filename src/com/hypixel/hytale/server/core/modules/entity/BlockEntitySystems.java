@@ -22,6 +22,7 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.entity.entities.BlockEntity;
 import com.hypixel.hytale.server.core.modules.entity.component.BoundingBox;
 import com.hypixel.hytale.server.core.modules.entity.component.EntityScaleComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.tracker.EntityTrackerSystems;
 import com.hypixel.hytale.server.core.modules.entity.tracker.NetworkId;
@@ -47,6 +48,17 @@ public class BlockEntitySystems {
       public void onEntityAdd(@Nonnull Holder<EntityStore> holder, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store) {
          if (!holder.getArchetype().contains(NetworkId.getComponentType())) {
             holder.addComponent(NetworkId.getComponentType(), new NetworkId(store.getExternalData().takeNextNetworkId()));
+         }
+
+         HeadRotation legacyHeadRotation = holder.getComponent(HeadRotation.getComponentType());
+         if (legacyHeadRotation != null) {
+            TransformComponent transform = holder.getComponent(TransformComponent.getComponentType());
+            if (transform != null) {
+               Rotation3f src = legacyHeadRotation.getRotation();
+               transform.getRotation().set(src.pitch(), src.yaw(), src.roll());
+            }
+
+            holder.removeComponent(HeadRotation.getComponentType());
          }
 
          BlockEntity blockEntityComponent = holder.getComponent(this.blockEntityComponentType);

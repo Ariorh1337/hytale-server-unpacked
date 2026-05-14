@@ -67,9 +67,26 @@ public interface MotionController extends DebugSupport.DebugFlagsChangeListener 
       @Nonnull ComponentAccessor<EntityStore> var7
    );
 
-   double probeMove(@Nonnull Ref<EntityStore> var1, Vector3d var2, Vector3d var3, ProbeMoveData var4, @Nonnull ComponentAccessor<EntityStore> var5);
+   double probeMove(
+      @Nonnull Ref<EntityStore> var1,
+      @Nonnull Vector3dc var2,
+      @Nonnull Vector3dc var3,
+      @Nonnull ProbeMoveData var4,
+      @Nonnull ComponentAccessor<EntityStore> var5
+   );
 
-   double probeMove(@Nonnull Ref<EntityStore> var1, ProbeMoveData var2, @Nonnull ComponentAccessor<EntityStore> var3);
+   double probeMove(@Nonnull Ref<EntityStore> var1, @Nonnull ProbeMoveData var2, @Nonnull ComponentAccessor<EntityStore> var3);
+
+   default void applyRailStep(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull Role role,
+      @Nonnull Vector3dc translation,
+      @Nonnull RailStepConfig config,
+      @Nonnull RailStepResult result,
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
+      throw new UnsupportedOperationException("applyRailStep is not supported by " + this.getType());
+   }
 
    void constrainRotations(Role var1, TransformComponent var2);
 
@@ -83,9 +100,11 @@ public interface MotionController extends DebugSupport.DebugFlagsChangeListener 
       @Nonnull ComponentAccessor<EntityStore> var5
    );
 
-   boolean isValidPosition(Vector3d var1, ComponentAccessor<EntityStore> var2);
+   boolean isValidPosition(@Nonnull Vector3dc var1, ComponentAccessor<EntityStore> var2);
 
    boolean canSteer(@Nonnull Ref<EntityStore> var1, @Nonnull ComponentAccessor<EntityStore> var2);
+
+   boolean isForcePushed();
 
    @Nullable
    String canSteerFailReason(@Nonnull Ref<EntityStore> var1, @Nonnull ComponentAccessor<EntityStore> var2);
@@ -121,6 +140,14 @@ public interface MotionController extends DebugSupport.DebugFlagsChangeListener 
    float getMaxClimbAngle();
 
    float getMaxSinkAngle();
+
+   default double getMaxClimbHeight() {
+      return 0.0;
+   }
+
+   default double getMaxDropHeight() {
+      return 0.0;
+   }
 
    boolean translateToAccessiblePosition(Vector3d var1, Box var2, double var3, double var5, ComponentAccessor<EntityStore> var7);
 

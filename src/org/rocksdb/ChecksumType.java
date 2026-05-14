@@ -13,7 +13,7 @@ public enum ChecksumType {
       return this.value_;
    }
 
-   ChecksumType(byte var3) {
-      this.value_ = var3;
+   ChecksumType(final byte nullxx) {
+      this.value_ = nullxx;
    }
 }

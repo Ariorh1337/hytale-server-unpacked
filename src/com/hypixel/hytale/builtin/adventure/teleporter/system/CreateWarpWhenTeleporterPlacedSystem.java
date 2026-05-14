@@ -104,11 +104,8 @@ public class CreateWarpWhenTeleporterPlacedSystem extends RefChangeSystem<ChunkS
          float warpRotationYaw = (float)rotationYaw.getRadians() + (float)Math.toRadians(180.0);
          Vector3d warpPosition = new Vector3d(x, y, z).add(0.5, 0.65, 0.5);
          Transform warpTransform = new Transform(warpPosition, new Rotation3f(Float.NaN, warpRotationYaw, Float.NaN));
-         String warpId = name.toLowerCase();
          Warp warp = new Warp(warpTransform, name, worldChunk.getWorld(), "*Teleporter", Instant.now());
-         TeleportPlugin teleportPlugin = TeleportPlugin.get();
-         teleportPlugin.getWarps().put(warpId, warp);
-         teleportPlugin.saveWarps();
+         TeleportPlugin.get().addWarp(warp, false);
       }
    }
 

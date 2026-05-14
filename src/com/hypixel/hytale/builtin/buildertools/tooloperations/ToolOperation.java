@@ -39,12 +39,12 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.TargetUtil;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -749,70 +749,78 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
    public static BlockMask combineMasks(@Nullable BuilderTool.ArgData args, @Nullable BlockMask globalMask) {
       if (args == null) {
          return globalMask;
-      }
-
-      Object useMaskCommands = args.tool().get("builtin_UseMaskCommands");
-      boolean useBrushMaskCommands = useMaskCommands != null ? (Boolean)useMaskCommands : false;
-      Object invertMask = args.tool().get("builtin_InvertMask");
-      boolean brushInvertMask = invertMask != null ? (Boolean)invertMask : false;
-      if (useBrushMaskCommands) {
-         String maskCommands = args.tool().get("builtin_MaskCommands") != null ? (String)args.tool().get("builtin_MaskCommands") : "";
-         String[] commands = NEWLINES_PATTERN.split(maskCommands);
-         BlockMask[] parsedMaskCommands = Arrays.stream(commands).map(m -> m.split(" ")).map(BlockMask::parse).toArray(BlockMask[]::new);
-         BlockMask mask = BlockMask.combine(parsedMaskCommands);
-         if (mask != null) {
-            mask.setInverted(brushInvertMask);
-         }
-
-         return mask;
       } else {
-         Object mask = args.tool().get("builtin_Mask");
-         Object maskAbove = args.tool().get("builtin_MaskAbove");
-         Object maskNot = args.tool().get("builtin_MaskNot");
-         Object maskBelow = args.tool().get("builtin_MaskBelow");
-         Object maskAdjacent = args.tool().get("builtin_MaskAdjacent");
-         Object maskNeighbor = args.tool().get("builtin_MaskNeighbor");
-         BlockMask brushMask = BlockMask.EMPTY;
-         BlockMask brushMaskAbove = BlockMask.EMPTY;
-         BlockMask brushMaskNot = BlockMask.EMPTY;
-         BlockMask brushMaskBelow = BlockMask.EMPTY;
-         BlockMask brushMaskAdjacent = BlockMask.EMPTY;
-         BlockMask brushMaskNeighbor = BlockMask.EMPTY;
-         if (mask != null) {
-            brushMask = (BlockMask)mask;
-         }
+         Object invertMask = args.tool().get("builtin_InvertMask");
+         boolean brushInvertMask = invertMask != null ? (Boolean)invertMask : false;
+         if (args.tool().get("builtin_MaskEntries") instanceof String maskEntriesStr && !maskEntriesStr.isEmpty()) {
+            return parseMaskEntries(maskEntriesStr, globalMask);
+         } else {
+            Object mask = args.tool().get("builtin_Mask");
+            Object maskAbove = args.tool().get("builtin_MaskAbove");
+            Object maskNot = args.tool().get("builtin_MaskNot");
+            Object maskBelow = args.tool().get("builtin_MaskBelow");
+            Object maskAdjacent = args.tool().get("builtin_MaskAdjacent");
+            Object maskNeighbor = args.tool().get("builtin_MaskNeighbor");
+            BlockMask brushMask = BlockMask.EMPTY;
+            BlockMask brushMaskAbove = BlockMask.EMPTY;
+            BlockMask brushMaskNot = BlockMask.EMPTY;
+            BlockMask brushMaskBelow = BlockMask.EMPTY;
+            BlockMask brushMaskAdjacent = BlockMask.EMPTY;
+            BlockMask brushMaskNeighbor = BlockMask.EMPTY;
+            if (mask != null) {
+               brushMask = (BlockMask)mask;
+            }
 
-         if (maskAbove != null) {
-            brushMaskAbove = (BlockMask)maskAbove;
-            brushMaskAbove = brushMaskAbove.withOptions(BlockFilter.FilterType.AboveBlock, false);
-         }
+            if (maskAbove != null) {
+               brushMaskAbove = (BlockMask)maskAbove;
+               brushMaskAbove = brushMaskAbove.withOptions(BlockFilter.FilterType.AboveBlock, false);
+            }
 
-         if (maskNot != null) {
-            brushMaskNot = (BlockMask)maskNot;
-            brushMaskNot = brushMaskNot.withOptions(BlockFilter.FilterType.TargetBlock, true);
-         }
+            if (maskNot != null) {
+               brushMaskNot = (BlockMask)maskNot;
+               brushMaskNot = brushMaskNot.withOptions(BlockFilter.FilterType.TargetBlock, true);
+            }
 
-         if (maskBelow != null) {
-            brushMaskBelow = (BlockMask)maskBelow;
-            brushMaskBelow = brushMaskBelow.withOptions(BlockFilter.FilterType.BelowBlock, false);
-         }
+            if (maskBelow != null) {
+               brushMaskBelow = (BlockMask)maskBelow;
+               brushMaskBelow = brushMaskBelow.withOptions(BlockFilter.FilterType.BelowBlock, false);
+            }
 
-         if (maskAdjacent != null) {
-            brushMaskAdjacent = (BlockMask)maskAdjacent;
-            brushMaskAdjacent = brushMaskAdjacent.withOptions(BlockFilter.FilterType.AdjacentBlock, false);
-         }
+            if (maskAdjacent != null) {
+               brushMaskAdjacent = (BlockMask)maskAdjacent;
+               brushMaskAdjacent = brushMaskAdjacent.withOptions(BlockFilter.FilterType.AdjacentBlock, false);
+            }
 
-         if (maskNeighbor != null) {
-            brushMaskNeighbor = (BlockMask)maskNeighbor;
-            brushMaskNeighbor = brushMaskNeighbor.withOptions(BlockFilter.FilterType.NeighborBlock, false);
-         }
+            if (maskNeighbor != null) {
+               brushMaskNeighbor = (BlockMask)maskNeighbor;
+               brushMaskNeighbor = brushMaskNeighbor.withOptions(BlockFilter.FilterType.NeighborBlock, false);
+            }
 
-         BlockMask combinedMask = BlockMask.combine(brushMask, brushMaskAbove, brushMaskNot, brushMaskBelow, brushMaskAdjacent, brushMaskNeighbor, globalMask);
-         if (combinedMask != null) {
-            combinedMask.setInverted(brushInvertMask);
-         }
+            BlockMask combinedMask = BlockMask.combine(
+               brushMask, brushMaskAbove, brushMaskNot, brushMaskBelow, brushMaskAdjacent, brushMaskNeighbor, globalMask
+            );
+            if (combinedMask != null) {
+               combinedMask.setInverted(brushInvertMask);
+            }
 
-         return combinedMask;
+            return combinedMask;
+         }
+      }
+   }
+
+   @Nullable
+   private static BlockMask parseMaskEntries(@Nonnull String value, @Nullable BlockMask globalMask) {
+      try {
+         String cleaned = value.replace("{", "").replace("}", "");
+         BlockMask parsed = BlockMask.parse(cleaned);
+         if (parsed != null && parsed != BlockMask.EMPTY) {
+            return globalMask != null ? BlockMask.combine(parsed, globalMask) : parsed;
+         } else {
+            return globalMask;
+         }
+      } catch (Exception e) {
+         LOGGER.at(Level.WARNING).log("Failed to parse mask entries: {}", value, e);
+         return globalMask;
       }
    }
 
@@ -822,6 +830,7 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
       OPERATIONS.put("Smooth", (ref, player1, playerRef1, packet, componentAccessor) -> new SmoothOperation(ref, packet, componentAccessor));
       OPERATIONS.put("Tint", TintOperation::new);
       OPERATIONS.put("Paint", PaintOperation::new);
+      OPERATIONS.put("OldSculpt", OldSculptOperation::new);
       OPERATIONS.put("Sculpt", SculptOperation::new);
       OPERATIONS.put("Layers", LayersOperation::new);
       OPERATIONS.put("LaserPointer", LaserPointerOperation::new);

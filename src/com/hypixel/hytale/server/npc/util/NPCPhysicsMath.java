@@ -7,6 +7,7 @@ import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.util.TrigMathUtil;
 import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Rotation3fc;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
@@ -52,6 +53,21 @@ public class NPCPhysicsMath {
    public static float pitchFromDirection(double x, double y, double z, float def) {
       double s = x * x + z * z;
       return s < 1.0E-12 ? def : TrigMathUtil.atan2(y, Math.sqrt(s));
+   }
+
+   public static void rotationFromDirection(double x, double y, double z, @Nonnull Rotation3fc inRotation, @Nonnull Rotation3f outRotation) {
+      double s = x * x + z * z;
+      outRotation.setYaw(s < 1.0E-12 ? inRotation.yaw() : PhysicsMath.headingFromDirection(x, z));
+      outRotation.setPitch(s < 1.0E-12 ? inRotation.pitch() : TrigMathUtil.atan2(y, Math.sqrt(s)));
+      outRotation.setRoll(inRotation.roll());
+   }
+
+   public static void rotationFromDirection(@Nonnull Vector3dc direction, @Nonnull Rotation3fc inRotation, @Nonnull Rotation3f outRotation) {
+      rotationFromDirection(direction.x(), direction.y(), direction.z(), inRotation, outRotation);
+   }
+
+   public static void rotationFromDirection(@Nonnull Vector3dc from, @Nonnull Vector3dc to, @Nonnull Rotation3fc inRotation, @Nonnull Rotation3f outRotation) {
+      rotationFromDirection(to.x() - from.x(), to.y() - from.y(), to.z() - from.z(), inRotation, outRotation);
    }
 
    @Nonnull

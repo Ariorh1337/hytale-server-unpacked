@@ -1,6 +1,5 @@
 package org.rocksdb;
 
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -121,12 +120,12 @@ public class Transaction extends RocksObject {
          );
       }
 
-      ((Buffer)var3).position(var3.limit());
+      var3.position(var3.limit());
       if (var5 < 0) {
          return GetStatus.fromStatusCode(Status.Code.NotFound, 0);
       }
 
-      ((Buffer)var4).position(Math.min(var4.limit(), var4.position() + var5));
+      var4.position(Math.min(var4.limit(), var4.position() + var5));
       return GetStatus.fromStatusCode(Status.Code.Ok, var5);
    }
 
@@ -275,12 +274,12 @@ public class Transaction extends RocksObject {
          );
       }
 
-      ((Buffer)var3).position(var3.limit());
+      var3.position(var3.limit());
       if (var7 < 0) {
          return GetStatus.fromStatusCode(Status.Code.NotFound, 0);
       }
 
-      ((Buffer)var4).position(Math.min(var4.limit(), var4.position() + var7));
+      var4.position(Math.min(var4.limit(), var4.position() + var7));
       return GetStatus.fromStatusCode(Status.Code.Ok, var7);
    }
 
@@ -413,8 +412,8 @@ public class Transaction extends RocksObject {
          );
       }
 
-      ((Buffer)var1).position(var1.limit());
-      ((Buffer)var2).position(var2.limit());
+      var1.position(var1.limit());
+      var2.position(var2.limit());
    }
 
    public void put(ColumnFamilyHandle var1, ByteBuffer var2, ByteBuffer var3, boolean var4) throws RocksDBException {
@@ -441,8 +440,8 @@ public class Transaction extends RocksObject {
          );
       }
 
-      ((Buffer)var2).position(var2.limit());
-      ((Buffer)var3).position(var3.limit());
+      var2.position(var2.limit());
+      var3.position(var3.limit());
    }
 
    public void put(ColumnFamilyHandle var1, ByteBuffer var2, ByteBuffer var3) throws RocksDBException {
@@ -516,8 +515,8 @@ public class Transaction extends RocksObject {
          );
       }
 
-      ((Buffer)var2).position(var2.limit());
-      ((Buffer)var3).position(var3.limit());
+      var2.position(var2.limit());
+      var3.position(var3.limit());
    }
 
    public void merge(ColumnFamilyHandle var1, ByteBuffer var2, ByteBuffer var3) throws RocksDBException {
@@ -632,8 +631,8 @@ public class Transaction extends RocksObject {
          );
       }
 
-      ((Buffer)var2).position(var2.limit());
-      ((Buffer)var3).position(var3.limit());
+      var2.position(var2.limit());
+      var3.position(var3.limit());
    }
 
    public void mergeUntracked(byte[] var1, byte[] var2) throws RocksDBException {
@@ -963,8 +962,8 @@ public class Transaction extends RocksObject {
       public static final Transaction.TransactionState COMMITED = COMMITTED;
       private final byte value;
 
-      TransactionState(byte var3) {
-         this.value = var3;
+      TransactionState(final byte nullxx) {
+         this.value = nullxx;
       }
 
       public static Transaction.TransactionState getTransactionState(byte var0) {

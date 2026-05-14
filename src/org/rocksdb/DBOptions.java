@@ -118,6 +118,18 @@ public class DBOptions extends RocksObject implements DBOptionsInterface<DBOptio
       return paranoidChecks(this.nativeHandle_);
    }
 
+   public DBOptions setOpenFilesAsync(boolean var1) {
+      assert this.isOwningHandle();
+      setOpenFilesAsync(this.nativeHandle_, var1);
+      return this;
+   }
+
+   @Override
+   public boolean openFilesAsync() {
+      assert this.isOwningHandle();
+      return openFilesAsync(this.nativeHandle_);
+   }
+
    public DBOptions setEnv(Env var1) {
       setEnv(this.nativeHandle_, var1.nativeHandle_);
       this.env_ = var1;
@@ -548,6 +560,18 @@ public class DBOptions extends RocksObject implements DBOptionsInterface<DBOptio
       return statsDumpPeriodSec(this.nativeHandle_);
    }
 
+   public DBOptions setMaxCompactionTriggerWakeupSeconds(long var1) {
+      assert this.isOwningHandle();
+      setMaxCompactionTriggerWakeupSeconds(this.nativeHandle_, var1);
+      return this;
+   }
+
+   @Override
+   public long maxCompactionTriggerWakeupSeconds() {
+      assert this.isOwningHandle();
+      return maxCompactionTriggerWakeupSeconds(this.nativeHandle_);
+   }
+
    public DBOptions setStatsPersistPeriodSec(int var1) {
       assert this.isOwningHandle();
       setStatsPersistPeriodSec(this.nativeHandle_, var1);
@@ -798,17 +822,6 @@ public class DBOptions extends RocksObject implements DBOptionsInterface<DBOptio
    public boolean skipStatsUpdateOnDbOpen() {
       assert this.isOwningHandle();
       return skipStatsUpdateOnDbOpen(this.nativeHandle_);
-   }
-
-   public DBOptions setSkipCheckingSstFileSizesOnDbOpen(boolean var1) {
-      setSkipCheckingSstFileSizesOnDbOpen(this.nativeHandle_, var1);
-      return this;
-   }
-
-   @Override
-   public boolean skipCheckingSstFileSizesOnDbOpen() {
-      assert this.isOwningHandle();
-      return skipCheckingSstFileSizesOnDbOpen(this.nativeHandle_);
    }
 
    public DBOptions setWalRecoveryMode(WALRecoveryMode var1) {
@@ -1080,6 +1093,10 @@ public class DBOptions extends RocksObject implements DBOptionsInterface<DBOptio
 
    private static native boolean paranoidChecks(long var0);
 
+   private static native void setOpenFilesAsync(long var0, boolean var2);
+
+   private static native boolean openFilesAsync(long var0);
+
    private static native void setRateLimiter(long var0, long var2);
 
    private static native void setSstFileManager(long var0, long var2);
@@ -1212,6 +1229,10 @@ public class DBOptions extends RocksObject implements DBOptionsInterface<DBOptio
 
    private static native int statsDumpPeriodSec(long var0);
 
+   private static native void setMaxCompactionTriggerWakeupSeconds(long var0, long var2);
+
+   private static native long maxCompactionTriggerWakeupSeconds(long var0);
+
    private static native void setStatsPersistPeriodSec(long var0, int var2);
 
    private static native int statsPersistPeriodSec(long var0);
@@ -1297,10 +1318,6 @@ public class DBOptions extends RocksObject implements DBOptionsInterface<DBOptio
    private static native void setSkipStatsUpdateOnDbOpen(long var0, boolean var2);
 
    private static native boolean skipStatsUpdateOnDbOpen(long var0);
-
-   private static native void setSkipCheckingSstFileSizesOnDbOpen(long var0, boolean var2);
-
-   private static native boolean skipCheckingSstFileSizesOnDbOpen(long var0);
 
    private static native void setWalRecoveryMode(long var0, byte var2);
 

@@ -8,8 +8,8 @@ public enum WALRecoveryMode {
 
    private final byte value;
 
-   WALRecoveryMode(byte var3) {
-      this.value = var3;
+   WALRecoveryMode(final byte nullxx) {
+      this.value = nullxx;
    }
 
    public byte getValue() {

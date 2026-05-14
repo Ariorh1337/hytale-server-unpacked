@@ -6,8 +6,8 @@ public enum StateType {
 
    private final byte value;
 
-   StateType(byte var3) {
-      this.value = var3;
+   StateType(final byte nullxx) {
+      this.value = nullxx;
    }
 
    byte getValue() {

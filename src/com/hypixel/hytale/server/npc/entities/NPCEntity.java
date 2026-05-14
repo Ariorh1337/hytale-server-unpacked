@@ -11,7 +11,6 @@ import com.hypixel.hytale.math.random.RandomExtra;
 import com.hypixel.hytale.math.vector.Rotation3fc;
 import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.protocol.AnimationSlot;
-import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.server.core.asset.type.entityeffect.config.ApplicationEffects;
 import com.hypixel.hytale.server.core.asset.type.entityeffect.config.EntityEffect;
 import com.hypixel.hytale.server.core.asset.type.environment.config.Environment;
@@ -283,13 +282,6 @@ public class NPCEntity extends LivingEntity implements INonPlayerCharacter {
 
    public double getDespawnTime() {
       return this.despawnRemainingSeconds;
-   }
-
-   @Override
-   public boolean canBreathe(
-      @Nonnull Ref<EntityStore> ref, @Nonnull BlockMaterial breathingMaterial, int fluidId, @Nonnull ComponentAccessor<EntityStore> componentAccessor
-   ) {
-      return this.role.canBreathe(breathingMaterial, fluidId);
    }
 
    public DamageData getDamageData() {

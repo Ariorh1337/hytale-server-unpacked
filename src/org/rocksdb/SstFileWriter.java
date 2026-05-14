@@ -1,6 +1,5 @@
 package org.rocksdb;
 
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 
 public class SstFileWriter extends RocksObject {
@@ -23,8 +22,8 @@ public class SstFileWriter extends RocksObject {
    public void put(ByteBuffer var1, ByteBuffer var2) throws RocksDBException {
       assert var1.isDirect() && var2.isDirect();
       putDirect(this.nativeHandle_, var1, var1.position(), var1.remaining(), var2, var2.position(), var2.remaining());
-      ((Buffer)var1).position(var1.limit());
-      ((Buffer)var2).position(var2.limit());
+      var1.position(var1.limit());
+      var2.position(var2.limit());
    }
 
    public void put(byte[] var1, byte[] var2) throws RocksDBException {

@@ -98,6 +98,10 @@ public interface ColumnFamilyOptionsInterface<T extends ColumnFamilyOptionsInter
 
    int memtableMaxRangeDeletions();
 
+   T setMinTombstonesForRangeConversion(int var1);
+
+   int minTombstonesForRangeConversion();
+
    T setCompactionThreadLimiter(ConcurrentTaskLimiter var1);
 
    ConcurrentTaskLimiter compactionThreadLimiter();

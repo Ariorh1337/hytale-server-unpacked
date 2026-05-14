@@ -16,6 +16,7 @@ public class SnapshotBuffer implements Component<EntityStore> {
    private int currentTickIndex = Integer.MIN_VALUE;
    private int oldestTickIndex = Integer.MIN_VALUE;
    private int currentIndex = -1;
+   private int storedCount = 0;
 
    public static ComponentType<EntityStore, SnapshotBuffer> getComponentType() {
       return EntityModule.get().getSnapshotBufferComponentType();
@@ -62,26 +63,33 @@ public class SnapshotBuffer implements Component<EntityStore> {
    }
 
    public void storeSnapshot(int tickIndex, @Nonnull Vector3d position, @Nonnull Rotation3f bodyRotation) {
-      if (this.currentIndex != -1 && this.currentTickIndex != tickIndex - 1) {
-         this.currentIndex = -1;
-         this.currentTickIndex = Integer.MIN_VALUE;
-         this.oldestTickIndex = Integer.MIN_VALUE;
-      }
+      if (this.currentIndex != -1 && this.currentTickIndex == tickIndex - 1) {
+         this.currentTickIndex = tickIndex;
+         if (++this.currentIndex == this.snapshots.length) {
+            this.currentIndex = 0;
+         }
 
-      if (this.currentIndex == -1) {
+         if (this.storedCount < this.snapshots.length) {
+            this.storedCount++;
+         } else {
+            this.oldestTickIndex++;
+         }
+
+         this.snapshots[this.currentIndex].init(position, bodyRotation);
+      } else {
+         if (this.currentIndex != -1) {
+            this.currentIndex = -1;
+            this.currentTickIndex = Integer.MIN_VALUE;
+            this.oldestTickIndex = Integer.MIN_VALUE;
+            this.storedCount = 0;
+         }
+
          this.oldestTickIndex = tickIndex;
+         this.currentTickIndex = tickIndex;
+         this.currentIndex = 0;
+         this.storedCount = 1;
+         this.snapshots[0].init(position, bodyRotation);
       }
-
-      this.currentTickIndex = tickIndex;
-      this.currentIndex++;
-      this.currentIndex = this.currentIndex % this.snapshots.length;
-      int maxRel = this.currentTickIndex - this.oldestTickIndex;
-      if (maxRel >= this.snapshots.length) {
-         this.oldestTickIndex++;
-      }
-
-      EntitySnapshot snapshot = this.snapshots[this.currentIndex];
-      snapshot.init(position, bodyRotation);
    }
 
    public void resize(int newLength) {
@@ -108,6 +116,7 @@ public class SnapshotBuffer implements Component<EntityStore> {
          this.currentIndex = -1;
          this.currentTickIndex = Integer.MIN_VALUE;
          this.oldestTickIndex = Integer.MIN_VALUE;
+         this.storedCount = 0;
       }
    }
 

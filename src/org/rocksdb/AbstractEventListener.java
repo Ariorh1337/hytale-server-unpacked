@@ -210,8 +210,8 @@ public abstract class AbstractEventListener extends RocksCallbackObject implemen
 
       private final byte value;
 
-      EnabledEventCallback(byte var3) {
-         this.value = var3;
+      EnabledEventCallback(final byte nullxx) {
+         this.value = nullxx;
       }
 
       byte getValue() {

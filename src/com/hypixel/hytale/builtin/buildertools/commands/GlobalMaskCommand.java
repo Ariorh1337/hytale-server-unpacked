@@ -3,6 +3,7 @@ package com.hypixel.hytale.builtin.buildertools.commands;
 import com.hypixel.hytale.builtin.buildertools.BuilderToolsPlugin;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolGMaskPreset;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
@@ -21,6 +22,8 @@ public class GlobalMaskCommand extends AbstractPlayerCommand {
       this.setPermissionGroups("hytale:WorldEditor");
       this.addUsageVariant(new GlobalMaskCommand.GlobalMaskSetCommand());
       this.addSubCommand(new GlobalMaskCommand.GlobalMaskClearCommand());
+      this.addSubCommand(new GlobalMaskCommand.GlobalMaskSaveCommand());
+      this.addSubCommand(new GlobalMaskCommand.GlobalMaskLoadCommand());
    }
 
    @Override
@@ -53,6 +56,57 @@ public class GlobalMaskCommand extends AbstractPlayerCommand {
          Player playerComponent = store.getComponent(ref, Player.getComponentType());
          assert playerComponent != null;
          BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> s.setGlobalMask(null, componentAccessor));
+      }
+   }
+
+   private static class GlobalMaskLoadCommand extends AbstractPlayerCommand {
+      @Nonnull
+      private final RequiredArg<String> nameArg = this.withRequiredArg("name", "server.commands.globalmask.load.name.desc", ArgTypes.GREEDY_STRING);
+
+      public GlobalMaskLoadCommand() {
+         super("load", "server.commands.globalmask.load.desc");
+         this.setPermissionGroups("hytale:WorldEditor");
+      }
+
+      @Override
+      protected void execute(
+         @Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world
+      ) {
+         BuilderToolGMaskPreset packet = new BuilderToolGMaskPreset();
+         packet.isSave = false;
+         packet.name = this.nameArg.get(context);
+         playerRef.getPacketHandler().write(packet);
+      }
+   }
+
+   private static class GlobalMaskSaveCommand extends AbstractPlayerCommand {
+      @Nonnull
+      private final RequiredArg<String> nameArg = this.withRequiredArg("name", "server.commands.globalmask.save.name.desc", ArgTypes.GREEDY_STRING);
+
+      public GlobalMaskSaveCommand() {
+         super("save", "server.commands.globalmask.save.desc");
+         this.setPermissionGroups("hytale:WorldEditor");
+      }
+
+      @Override
+      protected void execute(
+         @Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world
+      ) {
+         Player playerComponent = store.getComponent(ref, Player.getComponentType());
+         assert playerComponent != null;
+         String name = this.nameArg.get(context);
+         BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> {
+            BlockMask currentMask = s.getGlobalMask();
+            if (currentMask == null) {
+               context.sendMessage(Message.translation("server.commands.globalmask.save.noMask"));
+            } else {
+               BuilderToolGMaskPreset packet = new BuilderToolGMaskPreset();
+               packet.isSave = true;
+               packet.name = name;
+               packet.maskData = currentMask.toString();
+               playerRef.getPacketHandler().write(packet);
+            }
+         });
       }
    }
 

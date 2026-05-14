@@ -17,6 +17,10 @@ public interface AdvancedMutableColumnFamilyOptionsInterface<T extends AdvancedM
 
    double experimentalMempurgeThreshold();
 
+   T setMinTombstonesForRangeConversion(int var1);
+
+   int minTombstonesForRangeConversion();
+
    T setMemtableWholeKeyFiltering(boolean var1);
 
    boolean memtableWholeKeyFiltering();
@@ -112,6 +116,10 @@ public interface AdvancedMutableColumnFamilyOptionsInterface<T extends AdvancedM
    T setBlobGarbageCollectionForceThreshold(double var1);
 
    double blobGarbageCollectionForceThreshold();
+
+   T setReadTriggeredCompactionThreshold(double var1);
+
+   double readTriggeredCompactionThreshold();
 
    T setBlobCompactionReadaheadSize(long var1);
 

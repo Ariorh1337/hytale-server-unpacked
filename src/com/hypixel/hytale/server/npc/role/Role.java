@@ -1440,8 +1440,6 @@ public class Role implements IAnnotatedComponentCollection {
                   }
                }
             }
-
-            hotbarComponent.setActiveSlot((byte)0, holder, store);
          }
       }
 
@@ -1458,8 +1456,6 @@ public class Role implements IAnnotatedComponentCollection {
                   utilityContainer.setItemStackForSlot(i, InventoryHelper.createItem(offHandItem));
                }
             }
-
-            utilityComponent.setActiveSlot((byte)0, holder, store);
          }
       }
 

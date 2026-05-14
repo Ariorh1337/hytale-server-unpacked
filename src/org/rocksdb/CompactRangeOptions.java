@@ -146,8 +146,8 @@ public class CompactRangeOptions extends RocksObject {
 
       private final byte value;
 
-      BottommostLevelCompaction(byte var3) {
-         this.value = var3;
+      BottommostLevelCompaction(final byte nullxx) {
+         this.value = nullxx;
       }
 
       public byte getValue() {

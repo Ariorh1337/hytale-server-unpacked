@@ -164,18 +164,13 @@ public class WBWIRocksIterator extends AbstractRocksIterator<WriteBatchWithIndex
       public boolean equals(Object var1) {
          if (var1 == null) {
             return false;
-         }
-
-         if (this == var1) {
+         } else if (this == var1) {
             return true;
+         } else {
+            return !(var1 instanceof WBWIRocksIterator.WriteEntry var2)
+               ? false
+               : this.type.equals(var2.type) && this.key.equals(var2.key) && this.value.equals(var2.value);
          }
-
-         if (!(var1 instanceof WBWIRocksIterator.WriteEntry)) {
-            return false;
-         }
-
-         WBWIRocksIterator.WriteEntry var2 = (WBWIRocksIterator.WriteEntry)var1;
-         return this.type.equals(var2.type) && this.key.equals(var2.key) && this.value.equals(var2.value);
       }
 
       @Override
@@ -196,8 +191,8 @@ public class WBWIRocksIterator extends AbstractRocksIterator<WriteBatchWithIndex
 
       final byte id;
 
-      WriteType(byte var3) {
-         this.id = var3;
+      WriteType(final byte nullxx) {
+         this.id = nullxx;
       }
 
       public static WBWIRocksIterator.WriteType fromId(byte var0) {

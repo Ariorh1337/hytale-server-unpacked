@@ -93,9 +93,9 @@ public class NativeLibraryLoader {
    File loadLibraryFromJarToTemp(String var1) throws IOException {
       try (InputStream var2 = this.getClass().getClassLoader().getResourceAsStream(jniLibraryFileName)) {
          if (var2 != null) {
-            File var37 = this.createTemp(var1, jniLibraryFileName);
-            Files.copy(var2, var37.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            return var37;
+            File var10 = this.createTemp(var1, jniLibraryFileName);
+            Files.copy(var2, var10.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            return var10;
          }
 
          if (DEBUG_LOADING) {
@@ -107,11 +107,11 @@ public class NativeLibraryLoader {
          throw new RuntimeException(jniLibraryFileName + " was not found inside JAR, and there is no fallback.");
       }
 
-      try (InputStream var35 = this.getClass().getClassLoader().getResourceAsStream(fallbackJniLibraryFileName)) {
-         if (var35 != null) {
-            File var4 = this.createTemp(var1, fallbackJniLibraryFileName);
-            Files.copy(var35, var4.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            return var4;
+      try (InputStream var9 = this.getClass().getClassLoader().getResourceAsStream(fallbackJniLibraryFileName)) {
+         if (var9 != null) {
+            File var3 = this.createTemp(var1, fallbackJniLibraryFileName);
+            Files.copy(var9, var3.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            return var3;
          }
 
          if (DEBUG_LOADING) {

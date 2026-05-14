@@ -24,7 +24,7 @@ public class OptionString {
 
       @Override
       public String toString() {
-         return "" + this.key + "=" + this.value;
+         return this.key + "=" + this.value;
       }
    }
 

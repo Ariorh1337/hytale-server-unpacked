@@ -117,6 +117,8 @@ import com.hypixel.hytale.protocol.packets.auth.ServerAuthToken;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolArgUpdate;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolEntityAction;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolExtrudeAction;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolGMaskPreset;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolGMaskPresetLoadResponse;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolGeneralAction;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolHideAnchors;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolLaserPointer;
@@ -252,6 +254,7 @@ import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolSetCooldown;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolSetKeepLoaded;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolSetTargetTypes;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolUngroup;
+import com.hypixel.hytale.protocol.packets.player.UpdateMemoriesCount;
 import com.hypixel.hytale.protocol.packets.player.UpdateMemoriesFeatureStatus;
 import com.hypixel.hytale.protocol.packets.player.UpdateMovementSettings;
 import com.hypixel.hytale.protocol.packets.player.UpdateTriggerVolumeDisplay;
@@ -1673,6 +1676,19 @@ public final class PacketRegistry {
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         120,
+         "UpdateMemoriesCount",
+         UpdateMemoriesCount.class,
+         4,
+         4,
+         false,
+         UpdateMemoriesCount::validateStructure,
+         UpdateMemoriesCount::deserialize,
+         UpdateMemoriesCount::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
          NetworkChannel.Chunks,
          131,
          "SetChunk",
@@ -2691,8 +2707,8 @@ public final class PacketRegistry {
          240,
          "UpdateWorldMapSettings",
          UpdateWorldMapSettings.class,
-         20,
-         1677721600,
+         19,
+         19,
          false,
          UpdateWorldMapSettings::validateStructure,
          UpdateWorldMapSettings::deserialize,
@@ -4153,6 +4169,32 @@ public final class PacketRegistry {
          BuilderToolPrefabPreview::validateStructure,
          BuilderToolPrefabPreview::deserialize,
          BuilderToolPrefabPreview::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         430,
+         "BuilderToolGMaskPreset",
+         BuilderToolGMaskPreset.class,
+         2,
+         32768020,
+         false,
+         BuilderToolGMaskPreset::validateStructure,
+         BuilderToolGMaskPreset::deserialize,
+         BuilderToolGMaskPreset::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         431,
+         "BuilderToolGMaskPresetLoadResponse",
+         BuilderToolGMaskPresetLoadResponse.class,
+         1,
+         16384006,
+         false,
+         BuilderToolGMaskPresetLoadResponse::validateStructure,
+         BuilderToolGMaskPresetLoadResponse::deserialize,
+         BuilderToolGMaskPresetLoadResponse::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,

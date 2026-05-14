@@ -1,7 +1,6 @@
 package org.rocksdb;
 
 import java.io.IOException;
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -98,19 +97,19 @@ public class RocksDB extends RocksObject {
    }
 
    private static void waitForLibraryToBeLoaded() {
-      long var4 = 0L;
+      long var0 = 0L;
 
       try {
          while (libraryLoaded.get() == RocksDB.LibraryState.LOADING) {
             Thread.sleep(10L);
-            var4 += 10L;
-            if (var4 >= 10000L) {
+            var0 += 10L;
+            if (var0 >= 10000L) {
                throw new RuntimeException("Exceeded timeout whilst trying to load the RocksDB shared library");
             }
          }
-      } catch (InterruptedException var7) {
+      } catch (InterruptedException var3) {
          Thread.currentThread().interrupt();
-         throw new RuntimeException("Interrupted whilst trying to load the RocksDB shared library", var7);
+         throw new RuntimeException("Interrupted whilst trying to load the RocksDB shared library", var3);
       }
    }
 
@@ -456,8 +455,8 @@ public class RocksDB extends RocksObject {
          );
       }
 
-      ((Buffer)var3).position(var3.limit());
-      ((Buffer)var4).position(var4.limit());
+      var3.position(var3.limit());
+      var4.position(var4.limit());
    }
 
    public void put(WriteOptions var1, ByteBuffer var2, ByteBuffer var3) throws RocksDBException {
@@ -482,8 +481,8 @@ public class RocksDB extends RocksObject {
          );
       }
 
-      ((Buffer)var2).position(var2.limit());
-      ((Buffer)var3).position(var3.limit());
+      var2.position(var2.limit());
+      var3.position(var3.limit());
    }
 
    public void put(ColumnFamilyHandle var1, WriteOptions var2, byte[] var3, int var4, int var5, byte[] var6, int var7, int var8) throws RocksDBException {
@@ -547,10 +546,10 @@ public class RocksDB extends RocksObject {
       }
 
       if (var4 != -1) {
-         ((Buffer)var3).limit(Math.min(var3.limit(), var3.position() + var4));
+         var3.limit(Math.min(var3.limit(), var3.position() + var4));
       }
 
-      ((Buffer)var2).position(var2.limit());
+      var2.position(var2.limit());
       return var4;
    }
 
@@ -560,10 +559,10 @@ public class RocksDB extends RocksObject {
          this.nativeHandle_, var2.nativeHandle_, var3, var3.position(), var3.remaining(), var4, var4.position(), var4.remaining(), var1.nativeHandle_
       );
       if (var5 != -1) {
-         ((Buffer)var4).limit(Math.min(var4.limit(), var4.position() + var5));
+         var4.limit(Math.min(var4.limit(), var4.position() + var5));
       }
 
-      ((Buffer)var3).position(var3.limit());
+      var3.position(var3.limit());
       return var5;
    }
 
@@ -651,8 +650,8 @@ public class RocksDB extends RocksObject {
          );
       }
 
-      ((Buffer)var2).position(var2.limit());
-      ((Buffer)var3).position(var3.limit());
+      var2.position(var2.limit());
+      var3.position(var3.limit());
    }
 
    public void merge(ColumnFamilyHandle var1, WriteOptions var2, ByteBuffer var3, ByteBuffer var4) throws RocksDBException {
@@ -680,20 +679,20 @@ public class RocksDB extends RocksObject {
          );
       }
 
-      ((Buffer)var3).position(var3.limit());
-      ((Buffer)var4).position(var4.limit());
+      var3.position(var3.limit());
+      var4.position(var4.limit());
    }
 
    public void delete(WriteOptions var1, ByteBuffer var2) throws RocksDBException {
       assert var2.isDirect();
       deleteDirect(this.nativeHandle_, var1.nativeHandle_, var2, var2.position(), var2.remaining(), 0L);
-      ((Buffer)var2).position(var2.limit());
+      var2.position(var2.limit());
    }
 
    public void delete(ColumnFamilyHandle var1, WriteOptions var2, ByteBuffer var3) throws RocksDBException {
       assert var3.isDirect();
       deleteDirect(this.nativeHandle_, var2.nativeHandle_, var3, var3.position(), var3.remaining(), var1.nativeHandle_);
-      ((Buffer)var3).position(var3.limit());
+      var3.position(var3.limit());
    }
 
    public void merge(ColumnFamilyHandle var1, WriteOptions var2, byte[] var3, byte[] var4) throws RocksDBException {
@@ -864,9 +863,9 @@ public class RocksDB extends RocksObject {
 
    public List<ByteBufferGetStatus> multiGetByteBuffers(List<ByteBuffer> var1, List<ByteBuffer> var2) throws RocksDBException {
       try (ReadOptions var3 = new ReadOptions()) {
-         ArrayList var5 = new ArrayList(1);
-         var5.add(this.getDefaultColumnFamily());
-         return this.multiGetByteBuffers(var3, var5, var1, var2);
+         ArrayList var4 = new ArrayList(1);
+         var4.add(this.getDefaultColumnFamily());
+         return this.multiGetByteBuffers(var3, var4, var1, var2);
       }
    }
 
@@ -933,14 +932,14 @@ public class RocksDB extends RocksObject {
          Status var16 = var13[var15];
          if (var16.getCode() == Status.Code.Ok) {
             ByteBuffer var17 = var23[var15];
-            ((Buffer)var17).position(Math.min(var12[var15], var17.capacity()));
-            ((Buffer)var17).flip();
+            var17.position(Math.min(var12[var15], var17.capacity()));
+            var17.flip();
             var14.add(new ByteBufferGetStatus(var16, var12[var15], var17));
          } else if (var16.getCode() == Status.Code.Incomplete) {
             assert var12[var15] == -1;
             ByteBuffer var24 = var23[var15];
-            ((Buffer)var24).position(var24.capacity());
-            ((Buffer)var24).flip();
+            var24.position(var24.capacity());
+            var24.flip();
             var14.add(new ByteBufferGetStatus(var16, var24.capacity(), var24));
          } else {
             var14.add(new ByteBufferGetStatus(var16));
@@ -1082,7 +1081,7 @@ public class RocksDB extends RocksObject {
       boolean var4 = keyMayExistDirect(
          this.nativeHandle_, var1 == null ? 0L : var1.nativeHandle_, var2 == null ? 0L : var2.nativeHandle_, var3, var3.position(), var3.limit()
       );
-      ((Buffer)var3).position(var3.limit());
+      var3.position(var3.limit());
       return var4;
    }
 
@@ -1103,8 +1102,8 @@ public class RocksDB extends RocksObject {
          var4.remaining()
       );
       int var6 = var5[1];
-      ((Buffer)var4).limit(var4.position() + Math.min(var6, var4.remaining()));
-      ((Buffer)var3).position(var3.limit());
+      var4.limit(var4.position() + Math.min(var6, var4.remaining()));
+      var3.position(var3.limit());
       return new KeyMayExist(KeyMayExist.KeyMayExistEnum.values()[var5[0]], var6);
    }
 
@@ -1321,6 +1320,14 @@ public class RocksDB extends RocksObject {
 
    public void continueBackgroundWork() throws RocksDBException {
       continueBackgroundWork(this.nativeHandle_);
+   }
+
+   public void abortAllCompactions() {
+      abortAllCompactions(this.nativeHandle_);
+   }
+
+   public void resumeAllCompactions() {
+      resumeAllCompactions(this.nativeHandle_);
    }
 
    public void enableAutoCompaction(List<ColumnFamilyHandle> var1) throws RocksDBException {
@@ -1740,6 +1747,10 @@ public class RocksDB extends RocksObject {
    private static native void pauseBackgroundWork(long var0) throws RocksDBException;
 
    private static native void continueBackgroundWork(long var0) throws RocksDBException;
+
+   private static native void abortAllCompactions(long var0);
+
+   private static native void resumeAllCompactions(long var0);
 
    private static native void enableAutoCompaction(long var0, long[] var2) throws RocksDBException;
 

@@ -18,6 +18,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 
 public class SubmergeCommand extends AbstractPlayerCommand {
+   private static final String EMPTY_FLUID_KEY = "Empty";
    @Nonnull
    private final RequiredArg<String> fluidItemArg = this.withRequiredArg("fluid-item", "server.commands.submerge.fluidType.desc", ArgTypes.BLOCK_TYPE_KEY);
 
@@ -35,12 +36,24 @@ public class SubmergeCommand extends AbstractPlayerCommand {
       assert playerComponent != null;
       if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerRef, store)) {
          String fluidItemKey = this.fluidItemArg.get(context);
-         if (!FluidPatternHelper.isFluidItem(fluidItemKey)) {
+         if (isUnsubmergeFluidKey(fluidItemKey)) {
+            BuilderToolsPlugin.addToQueue(
+               playerComponent, playerRef, (playerEntityRef, builderState, componentAccessor) -> builderState.unsubmerge(playerEntityRef, componentAccessor)
+            );
+            context.sendMessage(Message.translation("server.builderTools.submerge.unsubmergedSelection"));
+         } else if (!FluidPatternHelper.isFluidItem(fluidItemKey)) {
             context.sendMessage(Message.translation("server.builderTools.invalidBlockType").param("name", fluidItemKey).param("key", fluidItemKey));
          } else {
             BlockPattern pattern = BlockPattern.parse(fluidItemKey);
-            BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> s.set(pattern, componentAccessor));
+            BuilderToolsPlugin.addToQueue(
+               playerComponent, playerRef, (playerEntityRef, builderState, componentAccessor) -> builderState.set(pattern, componentAccessor)
+            );
+            context.sendMessage(Message.translation("server.builderTools.submerge.submergedSelection"));
          }
       }
+   }
+
+   static boolean isUnsubmergeFluidKey(@Nonnull String fluidItemKey) {
+      return fluidItemKey.equalsIgnoreCase("Empty");
    }
 }

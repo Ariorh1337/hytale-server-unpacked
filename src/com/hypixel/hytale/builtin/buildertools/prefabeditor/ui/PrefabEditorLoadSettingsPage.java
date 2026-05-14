@@ -21,16 +21,24 @@ import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.math.util.ChunkUtil;
+import com.hypixel.hytale.math.util.MathUtil;
+import com.hypixel.hytale.protocol.Color;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolPrefabPreview;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
+import com.hypixel.hytale.protocol.packets.interface_.EditorBlocksChange;
 import com.hypixel.hytale.protocol.packets.interface_.Page;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.asset.type.environment.config.Environment;
+import com.hypixel.hytale.server.core.asset.util.ColorParseUtil;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
 import com.hypixel.hytale.server.core.modules.singleplayer.SingleplayerModule;
+import com.hypixel.hytale.server.core.prefab.PrefabLoadException;
 import com.hypixel.hytale.server.core.prefab.PrefabStore;
+import com.hypixel.hytale.server.core.prefab.selection.standard.BlockSelection;
 import com.hypixel.hytale.server.core.ui.DropdownEntryInfo;
 import com.hypixel.hytale.server.core.ui.LocalizableString;
 import com.hypixel.hytale.server.core.ui.Value;
@@ -42,6 +50,9 @@ import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
+import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.io.File;
@@ -54,6 +65,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<PrefabEditorLoadSettingsPage.PageData> {
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
@@ -75,6 +87,15 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
    private final List<String> selectedItems = new ObjectArrayList<>();
    @Nonnull
    private final AssetPrefabFileProvider assetProvider = new AssetPrefabFileProvider();
+   private static final int PREVIEW_TILT = 23;
+   private static final int PREVIEW_SPIN_SPEED = 27;
+   private static final int PREVIEW_MAX_SIZE = 100;
+   private static final int DEFAULT_BIOME_TINT = ColorParseUtil.colorToARGBInt(PrefabEditSessionManager.DEFAULT_TINT) & 16777215;
+   private static final int DEFAULT_WATER_TINT = ColorParseUtil.colorToARGBInt(Environment.getUnknownFor("").getWaterTint()) & 16777215;
+   @Nullable
+   private Path previewedBrowserPath;
+   @Nonnull
+   private PrefabRootDirectory resolvedRootDirectory = PrefabRootDirectory.ASSET;
    private boolean inAssetsRoot = false;
    @Nonnull
    private Path assetsCurrentDir = Paths.get("");
@@ -101,16 +122,6 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
 
       commandBuilder.set("#SavedConfigs #Input.Entries", this.savedConfigsDropdown);
       commandBuilder.set("#SavedConfigs #Input.Value", "");
-      ObjectArrayList<DropdownEntryInfo> rootDirectoryDropdown = new ObjectArrayList<>();
-
-      for (PrefabRootDirectory value : PrefabRootDirectory.values()) {
-         if (value != PrefabRootDirectory.WORLDGEN) {
-            rootDirectoryDropdown.add(new DropdownEntryInfo(LocalizableString.fromMessageId(value.getLocalizationString()), value.name()));
-         }
-      }
-
-      commandBuilder.set("#MainPage #RootDir #Input.Entries", rootDirectoryDropdown);
-      commandBuilder.set("#MainPage #RootDir #Input.Value", PrefabEditLoadCommand.DEFAULT_PREFAB_ROOT_DIRECTORY.name());
       ObjectArrayList<DropdownEntryInfo> worldGenTypeDropdown = new ObjectArrayList<>();
 
       for (WorldGenType value : WorldGenType.values()) {
@@ -167,7 +178,6 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
          "#MainPage #LoadButton",
          new EventData()
             .append("Action", PrefabEditorLoadSettingsPage.Action.Load.name())
-            .append("@RootDir", "#MainPage #RootDir #Input.Value")
             .append("@PrefabPaths", "#MainPage #PrefabPaths #Input.Value")
             .append("@Recursive", "#MainPage #Recursive #CheckBox.Value")
             .append("@Children", "#MainPage #Children #CheckBox.Value")
@@ -216,7 +226,6 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
          new EventData()
             .append("Action", PrefabEditorLoadSettingsPage.Action.SavePropertiesConfig.name())
             .append("@ConfigName", "#SaveConfigPage #SaveName #Input.Value")
-            .append("@RootDir", "#MainPage #RootDir #Input.Value")
             .append("@PrefabPaths", "#MainPage #PrefabPaths #Input.Value")
             .append("@Recursive", "#MainPage #Recursive #CheckBox.Value")
             .append("@Children", "#MainPage #Children #CheckBox.Value")
@@ -328,6 +337,7 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
                showLoadingBuilder.set("#LoadingPage #CancelButton.Visible", true);
                this.sendUpdate(showLoadingBuilder);
                this.playerRef.sendMessage(Message.translation("server.commands.editprefab.loading"));
+               data.prefabRootDirectory = this.resolvedRootDirectory;
                CompletableFuture<Void> result = BuilderToolsPlugin.get()
                   .getPrefabEditSessionManager()
                   .loadPrefabAndCreateEditSession(ref, playerComponent, data.toCreationSettings(), store, this::onLoadingProgress);
@@ -373,6 +383,7 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
                }
 
                BuilderToolsUserData.get(playerComponent).setLastSavePack(targetPack.getName());
+               data.prefabRootDirectory = this.resolvedRootDirectory;
                CompletableFuture<Void> saveFuture = PrefabEditorCreationSettings.save(data.configName, data.toCreationSettings(), targetPack);
                saveFuture.thenRun(() -> {
                   UICommandBuilder builderx = new UICommandBuilder();
@@ -388,8 +399,8 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
                break;
             case ApplySavedProperties:
                if (data.configName == null || data.configName.isBlank()) {
+                  this.resolvedRootDirectory = PrefabEditLoadCommand.DEFAULT_PREFAB_ROOT_DIRECTORY;
                   UICommandBuilder builderx = new UICommandBuilder();
-                  builderx.set("#MainPage #RootDir #Input.Value", PrefabEditLoadCommand.DEFAULT_PREFAB_ROOT_DIRECTORY.name());
                   builderx.set("#MainPage #PrefabPaths #Input.Value", "");
                   builderx.set("#MainPage #Recursive #CheckBox.Value", false);
                   builderx.set("#MainPage #Children #CheckBox.Value", false);
@@ -410,8 +421,8 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
 
                PrefabEditorCreationSettings.load(data.configName).thenAccept(settings -> {
                   if (settings != null) {
+                     this.resolvedRootDirectory = settings.getPrefabRootDirectory();
                      UICommandBuilder builderx = new UICommandBuilder();
-                     builderx.set("#MainPage #RootDir #Input.Value", settings.getPrefabRootDirectory().name());
                      builderx.set("#MainPage #PrefabPaths #Input.Value", String.join(",", settings.getUnprocessedPrefabPaths()));
                      builderx.set("#MainPage #Recursive #CheckBox.Value", settings.isRecursive());
                      builderx.set("#MainPage #Children #CheckBox.Value", settings.isLoadChildren());
@@ -480,7 +491,7 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
                break;
             case OpenBrowser: {
                this.inAssetsRoot = true;
-               List<PrefabStore.AssetPackPrefabPath> assetPacks = PrefabStore.get().getAllAssetPrefabPaths();
+               List<PrefabStore.AssetPackPrefabPath> assetPacks = PrefabStore.get().getAllBrowsablePrefabPaths();
                this.assetsCurrentDir = assetPacks.size() == 1 ? Paths.get("HytaleAssets") : Paths.get("");
                this.browserRoot = Paths.get("Assets");
                this.browserCurrent = Paths.get("");
@@ -491,10 +502,7 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
                UIEventBuilder eventBuilder = new UIEventBuilder();
                commandBuilder.set("#MainPage.Visible", false);
                commandBuilder.set("#BrowserPage.Visible", true);
-               List<DropdownEntryInfo> roots = this.buildBrowserRootEntries();
-               commandBuilder.set("#BrowserPage #BrowserContent #RootSelector.Visible", true);
-               commandBuilder.set("#BrowserPage #BrowserContent #RootSelector.Entries", roots);
-               commandBuilder.set("#BrowserPage #BrowserContent #RootSelector.Value", "Assets");
+               commandBuilder.set("#BrowserPage #BrowserContent #RootSelector.Visible", false);
                commandBuilder.set("#BrowserPage #BrowserContent #SearchInput.Value", "");
                commandBuilder.set("#BrowserPage #SelectedSection #SelectedItems.Value", "");
                this.buildBrowserList(commandBuilder, eventBuilder);
@@ -503,7 +511,7 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
             }
             case BrowserHome: {
                if (this.inAssetsRoot) {
-                  List<PrefabStore.AssetPackPrefabPath> packs = PrefabStore.get().getAllAssetPrefabPaths();
+                  List<PrefabStore.AssetPackPrefabPath> packs = PrefabStore.get().getAllBrowsablePrefabPaths();
                   this.assetsCurrentDir = packs.size() == 1 ? Paths.get("HytaleAssets") : Paths.get("");
                } else {
                   this.browserCurrent = this.browserRoot.getFileSystem().getPath("");
@@ -541,7 +549,7 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
 
                this.inAssetsRoot = "Assets".equals(data.browserRootStr);
                if (this.inAssetsRoot) {
-                  List<PrefabStore.AssetPackPrefabPath> packs = PrefabStore.get().getAllAssetPrefabPaths();
+                  List<PrefabStore.AssetPackPrefabPath> packs = PrefabStore.get().getAllBrowsablePrefabPaths();
                   this.assetsCurrentDir = packs.size() == 1 ? Paths.get("HytaleAssets") : Paths.get("");
                   this.browserRoot = Paths.get("Assets");
                   this.browserCurrent = Paths.get("");
@@ -563,7 +571,7 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
                commandBuilder.set("#BrowserPage #SelectedSection #SelectedItems.Value", "");
                PrefabRootDirectory rootDirValue = this.getRootDirectoryForPath(data.browserRootStr);
                if (rootDirValue != null) {
-                  commandBuilder.set("#MainPage #RootDir #Input.Value", rootDirValue.name());
+                  this.resolvedRootDirectory = rootDirValue;
                }
 
                this.buildBrowserList(commandBuilder, eventBuilder);
@@ -590,6 +598,7 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
                break;
             }
             case ConfirmBrowser: {
+               this.clearBrowserPreview();
                String pathsToSet;
                if (!this.selectedItems.isEmpty()) {
                   pathsToSet = String.join(",", this.selectedItems);
@@ -601,7 +610,7 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
                commandBuilder.set("#MainPage #PrefabPaths #Input.Value", pathsToSet);
                PrefabRootDirectory rootDirValue = this.inAssetsRoot ? PrefabRootDirectory.ASSET : this.getRootDirectoryForPath(this.browserRoot.toString());
                if (rootDirValue != null) {
-                  commandBuilder.set("#MainPage #RootDir #Input.Value", rootDirValue.name());
+                  this.resolvedRootDirectory = rootDirValue;
                }
 
                commandBuilder.set("#BrowserPage.Visible", false);
@@ -610,6 +619,7 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
                break;
             }
             case CancelBrowser: {
+               this.clearBrowserPreview();
                UICommandBuilder commandBuilder = new UICommandBuilder();
                commandBuilder.set("#BrowserPage.Visible", false);
                commandBuilder.set("#MainPage.Visible", true);
@@ -666,6 +676,7 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
          if (!this.assetsCurrentDir.toString().isEmpty()) {
             Path parent = this.assetsCurrentDir.getParent();
             this.assetsCurrentDir = parent != null ? parent : Paths.get("");
+            this.selectedPath = null;
             UICommandBuilder commandBuilder = new UICommandBuilder();
             UIEventBuilder eventBuilder = new UIEventBuilder();
             this.buildBrowserList(commandBuilder, eventBuilder);
@@ -681,14 +692,16 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
             if (Files.isDirectory(resolvedPath)) {
                this.assetsCurrentDir = Paths.get(targetVirtualPath);
                this.selectedPath = targetVirtualPath + "/";
+               this.clearBrowserPreview();
                UICommandBuilder commandBuilder = new UICommandBuilder();
                UIEventBuilder eventBuilder = new UIEventBuilder();
                this.buildBrowserList(commandBuilder, eventBuilder);
                this.sendUpdate(commandBuilder, eventBuilder, false);
             } else {
                this.selectedPath = targetVirtualPath;
+               this.sendBrowserPreview(this.assetProvider.resolveVirtualPath(targetVirtualPath));
                UICommandBuilder commandBuilder = new UICommandBuilder();
-               commandBuilder.set("#BrowserPage #CurrentPath.Text", "Assets/" + targetVirtualPath);
+               commandBuilder.set("#BrowserPage #CurrentPath.Text", toNodeEditorPathOrVirtual(targetVirtualPath));
                this.sendUpdate(commandBuilder);
             }
          }
@@ -704,12 +717,14 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
             this.browserCurrent = PathUtil.relativize(this.browserRoot, file);
             String pathStr = this.browserCurrent.toString().replace('\\', '/');
             this.selectedPath = pathStr.isEmpty() ? "/" : (pathStr.endsWith("/") ? pathStr : pathStr + "/");
+            this.clearBrowserPreview();
             UICommandBuilder commandBuilder = new UICommandBuilder();
             UIEventBuilder eventBuilder = new UIEventBuilder();
             this.buildBrowserList(commandBuilder, eventBuilder);
             this.sendUpdate(commandBuilder, eventBuilder, false);
          } else {
             this.selectedPath = PathUtil.relativize(this.browserRoot, file).toString().replace('\\', '/');
+            this.sendBrowserPreview(file);
             UICommandBuilder commandBuilder = new UICommandBuilder();
             commandBuilder.set("#BrowserPage #CurrentPath.Text", this.selectedPath);
             this.sendUpdate(commandBuilder);
@@ -718,6 +733,11 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
    }
 
    @Nonnull
+   private static String toNodeEditorPathOrVirtual(@Nonnull String virtualPath) {
+      String converted = AssetPrefabFileProvider.toNodeEditorPath(virtualPath);
+      return converted != null ? converted : "assets/";
+   }
+
    private String getCurrentBrowserPath() {
       if (this.selectedPath != null) {
          return this.selectedPath;
@@ -727,6 +747,79 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
       } else {
          String pathStr = this.browserCurrent.toString().replace('\\', '/');
          return pathStr.isEmpty() ? "/" : (pathStr.endsWith("/") ? pathStr : pathStr + "/");
+      }
+   }
+
+   private void sendBrowserPreview(@Nullable Path file) {
+      if (file == null || !Files.isRegularFile(file)) {
+         this.clearBrowserPreview();
+      } else if (!file.equals(this.previewedBrowserPath)) {
+         this.previewedBrowserPath = file;
+
+         try {
+            BlockSelection selection = PrefabStore.get().getPrefab(file);
+            this.sendBrowserPreviewPacket(selection);
+         } catch (PrefabLoadException e) {
+            this.sendBrowserPreviewPacket(null);
+         }
+      }
+   }
+
+   private void clearBrowserPreview() {
+      if (this.previewedBrowserPath != null) {
+         this.previewedBrowserPath = null;
+         this.sendBrowserPreviewPacket(null);
+      }
+   }
+
+   private void sendBrowserPreviewPacket(@Nullable BlockSelection selection) {
+      BuilderToolPrefabPreview packet = new BuilderToolPrefabPreview();
+      if (selection != null) {
+         packet.tilt = 23;
+         packet.spinSpeed = 27;
+         packet.previewScale = 100;
+         EditorBlocksChange editorPacket = selection.toPacket();
+         packet.blocksChange = editorPacket.blocksChange;
+         packet.fluidsChange = editorPacket.fluidsChange;
+         packet.entityChanges = editorPacket.entityChanges;
+         this.applyTintFromPlayerPosition(packet);
+      }
+
+      this.playerRef.getPacketHandler().write(packet);
+   }
+
+   private void applyTintFromPlayerPosition(@Nonnull BuilderToolPrefabPreview packet) {
+      Ref<EntityStore> ref = this.playerRef.getReference();
+      if (ref == null) {
+         packet.biomeTint = DEFAULT_BIOME_TINT;
+         packet.waterTint = DEFAULT_WATER_TINT;
+      } else {
+         Store<EntityStore> store = ref.getStore();
+         World world = store.getExternalData().getWorld();
+         Vector3d pos = this.playerRef.getTransform().getPosition();
+         int x = MathUtil.floor(pos.x);
+         int y = MathUtil.floor(pos.y);
+         int z = MathUtil.floor(pos.z);
+         long chunkIndex = ChunkUtil.indexChunkFromBlock(x, z);
+         WorldChunk chunk = world.getNonTickingChunk(chunkIndex);
+         if (chunk != null && chunk.getBlockChunk() != null) {
+            BlockChunk blockChunk = chunk.getBlockChunk();
+            packet.biomeTint = blockChunk.getTint(x, z);
+            int envId = blockChunk.getEnvironment(x, y, z);
+            Environment environment = Environment.getAssetMap().getAsset(envId);
+            if (environment != null) {
+               Color waterColor = environment.getWaterTint();
+               if (waterColor != null) {
+                  packet.waterTint = (waterColor.red & 255) << 16 | (waterColor.green & 255) << 8 | waterColor.blue & 255;
+                  return;
+               }
+            }
+
+            packet.waterTint = DEFAULT_WATER_TINT;
+         } else {
+            packet.biomeTint = DEFAULT_BIOME_TINT;
+            packet.waterTint = DEFAULT_WATER_TINT;
+         }
       }
    }
 
@@ -741,21 +834,8 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
 
    private void buildAssetsBrowserList(@Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder) {
       String currentDirStr = this.assetsCurrentDir.toString().replace('\\', '/');
-      String displayPath;
-      if (currentDirStr.isEmpty()) {
-         displayPath = "Assets";
-      } else {
-         String[] parts = currentDirStr.split("/", 2);
-         String packName = parts[0];
-         String subPath = parts.length > 1 ? "/" + parts[1] : "";
-         if ("HytaleAssets".equals(packName)) {
-            displayPath = packName + subPath;
-         } else {
-            displayPath = "Mods/" + packName + subPath;
-         }
-      }
-
-      commandBuilder.set("#BrowserPage #CurrentPath.Text", displayPath);
+      String assetsVirtualPath = currentDirStr.isEmpty() ? "" : currentDirStr + "/";
+      commandBuilder.set("#BrowserPage #CurrentPath.Text", assetsVirtualPath.isEmpty() ? "Asset Packs" : toNodeEditorPathOrVirtual(assetsVirtualPath));
       List<FileListProvider.FileEntry> entries = this.assetProvider.getFiles(this.assetsCurrentDir, this.browserSearchQuery);
       int buttonIndex = 0;
       if (!currentDirStr.isEmpty() && this.browserSearchQuery.isEmpty()) {
@@ -771,15 +851,16 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
 
       for (FileListProvider.FileEntry entry : entries) {
          String displayText = entry.isDirectory() ? entry.displayName() + "/" : entry.displayName();
+         String selector = "#BrowserPage #BrowserContent #FileList[" + buttonIndex + "]";
          commandBuilder.append("#BrowserPage #BrowserContent #FileList", "Pages/BasicTextButton.ui");
-         commandBuilder.set("#BrowserPage #BrowserContent #FileList[" + buttonIndex + "].Text", displayText);
+         commandBuilder.set(selector + ".Text", displayText);
          if (!entry.isDirectory()) {
-            commandBuilder.set("#BrowserPage #BrowserContent #FileList[" + buttonIndex + "].Style", BUTTON_HIGHLIGHTED);
+            commandBuilder.set(selector + ".Style", BUTTON_HIGHLIGHTED);
          }
 
          eventBuilder.addEventBinding(
             CustomUIEventBindingType.Activating,
-            "#BrowserPage #BrowserContent #FileList[" + buttonIndex + "]",
+            selector,
             new EventData().append("Action", PrefabEditorLoadSettingsPage.Action.BrowserNavigate.name()).append("File", entry.name())
          );
          buttonIndex++;
@@ -833,15 +914,16 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
       for (File file : files) {
          boolean isDirectory = file.isDirectory();
          String fileName = file.getName();
+         String selector = "#BrowserPage #BrowserContent #FileList[" + buttonIndex + "]";
          commandBuilder.append("#BrowserPage #BrowserContent #FileList", "Pages/BasicTextButton.ui");
-         commandBuilder.set("#BrowserPage #BrowserContent #FileList[" + buttonIndex + "].Text", !isDirectory ? fileName : fileName + "/");
+         commandBuilder.set(selector + ".Text", !isDirectory ? fileName : fileName + "/");
          if (!isDirectory) {
-            commandBuilder.set("#BrowserPage #BrowserContent #FileList[" + buttonIndex + "].Style", BUTTON_HIGHLIGHTED);
+            commandBuilder.set(selector + ".Style", BUTTON_HIGHLIGHTED);
          }
 
          eventBuilder.addEventBinding(
             CustomUIEventBindingType.Activating,
-            "#BrowserPage #BrowserContent #FileList[" + buttonIndex + "]",
+            selector,
             new EventData().append("Action", PrefabEditorLoadSettingsPage.Action.BrowserNavigate.name()).append("File", fileName)
          );
          buttonIndex++;
@@ -852,23 +934,18 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
    private List<DropdownEntryInfo> buildBrowserRootEntries() {
       List<DropdownEntryInfo> roots = new ObjectArrayList<>();
       roots.add(new DropdownEntryInfo(LocalizableString.fromString("Assets"), "Assets"));
-      roots.add(new DropdownEntryInfo(LocalizableString.fromString("Server"), PrefabStore.get().getServerPrefabsPath().toString()));
       return roots;
    }
 
    @Nullable
    private Path findActualRootPath(@Nonnull String pathStr) {
-      for (PrefabStore.AssetPackPrefabPath packPath : PrefabStore.get().getAllAssetPrefabPaths()) {
+      for (PrefabStore.AssetPackPrefabPath packPath : PrefabStore.get().getAllBrowsablePrefabPaths()) {
          if (packPath.prefabsPath().toString().equals(pathStr)) {
             return packPath.prefabsPath();
          }
       }
 
-      if (PrefabStore.get().getServerPrefabsPath().toString().equals(pathStr)) {
-         return PrefabStore.get().getServerPrefabsPath();
-      } else {
-         return PrefabStore.get().getWorldGenPrefabsPath().toString().equals(pathStr) ? PrefabStore.get().getWorldGenPrefabsPath() : null;
-      }
+      return PrefabStore.get().getWorldGenPrefabsPath().toString().equals(pathStr) ? PrefabStore.get().getWorldGenPrefabsPath() : null;
    }
 
    @Nullable
@@ -890,7 +967,7 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
       if ("Assets".equals(pathStr)) {
          return PrefabRootDirectory.ASSET;
       } else if (pathStr.equals(PrefabStore.get().getServerPrefabsPath().toString())) {
-         return PrefabRootDirectory.SERVER;
+         return PrefabRootDirectory.ASSET;
       } else if (pathStr.equals(PrefabStore.get().getWorldGenPrefabsPath().toString())) {
          return PrefabRootDirectory.WORLDGEN;
       } else {

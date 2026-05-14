@@ -4,6 +4,7 @@ import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.vector.Vector3dUtil;
 import javax.annotation.Nonnull;
 import org.joml.Vector3d;
+import org.joml.Vector3dc;
 
 public class BoxBlockIntersectionEvaluator extends BlockContactData implements IBlockCollisionEvaluator {
    @Nonnull
@@ -25,12 +26,13 @@ public class BoxBlockIntersectionEvaluator extends BlockContactData implements I
       data.setTouchingOverlapping(CollisionMath.isTouching(this.resultCode), CollisionMath.isOverlapping(this.resultCode));
    }
 
-   public Vector3d getWorldUp() {
+   @Nonnull
+   public Vector3dc getWorldUp() {
       return this.worldUp;
    }
 
-   public void setWorldUp(Vector3d worldUp) {
-      this.worldUp = worldUp;
+   public void setWorldUp(@Nonnull Vector3dc worldUp) {
+      this.worldUp.set(worldUp);
    }
 
    @Nonnull
@@ -46,13 +48,13 @@ public class BoxBlockIntersectionEvaluator extends BlockContactData implements I
    }
 
    @Nonnull
-   public BoxBlockIntersectionEvaluator setPosition(@Nonnull Vector3d pos) {
+   public BoxBlockIntersectionEvaluator setPosition(@Nonnull Vector3dc pos) {
       this.collisionPoint.set(pos);
       return this;
    }
 
    @Nonnull
-   public BoxBlockIntersectionEvaluator setBox(@Nonnull Box box, @Nonnull Vector3d pos) {
+   public BoxBlockIntersectionEvaluator setBox(@Nonnull Box box, @Nonnull Vector3dc pos) {
       return this.setBox(box).setPosition(pos);
    }
 

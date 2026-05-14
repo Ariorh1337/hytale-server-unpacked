@@ -83,19 +83,6 @@ public class ReadOptions extends RocksObject {
       return this;
    }
 
-   @Deprecated
-   public boolean managed() {
-      assert this.isOwningHandle();
-      return managed(this.nativeHandle_);
-   }
-
-   @Deprecated
-   public ReadOptions setManaged(boolean var1) {
-      assert this.isOwningHandle();
-      setManaged(this.nativeHandle_, var1);
-      return this;
-   }
-
    public boolean totalOrderSeek() {
       assert this.isOwningHandle();
       return totalOrderSeek(this.nativeHandle_);
@@ -324,10 +311,6 @@ public class ReadOptions extends RocksObject {
    private static native boolean tailing(long var0);
 
    private static native void setTailing(long var0, boolean var2);
-
-   private static native boolean managed(long var0);
-
-   private static native void setManaged(long var0, boolean var2);
 
    private static native boolean totalOrderSeek(long var0);
 
