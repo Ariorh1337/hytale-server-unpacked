@@ -331,7 +331,9 @@ public abstract class Interaction
       @Nonnull InteractionContext context,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
-      byte activeSlot = InventoryUtils.getActiveSlot(ref, context.getHeldItemSectionId(), componentAccessor);
+      byte activeSlot = type == InteractionType.Equipped
+         ? context.getHeldItemSlot()
+         : InventoryUtils.getActiveSlot(ref, context.getHeldItemSectionId(), componentAccessor);
       byte contextHeldItemSlot = context.getHeldItemSlot();
       ItemStack contextHeldItemStack = context.getHeldItem();
       ItemContainer contextHeldItemContainer = context.getHeldItemContainer();

@@ -24,7 +24,7 @@ public abstract class TriggerEffect {
       .add()
       .append(new KeyedCodec<>("Interval", Codec.FLOAT, false), (e, v) -> e.interval = v, e -> e.interval)
       .add()
-      .append(new KeyedCodec<>("Delay", Codec.FLOAT, false), (e, v) -> e.delay = v, e -> e.delay)
+      .append(new KeyedCodec<>("Delay", Codec.FLOAT, false), (effect, delay) -> effect.delay = delay, effect -> effect.delay)
       .add()
       .build();
    private TriggerEventType eventType;

@@ -38,7 +38,7 @@ public class TriggerVolumeChunkRegenSystem extends RefSystem<ChunkStore> {
             if (world != null) {
                TriggerVolumeManager manager = world.getEntityStore().getStore().getResource(this.managerResourceType);
                if (manager != null) {
-                  manager.removeWorldGenVolumesInChunk(ChunkUtil.indexChunk(wc.getX(), wc.getZ()));
+                  manager.markWorldGenRegenChunk(ChunkUtil.indexChunk(wc.getX(), wc.getZ()));
                }
             }
          }

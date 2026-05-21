@@ -163,11 +163,11 @@ public interface MotionController extends DebugSupport.DebugFlagsChangeListener 
 
    Vector3dc getWorldAntiNormal();
 
-   void addForce(@Nonnull Vector3d var1, @Nullable VelocityConfig var2);
+   void addVelocity(@Nonnull Vector3d var1, @Nullable VelocityConfig var2);
 
-   Vector3d getForce();
+   Vector3d getExternalVelocity();
 
-   void forceVelocity(@Nonnull Vector3dc var1, @Nullable VelocityConfig var2, boolean var3);
+   void setVelocity(@Nonnull Vector3dc var1, @Nullable VelocityConfig var2, boolean var3);
 
    MotionController.VerticalRange getDesiredVerticalRange(@Nonnull Ref<EntityStore> var1, @Nonnull ComponentAccessor<EntityStore> var2);
 

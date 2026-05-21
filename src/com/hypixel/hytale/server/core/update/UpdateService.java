@@ -4,6 +4,7 @@ import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.EmptyExtraInfo;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.codec.util.RawJsonReader;
 import com.hypixel.hytale.common.util.java.ManifestUtil;
 import com.hypixel.hytale.logger.HytaleLogger;
@@ -451,11 +452,60 @@ public class UpdateService {
       }
    }
 
+   @Nullable
+   public UpdateService.PatchlineSummary[] fetchPatchlines(@Nonnull String accessToken) throws IOException, InterruptedException {
+      String url = this.accountDataUrl + "/my-account/get-patchlines";
+      HttpRequest request = HttpRequest.newBuilder()
+         .uri(URI.create(url))
+         .header("Accept", "application/json")
+         .header("Authorization", "Bearer " + accessToken)
+         .header("User-Agent", AuthConfig.USER_AGENT)
+         .timeout(REQUEST_TIMEOUT)
+         .GET()
+         .build();
+      HttpResponse<String> response = this.httpClient.send(request, BodyHandlers.ofString());
+      if (response.statusCode() != 200) {
+         LOGGER.at(Level.WARNING).log("Failed to fetch patchlines: HTTP %d", (int)response.statusCode());
+         return null;
+      } else {
+         UpdateService.GetPatchlinesResponse patchlines = UpdateService.GetPatchlinesResponse.CODEC
+            .decodeJson(new RawJsonReader(response.body().toCharArray()), EmptyExtraInfo.EMPTY);
+         return patchlines != null ? patchlines.patchlines : null;
+      }
+   }
+
    private static <T> KeyedCodec<T> externalKey(String key, Codec<T> codec) {
       return new KeyedCodec<>(key, codec, false, true);
    }
 
    public record DownloadTask(CompletableFuture<Boolean> future, Thread thread) {
+   }
+
+   public static class GetPatchlinesResponse {
+      public UpdateService.PatchlineSummary[] patchlines;
+      public static final BuilderCodec<UpdateService.GetPatchlinesResponse> CODEC = BuilderCodec.builder(
+            UpdateService.GetPatchlinesResponse.class, UpdateService.GetPatchlinesResponse::new
+         )
+         .append(
+            UpdateService.externalKey("patchlines", new ArrayCodec<>(UpdateService.PatchlineSummary.CODEC, UpdateService.PatchlineSummary[]::new)),
+            (r, v) -> r.patchlines = v,
+            r -> r.patchlines
+         )
+         .add()
+         .build();
+   }
+
+   public static class PatchlineSummary {
+      public String name;
+      public long expiresAt;
+      public static final BuilderCodec<UpdateService.PatchlineSummary> CODEC = BuilderCodec.builder(
+            UpdateService.PatchlineSummary.class, UpdateService.PatchlineSummary::new
+         )
+         .append(UpdateService.externalKey("name", Codec.STRING), (r, v) -> r.name = v, r -> r.name)
+         .add()
+         .append(UpdateService.externalKey("expiresAt", Codec.LONG), (r, v) -> r.expiresAt = v, r -> r.expiresAt)
+         .add()
+         .build();
    }
 
    @FunctionalInterface

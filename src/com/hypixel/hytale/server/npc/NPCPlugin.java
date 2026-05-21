@@ -1000,10 +1000,13 @@ public class NPCPlugin extends JavaPlugin {
          try {
             if (!spawningContext.setSpawnable(spawnable)) {
                return SpawnTestResult.FAIL_NOT_SPAWNABLE;
-            } else if (!spawningContext.setExact(store.getExternalData().getWorld(), position.x(), position.y(), position.z())) {
-               return SpawnTestResult.FAIL_INVALID_POSITION;
             } else {
-               return spawningContext.validatePosition(20) ? SpawnTestResult.TEST_OK : SpawnTestResult.FAIL_INVALID_POSITION;
+               World world = store.getExternalData().getWorld();
+               if (!spawningContext.setExact(world, position.x(), position.y(), position.z())) {
+                  return SpawnTestResult.FAIL_INVALID_POSITION;
+               } else {
+                  return spawningContext.validatePosition(20) ? SpawnTestResult.TEST_OK : SpawnTestResult.FAIL_INVALID_POSITION;
+               }
             }
          } finally {
             spawningContext.releaseFull();

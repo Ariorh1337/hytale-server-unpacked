@@ -22,7 +22,7 @@ import javax.annotation.Nullable;
 public class DamageEntityEffect extends TriggerEffect {
    @Nonnull
    public static final BuilderCodec<DamageEntityEffect> CODEC = BuilderCodec.builder(DamageEntityEffect.class, DamageEntityEffect::new, BASE_CODEC)
-      .append(new KeyedCodec<>("Mode", new EnumCodec<>(DamageEntityEffect.DamageMode.class, EnumCodec.EnumStyle.LEGACY)), (e, v) -> e.mode = v, e -> e.mode)
+      .append(new KeyedCodec<>("Mode", new EnumCodec<>(DamageEntityEffect.DamageMode.class)), (e, v) -> e.mode = v, e -> e.mode)
       .add()
       .append(new KeyedCodec<>("Amount", Codec.FLOAT, false), (e, v) -> e.amount = v, e -> e.amount)
       .add()

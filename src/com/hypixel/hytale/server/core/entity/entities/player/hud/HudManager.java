@@ -10,6 +10,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -56,12 +57,6 @@ public class HudManager {
       return Collections.unmodifiableMap(this.customHuds);
    }
 
-   @Deprecated
-   @Nullable
-   public CustomUIHud getCustomHud() {
-      return this.customHuds.get("default");
-   }
-
    @Nonnull
    public Set<HudComponent> getVisibleHudComponents() {
       return this.unmodifiableVisibleHudComponents;
@@ -102,6 +97,7 @@ public class HudManager {
       CustomUIHud oldHud = this.customHuds.get(key);
       if (oldHud != hud) {
          if (oldHud != null) {
+            oldHud.onRemove();
             ref.getPacketHandler().writeNoCache(new CustomHud(key, 0, true, null));
          }
 
@@ -111,25 +107,19 @@ public class HudManager {
    }
 
    public void removeCustomHud(@Nonnull PlayerRef ref, @Nonnull String key) {
-      if (this.customHuds.remove(key) != null) {
+      CustomUIHud oldHud = this.customHuds.remove(key);
+      if (oldHud != null) {
+         oldHud.onRemove();
          ref.getPacketHandler().writeNoCache(new CustomHud(key, 0, true, null));
-      }
-   }
-
-   @Deprecated
-   public void setCustomHud(@Nonnull PlayerRef ref, @Nullable CustomUIHud hud) {
-      if (hud == null) {
-         this.removeCustomHud(ref, "default");
-      } else {
-         this.addCustomHud(ref, hud);
       }
    }
 
    public void resetHud(@Nonnull PlayerRef ref) {
       this.setVisibleHudComponents(ref, DEFAULT_HUD_COMPONENTS);
 
-      for (String key : this.customHuds.keySet()) {
-         ref.getPacketHandler().writeNoCache(new CustomHud(key, 0, true, null));
+      for (Entry<String, CustomUIHud> entry : this.customHuds.entrySet()) {
+         entry.getValue().onRemove();
+         ref.getPacketHandler().writeNoCache(new CustomHud(entry.getKey(), 0, true, null));
       }
 
       this.customHuds.clear();

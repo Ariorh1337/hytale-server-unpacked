@@ -28,11 +28,7 @@ public class SetVelocityEffect extends TriggerEffect {
       .add()
       .append(new KeyedCodec<>("Additive", Codec.BOOLEAN, false), (e, v) -> e.additive = v, e -> e.additive)
       .add()
-      .append(
-         new KeyedCodec<>("RelativeMode", new EnumCodec<>(SetVelocityEffect.RelativeMode.class, EnumCodec.EnumStyle.LEGACY), false),
-         (e, v) -> e.relativeMode = v,
-         e -> e.relativeMode
-      )
+      .append(new KeyedCodec<>("RelativeMode", new EnumCodec<>(SetVelocityEffect.RelativeMode.class), false), (e, v) -> e.relativeMode = v, e -> e.relativeMode)
       .add()
       .build();
    private Vector3d velocity = new Vector3d(0.0, 0.0, 0.0);

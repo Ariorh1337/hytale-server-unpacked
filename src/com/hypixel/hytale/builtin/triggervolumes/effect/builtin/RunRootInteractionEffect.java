@@ -25,11 +25,7 @@ public class RunRootInteractionEffect extends TriggerEffect {
       )
       .append(new KeyedCodec<>("RootInteraction", Codec.STRING), (e, v) -> e.rootInteractionId = v, e -> e.rootInteractionId)
       .add()
-      .append(
-         new KeyedCodec<>("InteractionType", new EnumCodec<>(InteractionType.class, EnumCodec.EnumStyle.LEGACY), false),
-         (e, v) -> e.interactionType = v,
-         e -> e.interactionType
-      )
+      .append(new KeyedCodec<>("InteractionType", new EnumCodec<>(InteractionType.class), false), (e, v) -> e.interactionType = v, e -> e.interactionType)
       .add()
       .build();
    @Nullable

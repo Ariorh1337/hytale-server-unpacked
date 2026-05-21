@@ -6,16 +6,11 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import javax.annotation.Nonnull;
 
 public abstract class CustomUIHud {
-   public static final String DEFAULT_KEY = "default";
    @Nonnull
    private final PlayerRef playerRef;
    @Nonnull
    private final String key;
    private int zOrder;
-
-   public CustomUIHud(@Nonnull PlayerRef playerRef) {
-      this(playerRef, "default");
-   }
 
    public CustomUIHud(@Nonnull PlayerRef playerRef, @Nonnull String key) {
       this(playerRef, key, 0);
@@ -55,6 +50,9 @@ public abstract class CustomUIHud {
    public void setZOrder(int zOrder) {
       this.zOrder = zOrder;
       this.update(false, new UICommandBuilder());
+   }
+
+   protected void onRemove() {
    }
 
    protected abstract void build(@Nonnull UICommandBuilder var1);

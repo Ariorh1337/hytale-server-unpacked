@@ -8,9 +8,11 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import java.util.Iterator;
 import java.util.List;
 import java.util.PriorityQueue;
 import java.util.UUID;
+import java.util.function.Predicate;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -18,7 +20,7 @@ import javax.annotation.Nullable;
 public class DelayedEffectScheduler {
    @Nonnull
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-   private final PriorityQueue<DelayedEffectScheduler.ScheduledEffect> queue = new PriorityQueue<>();
+   private final PriorityQueue<DelayedEffectScheduler.ScheduledItem> queue = new PriorityQueue<>();
 
    public void schedule(
       @Nonnull TriggerEffect effect,
@@ -42,42 +44,86 @@ public class DelayedEffectScheduler {
       float delaySeconds,
       @Nullable List<VolumeEntry> spatialVolumes
    ) {
+      this.schedule(effect, entityRef, entityUuid, eventType, volume, nowNanos, delaySeconds, spatialVolumes, null);
+   }
+
+   public void schedule(
+      @Nonnull TriggerEffect effect,
+      @Nonnull Ref<EntityStore> entityRef,
+      @Nonnull UUID entityUuid,
+      @Nonnull TriggerEventType eventType,
+      @Nonnull VolumeEntry volume,
+      long nowNanos,
+      float delaySeconds,
+      @Nullable List<VolumeEntry> spatialVolumes,
+      @Nullable DelayedEffectScheduler.ScheduledEffectCallback callback
+   ) {
       long executeAt = nowNanos + (long)(delaySeconds * 1.0E9F);
-      this.queue.add(new DelayedEffectScheduler.ScheduledEffect(executeAt, effect, entityRef, entityUuid, eventType, volume, spatialVolumes));
+      this.queue.add(new DelayedEffectScheduler.ScheduledEffect(executeAt, effect, entityRef, entityUuid, eventType, volume, spatialVolumes, callback));
+   }
+
+   public void scheduleGate(
+      @Nonnull DelayedEffectScheduler.ScheduledGateAction action,
+      @Nonnull Ref<EntityStore> entityRef,
+      @Nonnull UUID entityUuid,
+      @Nonnull TriggerEventType eventType,
+      @Nonnull VolumeEntry volume,
+      long nowNanos,
+      float delaySeconds,
+      @Nullable List<VolumeEntry> spatialVolumes
+   ) {
+      long executeAt = nowNanos + (long)(delaySeconds * 1.0E9F);
+      this.queue.add(new DelayedEffectScheduler.ScheduledGate(executeAt, action, entityRef, entityUuid, eventType, volume, spatialVolumes));
    }
 
    public void tick(long nowNanos, @Nonnull Store<EntityStore> store) {
-      while (!this.queue.isEmpty() && this.queue.peek().executeAtNanos <= nowNanos) {
-         DelayedEffectScheduler.ScheduledEffect scheduled = this.queue.poll();
-         if (scheduled.entityRef.isValid() && !scheduled.volume.isPendingDestroy()) {
+      while (!this.queue.isEmpty() && this.queue.peek().executeAtNanos() <= nowNanos) {
+         DelayedEffectScheduler.ScheduledItem scheduled = this.queue.poll();
+         if (scheduled != null) {
+            boolean executed = false;
+
             try {
-               TriggerContext context = scheduled.spatialVolumes != null
-                  ? new TriggerContext(scheduled.entityRef, store, scheduled.eventType, scheduled.volume, scheduled.spatialVolumes)
-                  : new TriggerContext(scheduled.entityRef, store, scheduled.eventType, scheduled.volume);
-               scheduled.effect.execute(context);
-            } catch (Exception e) {
-               LOGGER.at(Level.WARNING)
-                  .withCause(e)
-                  .log("Error executing delayed effect %s on volume '%s'", scheduled.effect.getClass().getSimpleName(), scheduled.volume.getId());
+               if (scheduled.entityRef().isValid() && !scheduled.volume().isPendingDestroy()) {
+                  executed = scheduled.execute(store, nowNanos);
+               }
+            } finally {
+               scheduled.onFinished(executed, nowNanos);
             }
          }
       }
    }
 
    public void cancelForEntity(@Nonnull UUID entityUuid) {
-      this.queue.removeIf(s -> s.entityUuid.equals(entityUuid));
+      this.cancelIf(scheduledItem -> scheduledItem.entityUuid().equals(entityUuid));
    }
 
-   public void cancelNonExitForEntity(@Nonnull UUID entityUuid) {
-      this.queue.removeIf(s -> s.entityUuid.equals(entityUuid) && s.eventType != TriggerEventType.EXIT);
+   public void cancelNonExitForEntityInVolume(@Nonnull UUID entityUuid, @Nonnull VolumeEntry volume) {
+      this.cancelIf(
+         scheduledItem -> scheduledItem.entityUuid().equals(entityUuid)
+            && scheduledItem.volume() == volume
+            && scheduledItem.eventType() != TriggerEventType.EXIT
+      );
    }
 
    public void cancelForVolume(@Nonnull VolumeEntry volume) {
-      this.queue.removeIf(s -> s.volume == volume);
+      this.cancelIf(scheduledItem -> scheduledItem.volume() == volume);
    }
 
    public boolean isEmpty() {
       return this.queue.isEmpty();
+   }
+
+   private void cancelIf(@Nonnull Predicate<DelayedEffectScheduler.ScheduledItem> predicate) {
+      long nowNanos = System.nanoTime();
+      Iterator<DelayedEffectScheduler.ScheduledItem> iterator = this.queue.iterator();
+
+      while (iterator.hasNext()) {
+         DelayedEffectScheduler.ScheduledItem scheduledItem = iterator.next();
+         if (predicate.test(scheduledItem)) {
+            iterator.remove();
+            scheduledItem.onFinished(false, nowNanos);
+         }
+      }
    }
 
    private record ScheduledEffect(
@@ -87,10 +133,96 @@ public class DelayedEffectScheduler {
       @Nonnull UUID entityUuid,
       @Nonnull TriggerEventType eventType,
       @Nonnull VolumeEntry volume,
+      @Nullable List<VolumeEntry> spatialVolumes,
+      @Nullable DelayedEffectScheduler.ScheduledEffectCallback callback
+   ) implements DelayedEffectScheduler.ScheduledItem {
+      @Override
+      public boolean execute(@Nonnull Store<EntityStore> store, long nowNanos) {
+         try {
+            Ref<EntityStore> actorRef = this.volume.getProjectileSource().resolveActorRef(this.entityRef, store);
+            TriggerContext context = this.spatialVolumes != null
+               ? new TriggerContext(actorRef, store, this.eventType, this.volume, this.spatialVolumes)
+               : new TriggerContext(actorRef, store, this.eventType, this.volume);
+            this.effect.execute(context);
+            return true;
+         } catch (Exception exception) {
+            DelayedEffectScheduler.LOGGER
+               .at(Level.WARNING)
+               .withCause(exception)
+               .log("Error executing delayed effect %s on volume '%s'", this.effect.getClass().getSimpleName(), this.volume.getId());
+            return false;
+         }
+      }
+
+      @Override
+      public void onFinished(boolean executed, long nowNanos) {
+         if (this.callback != null) {
+            try {
+               this.callback.onFinished(executed, nowNanos);
+            } catch (Exception exception) {
+               DelayedEffectScheduler.LOGGER
+                  .at(Level.WARNING)
+                  .withCause(exception)
+                  .log("Error finishing delayed effect %s on volume '%s'", this.effect.getClass().getSimpleName(), this.volume.getId());
+            }
+         }
+      }
+   }
+
+   public interface ScheduledEffectCallback {
+      void onFinished(boolean var1, long var2);
+   }
+
+   private record ScheduledGate(
+      long executeAtNanos,
+      @Nonnull DelayedEffectScheduler.ScheduledGateAction action,
+      @Nonnull Ref<EntityStore> entityRef,
+      @Nonnull UUID entityUuid,
+      @Nonnull TriggerEventType eventType,
+      @Nonnull VolumeEntry volume,
       @Nullable List<VolumeEntry> spatialVolumes
-   ) implements Comparable<DelayedEffectScheduler.ScheduledEffect> {
-      public int compareTo(@Nonnull DelayedEffectScheduler.ScheduledEffect other) {
-         return Long.compare(this.executeAtNanos, other.executeAtNanos);
+   ) implements DelayedEffectScheduler.ScheduledItem {
+      @Override
+      public boolean execute(@Nonnull Store<EntityStore> store, long nowNanos) {
+         this.action.execute(this.entityRef, this.entityUuid, this.eventType, this.volume, this.spatialVolumes, store, nowNanos);
+         return true;
+      }
+   }
+
+   public interface ScheduledGateAction {
+      void execute(
+         @Nonnull Ref<EntityStore> var1,
+         @Nonnull UUID var2,
+         @Nonnull TriggerEventType var3,
+         @Nonnull VolumeEntry var4,
+         @Nullable List<VolumeEntry> var5,
+         @Nonnull Store<EntityStore> var6,
+         long var7
+      );
+   }
+
+   private interface ScheduledItem extends Comparable<DelayedEffectScheduler.ScheduledItem> {
+      long executeAtNanos();
+
+      @Nonnull
+      Ref<EntityStore> entityRef();
+
+      @Nonnull
+      UUID entityUuid();
+
+      @Nonnull
+      VolumeEntry volume();
+
+      @Nonnull
+      TriggerEventType eventType();
+
+      boolean execute(@Nonnull Store<EntityStore> var1, long var2);
+
+      default void onFinished(boolean executed, long nowNanos) {
+      }
+
+      default int compareTo(@Nonnull DelayedEffectScheduler.ScheduledItem other) {
+         return Long.compare(this.executeAtNanos(), other.executeAtNanos());
       }
    }
 }

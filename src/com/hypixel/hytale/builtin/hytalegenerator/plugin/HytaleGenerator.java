@@ -39,6 +39,7 @@ import com.hypixel.hytale.builtin.hytalegenerator.worldstructure.WorldStructure;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.server.core.Constants;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.universe.world.events.RemoveWorldEvent;
@@ -60,23 +61,30 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.joml.Vector3d;
 
 public class HytaleGenerator extends JavaPlugin {
-   private static HytaleGenerator instance;
+   @Nonnull
+   public static Vector3d DEFAULT_SPAWN_POSITION = new Vector3d(0.0, 140.0, 0.0);
+   @Nullable
+   private static HytaleGenerator INSTANCE;
+   @Nullable
    private AssetManager assetManager;
+   @Nullable
    private Runnable assetReloadListener;
+   @Nonnull
    public final Config<BiomeEditor.Defaults> biomeEditorConfig;
    @Nonnull
    private final Map<ChunkRequest.GeneratorProfile, ChunkGenerator> generators = new HashMap<>();
    @Nonnull
    private final Semaphore chunkGenerationSemaphore = new Semaphore(1);
    private int concurrency;
+   @Nullable
    private ExecutorService mainExecutor;
+   @Nullable
    private ThreadPoolExecutor concurrentExecutor;
    private int worldCounter;
-   @Nonnull
-   public static Vector3d DEFAULT_SPAWN_POSITION = new Vector3d(0.0, 140.0, 0.0);
 
    @Override
    protected void start() {
@@ -90,6 +98,16 @@ public class HytaleGenerator extends JavaPlugin {
          this.assetReloadListener = () -> this.reloadGenerators();
          this.assetManager.registerReloadListener(this.assetReloadListener);
       }
+   }
+
+   @Nullable
+   public AssetManager getAssetManager() {
+      return this.assetManager;
+   }
+
+   @Nullable
+   public static HytaleGenerator get() {
+      return INSTANCE;
    }
 
    @Nonnull
@@ -363,6 +381,7 @@ public class HytaleGenerator extends JavaPlugin {
 
    private void loadExecutors(@Nonnull SettingsAsset settingsAsset) {
       int newConcurrency = getConcurrency(settingsAsset);
+      LoggerUtil.getLogger().info("Using " + newConcurrency + " out of " + Runtime.getRuntime().availableProcessors() + " available threads.");
       if (newConcurrency != this.concurrency || this.mainExecutor == null || this.concurrentExecutor == null) {
          this.concurrency = newConcurrency;
          if (this.mainExecutor == null) {
@@ -391,23 +410,6 @@ public class HytaleGenerator extends JavaPlugin {
       }
    }
 
-   private static int getConcurrency(@Nonnull SettingsAsset settingsAsset) {
-      int concurrencySetting = settingsAsset.getCustomConcurrency();
-      int availableProcessors = Runtime.getRuntime().availableProcessors();
-      int value = 1;
-      if (concurrencySetting < 1) {
-         value = Math.max(availableProcessors, 1);
-      } else {
-         if (concurrencySetting > availableProcessors) {
-            LoggerUtil.getLogger().warning("Concurrency setting " + concurrencySetting + " exceeds available processors " + availableProcessors);
-         }
-
-         value = concurrencySetting;
-      }
-
-      return value;
-   }
-
    private void reloadGenerators() {
       try {
          this.chunkGenerationSemaphore.acquireUninterruptibly();
@@ -422,15 +424,34 @@ public class HytaleGenerator extends JavaPlugin {
 
    public HytaleGenerator(@Nonnull JavaPluginInit init) {
       super(init);
-      instance = this;
+      INSTANCE = this;
       this.biomeEditorConfig = this.withConfig("biome_editor", BiomeEditor.Defaults.CODEC);
    }
 
-   public AssetManager getAssetManager() {
-      return this.assetManager;
+   private static int getConcurrency(@Nonnull SettingsAsset settingsAsset) {
+      int concurrencySetting = settingsAsset.getCustomConcurrency();
+      int availableProcessors = Runtime.getRuntime().availableProcessors();
+      if (concurrencySetting < 1) {
+         return getDefaultConcurrency();
+      } else if (concurrencySetting > availableProcessors) {
+         LoggerUtil.getLogger().warning("Concurrency setting " + concurrencySetting + " exceeds available processors " + availableProcessors);
+         return availableProcessors;
+      } else {
+         return concurrencySetting;
+      }
    }
 
-   public static HytaleGenerator get() {
-      return instance;
+   private static int getDefaultConcurrency() {
+      int systemThreadCount = Runtime.getRuntime().availableProcessors();
+      boolean isSinglePlayer = Constants.SINGLEPLAYER;
+
+      int freeThreads = switch (systemThreadCount) {
+         case 0, 1, 2 -> 0;
+         case 3, 4, 5 -> 1;
+         case 6, 7, 8 -> isSinglePlayer ? 2 : 1;
+         case 9, 10 -> isSinglePlayer ? 3 : 2;
+         default -> isSinglePlayer ? 4 : 3;
+      };
+      return Math.max(1, systemThreadCount - freeThreads);
    }
 }

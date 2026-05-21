@@ -80,7 +80,7 @@ public class FarmingUtil {
                float currentProgress = farmingBlock.getGrowthProgress();
                int currentStage = (int)currentProgress;
                String currentStageSet = farmingBlock.getCurrentStageSet();
-               FarmingStageData[] stages = currentStageSet != null ? farmingConfig.getStages().get(currentStageSet) : null;
+               FarmingStageData[] stages = farmingConfig.getStages().get(currentStageSet);
                if (stages == null) {
                   currentStageSet = farmingConfig.getStartingStageSet();
                   if (currentStageSet == null) {
@@ -247,6 +247,13 @@ public class FarmingUtil {
       centerPosition.add(blockPosition.x, blockPosition.y, blockPosition.z);
       FarmingData farmingConfig = blockType.getFarming();
       boolean isFarmable = farmingConfig != null && farmingConfig.getStages() != null;
+      Store<ChunkStore> chunkStore = world.getChunkStore().getStore();
+      long chunkIndex = ChunkUtil.indexChunkFromBlock(blockPosition.x, blockPosition.z);
+      Ref<ChunkStore> chunkRef = world.getChunkStore().getChunkReference(chunkIndex);
+      if (chunkRef == null) {
+         return false;
+      }
+
       if (isFarmable && farmingConfig.getStageSetAfterHarvest() != null) {
          giveDrops(store, ref, centerPosition, blockType, harvestingDropType);
          Map<String, FarmingStageData[]> stageSets = farmingConfig.getStages();
@@ -260,18 +267,12 @@ public class FarmingUtil {
          String newStageSet = farmingConfig.getStageSetAfterHarvest();
          FarmingStageData[] newStages = stageSets.get(newStageSet);
          if (newStages != null && newStages.length != 0) {
-            Store<ChunkStore> chunkStore = world.getChunkStore().getStore();
-            Ref<ChunkStore> chunkRef = world.getChunkStore().getChunkReference(ChunkUtil.indexChunkFromBlock(blockPosition.x, blockPosition.z));
-            if (chunkRef == null) {
-               return false;
-            }
-
             BlockComponentChunk blockComponentChunk = chunkStore.getComponent(chunkRef, BlockComponentChunk.getComponentType());
             if (blockComponentChunk == null) {
                return false;
             }
 
-            Instant now = store.getExternalData().getWorld().getEntityStore().getStore().getResource(WorldTimeResource.getResourceType()).getGameTime();
+            Instant now = store.getResource(WorldTimeResource.getResourceType()).getGameTime();
             int blockIndexColumn = ChunkUtil.indexBlockInColumn(blockPosition.x, blockPosition.y, blockPosition.z);
             Ref<ChunkStore> blockRef = blockComponentChunk.getEntityReference(blockIndexColumn);
             FarmingBlock farmingBlock;
@@ -310,18 +311,18 @@ public class FarmingUtil {
             newStages[0].apply(chunkStore, sectionRef, blockRef, blockPosition.x, blockPosition.y, blockPosition.z, previousStage);
             return true;
          } else {
-            WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(blockPosition.x, blockPosition.z));
-            if (chunk != null) {
-               chunk.breakBlock(blockPosition.x, blockPosition.y, blockPosition.z);
+            WorldChunk worldChunkComponent = chunkStore.getComponent(chunkRef, WorldChunk.getComponentType());
+            if (worldChunkComponent != null) {
+               worldChunkComponent.breakBlock(blockPosition.x, blockPosition.y, blockPosition.z);
             }
 
             return false;
          }
       } else {
          giveDrops(store, ref, centerPosition, blockType, harvestingDropType);
-         WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(blockPosition.x, blockPosition.z));
-         if (chunk != null) {
-            chunk.breakBlock(blockPosition.x, blockPosition.y, blockPosition.z);
+         WorldChunk worldChunkComponent = chunkStore.getComponent(chunkRef, WorldChunk.getComponentType());
+         if (worldChunkComponent != null) {
+            worldChunkComponent.breakBlock(blockPosition.x, blockPosition.y, blockPosition.z);
          }
 
          return true;

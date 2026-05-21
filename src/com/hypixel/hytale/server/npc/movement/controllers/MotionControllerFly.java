@@ -70,7 +70,7 @@ public class MotionControllerFly extends MotionControllerBase {
    protected double lastSpeed;
    protected float lastRoll;
    protected double currentRelativeSpeed;
-   protected double minSpeedAfterForceSquared;
+   protected double externalVelocityStopThresholdSquared;
    @Nullable
    protected double[] desiredAltitudeOverride;
 
@@ -98,8 +98,8 @@ public class MotionControllerFly extends MotionControllerBase {
       this.fastFlyThreshold = builder.getFastFlyThreshold();
       this.autoLevel = builder.isAutoLevel();
       this.desiredAltitudeWeight = builder.getDesiredAltitudeWeight();
-      this.minSpeedAfterForceSquared = MathUtil.minValue(this.maxHorizontalSpeed, this.maxSinkSpeed, this.maxClimbSpeed);
-      this.minSpeedAfterForceSquared = this.minSpeedAfterForceSquared * this.minSpeedAfterForceSquared;
+      this.externalVelocityStopThresholdSquared = MathUtil.minValue(this.maxHorizontalSpeed, this.maxSinkSpeed, this.maxClimbSpeed);
+      this.externalVelocityStopThresholdSquared = this.externalVelocityStopThresholdSquared * this.externalVelocityStopThresholdSquared;
    }
 
    @Nonnull
@@ -134,13 +134,13 @@ public class MotionControllerFly extends MotionControllerBase {
       this.moveProbe.probePosition(ref, this.collisionBoundingBox, this.position, this.collisionResult, componentAccessor);
       this.currentRelativeSpeed = steering.getSpeed();
       if (!this.isAlive(ref, componentAccessor)) {
-         this.forceVelocity.zero();
+         this.externalVelocity.zero();
          this.appliedVelocities.clear();
       }
 
       double maxFallSpeed = this.moveProbe.isInWater() ? this.maxSinkSpeedFluid : this.maxFallSpeed;
       boolean onGround = this.onGround();
-      if (this.forceVelocity.equals(Vector3dUtil.ZERO) && this.appliedVelocities.isEmpty()) {
+      if (this.externalVelocity.equals(Vector3dUtil.ZERO) && this.appliedVelocities.isEmpty()) {
          if (NPCPhysicsMath.near(this.lastVelocity, Vector3dUtil.ZERO)) {
             PhysicsMath.vectorFromAngles(this.getYaw(), this.getPitch(), this.lastVelocity);
             this.lastSpeed = 0.0;
@@ -256,11 +256,11 @@ public class MotionControllerFly extends MotionControllerBase {
          steering.setPitch(this.getPitch());
          steering.setRoll(this.getRoll());
          if (!this.isObstructed()) {
-            translation.set(this.forceVelocity);
+            translation.set(this.externalVelocity);
 
             for (int i = 0; i < this.appliedVelocities.size(); i++) {
                MotionControllerBase.AppliedVelocity entry = this.appliedVelocities.get(i);
-               if (entry.velocity.y + this.forceVelocity.y <= 0.0 || entry.velocity.y < 0.0) {
+               if (entry.velocity.y + this.externalVelocity.y <= 0.0 || entry.velocity.y < 0.0) {
                   entry.canClear = true;
                }
 
@@ -273,7 +273,7 @@ public class MotionControllerFly extends MotionControllerBase {
          } else {
             translation.zero();
             this.appliedVelocities.clear();
-            this.forceVelocity.zero();
+            this.externalVelocity.zero();
          }
 
          if (!onGround) {
@@ -538,13 +538,13 @@ public class MotionControllerFly extends MotionControllerBase {
    }
 
    @Override
-   protected void dampForceVelocity(
-      @Nonnull Vector3d forceVelocity, double forceVelocityDamping, double interval, ComponentAccessor<EntityStore> componentAccessor
+   protected void dampExternalVelocity(
+      @Nonnull Vector3d externalVelocity, double externalVelocityDamping, double interval, ComponentAccessor<EntityStore> componentAccessor
    ) {
-      if (forceVelocity.lengthSquared() < this.minSpeedAfterForceSquared) {
-         forceVelocity.zero();
+      if (externalVelocity.lengthSquared() < this.externalVelocityStopThresholdSquared) {
+         externalVelocity.zero();
       } else {
-         NPCPhysicsMath.deccelerateToStop(forceVelocity, this.getDampingDeceleration(), interval);
+         NPCPhysicsMath.deccelerateToStop(externalVelocity, this.getDampingDeceleration(), interval);
       }
    }
 
@@ -654,12 +654,12 @@ public class MotionControllerFly extends MotionControllerBase {
       this.lastSpeed = speed;
    }
 
-   public double getMinSpeedAfterForceSquared() {
-      return this.minSpeedAfterForceSquared;
+   public double getExternalVelocityStopThresholdSquared() {
+      return this.externalVelocityStopThresholdSquared;
    }
 
    public double getDampingDeceleration() {
-      return this.forceVelocityDamping * 20.0;
+      return this.externalVelocityDamping * 20.0;
    }
 
    protected double computeMaxSpeedFromPitch(double pitch) {

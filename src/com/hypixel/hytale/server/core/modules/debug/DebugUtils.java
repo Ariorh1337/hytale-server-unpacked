@@ -331,24 +331,24 @@ public class DebugUtils {
       addArrow(world, position, direction, color, 0.8F, time, flags);
    }
 
-   public static void addForce(@Nonnull World world, @Nonnull Vector3d position, @Nonnull Vector3d force, @Nullable VelocityConfig velocityConfig) {
+   public static void addVelocity(@Nonnull World world, @Nonnull Vector3d position, @Nonnull Vector3d velocity, @Nullable VelocityConfig velocityConfig) {
       if (DISPLAY_FORCES) {
-         Vector3d forceClone = new Vector3d(force);
+         Vector3d velocityClone = new Vector3d(velocity);
          if (velocityConfig == null || SplitVelocity.SHOULD_MODIFY_VELOCITY) {
-            forceClone.x = forceClone.x / DamageSystems.HackKnockbackValues.PLAYER_KNOCKBACK_SCALE;
-            forceClone.z = forceClone.z / DamageSystems.HackKnockbackValues.PLAYER_KNOCKBACK_SCALE;
+            velocityClone.x = velocityClone.x / DamageSystems.HackKnockbackValues.PLAYER_KNOCKBACK_SCALE;
+            velocityClone.z = velocityClone.z / DamageSystems.HackKnockbackValues.PLAYER_KNOCKBACK_SCALE;
          }
 
          Matrix4d matrix = new Matrix4d();
          matrix.identity();
          matrix.translate(position);
-         double angleY = Math.atan2(forceClone.z, forceClone.x);
+         double angleY = Math.atan2(velocityClone.z, velocityClone.x);
          matrix.rotate(-(angleY + (Math.PI / 2)), 0.0, 1.0, 0.0);
-         double angleX = Math.atan2(Math.sqrt(forceClone.x * forceClone.x + forceClone.z * forceClone.z), forceClone.y);
+         double angleX = Math.atan2(Math.sqrt(velocityClone.x * velocityClone.x + velocityClone.z * velocityClone.z), velocityClone.y);
          matrix.rotate(-angleX, 1.0, 0.0, 0.0);
          Random random = new Random();
          Vector3f color = new Vector3f(random.nextFloat(), random.nextFloat(), random.nextFloat());
-         addArrow(world, matrix, color, forceClone.length(), 10.0F, FLAG_FADE);
+         addArrow(world, matrix, color, velocityClone.length(), 10.0F, FLAG_FADE);
       }
    }
 

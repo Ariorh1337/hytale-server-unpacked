@@ -1217,9 +1217,14 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
       if (this.recipeToGenerate != null) {
          CraftingRecipe recipe = this.recipeToGenerate;
          CraftingRecipe newRecipe = new CraftingRecipe(recipe);
-         MaterialQuantity primaryOutput = new MaterialQuantity(this.id, null, null, newRecipe.primaryOutputQuantity, null);
-         if (newRecipe.outputs == null || newRecipe.outputs.length == 0) {
-            newRecipe.outputs = new MaterialQuantity[]{primaryOutput};
+         MaterialQuantity primaryOutput;
+         if (newRecipe.outputs != null && newRecipe.outputs.length == 1 && this.id.equals(newRecipe.outputs[0].getItemId())) {
+            primaryOutput = newRecipe.outputs[0];
+         } else {
+            primaryOutput = new MaterialQuantity(this.id, null, null, newRecipe.primaryOutputQuantity, null);
+            if (newRecipe.outputs == null || newRecipe.outputs.length == 0) {
+               newRecipe.outputs = new MaterialQuantity[]{primaryOutput};
+            }
          }
 
          newRecipe.primaryOutput = primaryOutput;

@@ -15,7 +15,7 @@ public class StateBinding {
    public static final int FIXED_BLOCK_SIZE = 5;
    public static final int VARIABLE_FIELD_COUNT = 1;
    public static final int VARIABLE_BLOCK_START = 5;
-   public static final int MAX_SIZE = 36864010;
+   public static final int MAX_SIZE = 53248010;
    public int audioStateIndex;
    @Nullable
    public StateDelta[] deltas;
@@ -54,8 +54,8 @@ public class StateBinding {
             throw ProtocolException.arrayTooLong("Deltas", deltasCount, 4096000);
          }
 
-         if (pos + deltasVarLen + deltasCount * 9L > buf.readableBytes()) {
-            throw ProtocolException.bufferTooSmall("Deltas", pos + deltasVarLen + deltasCount * 9, buf.readableBytes());
+         if (pos + deltasVarLen + deltasCount * 13L > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Deltas", pos + deltasVarLen + deltasCount * 13, buf.readableBytes());
          }
 
          pos += deltasVarLen;
@@ -120,15 +120,15 @@ public class StateBinding {
       }
 
       int lenOffset = (int)(packed >>> 32);
-      if (off + lenOffset + len * 9L > mem.byteSize()) {
-         throw ProtocolException.bufferTooSmall("Deltas", off + lenOffset + len * 9, (int)mem.byteSize());
+      if (off + lenOffset + len * 13L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Deltas", off + lenOffset + len * 13, (int)mem.byteSize());
       }
 
       off += lenOffset;
       StateDelta[] data = new StateDelta[len];
 
       for (int i = 0; i < len; i++) {
-         data[i] = StateDelta.toObject(mem, off + i * 9);
+         data[i] = StateDelta.toObject(mem, off + i * 13);
       }
 
       return data;
@@ -162,15 +162,15 @@ public class StateBinding {
          }
 
          int lenOffset = (int)(packed >>> 32);
-         if (off + lenOffset + len * 9L > mem.byteSize()) {
-            throw ProtocolException.bufferTooSmall("Deltas", off + lenOffset + len * 9, (int)mem.byteSize());
+         if (off + lenOffset + len * 13L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("Deltas", off + lenOffset + len * 13, (int)mem.byteSize());
          }
 
          off += lenOffset;
          deltas = new StateDelta[len];
 
          for (int i = 0; i < len; i++) {
-            deltas[i] = StateDelta.toObject(mem, off + i * 9);
+            deltas[i] = StateDelta.toObject(mem, off + i * 13);
          }
       }
 
@@ -228,7 +228,7 @@ public class StateBinding {
    public int computeSize() {
       int size = 5;
       if (this.deltas != null) {
-         size += VarInt.size(this.deltas.length) + this.deltas.length * 9;
+         size += VarInt.size(this.deltas.length) + this.deltas.length * 13;
       }
 
       return size;
@@ -252,7 +252,7 @@ public class StateBinding {
          }
 
          pos += VarInt.size(deltasCount);
-         pos += deltasCount * 9;
+         pos += deltasCount * 13;
          if (pos > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading Deltas");
          }

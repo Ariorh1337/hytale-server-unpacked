@@ -2,33 +2,45 @@ package com.hypixel.hytale.builtin.triggervolumes.manager;
 
 import com.hypixel.hytale.builtin.triggervolumes.EntityTargetType;
 import com.hypixel.hytale.builtin.triggervolumes.component.TriggerVolumeGroup;
+import com.hypixel.hytale.builtin.triggervolumes.effect.TriggerEventType;
+import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.TaggedVolumeEffectUtil;
 import com.hypixel.hytale.builtin.triggervolumes.shape.BoxShape;
 import com.hypixel.hytale.builtin.triggervolumes.shape.CylinderShape;
 import com.hypixel.hytale.builtin.triggervolumes.shape.SphereShape;
 import com.hypixel.hytale.builtin.triggervolumes.shape.TriggerVolumeShape;
+import com.hypixel.hytale.builtin.triggervolumes.system.DelayedEffectScheduler;
 import com.hypixel.hytale.builtin.triggervolumes.system.VolumeSpatialIndex;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.map.MapCodec;
+import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Resource;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.protocol.packets.player.AddOrUpdateTriggerVolumeDisplay;
 import com.hypixel.hytale.protocol.packets.player.RemoveTriggerVolumeDisplay;
+import com.hypixel.hytale.protocol.packets.player.TriggerVolumeConditionTiming;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeDisplayEntry;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeShapeType;
 import com.hypixel.hytale.protocol.packets.player.UpdateTriggerVolumeDisplay;
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
@@ -67,8 +79,15 @@ public class TriggerVolumeManager implements Resource<EntityStore> {
    private final ConcurrentHashMap<String, String> prefabGroupLinkRemap = new ConcurrentHashMap<>();
    private final Map<UUID, EnumSet<TriggerVolumeManager.ViewSource>> activeViewers = new ConcurrentHashMap<>();
    private final Map<UUID, String> playerSelections = new ConcurrentHashMap<>();
+   private final transient Map<UUID, TriggerVolumeManager.SelectionObserver> selectionObservers = new ConcurrentHashMap<>();
+   private final transient Map<UUID, TriggerVolumeManager.VolumeUpdateObserver> volumeUpdateObservers = new ConcurrentHashMap<>();
+   private final Set<Long> pendingWorldGenRegenChunks = ConcurrentHashMap.newKeySet();
+   @Nonnull
+   private final transient Deque<TriggerVolumeManager.PendingTriggerEvent> pendingEvents = new ArrayDeque<>();
    @Nonnull
    private final VolumeSpatialIndex spatialIndex = new VolumeSpatialIndex();
+   @Nonnull
+   private final transient DelayedEffectScheduler delayedEffectScheduler = new DelayedEffectScheduler();
    @Nullable
    private World world;
 
@@ -100,8 +119,46 @@ public class TriggerVolumeManager implements Resource<EntityStore> {
    }
 
    public void unregister(@Nonnull String id) {
-      this.volumes.remove(id);
+      VolumeEntry removed = this.volumes.remove(id);
+      if (removed != null) {
+         removed.markPendingDestroy();
+      }
+
       this.spatialIndex.markDirty();
+   }
+
+   @Nullable
+   public VolumeEntry renameVolume(@Nonnull String oldId, @Nonnull String newId) {
+      if (oldId.equals(newId)) {
+         return this.volumes.get(oldId);
+      }
+
+      VolumeEntry entry = this.volumes.remove(oldId);
+      if (entry == null) {
+         return null;
+      }
+
+      if (this.volumes.putIfAbsent(newId, entry) != null) {
+         this.volumes.put(oldId, entry);
+         return null;
+      }
+
+      entry.setId(newId);
+
+      for (GroupEntry group : this.groups.values()) {
+         if (group.getMemberVolumeIds().remove(oldId)) {
+            group.addMember(newId);
+         }
+      }
+
+      for (Entry<UUID, String> selectionEntry : this.playerSelections.entrySet()) {
+         if (oldId.equals(selectionEntry.getValue())) {
+            this.playerSelections.put(selectionEntry.getKey(), newId);
+         }
+      }
+
+      this.spatialIndex.markDirty();
+      return entry;
    }
 
    public void removeWorldGenVolumesInChunk(long chunkIndex) {
@@ -125,6 +182,7 @@ public class TriggerVolumeManager implements Resource<EntityStore> {
                   }
                }
 
+               entry.markPendingDestroy();
                iter.remove();
                this.notifyViewersRemove(entry.getId());
                removedAny = true;
@@ -139,6 +197,14 @@ public class TriggerVolumeManager implements Resource<EntityStore> {
       if (removedAny) {
          this.spatialIndex.markDirty();
       }
+   }
+
+   public void markWorldGenRegenChunk(long chunkIndex) {
+      this.pendingWorldGenRegenChunks.add(chunkIndex);
+   }
+
+   public boolean consumeWorldGenRegenChunk(long chunkIndex) {
+      return this.pendingWorldGenRegenChunks.remove(chunkIndex);
    }
 
    @Nullable
@@ -167,6 +233,11 @@ public class TriggerVolumeManager implements Resource<EntityStore> {
    @Nonnull
    public VolumeSpatialIndex getSpatialIndex() {
       return this.spatialIndex;
+   }
+
+   @Nonnull
+   public DelayedEffectScheduler getDelayedEffectScheduler() {
+      return this.delayedEffectScheduler;
    }
 
    public void setWorld(@Nullable World world) {
@@ -380,6 +451,83 @@ public class TriggerVolumeManager implements Resource<EntityStore> {
       return result;
    }
 
+   public boolean setTag(@Nonnull String volumeId, @Nonnull String key, @Nullable String value, @Nonnull Ref<EntityStore> actorRef, @Nonnull UUID actorUuid) {
+      VolumeEntry volume = this.volumes.get(volumeId);
+      if (volume == null) {
+         return false;
+      }
+
+      String normalizedKey = key.trim();
+      if (normalizedKey.isEmpty()) {
+         return false;
+      }
+
+      String normalizedValue = TaggedVolumeEffectUtil.normalizeTagValue(value);
+      String existing = volume.getRawTags().get(normalizedKey);
+      if (Objects.equals(existing, normalizedValue)) {
+         return false;
+      }
+
+      LinkedHashMap<String, String> tags = new LinkedHashMap<>(volume.getRawTags());
+      tags.put(normalizedKey, normalizedValue);
+      volume.setTags(tags);
+      this.enqueuePendingEvent(
+         new TriggerVolumeManager.PendingTriggerEvent(TriggerEventType.TAG_ADDED, actorRef, actorUuid, volumeId, null, null, normalizedKey, normalizedValue)
+      );
+      return true;
+   }
+
+   public boolean removeTag(@Nonnull String volumeId, @Nonnull String key, @Nonnull Ref<EntityStore> actorRef, @Nonnull UUID actorUuid) {
+      return this.removeTag(volumeId, key, null, actorRef, actorUuid);
+   }
+
+   public boolean removeTag(@Nonnull String volumeId, @Nonnull String key, @Nullable String value, @Nonnull Ref<EntityStore> actorRef, @Nonnull UUID actorUuid) {
+      VolumeEntry volume = this.volumes.get(volumeId);
+      if (volume == null) {
+         return false;
+      }
+
+      String normalizedKey = key.trim();
+      if (!normalizedKey.isEmpty() && volume.getRawTags().containsKey(normalizedKey)) {
+         String existing = volume.getRawTags().get(normalizedKey);
+         String normalizedValue = TaggedVolumeEffectUtil.blankToNull(value);
+         if (normalizedValue != null && !Objects.equals(existing, normalizedValue)) {
+            return false;
+         }
+
+         LinkedHashMap<String, String> tags = new LinkedHashMap<>(volume.getRawTags());
+         tags.remove(normalizedKey);
+         volume.setTags(tags);
+         this.enqueuePendingEvent(
+            new TriggerVolumeManager.PendingTriggerEvent(TriggerEventType.TAG_REMOVED, actorRef, actorUuid, volumeId, null, null, normalizedKey, existing)
+         );
+         return true;
+      } else {
+         return false;
+      }
+   }
+
+   public void enqueueBlockEvent(
+      @Nonnull TriggerEventType eventType,
+      @Nonnull Ref<EntityStore> actorRef,
+      @Nonnull UUID actorUuid,
+      @Nonnull Vector3d blockPosition,
+      @Nonnull String blockId
+   ) {
+      this.enqueuePendingEvent(
+         new TriggerVolumeManager.PendingTriggerEvent(eventType, actorRef, actorUuid, null, new Vector3d(blockPosition), blockId, null, null)
+      );
+   }
+
+   @Nullable
+   public TriggerVolumeManager.PendingTriggerEvent pollPendingEvent() {
+      return this.pendingEvents.pollFirst();
+   }
+
+   private void enqueuePendingEvent(@Nonnull TriggerVolumeManager.PendingTriggerEvent event) {
+      this.pendingEvents.addLast(event);
+   }
+
    public boolean isViewing(@Nonnull UUID playerUuid) {
       EnumSet<TriggerVolumeManager.ViewSource> sources = this.activeViewers.get(playerUuid);
       return sources != null && !sources.isEmpty();
@@ -388,6 +536,12 @@ public class TriggerVolumeManager implements Resource<EntityStore> {
    public boolean isViewing(@Nonnull UUID playerUuid, @Nonnull TriggerVolumeManager.ViewSource source) {
       EnumSet<TriggerVolumeManager.ViewSource> sources = this.activeViewers.get(playerUuid);
       return sources != null && sources.contains(source);
+   }
+
+   @Nullable
+   public EnumSet<TriggerVolumeManager.ViewSource> peekViewerSources(@Nonnull UUID playerUuid) {
+      EnumSet<TriggerVolumeManager.ViewSource> sources = this.activeViewers.get(playerUuid);
+      return sources != null ? EnumSet.copyOf(sources) : null;
    }
 
    public void addViewer(@Nonnull UUID playerUuid, @Nonnull TriggerVolumeManager.ViewSource source) {
@@ -407,11 +561,32 @@ public class TriggerVolumeManager implements Resource<EntityStore> {
       } else {
          this.playerSelections.put(playerUuid, volumeId);
       }
+
+      TriggerVolumeManager.SelectionObserver observer = this.selectionObservers.get(playerUuid);
+      if (observer != null) {
+         observer.onSelectionChanged(volumeId);
+      }
    }
 
    @Nullable
    public String getPlayerSelection(@Nonnull UUID playerUuid) {
       return this.playerSelections.get(playerUuid);
+   }
+
+   public void setSelectionObserver(@Nonnull UUID playerUuid, @Nonnull TriggerVolumeManager.SelectionObserver observer) {
+      this.selectionObservers.put(playerUuid, observer);
+   }
+
+   public void clearSelectionObserver(@Nonnull UUID playerUuid, @Nonnull TriggerVolumeManager.SelectionObserver observer) {
+      this.selectionObservers.remove(playerUuid, observer);
+   }
+
+   public void setVolumeUpdateObserver(@Nonnull UUID playerUuid, @Nonnull TriggerVolumeManager.VolumeUpdateObserver observer) {
+      this.volumeUpdateObservers.put(playerUuid, observer);
+   }
+
+   public void clearVolumeUpdateObserver(@Nonnull UUID playerUuid, @Nonnull TriggerVolumeManager.VolumeUpdateObserver observer) {
+      this.volumeUpdateObservers.remove(playerUuid, observer);
    }
 
    public void notifyViewers() {
@@ -432,6 +607,11 @@ public class TriggerVolumeManager implements Resource<EntityStore> {
       return this.activeViewers.size();
    }
 
+   @Nonnull
+   public Set<UUID> getViewerUuids() {
+      return new HashSet<>(this.activeViewers.keySet());
+   }
+
    public void clearViewers() {
       this.activeViewers.clear();
       this.playerSelections.clear();
@@ -448,6 +628,10 @@ public class TriggerVolumeManager implements Resource<EntityStore> {
             }
          }
       }
+
+      for (TriggerVolumeManager.VolumeUpdateObserver observer : this.volumeUpdateObservers.values()) {
+         observer.onVolumeUpdated(vol);
+      }
    }
 
    public void notifyViewersRemove(@Nonnull String volumeId) {
@@ -458,6 +642,23 @@ public class TriggerVolumeManager implements Resource<EntityStore> {
             PlayerRef playerRef = Universe.get().getPlayer(uuid);
             if (playerRef != null) {
                playerRef.getPacketHandler().write(packet);
+            }
+         }
+      }
+
+      for (TriggerVolumeManager.VolumeUpdateObserver observer : this.volumeUpdateObservers.values()) {
+         observer.onVolumeRemoved(volumeId);
+      }
+   }
+
+   public void notifyViewersLegacyVolumeSkipped() {
+      if (!this.activeViewers.isEmpty()) {
+         Message message = Message.translation("server.triggervolumes.legacyVolumeSkipped");
+
+         for (UUID uuid : this.activeViewers.keySet()) {
+            PlayerRef playerRef = Universe.get().getPlayer(uuid);
+            if (playerRef != null) {
+               playerRef.sendMessage(message);
             }
          }
       }
@@ -526,6 +727,10 @@ public class TriggerVolumeManager implements Resource<EntityStore> {
             targetBits = (byte)(targetBits | 1);
          } else if (tt == EntityTargetType.NPC) {
             targetBits = (byte)(targetBits | 2);
+         } else if (tt == EntityTargetType.ITEM_DROP) {
+            targetBits = (byte)(targetBits | 4);
+         } else if (tt == EntityTargetType.PROJECTILE) {
+            targetBits = (byte)(targetBits | 8);
          }
       }
 
@@ -535,6 +740,9 @@ public class TriggerVolumeManager implements Resource<EntityStore> {
       entry.cooldown = vol.getCooldown();
       entry.cooldownMode = (byte)vol.getCooldownMode().ordinal();
       entry.activationDelay = vol.getActivationDelay();
+      entry.conditionTiming = vol.getConditionTiming() == ConditionTiming.BEFORE_VOLUME_DELAY
+         ? TriggerVolumeConditionTiming.BeforeVolumeDelay
+         : TriggerVolumeConditionTiming.AfterVolumeDelay;
       if (vol.getGroupId() != null) {
          entry.groupId = vol.getGroupId();
          GroupEntry group = this.groups.get(vol.getGroupId());
@@ -556,9 +764,31 @@ public class TriggerVolumeManager implements Resource<EntityStore> {
       throw new UnsupportedOperationException("TriggerVolumeManager cannot be cloned");
    }
 
+   public record PendingTriggerEvent(
+      @Nonnull TriggerEventType eventType,
+      @Nonnull Ref<EntityStore> actorRef,
+      @Nonnull UUID actorUuid,
+      @Nullable String volumeId,
+      @Nullable Vector3d blockPosition,
+      @Nullable String blockId,
+      @Nullable String tagKey,
+      @Nullable String tagValue
+   ) {
+   }
+
+   public interface SelectionObserver {
+      void onSelectionChanged(@Nullable String var1);
+   }
+
    public enum ViewSource {
       COMMAND,
       TOOL,
       SELECTION_TOOL;
+   }
+
+   public interface VolumeUpdateObserver {
+      void onVolumeUpdated(@Nonnull VolumeEntry var1);
+
+      void onVolumeRemoved(@Nonnull String var1);
    }
 }

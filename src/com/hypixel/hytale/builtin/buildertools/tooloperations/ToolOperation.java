@@ -198,7 +198,7 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
       this.shape = shape != null ? BrushShape.valueOf((String)shape) : BrushShape.Sphere;
       this.density = density != null ? (Integer)density : 100;
       this.spacing = spacing != null ? (Integer)spacing : 0;
-      this.pattern = this.getPattern(packet, material != null ? (BlockPattern)material : BlockPattern.EMPTY);
+      this.pattern = material != null ? (BlockPattern)material : BlockPattern.EMPTY;
       this.mask = combineMasks(args, this.builderState.getGlobalMask());
       Object origin = args.tool().get("builtin_Origin");
       Object rotateOrigin = args.tool().get("builtin_OriginRotation");
@@ -341,14 +341,6 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
             bc.setBrushMask(this.mask);
             bc.setShapeThickness(this.shapeThickness);
          }, componentAccessor);
-   }
-
-   private BlockPattern getPattern(@Nonnull BuilderToolOnUseInteraction packet, BlockPattern pattern) {
-      if (packet.type == InteractionType.Primary) {
-         return BlockPattern.EMPTY;
-      } else {
-         return this instanceof PaintOperation && pattern.equals(BlockPattern.EMPTY) ? BlockPattern.parse("Rock_Stone") : pattern;
-      }
    }
 
    @Nullable

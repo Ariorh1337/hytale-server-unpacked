@@ -31,6 +31,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockComponentChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.ChunkColumn;
+import com.hypixel.hytale.server.core.universe.world.chunk.ChunkFlag;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.ChunkSection;
@@ -136,11 +137,11 @@ public class FarmingSystems {
                   Vector3i coopPosition = coopResidentComponent.getCoopLocation();
                   World world = commandBuffer.getExternalData().getWorld();
                   long chunkIndex = ChunkUtil.indexChunkFromBlock(coopPosition.x, coopPosition.z);
-                  WorldChunk worldChunkComponent = world.getChunkIfLoaded(chunkIndex);
-                  if (worldChunkComponent != null) {
-                     Ref<ChunkStore> chunkRef = world.getChunkStore().getChunkReference(chunkIndex);
-                     if (chunkRef != null && chunkRef.isValid()) {
-                        Store<ChunkStore> chunkStore = world.getChunkStore().getStore();
+                  Ref<ChunkStore> chunkRef = world.getChunkStore().getChunkReference(chunkIndex);
+                  if (chunkRef != null && chunkRef.isValid()) {
+                     Store<ChunkStore> chunkStore = world.getChunkStore().getStore();
+                     WorldChunk worldChunkComponent = chunkStore.getComponent(chunkRef, WorldChunk.getComponentType());
+                     if (worldChunkComponent != null && worldChunkComponent.is(ChunkFlag.TICKING)) {
                         ChunkColumn chunkColumnComponent = chunkStore.getComponent(chunkRef, ChunkColumn.getComponentType());
                         if (chunkColumnComponent != null) {
                            BlockChunk blockChunkComponent = chunkStore.getComponent(chunkRef, BlockChunk.getComponentType());

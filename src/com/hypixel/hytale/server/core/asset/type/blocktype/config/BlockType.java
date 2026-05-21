@@ -314,6 +314,13 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
          (blockType, parent) -> blockType.particleColor = parent.particleColor
       )
       .add()
+      .appendInherited(
+         new KeyedCodec<>("TextureComputedColor", ProtocolCodecs.COLOR),
+         (blockType, s) -> blockType.textureComputedColor = s,
+         blockType -> blockType.textureComputedColor,
+         (blockType, parent) -> blockType.textureComputedColor = parent.textureComputedColor
+      )
+      .add()
       .<ModelParticle[]>appendInherited(
          new KeyedCodec<>("Particles", ModelParticle.ARRAY_CODEC),
          (blockType, s) -> blockType.particles = s,
@@ -920,6 +927,7 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
    protected String blockParticleSetId;
    protected String blockBreakingDecalId;
    protected Color particleColor;
+   protected Color textureComputedColor;
    protected TickProcedure tickProcedure;
    private RandomTickProcedure randomTickProcedure;
    protected ShaderType[] effect;
@@ -1062,6 +1070,7 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
       this.blockParticleSetId = other.blockParticleSetId;
       this.blockBreakingDecalId = other.blockBreakingDecalId;
       this.particleColor = other.particleColor;
+      this.textureComputedColor = other.textureComputedColor;
       this.tickProcedure = other.tickProcedure;
       this.effect = other.effect;
       this.textures = other.textures;
@@ -1157,6 +1166,7 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
       packet.blockParticleSetId = this.blockParticleSetId;
       packet.blockBreakingDecalId = this.blockBreakingDecalId;
       packet.particleColor = this.particleColor;
+      packet.textureComputedColor = this.textureComputedColor;
       if (this.support != null) {
          Object2ObjectOpenHashMap<BlockNeighbor, com.hypixel.hytale.protocol.RequiredBlockFaceSupport[]> supportMap = new Object2ObjectOpenHashMap<>();
 
@@ -1474,6 +1484,10 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
 
    public Color getParticleColor() {
       return this.particleColor;
+   }
+
+   public Color getTextureComputedColor() {
+      return this.textureComputedColor;
    }
 
    public TickProcedure getTickProcedure() {
@@ -2035,6 +2049,8 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
          + this.blockBreakingDecalId
          + "', particleColor="
          + this.particleColor
+         + ", textureComputedColor="
+         + this.textureComputedColor
          + ", effect="
          + Arrays.toString(this.effect)
          + ", textures="

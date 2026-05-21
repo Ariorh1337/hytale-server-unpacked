@@ -70,7 +70,7 @@ public class BreakBlockInteraction extends SimpleBlockInteraction {
       boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler
    ) {
       super.tick0(firstRun, time, type, context, cooldownHandler);
-      this.computeCurrentBlockSyncData(context);
+      computeCurrentBlockSyncData(context);
    }
 
    @Override

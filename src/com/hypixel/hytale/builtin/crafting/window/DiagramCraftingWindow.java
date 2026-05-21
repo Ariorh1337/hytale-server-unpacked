@@ -268,17 +268,18 @@ public class DiagramCraftingWindow extends CraftingWindow implements ItemContain
       if (recipes.size() == 1 && allSlotsFull) {
          CraftingRecipe recipe = recipes.getFirst();
          ItemStack output = CraftingManager.getOutputItemStacks(recipe).getFirst();
-         if (playerComponent.getPlayerConfigData().getKnownRecipes().contains(recipe.getId())) {
-            this.outputContainer.setItemStackForSlot((short)0, output);
+         Set<String> known = playerComponent.getPlayerConfigData().getKnownRecipes();
+         if (recipe.isKnowledgeRequired() && !known.contains(recipe.getId())) {
+            this.outputContainer.setItemStackForSlot((short)0, new ItemStack("Unknown", 1), false);
          } else {
-            this.outputContainer.setItemStackForSlot((short)0, new ItemStack("Unknown", 1));
+            this.outputContainer.setItemStackForSlot((short)0, output, false);
          }
       } else {
          if (!recipes.isEmpty() && allSlotsFull) {
             LOGGER.at(Level.WARNING).log("Multiple recipes defined for the same materials! %s", recipes);
          }
 
-         this.outputContainer.setItemStackForSlot((short)0, ItemStack.EMPTY);
+         this.outputContainer.setItemStackForSlot((short)0, ItemStack.EMPTY, false);
       }
 
       this.invalidate();

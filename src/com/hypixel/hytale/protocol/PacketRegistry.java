@@ -222,6 +222,7 @@ import com.hypixel.hytale.protocol.packets.player.ClientReady;
 import com.hypixel.hytale.protocol.packets.player.ClientTeleport;
 import com.hypixel.hytale.protocol.packets.player.DamageInfo;
 import com.hypixel.hytale.protocol.packets.player.DisplayDebug;
+import com.hypixel.hytale.protocol.packets.player.HideTriggerVolumePastePrefabPreview;
 import com.hypixel.hytale.protocol.packets.player.JoinWorld;
 import com.hypixel.hytale.protocol.packets.player.LoadHotbar;
 import com.hypixel.hytale.protocol.packets.player.MouseInteraction;
@@ -234,6 +235,7 @@ import com.hypixel.hytale.protocol.packets.player.SetBlockPlacementOverride;
 import com.hypixel.hytale.protocol.packets.player.SetClientId;
 import com.hypixel.hytale.protocol.packets.player.SetGameMode;
 import com.hypixel.hytale.protocol.packets.player.SetMovementStates;
+import com.hypixel.hytale.protocol.packets.player.ShowTriggerVolumePastePrefabPreview;
 import com.hypixel.hytale.protocol.packets.player.SyncPlayerPreferences;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolCreate;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolCreateResponse;
@@ -247,9 +249,11 @@ import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolMove;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolMultiMove;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolResize;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolSelect;
+import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolSelection;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolSetActivationDelay;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolSetCancelDelayedOnExit;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolSetColor;
+import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolSetConditionTiming;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolSetCooldown;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolSetKeepLoaded;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolSetTargetTypes;
@@ -4281,7 +4285,7 @@ public final class PacketRegistry {
          "AddOrUpdateTriggerVolumeDisplay",
          AddOrUpdateTriggerVolumeDisplay.class,
          0,
-         65536098,
+         65536099,
          false,
          AddOrUpdateTriggerVolumeDisplay::validateStructure,
          AddOrUpdateTriggerVolumeDisplay::deserialize,
@@ -4559,6 +4563,58 @@ public final class PacketRegistry {
          TriggerVolumeToolDuplicate::validateStructure,
          TriggerVolumeToolDuplicate::deserialize,
          TriggerVolumeToolDuplicate::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         506,
+         "TriggerVolumeToolSetConditionTiming",
+         TriggerVolumeToolSetConditionTiming.class,
+         1,
+         16384006,
+         false,
+         TriggerVolumeToolSetConditionTiming::validateStructure,
+         TriggerVolumeToolSetConditionTiming::deserialize,
+         TriggerVolumeToolSetConditionTiming::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         507,
+         "TriggerVolumeToolSelection",
+         TriggerVolumeToolSelection.class,
+         1,
+         1677721600,
+         false,
+         TriggerVolumeToolSelection::validateStructure,
+         TriggerVolumeToolSelection::deserialize,
+         TriggerVolumeToolSelection::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         508,
+         "ShowTriggerVolumePastePrefabPreview",
+         ShowTriggerVolumePastePrefabPreview.class,
+         21,
+         1677721600,
+         true,
+         ShowTriggerVolumePastePrefabPreview::validateStructure,
+         ShowTriggerVolumePastePrefabPreview::deserialize,
+         ShowTriggerVolumePastePrefabPreview::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         509,
+         "HideTriggerVolumePastePrefabPreview",
+         HideTriggerVolumePastePrefabPreview.class,
+         0,
+         0,
+         false,
+         HideTriggerVolumePastePrefabPreview::validateStructure,
+         HideTriggerVolumePastePrefabPreview::deserialize,
+         HideTriggerVolumePastePrefabPreview::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,

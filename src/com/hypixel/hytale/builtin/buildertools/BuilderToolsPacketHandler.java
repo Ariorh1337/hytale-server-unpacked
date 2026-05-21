@@ -70,6 +70,7 @@ import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.io.handlers.IPacketHandler;
 import com.hypixel.hytale.server.core.io.handlers.IWorldPacketHandler;
 import com.hypixel.hytale.server.core.io.handlers.SubPacketHandler;
+import com.hypixel.hytale.server.core.modules.entity.DespawnComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.BoundingBox;
 import com.hypixel.hytale.server.core.modules.entity.component.DynamicLight;
 import com.hypixel.hytale.server.core.modules.entity.component.EntityScaleComponent;
@@ -270,6 +271,7 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
                         AnimationUtils.stopAnimation(targetRef, AnimationSlot.Movement, componentAccessor);
                      } else {
                         componentAccessor.addComponent(targetRef, Frozen.getComponentType(), Frozen.get());
+                        componentAccessor.tryRemoveComponent(targetRef, DespawnComponent.getComponentType());
                         resetToIdleAnimation(targetRef, componentAccessor);
                      }
 
@@ -284,6 +286,7 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
                         copy.replaceComponent(UUIDComponent.getComponentType(), new UUIDComponent(UUID.randomUUID()));
                      }
 
+                     copy.tryRemoveComponent(DespawnComponent.getComponentType());
                      Ref<EntityStore> clonedRef = entityStore.addEntity(copy, AddReason.SPAWN);
                      if (clonedRef != null) {
                         builderState.pushEntityCloneHistory(clonedRef);
@@ -1011,6 +1014,10 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
                         if (transformComponent != null) {
                            ModelTransform modelTransform = packet.modelTransform;
                            builderState.handleEntityTransform(targetRef, modelTransform != null, packet.isSessionEnd, componentAccessor);
+                           if (modelTransform != null) {
+                              componentAccessor.tryRemoveComponent(targetRef, DespawnComponent.getComponentType());
+                           }
+
                            HeadRotation headRotation = componentAccessor.getComponent(targetRef, HeadRotation.getComponentType());
                            if (modelTransform != null) {
                               boolean hasPosition = modelTransform.position != null;

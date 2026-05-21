@@ -13,6 +13,7 @@ import javax.annotation.Nullable;
 
 public class ExecutionContext {
    public static final int STACK_GROW_INCREMENT = 8;
+   @Nullable
    protected Scope scope;
    protected ExecutionContext.Operand[] operandStack;
    protected int stackTop;
@@ -43,7 +44,7 @@ public class ExecutionContext {
    public static final ExecutionContext.Instruction LOGICAL_AND = context -> context.popPush(context.getBoolean(1) && context.getBoolean(0), 2);
    public static final ExecutionContext.Instruction LOGICAL_OR = context -> context.popPush(context.getBoolean(1) || context.getBoolean(0), 2);
 
-   public ExecutionContext(Scope scope) {
+   public ExecutionContext(@Nullable Scope scope) {
       this.scope = scope;
       this.stackTop = -1;
       this.lastPushedType = ValueType.VOID;
@@ -103,12 +104,14 @@ public class ExecutionContext {
       return this.get(0);
    }
 
-   public Scope setScope(Scope scope) {
-      Scope oldScope = this.getScope();
+   @Nullable
+   public Scope setScope(@Nullable Scope scope) {
+      Scope tempScope = this.scope;
       this.scope = scope;
-      return oldScope;
+      return tempScope;
    }
 
+   @Nullable
    public Scope getScope() {
       return this.scope;
    }

@@ -43,6 +43,7 @@ import com.hypixel.hytale.metrics.metric.HistoricMetric;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import java.lang.invoke.VarHandle;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -52,6 +53,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.function.BiConsumer;
@@ -61,6 +63,7 @@ import javax.annotation.Nullable;
 
 public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
    public static final Store[] EMPTY_ARRAY = new Store[0];
+   private static final boolean COUNT_SEQLOCK_RETRIES = Store.class.desiredAssertionStatus();
    @Nonnull
    public static final MetricsRegistry<Store<?>> METRICS_REGISTRY = new MetricsRegistry<Store<?>>()
       .register("ArchetypeChunkCount", Store::getArchetypeChunkCount, Codec.INTEGER)
@@ -129,6 +132,8 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
    private HistoricMetric[] systemMetrics = HistoricMetric.EMPTY_ARRAY;
    @Deprecated(forRemoval = true)
    private boolean disableProcessingAssert = false;
+   @Nonnull
+   final AtomicLong seqlockRetries = new AtomicLong();
 
    Store(@Nonnull ComponentRegistry<ECS_TYPE> registry, int storeIndex, @Nonnull ECS_TYPE externalData, @Nonnull IResourceStorage resourceStorage) {
       this.registry = registry;
@@ -419,8 +424,9 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
          systemIndex = this.findOrCreateArchetypeChunk(holder.getArchetype());
          ArchetypeChunk<ECS_TYPE> archetypeChunk = this.archetypeChunks[systemIndex];
          int chunkEntityRef = archetypeChunk.addEntity(ref, holder);
-         ref.setArchetypeChunk(archetypeChunk);
-         ref.setChunkEntityIndex(chunkEntityRef);
+         ref.beginMutation();
+         ref.setPosition(archetypeChunk, chunkEntityRef);
+         ref.endMutation();
          SystemType<ECS_TYPE, RefSystem<ECS_TYPE>> systemTypex = this.registry.getRefSystemType();
          BitSet systemIndexesx = data.getSystemIndexesForType(systemTypex);
          BitSet entityProcessedBySystemIndexes = archetypeChunk.getSystemIndexes();
@@ -542,8 +548,9 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
             int archetypeIndex = this.findOrCreateArchetypeChunk(holder.getArchetype());
             ArchetypeChunk<ECS_TYPE> archetypeChunk = this.archetypeChunks[archetypeIndex];
             int chunkEntityRef = archetypeChunk.addEntity(ref, holder);
-            ref.setArchetypeChunk(archetypeChunk);
-            ref.setChunkEntityIndex(chunkEntityRef);
+            ref.beginMutation();
+            ref.setPosition(archetypeChunk, chunkEntityRef);
+            ref.endMutation();
             systemIndex++;
          }
 
@@ -639,15 +646,15 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
       this.assertWriteProcessing();
       int entityIndex = ref.validate(this);
       CommandBuffer<ECS_TYPE> commandBuffer = this.takeCommandBuffer();
-      ArchetypeChunk<ECS_TYPE> archetypeChunk = ref.getArchetypeChunk();
-      int chunkEntityRef = ref.getChunkEntityIndex();
+      ArchetypeChunk<ECS_TYPE> chunk = ref.getArchetypeChunk();
+      int chunkIndex = ref.getChunkEntityIndex();
       ComponentRegistry.Data<ECS_TYPE> data = this.registry._internal_getData();
       this.processing.lock();
 
       try {
          SystemType<ECS_TYPE, RefSystem<ECS_TYPE>> systemType = this.registry.getRefSystemType();
          BitSet systemIndexes = data.getSystemIndexesForType(systemType);
-         BitSet entityProcessedBySystemIndexes = archetypeChunk.getSystemIndexes();
+         BitSet entityProcessedBySystemIndexes = chunk.getSystemIndexes();
          int systemIndex = -1;
 
          while ((systemIndex = systemIndexes.nextSetBit(systemIndex + 1)) >= 0) {
@@ -665,9 +672,10 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
 
          this.refs[lastIndex] = null;
          this.entitiesSize = lastIndex;
-         archetypeChunk.removeEntity(chunkEntityRef, holder);
-         if (archetypeChunk.size() == 0) {
-            this.removeArchetypeChunk(archetypeChunk);
+         ref.beginMutation();
+         chunk.removeEntity(chunkIndex, holder);
+         if (chunk.size() == 0) {
+            this.removeArchetypeChunk(chunk);
          }
 
          ref.invalidate(proxyReason);
@@ -753,8 +761,7 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
          while ((systemIndex = systemIndexes.nextSetBit(systemIndex + 1)) >= 0) {
             for (int i = refStart; i < refEnd; i++) {
                Ref<ECS_TYPE> ref = refArr[i];
-               ArchetypeChunk<ECS_TYPE> archetypeChunk = ref.getArchetypeChunk();
-               BitSet entityProcessedBySystemIndexes = archetypeChunk.getSystemIndexes();
+               BitSet entityProcessedBySystemIndexes = ref.getArchetypeChunk().getSystemIndexes();
                if (entityProcessedBySystemIndexes.get(systemIndex)) {
                   data.getSystem(systemIndex, systemType).onEntityRemove(refArr[i], reason, this, commandBuffer);
                }
@@ -764,8 +771,8 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
          for (int i = 0; i < length; i++) {
             Ref<ECS_TYPE> ref = refArr[refStart + i];
             systemIndex = ref.getIndex();
-            ArchetypeChunk<ECS_TYPE> archetypeChunk = ref.getArchetypeChunk();
-            int chunkEntityRef = ref.getChunkEntityIndex();
+            ArchetypeChunk<ECS_TYPE> chunk = ref.getArchetypeChunk();
+            int chunkIndex = ref.getChunkEntityIndex();
             int lastIndex = this.entitiesSize - 1;
             if (systemIndex != lastIndex) {
                Ref<ECS_TYPE> lastEntityRef = this.refs[lastIndex];
@@ -776,9 +783,10 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
             this.refs[lastIndex] = null;
             this.entitiesSize = lastIndex;
             Holder<ECS_TYPE> holder = holders[holderStart + i];
-            archetypeChunk.removeEntity(chunkEntityRef, holder);
-            if (archetypeChunk.size() == 0) {
-               this.removeArchetypeChunk(archetypeChunk);
+            ref.beginMutation();
+            chunk.removeEntity(chunkIndex, holder);
+            if (chunk.size() == 0) {
+               this.removeArchetypeChunk(chunk);
             }
          }
 
@@ -974,12 +982,45 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
    }
 
    @Nullable
+   public <T extends Component<ECS_TYPE>> T getComponentConcurrent(@Nonnull Ref<ECS_TYPE> ref, @Nonnull ComponentType<ECS_TYPE, T> componentType) {
+      componentType.validateRegistry(this.registry);
+      componentType.validate();
+
+      while (true) {
+         int seq1 = ref.getSeq();
+         if ((seq1 & 1) != 0) {
+            Thread.onSpinWait();
+         } else {
+            if (!ref.isValid(this)) {
+               return null;
+            }
+
+            ArchetypeChunk<ECS_TYPE> chunk = ref.getArchetypeChunk();
+            if (chunk == null) {
+               Thread.onSpinWait();
+            } else {
+               T result = chunk.__internal_getComponentConcurrent(ref.getChunkEntityIndex(), componentType);
+               VarHandle.loadLoadFence();
+               if (seq1 == ref.getSeq()) {
+                  return result;
+               }
+
+               if (COUNT_SEQLOCK_RETRIES) {
+                  this.seqlockRetries.incrementAndGet();
+               }
+
+               Thread.onSpinWait();
+            }
+         }
+      }
+   }
+
+   @Nullable
    protected <T extends Component<ECS_TYPE>> T __internal_getComponent(@Nonnull Ref<ECS_TYPE> ref, @Nonnull ComponentType<ECS_TYPE, T> componentType) {
       ref.validate(this);
       componentType.validateRegistry(this.registry);
       componentType.validate();
-      ArchetypeChunk<ECS_TYPE> archetypeChunk = ref.getArchetypeChunk();
-      return archetypeChunk.__internal_getComponent(ref.getChunkEntityIndex(), componentType);
+      return ref.getArchetypeChunk().__internal_getComponent(ref.getChunkEntityIndex(), componentType);
    }
 
    @Override
@@ -1404,11 +1445,10 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
             T system = (T)data.getSystem(systemIndex, systemType);
 
             for (Ref<ECS_TYPE> ref : refs) {
-               ArchetypeChunk<ECS_TYPE> archetypeChunk = ref.getArchetypeChunk();
-               BitSet entityProcessedBySystemIndexes = archetypeChunk.getSystemIndexes();
+               ArchetypeChunk<ECS_TYPE> chunk = ref.getArchetypeChunk();
+               BitSet entityProcessedBySystemIndexes = chunk.getSystemIndexes();
                if (entityProcessedBySystemIndexes.get(systemIndex)) {
-                  int index = ref.getChunkEntityIndex();
-                  system.fetch(index, archetypeChunk, this, commandBuffer, query, results);
+                  system.fetch(ref.getChunkEntityIndex(), chunk, this, commandBuffer, query, results);
                }
             }
          }
@@ -1443,9 +1483,8 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
       this.processing.lock();
 
       try {
-         ArchetypeChunk<ECS_TYPE> archetypeChunk = ref.getArchetypeChunk();
-         BitSet entityProcessedBySystemIndexes = archetypeChunk.getSystemIndexes();
-         int index = ref.getChunkEntityIndex();
+         ArchetypeChunk<ECS_TYPE> chunk = ref.getArchetypeChunk();
+         BitSet entityProcessedBySystemIndexes = chunk.getSystemIndexes();
          int systemIndex = -1;
 
          while ((systemIndex = systemIndexes.nextSetBit(systemIndex + 1)) >= 0) {
@@ -1456,7 +1495,7 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
 
             if (systemIndexes.get(systemIndex)) {
                EntityEventSystem<ECS_TYPE, Event> system = data.getSystem(systemIndex, systemType);
-               system.handleInternal(index, archetypeChunk, this, commandBuffer, param);
+               system.handleInternal(ref.getChunkEntityIndex(), chunk, this, commandBuffer, param);
                if (commandBuffer.consumeWasTrackedRefRemoved()) {
                   break;
                }
@@ -1556,9 +1595,8 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
       CommandBuffer<ECS_TYPE> commandBuffer = sourceCommandBuffer.fork();
       commandBuffer.track(ref);
       BitSet systemIndexes = data.getSystemIndexesForType(systemType);
-      ArchetypeChunk<ECS_TYPE> archetypeChunk = ref.getArchetypeChunk();
-      BitSet entityProcessedBySystemIndexes = archetypeChunk.getSystemIndexes();
-      int index = ref.getChunkEntityIndex();
+      ArchetypeChunk<ECS_TYPE> chunk = ref.getArchetypeChunk();
+      BitSet entityProcessedBySystemIndexes = chunk.getSystemIndexes();
       int systemIndex = -1;
 
       while ((systemIndex = systemIndexes.nextSetBit(systemIndex + 1)) >= 0) {
@@ -1569,7 +1607,7 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
 
          if (systemIndexes.get(systemIndex)) {
             EntityEventSystem<ECS_TYPE, Event> system = data.getSystem(systemIndex, systemType);
-            system.handleInternal(index, archetypeChunk, this, commandBuffer, param);
+            system.handleInternal(ref.getChunkEntityIndex(), chunk, this, commandBuffer, param);
             if (commandBuffer.consumeWasTrackedRefRemoved()) {
                break;
             }
@@ -1793,10 +1831,7 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
                               assert unknownComponents != null;
                               Component<ECS_TYPE> component = unknownComponents.removeComponent(componentId, componentCodec);
                               entity.addComponent(componentType, component);
-                           }, (newChunkEntityRef, ref) -> {
-                              ref.setArchetypeChunk(toArchetypeChunk);
-                              ref.setChunkEntityIndex(newChunkEntityRef);
-                           });
+                           }, (newChunkEntityRef, ref) -> ref.setPosition(toArchetypeChunk, newChunkEntityRef));
                            if (archetypeChunk.size() == 0) {
                               this.archetypeToIndexMap.removeInt(archetypeChunk.getArchetype());
                               this.archetypeChunks[archetypeIndex] = null;
@@ -1868,10 +1903,7 @@ public class Store<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
                            }
 
                            entity.removeComponent(componentType);
-                        }, (newChunkEntityRef, ref) -> {
-                           ref.setArchetypeChunk(toArchetypeChunk);
-                           ref.setChunkEntityIndex(newChunkEntityRef);
-                        });
+                        }, (newChunkEntityRef, ref) -> ref.setPosition(toArchetypeChunk, newChunkEntityRef));
                      }
                   }
                }

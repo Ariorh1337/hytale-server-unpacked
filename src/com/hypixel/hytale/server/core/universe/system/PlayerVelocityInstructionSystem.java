@@ -65,7 +65,7 @@ public class PlayerVelocityInstructionSystem extends EntityTickingSystem<EntityS
                   TransformComponent transformComponent = archetypeChunk.getComponent(index, TransformComponent.getComponentType());
                   if (transformComponent != null) {
                      World world = commandBuffer.getExternalData().getWorld();
-                     DebugUtils.addForce(world, transformComponent.getPosition(), velocityx, velocityConfigx);
+                     DebugUtils.addVelocity(world, transformComponent.getPosition(), velocityx, velocityConfigx);
                   }
                }
                break;
@@ -86,7 +86,7 @@ public class PlayerVelocityInstructionSystem extends EntityTickingSystem<EntityS
                   TransformComponent transformComponent = archetypeChunk.getComponent(index, TransformComponent.getComponentType());
                   if (transformComponent != null) {
                      World world = commandBuffer.getExternalData().getWorld();
-                     DebugUtils.addForce(world, transformComponent.getPosition(), new Vector3d(velocity.x, velocity.y, velocity.z), velocityConfig);
+                     DebugUtils.addVelocity(world, transformComponent.getPosition(), new Vector3d(velocity.x, velocity.y, velocity.z), velocityConfig);
                   }
                }
          }

@@ -118,12 +118,12 @@ public class BlockEntity implements Component<EntityStore> {
       return this.blockTypeKey;
    }
 
-   public void addForce(float x, float y, float z) {
+   public void addVelocity(float x, float y, float z) {
       this.simplePhysicsProvider.addVelocity(x, y, z);
    }
 
-   public void addForce(@Nonnull Vector3d force) {
-      this.simplePhysicsProvider.addVelocity((float)force.x, (float)force.y, (float)force.z);
+   public void addVelocity(@Nonnull Vector3d velocity) {
+      this.simplePhysicsProvider.addVelocity((float)velocity.x, (float)velocity.y, (float)velocity.z);
    }
 
    public boolean consumeBlockIdNetworkOutdated() {

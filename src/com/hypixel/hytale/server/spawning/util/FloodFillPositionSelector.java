@@ -574,7 +574,7 @@ public class FloodFillPositionSelector implements Component<EntityStore> {
       }
 
       checkIndex = index + 1;
-      if (checkIndex >= this.fullResolutionMap.size() || !this.fullResolutionMap.get(checkIndex)) {
+      if (checkIndex >= this.heightGrid.length || !this.fullResolutionMap.get(checkIndex)) {
          newIndex--;
       }
 
@@ -584,11 +584,11 @@ public class FloodFillPositionSelector implements Component<EntityStore> {
       }
 
       checkIndex = index + this.size;
-      if (checkIndex >= this.fullResolutionMap.size() || !this.fullResolutionMap.get(checkIndex)) {
+      if (checkIndex >= this.heightGrid.length || !this.fullResolutionMap.get(checkIndex)) {
          newIndex -= this.size;
       }
 
-      return this.fullResolutionMap.get(newIndex) ? newIndex : index;
+      return newIndex >= 0 && newIndex < this.heightGrid.length && this.fullResolutionMap.get(newIndex) ? newIndex : index;
    }
 
    private int getValidMovementModesMask(

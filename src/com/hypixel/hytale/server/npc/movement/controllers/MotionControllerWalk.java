@@ -471,8 +471,8 @@ public class MotionControllerWalk extends MotionControllerBase {
    }
 
    @Override
-   public void forceVelocity(@Nonnull Vector3dc velocity, VelocityConfig velocityConfig, boolean ignoreDamping) {
-      super.forceVelocity(velocity, velocityConfig, ignoreDamping);
+   public void setVelocity(@Nonnull Vector3dc velocity, VelocityConfig velocityConfig, boolean ignoreDamping) {
+      super.setVelocity(velocity, velocityConfig, ignoreDamping);
       this.onGround = false;
    }
 
@@ -1003,11 +1003,11 @@ public class MotionControllerWalk extends MotionControllerBase {
          this.climbUpDistance = 0.0;
          this.currentClimbForwardDistance = 0.0;
          this.maxClimbForwardDistance = 0.0;
-         translation.set(this.forceVelocity);
+         translation.set(this.externalVelocity);
 
          for (int i = 0; i < this.appliedVelocities.size(); i++) {
             MotionControllerBase.AppliedVelocity entry = this.appliedVelocities.get(i);
-            if (entry.velocity.y + this.forceVelocity.y <= 0.0 || entry.velocity.y < 0.0) {
+            if (entry.velocity.y + this.externalVelocity.y <= 0.0 || entry.velocity.y < 0.0) {
                entry.canClear = true;
             }
 
@@ -1019,19 +1019,19 @@ public class MotionControllerWalk extends MotionControllerBase {
          }
 
          translation.mul(dt);
-         if (!this.onGround || !(this.forceVelocity.y < 0.0)) {
-            this.forceVelocity.y = this.computeNewFallSpeed(dt, this.forceVelocity.y);
+         if (!this.onGround || !(this.externalVelocity.y < 0.0)) {
+            this.externalVelocity.y = this.computeNewFallSpeed(dt, this.externalVelocity.y);
          } else if (translation.y < 0.0) {
             translation.y = 0.0;
-            this.forceVelocity.y = 0.0;
+            this.externalVelocity.y = 0.0;
          }
 
-         if (!this.appliedForce.equals(Vector3dUtil.ZERO)) {
+         if (!this.appliedVelocity.equals(Vector3dUtil.ZERO)) {
             if (this.moveSpeed > 0.0) {
                float headingX = PhysicsMath.headingX(this.getYaw());
                float headingZ = PhysicsMath.headingZ(this.getYaw());
-               double length2 = this.appliedForce.x * this.appliedForce.x + this.appliedForce.z * this.appliedForce.z;
-               double multiplier = length2 > 0.0 ? (headingX * this.appliedForce.x + headingZ * this.appliedForce.z) / Math.sqrt(length2) : 0.0;
+               double length2 = this.appliedVelocity.x * this.appliedVelocity.x + this.appliedVelocity.z * this.appliedVelocity.z;
+               double multiplier = length2 > 0.0 ? (headingX * this.appliedVelocity.x + headingZ * this.appliedVelocity.z) / Math.sqrt(length2) : 0.0;
                multiplier = Math.min((multiplier + 1.0) / 2.0, this.maxWalkSpeedAfterHitMultiplier);
                this.moveSpeed *= multiplier;
                if (this.moveSpeed > this.minHorizontalSpeed) {
@@ -1046,15 +1046,15 @@ public class MotionControllerWalk extends MotionControllerBase {
                npcComponent.setHoverHeight(translation.y <= 0.0 ? this.minHoverDrop : this.maxHover);
             }
 
-            this.appliedForce.zero();
+            this.appliedVelocity.zero();
          }
 
          if (this.onGround && this.ignoreDamping) {
-            double speed = this.forceVelocity.length() - dt * this.inertia * this.acceleration * 5.0;
+            double speed = this.externalVelocity.length() - dt * this.inertia * this.acceleration * 5.0;
             if (speed > 0.0) {
-               this.forceVelocity.normalize(speed);
+               this.externalVelocity.normalize(speed);
             } else {
-               this.forceVelocity.zero();
+               this.externalVelocity.zero();
             }
          }
 
@@ -1516,7 +1516,7 @@ public class MotionControllerWalk extends MotionControllerBase {
          } else {
             if (this.ignoreDamping) {
                this.ignoreDamping = false;
-               this.clearForce();
+               this.clearExternalVelocity();
             }
 
             int count = this.collisionResult.getBlockCollisionCount();

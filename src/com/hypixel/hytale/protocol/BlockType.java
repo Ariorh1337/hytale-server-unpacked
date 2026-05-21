@@ -15,10 +15,10 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class BlockType {
-   public static final int NULLABLE_BIT_FIELD_SIZE = 4;
-   public static final int FIXED_BLOCK_SIZE = 172;
+   public static final int NULLABLE_BIT_FIELD_SIZE = 5;
+   public static final int FIXED_BLOCK_SIZE = 176;
    public static final int VARIABLE_FIELD_COUNT = 25;
-   public static final int VARIABLE_BLOCK_START = 272;
+   public static final int VARIABLE_BLOCK_START = 276;
    public static final int MAX_SIZE = 1677721600;
    @Nullable
    public String item;
@@ -77,6 +77,8 @@ public class BlockType {
    public String blockBreakingDecalId;
    @Nullable
    public Color particleColor;
+   @Nullable
+   public Color textureComputedColor;
    @Nullable
    public ColorLight light;
    @Nullable
@@ -153,6 +155,7 @@ public class BlockType {
       @Nullable String blockParticleSetId,
       @Nullable String blockBreakingDecalId,
       @Nullable Color particleColor,
+      @Nullable Color textureComputedColor,
       @Nullable ColorLight light,
       @Nullable Tint tint,
       @Nullable Tint biomeTint,
@@ -208,6 +211,7 @@ public class BlockType {
       this.blockParticleSetId = blockParticleSetId;
       this.blockBreakingDecalId = blockBreakingDecalId;
       this.particleColor = particleColor;
+      this.textureComputedColor = textureComputedColor;
       this.light = light;
       this.tint = tint;
       this.biomeTint = biomeTint;
@@ -265,6 +269,7 @@ public class BlockType {
       this.blockParticleSetId = other.blockParticleSetId;
       this.blockBreakingDecalId = other.blockBreakingDecalId;
       this.particleColor = other.particleColor;
+      this.textureComputedColor = other.textureComputedColor;
       this.light = other.light;
       this.tint = other.tint;
       this.biomeTint = other.biomeTint;
@@ -289,69 +294,73 @@ public class BlockType {
 
    @Nonnull
    public static BlockType deserialize(@Nonnull ByteBuf buf, int offset) {
-      if (buf.readableBytes() - offset < 272) {
-         throw ProtocolException.bufferTooSmall("BlockType", 272, buf.readableBytes() - offset);
+      if (buf.readableBytes() - offset < 276) {
+         throw ProtocolException.bufferTooSmall("BlockType", 276, buf.readableBytes() - offset);
       }
 
       BlockType obj = new BlockType();
-      byte[] nullBits = PacketIO.readBytes(buf, offset, 4);
-      obj.unknown = buf.getByte(offset + 4) != 0;
-      obj.drawType = DrawType.fromValue(buf.getByte(offset + 5));
-      obj.material = BlockMaterial.fromValue(buf.getByte(offset + 6));
-      obj.opacity = Opacity.fromValue(buf.getByte(offset + 7));
-      obj.hitbox = buf.getIntLE(offset + 8);
-      obj.interactionHitbox = buf.getIntLE(offset + 12);
-      obj.modelScale = buf.getFloatLE(offset + 16);
-      obj.looping = buf.getByte(offset + 20) != 0;
-      obj.maxSupportDistance = buf.getIntLE(offset + 21);
-      obj.blockSupportsRequiredFor = BlockSupportsRequiredForType.fromValue(buf.getByte(offset + 25));
-      obj.requiresAlphaBlending = buf.getByte(offset + 26) != 0;
-      obj.cubeShadingMode = ShadingMode.fromValue(buf.getByte(offset + 27));
-      obj.randomRotation = RandomRotation.fromValue(buf.getByte(offset + 28));
-      obj.variantRotation = VariantRotation.fromValue(buf.getByte(offset + 29));
-      obj.rotationYawPlacementOffset = Rotation.fromValue(buf.getByte(offset + 30));
-      obj.blockSoundSetIndex = buf.getIntLE(offset + 31);
-      obj.physicalMaterialIndex = buf.getIntLE(offset + 35);
-      obj.soundOcclusionOpacity = buf.getFloatLE(offset + 39);
-      obj.ambientSoundEventIndex = buf.getIntLE(offset + 43);
+      byte[] nullBits = PacketIO.readBytes(buf, offset, 5);
+      obj.unknown = buf.getByte(offset + 5) != 0;
+      obj.drawType = DrawType.fromValue(buf.getByte(offset + 6));
+      obj.material = BlockMaterial.fromValue(buf.getByte(offset + 7));
+      obj.opacity = Opacity.fromValue(buf.getByte(offset + 8));
+      obj.hitbox = buf.getIntLE(offset + 9);
+      obj.interactionHitbox = buf.getIntLE(offset + 13);
+      obj.modelScale = buf.getFloatLE(offset + 17);
+      obj.looping = buf.getByte(offset + 21) != 0;
+      obj.maxSupportDistance = buf.getIntLE(offset + 22);
+      obj.blockSupportsRequiredFor = BlockSupportsRequiredForType.fromValue(buf.getByte(offset + 26));
+      obj.requiresAlphaBlending = buf.getByte(offset + 27) != 0;
+      obj.cubeShadingMode = ShadingMode.fromValue(buf.getByte(offset + 28));
+      obj.randomRotation = RandomRotation.fromValue(buf.getByte(offset + 29));
+      obj.variantRotation = VariantRotation.fromValue(buf.getByte(offset + 30));
+      obj.rotationYawPlacementOffset = Rotation.fromValue(buf.getByte(offset + 31));
+      obj.blockSoundSetIndex = buf.getIntLE(offset + 32);
+      obj.physicalMaterialIndex = buf.getIntLE(offset + 36);
+      obj.soundOcclusionOpacity = buf.getFloatLE(offset + 40);
+      obj.ambientSoundEventIndex = buf.getIntLE(offset + 44);
       if ((nullBits[0] & 1) != 0) {
-         obj.particleColor = Color.deserialize(buf, offset + 47);
+         obj.particleColor = Color.deserialize(buf, offset + 48);
       }
 
       if ((nullBits[0] & 2) != 0) {
-         obj.light = ColorLight.deserialize(buf, offset + 50);
+         obj.textureComputedColor = Color.deserialize(buf, offset + 51);
       }
 
       if ((nullBits[0] & 4) != 0) {
-         obj.tint = Tint.deserialize(buf, offset + 54);
+         obj.light = ColorLight.deserialize(buf, offset + 54);
       }
 
       if ((nullBits[0] & 8) != 0) {
-         obj.biomeTint = Tint.deserialize(buf, offset + 78);
+         obj.tint = Tint.deserialize(buf, offset + 58);
       }
 
-      obj.group = buf.getIntLE(offset + 102);
       if ((nullBits[0] & 16) != 0) {
-         obj.movementSettings = BlockMovementSettings.deserialize(buf, offset + 106);
+         obj.biomeTint = Tint.deserialize(buf, offset + 82);
       }
 
+      obj.group = buf.getIntLE(offset + 106);
       if ((nullBits[0] & 32) != 0) {
-         obj.flags = BlockFlags.deserialize(buf, offset + 148);
+         obj.movementSettings = BlockMovementSettings.deserialize(buf, offset + 110);
       }
 
       if ((nullBits[0] & 64) != 0) {
-         obj.placementSettings = BlockPlacementSettings.deserialize(buf, offset + 150);
+         obj.flags = BlockFlags.deserialize(buf, offset + 152);
       }
 
-      obj.ignoreSupportWhenPlaced = buf.getByte(offset + 167) != 0;
-      obj.transitionToTag = buf.getIntLE(offset + 168);
       if ((nullBits[0] & 128) != 0) {
-         int varPosBase0 = buf.getIntLE(offset + 172);
-         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 272) {
+         obj.placementSettings = BlockPlacementSettings.deserialize(buf, offset + 154);
+      }
+
+      obj.ignoreSupportWhenPlaced = buf.getByte(offset + 171) != 0;
+      obj.transitionToTag = buf.getIntLE(offset + 172);
+      if ((nullBits[1] & 1) != 0) {
+         int varPosBase0 = buf.getIntLE(offset + 176);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("Item", varPosBase0, buf.readableBytes());
          }
 
-         int varPos0 = offset + 272 + varPosBase0;
+         int varPos0 = offset + 276 + varPosBase0;
          int itemLen = VarInt.peek(buf, varPos0);
          if (itemLen < 0) {
             throw ProtocolException.invalidVarInt("Item");
@@ -369,13 +378,13 @@ public class BlockType {
          obj.item = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
-      if ((nullBits[1] & 1) != 0) {
-         int varPosBase1 = buf.getIntLE(offset + 176);
-         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[1] & 2) != 0) {
+         int varPosBase1 = buf.getIntLE(offset + 180);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("Name", varPosBase1, buf.readableBytes());
          }
 
-         int varPos1 = offset + 272 + varPosBase1;
+         int varPos1 = offset + 276 + varPosBase1;
          int nameLen = VarInt.peek(buf, varPos1);
          if (nameLen < 0) {
             throw ProtocolException.invalidVarInt("Name");
@@ -393,13 +402,13 @@ public class BlockType {
          obj.name = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
       }
 
-      if ((nullBits[1] & 2) != 0) {
-         int varPosBase2 = buf.getIntLE(offset + 180);
-         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[1] & 4) != 0) {
+         int varPosBase2 = buf.getIntLE(offset + 184);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("ShaderEffect", varPosBase2, buf.readableBytes());
          }
 
-         int varPos2 = offset + 272 + varPosBase2;
+         int varPos2 = offset + 276 + varPosBase2;
          int shaderEffectCount = VarInt.peek(buf, varPos2);
          if (shaderEffectCount < 0) {
             throw ProtocolException.invalidVarInt("ShaderEffect");
@@ -423,13 +432,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[1] & 4) != 0) {
-         int varPosBase3 = buf.getIntLE(offset + 184);
-         if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[1] & 8) != 0) {
+         int varPosBase3 = buf.getIntLE(offset + 188);
+         if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("Model", varPosBase3, buf.readableBytes());
          }
 
-         int varPos3 = offset + 272 + varPosBase3;
+         int varPos3 = offset + 276 + varPosBase3;
          int modelLen = VarInt.peek(buf, varPos3);
          if (modelLen < 0) {
             throw ProtocolException.invalidVarInt("Model");
@@ -447,13 +456,13 @@ public class BlockType {
          obj.model = PacketIO.readVarString(buf, varPos3, PacketIO.UTF8);
       }
 
-      if ((nullBits[1] & 8) != 0) {
-         int varPosBase4 = buf.getIntLE(offset + 188);
-         if (varPosBase4 < 0 || varPosBase4 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[1] & 16) != 0) {
+         int varPosBase4 = buf.getIntLE(offset + 192);
+         if (varPosBase4 < 0 || varPosBase4 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("ModelTexture", varPosBase4, buf.readableBytes());
          }
 
-         int varPos4 = offset + 272 + varPosBase4;
+         int varPos4 = offset + 276 + varPosBase4;
          int modelTextureCount = VarInt.peek(buf, varPos4);
          if (modelTextureCount < 0) {
             throw ProtocolException.invalidVarInt("ModelTexture");
@@ -477,13 +486,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[1] & 16) != 0) {
-         int varPosBase5 = buf.getIntLE(offset + 192);
-         if (varPosBase5 < 0 || varPosBase5 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[1] & 32) != 0) {
+         int varPosBase5 = buf.getIntLE(offset + 196);
+         if (varPosBase5 < 0 || varPosBase5 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("ModelAnimation", varPosBase5, buf.readableBytes());
          }
 
-         int varPos5 = offset + 272 + varPosBase5;
+         int varPos5 = offset + 276 + varPosBase5;
          int modelAnimationLen = VarInt.peek(buf, varPos5);
          if (modelAnimationLen < 0) {
             throw ProtocolException.invalidVarInt("ModelAnimation");
@@ -501,13 +510,13 @@ public class BlockType {
          obj.modelAnimation = PacketIO.readVarString(buf, varPos5, PacketIO.UTF8);
       }
 
-      if ((nullBits[1] & 32) != 0) {
-         int varPosBase6 = buf.getIntLE(offset + 196);
-         if (varPosBase6 < 0 || varPosBase6 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[1] & 64) != 0) {
+         int varPosBase6 = buf.getIntLE(offset + 200);
+         if (varPosBase6 < 0 || varPosBase6 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("Support", varPosBase6, buf.readableBytes());
          }
 
-         int varPos6 = offset + 272 + varPosBase6;
+         int varPos6 = offset + 276 + varPosBase6;
          int supportCount = VarInt.peek(buf, varPos6);
          if (supportCount < 0) {
             throw ProtocolException.invalidVarInt("Support");
@@ -551,13 +560,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[1] & 64) != 0) {
-         int varPosBase7 = buf.getIntLE(offset + 200);
-         if (varPosBase7 < 0 || varPosBase7 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[1] & 128) != 0) {
+         int varPosBase7 = buf.getIntLE(offset + 204);
+         if (varPosBase7 < 0 || varPosBase7 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("Supporting", varPosBase7, buf.readableBytes());
          }
 
-         int varPos7 = offset + 272 + varPosBase7;
+         int varPos7 = offset + 276 + varPosBase7;
          int supportingCount = VarInt.peek(buf, varPos7);
          if (supportingCount < 0) {
             throw ProtocolException.invalidVarInt("Supporting");
@@ -601,13 +610,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[1] & 128) != 0) {
-         int varPosBase8 = buf.getIntLE(offset + 204);
-         if (varPosBase8 < 0 || varPosBase8 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[2] & 1) != 0) {
+         int varPosBase8 = buf.getIntLE(offset + 208);
+         if (varPosBase8 < 0 || varPosBase8 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("CubeTextures", varPosBase8, buf.readableBytes());
          }
 
-         int varPos8 = offset + 272 + varPosBase8;
+         int varPos8 = offset + 276 + varPosBase8;
          int cubeTexturesCount = VarInt.peek(buf, varPos8);
          if (cubeTexturesCount < 0) {
             throw ProtocolException.invalidVarInt("CubeTextures");
@@ -631,13 +640,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[2] & 1) != 0) {
-         int varPosBase9 = buf.getIntLE(offset + 208);
-         if (varPosBase9 < 0 || varPosBase9 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[2] & 2) != 0) {
+         int varPosBase9 = buf.getIntLE(offset + 212);
+         if (varPosBase9 < 0 || varPosBase9 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("CubeSideMaskTexture", varPosBase9, buf.readableBytes());
          }
 
-         int varPos9 = offset + 272 + varPosBase9;
+         int varPos9 = offset + 276 + varPosBase9;
          int cubeSideMaskTextureLen = VarInt.peek(buf, varPos9);
          if (cubeSideMaskTextureLen < 0) {
             throw ProtocolException.invalidVarInt("CubeSideMaskTexture");
@@ -655,13 +664,13 @@ public class BlockType {
          obj.cubeSideMaskTexture = PacketIO.readVarString(buf, varPos9, PacketIO.UTF8);
       }
 
-      if ((nullBits[2] & 2) != 0) {
-         int varPosBase10 = buf.getIntLE(offset + 212);
-         if (varPosBase10 < 0 || varPosBase10 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[2] & 4) != 0) {
+         int varPosBase10 = buf.getIntLE(offset + 216);
+         if (varPosBase10 < 0 || varPosBase10 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("ConditionalSounds", varPosBase10, buf.readableBytes());
          }
 
-         int varPos10 = offset + 272 + varPosBase10;
+         int varPos10 = offset + 276 + varPosBase10;
          int conditionalSoundsCount = VarInt.peek(buf, varPos10);
          if (conditionalSoundsCount < 0) {
             throw ProtocolException.invalidVarInt("ConditionalSounds");
@@ -685,13 +694,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[2] & 4) != 0) {
-         int varPosBase11 = buf.getIntLE(offset + 216);
-         if (varPosBase11 < 0 || varPosBase11 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[2] & 8) != 0) {
+         int varPosBase11 = buf.getIntLE(offset + 220);
+         if (varPosBase11 < 0 || varPosBase11 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("Particles", varPosBase11, buf.readableBytes());
          }
 
-         int varPos11 = offset + 272 + varPosBase11;
+         int varPos11 = offset + 276 + varPosBase11;
          int particlesCount = VarInt.peek(buf, varPos11);
          if (particlesCount < 0) {
             throw ProtocolException.invalidVarInt("Particles");
@@ -715,13 +724,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[2] & 8) != 0) {
-         int varPosBase12 = buf.getIntLE(offset + 220);
-         if (varPosBase12 < 0 || varPosBase12 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[2] & 16) != 0) {
+         int varPosBase12 = buf.getIntLE(offset + 224);
+         if (varPosBase12 < 0 || varPosBase12 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("BlockParticleSetId", varPosBase12, buf.readableBytes());
          }
 
-         int varPos12 = offset + 272 + varPosBase12;
+         int varPos12 = offset + 276 + varPosBase12;
          int blockParticleSetIdLen = VarInt.peek(buf, varPos12);
          if (blockParticleSetIdLen < 0) {
             throw ProtocolException.invalidVarInt("BlockParticleSetId");
@@ -739,13 +748,13 @@ public class BlockType {
          obj.blockParticleSetId = PacketIO.readVarString(buf, varPos12, PacketIO.UTF8);
       }
 
-      if ((nullBits[2] & 16) != 0) {
-         int varPosBase13 = buf.getIntLE(offset + 224);
-         if (varPosBase13 < 0 || varPosBase13 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[2] & 32) != 0) {
+         int varPosBase13 = buf.getIntLE(offset + 228);
+         if (varPosBase13 < 0 || varPosBase13 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("BlockBreakingDecalId", varPosBase13, buf.readableBytes());
          }
 
-         int varPos13 = offset + 272 + varPosBase13;
+         int varPos13 = offset + 276 + varPosBase13;
          int blockBreakingDecalIdLen = VarInt.peek(buf, varPos13);
          if (blockBreakingDecalIdLen < 0) {
             throw ProtocolException.invalidVarInt("BlockBreakingDecalId");
@@ -765,13 +774,13 @@ public class BlockType {
          obj.blockBreakingDecalId = PacketIO.readVarString(buf, varPos13, PacketIO.UTF8);
       }
 
-      if ((nullBits[2] & 32) != 0) {
-         int varPosBase14 = buf.getIntLE(offset + 228);
-         if (varPosBase14 < 0 || varPosBase14 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[2] & 64) != 0) {
+         int varPosBase14 = buf.getIntLE(offset + 232);
+         if (varPosBase14 < 0 || varPosBase14 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("TransitionTexture", varPosBase14, buf.readableBytes());
          }
 
-         int varPos14 = offset + 272 + varPosBase14;
+         int varPos14 = offset + 276 + varPosBase14;
          int transitionTextureLen = VarInt.peek(buf, varPos14);
          if (transitionTextureLen < 0) {
             throw ProtocolException.invalidVarInt("TransitionTexture");
@@ -789,13 +798,13 @@ public class BlockType {
          obj.transitionTexture = PacketIO.readVarString(buf, varPos14, PacketIO.UTF8);
       }
 
-      if ((nullBits[2] & 64) != 0) {
-         int varPosBase15 = buf.getIntLE(offset + 232);
-         if (varPosBase15 < 0 || varPosBase15 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[2] & 128) != 0) {
+         int varPosBase15 = buf.getIntLE(offset + 236);
+         if (varPosBase15 < 0 || varPosBase15 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("TransitionToGroups", varPosBase15, buf.readableBytes());
          }
 
-         int varPos15 = offset + 272 + varPosBase15;
+         int varPos15 = offset + 276 + varPosBase15;
          int transitionToGroupsCount = VarInt.peek(buf, varPos15);
          if (transitionToGroupsCount < 0) {
             throw ProtocolException.invalidVarInt("TransitionToGroups");
@@ -817,13 +826,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[2] & 128) != 0) {
-         int varPosBase16 = buf.getIntLE(offset + 236);
-         if (varPosBase16 < 0 || varPosBase16 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[3] & 1) != 0) {
+         int varPosBase16 = buf.getIntLE(offset + 240);
+         if (varPosBase16 < 0 || varPosBase16 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("InteractionHint", varPosBase16, buf.readableBytes());
          }
 
-         int varPos16 = offset + 272 + varPosBase16;
+         int varPos16 = offset + 276 + varPosBase16;
          int interactionHintLen = VarInt.peek(buf, varPos16);
          if (interactionHintLen < 0) {
             throw ProtocolException.invalidVarInt("InteractionHint");
@@ -841,43 +850,43 @@ public class BlockType {
          obj.interactionHint = PacketIO.readVarString(buf, varPos16, PacketIO.UTF8);
       }
 
-      if ((nullBits[3] & 1) != 0) {
-         int varPosBase17 = buf.getIntLE(offset + 240);
-         if (varPosBase17 < 0 || varPosBase17 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[3] & 2) != 0) {
+         int varPosBase17 = buf.getIntLE(offset + 244);
+         if (varPosBase17 < 0 || varPosBase17 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("Gathering", varPosBase17, buf.readableBytes());
          }
 
-         int varPos17 = offset + 272 + varPosBase17;
+         int varPos17 = offset + 276 + varPosBase17;
          obj.gathering = BlockGathering.deserialize(buf, varPos17);
       }
 
-      if ((nullBits[3] & 2) != 0) {
-         int varPosBase18 = buf.getIntLE(offset + 244);
-         if (varPosBase18 < 0 || varPosBase18 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[3] & 4) != 0) {
+         int varPosBase18 = buf.getIntLE(offset + 248);
+         if (varPosBase18 < 0 || varPosBase18 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("Display", varPosBase18, buf.readableBytes());
          }
 
-         int varPos18 = offset + 272 + varPosBase18;
+         int varPos18 = offset + 276 + varPosBase18;
          obj.display = ModelDisplay.deserialize(buf, varPos18);
       }
 
-      if ((nullBits[3] & 4) != 0) {
-         int varPosBase19 = buf.getIntLE(offset + 248);
-         if (varPosBase19 < 0 || varPosBase19 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[3] & 8) != 0) {
+         int varPosBase19 = buf.getIntLE(offset + 252);
+         if (varPosBase19 < 0 || varPosBase19 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("Rail", varPosBase19, buf.readableBytes());
          }
 
-         int varPos19 = offset + 272 + varPosBase19;
+         int varPos19 = offset + 276 + varPosBase19;
          obj.rail = RailConfig.deserialize(buf, varPos19);
       }
 
-      if ((nullBits[3] & 8) != 0) {
-         int varPosBase20 = buf.getIntLE(offset + 252);
-         if (varPosBase20 < 0 || varPosBase20 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[3] & 16) != 0) {
+         int varPosBase20 = buf.getIntLE(offset + 256);
+         if (varPosBase20 < 0 || varPosBase20 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("Interactions", varPosBase20, buf.readableBytes());
          }
 
-         int varPos20 = offset + 272 + varPosBase20;
+         int varPos20 = offset + 276 + varPosBase20;
          int interactionsCount = VarInt.peek(buf, varPos20);
          if (interactionsCount < 0) {
             throw ProtocolException.invalidVarInt("Interactions");
@@ -901,13 +910,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[3] & 16) != 0) {
-         int varPosBase21 = buf.getIntLE(offset + 256);
-         if (varPosBase21 < 0 || varPosBase21 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[3] & 32) != 0) {
+         int varPosBase21 = buf.getIntLE(offset + 260);
+         if (varPosBase21 < 0 || varPosBase21 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("States", varPosBase21, buf.readableBytes());
          }
 
-         int varPos21 = offset + 272 + varPosBase21;
+         int varPos21 = offset + 276 + varPosBase21;
          int statesCount = VarInt.peek(buf, varPos21);
          if (statesCount < 0) {
             throw ProtocolException.invalidVarInt("States");
@@ -946,13 +955,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[3] & 32) != 0) {
-         int varPosBase22 = buf.getIntLE(offset + 260);
-         if (varPosBase22 < 0 || varPosBase22 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[3] & 64) != 0) {
+         int varPosBase22 = buf.getIntLE(offset + 264);
+         if (varPosBase22 < 0 || varPosBase22 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("TagIndexes", varPosBase22, buf.readableBytes());
          }
 
-         int varPos22 = offset + 272 + varPosBase22;
+         int varPos22 = offset + 276 + varPosBase22;
          int tagIndexesCount = VarInt.peek(buf, varPos22);
          if (tagIndexesCount < 0) {
             throw ProtocolException.invalidVarInt("TagIndexes");
@@ -974,23 +983,23 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[3] & 64) != 0) {
-         int varPosBase23 = buf.getIntLE(offset + 264);
-         if (varPosBase23 < 0 || varPosBase23 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[3] & 128) != 0) {
+         int varPosBase23 = buf.getIntLE(offset + 268);
+         if (varPosBase23 < 0 || varPosBase23 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("Bench", varPosBase23, buf.readableBytes());
          }
 
-         int varPos23 = offset + 272 + varPosBase23;
+         int varPos23 = offset + 276 + varPosBase23;
          obj.bench = Bench.deserialize(buf, varPos23);
       }
 
-      if ((nullBits[3] & 128) != 0) {
-         int varPosBase24 = buf.getIntLE(offset + 268);
-         if (varPosBase24 < 0 || varPosBase24 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[4] & 1) != 0) {
+         int varPosBase24 = buf.getIntLE(offset + 272);
+         if (varPosBase24 < 0 || varPosBase24 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("ConnectedBlockRuleSet", varPosBase24, buf.readableBytes());
          }
 
-         int varPos24 = offset + 272 + varPosBase24;
+         int varPos24 = offset + 276 + varPosBase24;
          obj.connectedBlockRuleSet = ConnectedBlockRuleSet.deserialize(buf, varPos24);
       }
 
@@ -998,15 +1007,15 @@ public class BlockType {
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
-      byte[] nullBits = PacketIO.readBytes(buf, offset, 4);
-      int maxEnd = 272;
-      if ((nullBits[0] & 128) != 0) {
-         int fieldOffset0 = buf.getIntLE(offset + 172);
-         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 272) {
+      byte[] nullBits = PacketIO.readBytes(buf, offset, 5);
+      int maxEnd = 276;
+      if ((nullBits[1] & 1) != 0) {
+         int fieldOffset0 = buf.getIntLE(offset + 176);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("Item", fieldOffset0, maxEnd);
          }
 
-         int pos0 = offset + 272 + fieldOffset0;
+         int pos0 = offset + 276 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
          pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
@@ -1014,13 +1023,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[1] & 1) != 0) {
-         int fieldOffset1 = buf.getIntLE(offset + 176);
-         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[1] & 2) != 0) {
+         int fieldOffset1 = buf.getIntLE(offset + 180);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("Name", fieldOffset1, maxEnd);
          }
 
-         int pos1 = offset + 272 + fieldOffset1;
+         int pos1 = offset + 276 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
          pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
@@ -1028,13 +1037,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[1] & 2) != 0) {
-         int fieldOffset2 = buf.getIntLE(offset + 180);
-         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[1] & 4) != 0) {
+         int fieldOffset2 = buf.getIntLE(offset + 184);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("ShaderEffect", fieldOffset2, maxEnd);
          }
 
-         int pos2 = offset + 272 + fieldOffset2;
+         int pos2 = offset + 276 + fieldOffset2;
          int arrLen = VarInt.peek(buf, pos2);
          pos2 += VarInt.size(arrLen) + arrLen * 1;
          if (pos2 - offset > maxEnd) {
@@ -1042,13 +1051,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[1] & 4) != 0) {
-         int fieldOffset3 = buf.getIntLE(offset + 184);
-         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[1] & 8) != 0) {
+         int fieldOffset3 = buf.getIntLE(offset + 188);
+         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("Model", fieldOffset3, maxEnd);
          }
 
-         int pos3 = offset + 272 + fieldOffset3;
+         int pos3 = offset + 276 + fieldOffset3;
          int sl = VarInt.peek(buf, pos3);
          pos3 += VarInt.size(sl) + sl;
          if (pos3 - offset > maxEnd) {
@@ -1056,13 +1065,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[1] & 8) != 0) {
-         int fieldOffset4 = buf.getIntLE(offset + 188);
-         if (fieldOffset4 < 0 || fieldOffset4 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[1] & 16) != 0) {
+         int fieldOffset4 = buf.getIntLE(offset + 192);
+         if (fieldOffset4 < 0 || fieldOffset4 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("ModelTexture", fieldOffset4, maxEnd);
          }
 
-         int pos4 = offset + 272 + fieldOffset4;
+         int pos4 = offset + 276 + fieldOffset4;
          int arrLen = VarInt.peek(buf, pos4);
          pos4 += VarInt.size(arrLen);
 
@@ -1075,13 +1084,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[1] & 16) != 0) {
-         int fieldOffset5 = buf.getIntLE(offset + 192);
-         if (fieldOffset5 < 0 || fieldOffset5 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[1] & 32) != 0) {
+         int fieldOffset5 = buf.getIntLE(offset + 196);
+         if (fieldOffset5 < 0 || fieldOffset5 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("ModelAnimation", fieldOffset5, maxEnd);
          }
 
-         int pos5 = offset + 272 + fieldOffset5;
+         int pos5 = offset + 276 + fieldOffset5;
          int sl = VarInt.peek(buf, pos5);
          pos5 += VarInt.size(sl) + sl;
          if (pos5 - offset > maxEnd) {
@@ -1089,13 +1098,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[1] & 32) != 0) {
-         int fieldOffset6 = buf.getIntLE(offset + 196);
-         if (fieldOffset6 < 0 || fieldOffset6 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[1] & 64) != 0) {
+         int fieldOffset6 = buf.getIntLE(offset + 200);
+         if (fieldOffset6 < 0 || fieldOffset6 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("Support", fieldOffset6, maxEnd);
          }
 
-         int pos6 = offset + 272 + fieldOffset6;
+         int pos6 = offset + 276 + fieldOffset6;
          int dictLen = VarInt.peek(buf, pos6);
          pos6 += VarInt.size(dictLen);
 
@@ -1113,13 +1122,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[1] & 64) != 0) {
-         int fieldOffset7 = buf.getIntLE(offset + 200);
-         if (fieldOffset7 < 0 || fieldOffset7 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[1] & 128) != 0) {
+         int fieldOffset7 = buf.getIntLE(offset + 204);
+         if (fieldOffset7 < 0 || fieldOffset7 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("Supporting", fieldOffset7, maxEnd);
          }
 
-         int pos7 = offset + 272 + fieldOffset7;
+         int pos7 = offset + 276 + fieldOffset7;
          int dictLen = VarInt.peek(buf, pos7);
          pos7 += VarInt.size(dictLen);
 
@@ -1137,13 +1146,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[1] & 128) != 0) {
-         int fieldOffset8 = buf.getIntLE(offset + 204);
-         if (fieldOffset8 < 0 || fieldOffset8 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[2] & 1) != 0) {
+         int fieldOffset8 = buf.getIntLE(offset + 208);
+         if (fieldOffset8 < 0 || fieldOffset8 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("CubeTextures", fieldOffset8, maxEnd);
          }
 
-         int pos8 = offset + 272 + fieldOffset8;
+         int pos8 = offset + 276 + fieldOffset8;
          int arrLen = VarInt.peek(buf, pos8);
          pos8 += VarInt.size(arrLen);
 
@@ -1156,13 +1165,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[2] & 1) != 0) {
-         int fieldOffset9 = buf.getIntLE(offset + 208);
-         if (fieldOffset9 < 0 || fieldOffset9 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[2] & 2) != 0) {
+         int fieldOffset9 = buf.getIntLE(offset + 212);
+         if (fieldOffset9 < 0 || fieldOffset9 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("CubeSideMaskTexture", fieldOffset9, maxEnd);
          }
 
-         int pos9 = offset + 272 + fieldOffset9;
+         int pos9 = offset + 276 + fieldOffset9;
          int sl = VarInt.peek(buf, pos9);
          pos9 += VarInt.size(sl) + sl;
          if (pos9 - offset > maxEnd) {
@@ -1170,13 +1179,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[2] & 2) != 0) {
-         int fieldOffset10 = buf.getIntLE(offset + 212);
-         if (fieldOffset10 < 0 || fieldOffset10 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[2] & 4) != 0) {
+         int fieldOffset10 = buf.getIntLE(offset + 216);
+         if (fieldOffset10 < 0 || fieldOffset10 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("ConditionalSounds", fieldOffset10, maxEnd);
          }
 
-         int pos10 = offset + 272 + fieldOffset10;
+         int pos10 = offset + 276 + fieldOffset10;
          int arrLen = VarInt.peek(buf, pos10);
          pos10 += VarInt.size(arrLen);
 
@@ -1189,13 +1198,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[2] & 4) != 0) {
-         int fieldOffset11 = buf.getIntLE(offset + 216);
-         if (fieldOffset11 < 0 || fieldOffset11 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[2] & 8) != 0) {
+         int fieldOffset11 = buf.getIntLE(offset + 220);
+         if (fieldOffset11 < 0 || fieldOffset11 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("Particles", fieldOffset11, maxEnd);
          }
 
-         int pos11 = offset + 272 + fieldOffset11;
+         int pos11 = offset + 276 + fieldOffset11;
          int arrLen = VarInt.peek(buf, pos11);
          pos11 += VarInt.size(arrLen);
 
@@ -1208,13 +1217,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[2] & 8) != 0) {
-         int fieldOffset12 = buf.getIntLE(offset + 220);
-         if (fieldOffset12 < 0 || fieldOffset12 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[2] & 16) != 0) {
+         int fieldOffset12 = buf.getIntLE(offset + 224);
+         if (fieldOffset12 < 0 || fieldOffset12 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("BlockParticleSetId", fieldOffset12, maxEnd);
          }
 
-         int pos12 = offset + 272 + fieldOffset12;
+         int pos12 = offset + 276 + fieldOffset12;
          int sl = VarInt.peek(buf, pos12);
          pos12 += VarInt.size(sl) + sl;
          if (pos12 - offset > maxEnd) {
@@ -1222,13 +1231,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[2] & 16) != 0) {
-         int fieldOffset13 = buf.getIntLE(offset + 224);
-         if (fieldOffset13 < 0 || fieldOffset13 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[2] & 32) != 0) {
+         int fieldOffset13 = buf.getIntLE(offset + 228);
+         if (fieldOffset13 < 0 || fieldOffset13 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("BlockBreakingDecalId", fieldOffset13, maxEnd);
          }
 
-         int pos13 = offset + 272 + fieldOffset13;
+         int pos13 = offset + 276 + fieldOffset13;
          int sl = VarInt.peek(buf, pos13);
          pos13 += VarInt.size(sl) + sl;
          if (pos13 - offset > maxEnd) {
@@ -1236,13 +1245,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[2] & 32) != 0) {
-         int fieldOffset14 = buf.getIntLE(offset + 228);
-         if (fieldOffset14 < 0 || fieldOffset14 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[2] & 64) != 0) {
+         int fieldOffset14 = buf.getIntLE(offset + 232);
+         if (fieldOffset14 < 0 || fieldOffset14 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("TransitionTexture", fieldOffset14, maxEnd);
          }
 
-         int pos14 = offset + 272 + fieldOffset14;
+         int pos14 = offset + 276 + fieldOffset14;
          int sl = VarInt.peek(buf, pos14);
          pos14 += VarInt.size(sl) + sl;
          if (pos14 - offset > maxEnd) {
@@ -1250,13 +1259,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[2] & 64) != 0) {
-         int fieldOffset15 = buf.getIntLE(offset + 232);
-         if (fieldOffset15 < 0 || fieldOffset15 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[2] & 128) != 0) {
+         int fieldOffset15 = buf.getIntLE(offset + 236);
+         if (fieldOffset15 < 0 || fieldOffset15 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("TransitionToGroups", fieldOffset15, maxEnd);
          }
 
-         int pos15 = offset + 272 + fieldOffset15;
+         int pos15 = offset + 276 + fieldOffset15;
          int arrLen = VarInt.peek(buf, pos15);
          pos15 += VarInt.size(arrLen) + arrLen * 4;
          if (pos15 - offset > maxEnd) {
@@ -1264,13 +1273,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[2] & 128) != 0) {
-         int fieldOffset16 = buf.getIntLE(offset + 236);
-         if (fieldOffset16 < 0 || fieldOffset16 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[3] & 1) != 0) {
+         int fieldOffset16 = buf.getIntLE(offset + 240);
+         if (fieldOffset16 < 0 || fieldOffset16 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("InteractionHint", fieldOffset16, maxEnd);
          }
 
-         int pos16 = offset + 272 + fieldOffset16;
+         int pos16 = offset + 276 + fieldOffset16;
          int sl = VarInt.peek(buf, pos16);
          pos16 += VarInt.size(sl) + sl;
          if (pos16 - offset > maxEnd) {
@@ -1278,52 +1287,52 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[3] & 1) != 0) {
-         int fieldOffset17 = buf.getIntLE(offset + 240);
-         if (fieldOffset17 < 0 || fieldOffset17 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[3] & 2) != 0) {
+         int fieldOffset17 = buf.getIntLE(offset + 244);
+         if (fieldOffset17 < 0 || fieldOffset17 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("Gathering", fieldOffset17, maxEnd);
          }
 
-         int pos17 = offset + 272 + fieldOffset17;
+         int pos17 = offset + 276 + fieldOffset17;
          pos17 += BlockGathering.computeBytesConsumed(buf, pos17);
          if (pos17 - offset > maxEnd) {
             maxEnd = pos17 - offset;
          }
       }
 
-      if ((nullBits[3] & 2) != 0) {
-         int fieldOffset18 = buf.getIntLE(offset + 244);
-         if (fieldOffset18 < 0 || fieldOffset18 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[3] & 4) != 0) {
+         int fieldOffset18 = buf.getIntLE(offset + 248);
+         if (fieldOffset18 < 0 || fieldOffset18 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("Display", fieldOffset18, maxEnd);
          }
 
-         int pos18 = offset + 272 + fieldOffset18;
+         int pos18 = offset + 276 + fieldOffset18;
          pos18 += ModelDisplay.computeBytesConsumed(buf, pos18);
          if (pos18 - offset > maxEnd) {
             maxEnd = pos18 - offset;
          }
       }
 
-      if ((nullBits[3] & 4) != 0) {
-         int fieldOffset19 = buf.getIntLE(offset + 248);
-         if (fieldOffset19 < 0 || fieldOffset19 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[3] & 8) != 0) {
+         int fieldOffset19 = buf.getIntLE(offset + 252);
+         if (fieldOffset19 < 0 || fieldOffset19 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("Rail", fieldOffset19, maxEnd);
          }
 
-         int pos19 = offset + 272 + fieldOffset19;
+         int pos19 = offset + 276 + fieldOffset19;
          pos19 += RailConfig.computeBytesConsumed(buf, pos19);
          if (pos19 - offset > maxEnd) {
             maxEnd = pos19 - offset;
          }
       }
 
-      if ((nullBits[3] & 8) != 0) {
-         int fieldOffset20 = buf.getIntLE(offset + 252);
-         if (fieldOffset20 < 0 || fieldOffset20 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[3] & 16) != 0) {
+         int fieldOffset20 = buf.getIntLE(offset + 256);
+         if (fieldOffset20 < 0 || fieldOffset20 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("Interactions", fieldOffset20, maxEnd);
          }
 
-         int pos20 = offset + 272 + fieldOffset20;
+         int pos20 = offset + 276 + fieldOffset20;
          int dictLen = VarInt.peek(buf, pos20);
          pos20 += VarInt.size(dictLen);
 
@@ -1336,13 +1345,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[3] & 16) != 0) {
-         int fieldOffset21 = buf.getIntLE(offset + 256);
-         if (fieldOffset21 < 0 || fieldOffset21 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[3] & 32) != 0) {
+         int fieldOffset21 = buf.getIntLE(offset + 260);
+         if (fieldOffset21 < 0 || fieldOffset21 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("States", fieldOffset21, maxEnd);
          }
 
-         int pos21 = offset + 272 + fieldOffset21;
+         int pos21 = offset + 276 + fieldOffset21;
          int dictLen = VarInt.peek(buf, pos21);
          pos21 += VarInt.size(dictLen);
 
@@ -1357,13 +1366,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[3] & 32) != 0) {
-         int fieldOffset22 = buf.getIntLE(offset + 260);
-         if (fieldOffset22 < 0 || fieldOffset22 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[3] & 64) != 0) {
+         int fieldOffset22 = buf.getIntLE(offset + 264);
+         if (fieldOffset22 < 0 || fieldOffset22 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("TagIndexes", fieldOffset22, maxEnd);
          }
 
-         int pos22 = offset + 272 + fieldOffset22;
+         int pos22 = offset + 276 + fieldOffset22;
          int arrLen = VarInt.peek(buf, pos22);
          pos22 += VarInt.size(arrLen) + arrLen * 4;
          if (pos22 - offset > maxEnd) {
@@ -1371,26 +1380,26 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[3] & 64) != 0) {
-         int fieldOffset23 = buf.getIntLE(offset + 264);
-         if (fieldOffset23 < 0 || fieldOffset23 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[3] & 128) != 0) {
+         int fieldOffset23 = buf.getIntLE(offset + 268);
+         if (fieldOffset23 < 0 || fieldOffset23 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("Bench", fieldOffset23, maxEnd);
          }
 
-         int pos23 = offset + 272 + fieldOffset23;
+         int pos23 = offset + 276 + fieldOffset23;
          pos23 += Bench.computeBytesConsumed(buf, pos23);
          if (pos23 - offset > maxEnd) {
             maxEnd = pos23 - offset;
          }
       }
 
-      if ((nullBits[3] & 128) != 0) {
-         int fieldOffset24 = buf.getIntLE(offset + 268);
-         if (fieldOffset24 < 0 || fieldOffset24 > buf.writerIndex() - offset - 272) {
+      if ((nullBits[4] & 1) != 0) {
+         int fieldOffset24 = buf.getIntLE(offset + 272);
+         if (fieldOffset24 < 0 || fieldOffset24 > buf.writerIndex() - offset - 276) {
             throw ProtocolException.invalidOffset("ConnectedBlockRuleSet", fieldOffset24, maxEnd);
          }
 
-         int pos24 = offset + 272 + fieldOffset24;
+         int pos24 = offset + 276 + fieldOffset24;
          pos24 += ConnectedBlockRuleSet.computeBytesConsumed(buf, pos24);
          if (pos24 - offset > maxEnd) {
             maxEnd = pos24 - offset;
@@ -1401,7 +1410,7 @@ public class BlockType {
    }
 
    public static boolean isBufferTooSmall(MemorySegment mem) {
-      return mem.byteSize() < 272L;
+      return mem.byteSize() < 276L;
    }
 
    @Nullable
@@ -1412,7 +1421,7 @@ public class BlockType {
    @Nullable
    public static String getItem(MemorySegment mem, int offset) {
       return hasItem(mem, offset)
-         ? PacketIO.readVarString("Item", mem, offset + getValidatedOffset(mem, offset, 172, 272, "Item"), 4096000, PacketIO.UTF8)
+         ? PacketIO.readVarString("Item", mem, offset + getValidatedOffset(mem, offset, 176, 276, "Item"), 4096000, PacketIO.UTF8)
          : null;
    }
 
@@ -1424,7 +1433,7 @@ public class BlockType {
    @Nullable
    public static String getName(MemorySegment mem, int offset) {
       return hasName(mem, offset)
-         ? PacketIO.readVarString("Name", mem, offset + getValidatedOffset(mem, offset, 176, 272, "Name"), 4096000, PacketIO.UTF8)
+         ? PacketIO.readVarString("Name", mem, offset + getValidatedOffset(mem, offset, 180, 276, "Name"), 4096000, PacketIO.UTF8)
          : null;
    }
 
@@ -1433,7 +1442,7 @@ public class BlockType {
    }
 
    public static boolean getUnknown(MemorySegment mem, int offset) {
-      return mem.get(PacketIO.PROTO_BOOL, offset + 4);
+      return mem.get(PacketIO.PROTO_BOOL, offset + 5);
    }
 
    public static DrawType getDrawType(MemorySegment mem) {
@@ -1441,7 +1450,7 @@ public class BlockType {
    }
 
    public static DrawType getDrawType(MemorySegment mem, int offset) {
-      return DrawType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 5));
+      return DrawType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 6));
    }
 
    public static BlockMaterial getMaterial(MemorySegment mem) {
@@ -1449,7 +1458,7 @@ public class BlockType {
    }
 
    public static BlockMaterial getMaterial(MemorySegment mem, int offset) {
-      return BlockMaterial.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 6));
+      return BlockMaterial.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 7));
    }
 
    public static Opacity getOpacity(MemorySegment mem) {
@@ -1457,7 +1466,7 @@ public class BlockType {
    }
 
    public static Opacity getOpacity(MemorySegment mem, int offset) {
-      return Opacity.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 7));
+      return Opacity.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 8));
    }
 
    @Nullable
@@ -1471,7 +1480,7 @@ public class BlockType {
          return null;
       }
 
-      int off = offset + getValidatedOffset(mem, offset, 180, 272, "ShaderEffect");
+      int off = offset + getValidatedOffset(mem, offset, 184, 276, "ShaderEffect");
       long packed = VarInt.getWithLength(mem, off);
       int len = (int)packed;
       if (len < 0) {
@@ -1502,7 +1511,7 @@ public class BlockType {
    }
 
    public static int getHitbox(MemorySegment mem, int offset) {
-      return mem.get(PacketIO.PROTO_INT, offset + 8);
+      return mem.get(PacketIO.PROTO_INT, offset + 9);
    }
 
    public static int getInteractionHitbox(MemorySegment mem) {
@@ -1510,7 +1519,7 @@ public class BlockType {
    }
 
    public static int getInteractionHitbox(MemorySegment mem, int offset) {
-      return mem.get(PacketIO.PROTO_INT, offset + 12);
+      return mem.get(PacketIO.PROTO_INT, offset + 13);
    }
 
    @Nullable
@@ -1521,7 +1530,7 @@ public class BlockType {
    @Nullable
    public static String getModel(MemorySegment mem, int offset) {
       return hasModel(mem, offset)
-         ? PacketIO.readVarString("Model", mem, offset + getValidatedOffset(mem, offset, 184, 272, "Model"), 4096000, PacketIO.UTF8)
+         ? PacketIO.readVarString("Model", mem, offset + getValidatedOffset(mem, offset, 188, 276, "Model"), 4096000, PacketIO.UTF8)
          : null;
    }
 
@@ -1536,7 +1545,7 @@ public class BlockType {
          return null;
       }
 
-      int off = offset + getValidatedOffset(mem, offset, 188, 272, "ModelTexture");
+      int off = offset + getValidatedOffset(mem, offset, 192, 276, "ModelTexture");
       long packed = VarInt.getWithLength(mem, off);
       int len = (int)packed;
       if (len < 0) {
@@ -1568,7 +1577,7 @@ public class BlockType {
    }
 
    public static float getModelScale(MemorySegment mem, int offset) {
-      return mem.get(PacketIO.PROTO_FLOAT, offset + 16);
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 17);
    }
 
    @Nullable
@@ -1579,7 +1588,7 @@ public class BlockType {
    @Nullable
    public static String getModelAnimation(MemorySegment mem, int offset) {
       return hasModelAnimation(mem, offset)
-         ? PacketIO.readVarString("ModelAnimation", mem, offset + getValidatedOffset(mem, offset, 192, 272, "ModelAnimation"), 4096000, PacketIO.UTF8)
+         ? PacketIO.readVarString("ModelAnimation", mem, offset + getValidatedOffset(mem, offset, 196, 276, "ModelAnimation"), 4096000, PacketIO.UTF8)
          : null;
    }
 
@@ -1588,7 +1597,7 @@ public class BlockType {
    }
 
    public static boolean getLooping(MemorySegment mem, int offset) {
-      return mem.get(PacketIO.PROTO_BOOL, offset + 20);
+      return mem.get(PacketIO.PROTO_BOOL, offset + 21);
    }
 
    public static int getMaxSupportDistance(MemorySegment mem) {
@@ -1596,7 +1605,7 @@ public class BlockType {
    }
 
    public static int getMaxSupportDistance(MemorySegment mem, int offset) {
-      return mem.get(PacketIO.PROTO_INT, offset + 21);
+      return mem.get(PacketIO.PROTO_INT, offset + 22);
    }
 
    public static BlockSupportsRequiredForType getBlockSupportsRequiredFor(MemorySegment mem) {
@@ -1604,7 +1613,7 @@ public class BlockType {
    }
 
    public static BlockSupportsRequiredForType getBlockSupportsRequiredFor(MemorySegment mem, int offset) {
-      return BlockSupportsRequiredForType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 25));
+      return BlockSupportsRequiredForType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 26));
    }
 
    @Nullable
@@ -1618,7 +1627,7 @@ public class BlockType {
          return null;
       }
 
-      int off = offset + getValidatedOffset(mem, offset, 196, 272, "Support");
+      int off = offset + getValidatedOffset(mem, offset, 200, 276, "Support");
       long packed = VarInt.getWithLength(mem, off);
       int len = (int)packed;
       if (len < 0) {
@@ -1676,7 +1685,7 @@ public class BlockType {
          return null;
       }
 
-      int off = offset + getValidatedOffset(mem, offset, 200, 272, "Supporting");
+      int off = offset + getValidatedOffset(mem, offset, 204, 276, "Supporting");
       long packed = VarInt.getWithLength(mem, off);
       int len = (int)packed;
       if (len < 0) {
@@ -1728,7 +1737,7 @@ public class BlockType {
    }
 
    public static boolean getRequiresAlphaBlending(MemorySegment mem, int offset) {
-      return mem.get(PacketIO.PROTO_BOOL, offset + 26);
+      return mem.get(PacketIO.PROTO_BOOL, offset + 27);
    }
 
    @Nullable
@@ -1742,7 +1751,7 @@ public class BlockType {
          return null;
       }
 
-      int off = offset + getValidatedOffset(mem, offset, 204, 272, "CubeTextures");
+      int off = offset + getValidatedOffset(mem, offset, 208, 276, "CubeTextures");
       long packed = VarInt.getWithLength(mem, off);
       int len = (int)packed;
       if (len < 0) {
@@ -1777,7 +1786,7 @@ public class BlockType {
    @Nullable
    public static String getCubeSideMaskTexture(MemorySegment mem, int offset) {
       return hasCubeSideMaskTexture(mem, offset)
-         ? PacketIO.readVarString("CubeSideMaskTexture", mem, offset + getValidatedOffset(mem, offset, 208, 272, "CubeSideMaskTexture"), 4096000, PacketIO.UTF8)
+         ? PacketIO.readVarString("CubeSideMaskTexture", mem, offset + getValidatedOffset(mem, offset, 212, 276, "CubeSideMaskTexture"), 4096000, PacketIO.UTF8)
          : null;
    }
 
@@ -1786,7 +1795,7 @@ public class BlockType {
    }
 
    public static ShadingMode getCubeShadingMode(MemorySegment mem, int offset) {
-      return ShadingMode.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 27));
+      return ShadingMode.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 28));
    }
 
    public static RandomRotation getRandomRotation(MemorySegment mem) {
@@ -1794,7 +1803,7 @@ public class BlockType {
    }
 
    public static RandomRotation getRandomRotation(MemorySegment mem, int offset) {
-      return RandomRotation.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 28));
+      return RandomRotation.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 29));
    }
 
    public static VariantRotation getVariantRotation(MemorySegment mem) {
@@ -1802,7 +1811,7 @@ public class BlockType {
    }
 
    public static VariantRotation getVariantRotation(MemorySegment mem, int offset) {
-      return VariantRotation.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 29));
+      return VariantRotation.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 30));
    }
 
    public static Rotation getRotationYawPlacementOffset(MemorySegment mem) {
@@ -1810,7 +1819,7 @@ public class BlockType {
    }
 
    public static Rotation getRotationYawPlacementOffset(MemorySegment mem, int offset) {
-      return Rotation.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 30));
+      return Rotation.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 31));
    }
 
    public static int getBlockSoundSetIndex(MemorySegment mem) {
@@ -1818,7 +1827,7 @@ public class BlockType {
    }
 
    public static int getBlockSoundSetIndex(MemorySegment mem, int offset) {
-      return mem.get(PacketIO.PROTO_INT, offset + 31);
+      return mem.get(PacketIO.PROTO_INT, offset + 32);
    }
 
    public static int getPhysicalMaterialIndex(MemorySegment mem) {
@@ -1826,7 +1835,7 @@ public class BlockType {
    }
 
    public static int getPhysicalMaterialIndex(MemorySegment mem, int offset) {
-      return mem.get(PacketIO.PROTO_INT, offset + 35);
+      return mem.get(PacketIO.PROTO_INT, offset + 36);
    }
 
    public static float getSoundOcclusionOpacity(MemorySegment mem) {
@@ -1834,7 +1843,7 @@ public class BlockType {
    }
 
    public static float getSoundOcclusionOpacity(MemorySegment mem, int offset) {
-      return mem.get(PacketIO.PROTO_FLOAT, offset + 39);
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 40);
    }
 
    public static int getAmbientSoundEventIndex(MemorySegment mem) {
@@ -1842,7 +1851,7 @@ public class BlockType {
    }
 
    public static int getAmbientSoundEventIndex(MemorySegment mem, int offset) {
-      return mem.get(PacketIO.PROTO_INT, offset + 43);
+      return mem.get(PacketIO.PROTO_INT, offset + 44);
    }
 
    @Nullable
@@ -1856,7 +1865,7 @@ public class BlockType {
          return null;
       }
 
-      int off = offset + getValidatedOffset(mem, offset, 212, 272, "ConditionalSounds");
+      int off = offset + getValidatedOffset(mem, offset, 216, 276, "ConditionalSounds");
       long packed = VarInt.getWithLength(mem, off);
       int len = (int)packed;
       if (len < 0) {
@@ -1893,7 +1902,7 @@ public class BlockType {
          return null;
       }
 
-      int off = offset + getValidatedOffset(mem, offset, 216, 272, "Particles");
+      int off = offset + getValidatedOffset(mem, offset, 220, 276, "Particles");
       long packed = VarInt.getWithLength(mem, off);
       int len = (int)packed;
       if (len < 0) {
@@ -1928,7 +1937,7 @@ public class BlockType {
    @Nullable
    public static String getBlockParticleSetId(MemorySegment mem, int offset) {
       return hasBlockParticleSetId(mem, offset)
-         ? PacketIO.readVarString("BlockParticleSetId", mem, offset + getValidatedOffset(mem, offset, 220, 272, "BlockParticleSetId"), 4096000, PacketIO.UTF8)
+         ? PacketIO.readVarString("BlockParticleSetId", mem, offset + getValidatedOffset(mem, offset, 224, 276, "BlockParticleSetId"), 4096000, PacketIO.UTF8)
          : null;
    }
 
@@ -1941,7 +1950,7 @@ public class BlockType {
    public static String getBlockBreakingDecalId(MemorySegment mem, int offset) {
       return hasBlockBreakingDecalId(mem, offset)
          ? PacketIO.readVarString(
-            "BlockBreakingDecalId", mem, offset + getValidatedOffset(mem, offset, 224, 272, "BlockBreakingDecalId"), 4096000, PacketIO.UTF8
+            "BlockBreakingDecalId", mem, offset + getValidatedOffset(mem, offset, 228, 276, "BlockBreakingDecalId"), 4096000, PacketIO.UTF8
          )
          : null;
    }
@@ -1953,7 +1962,17 @@ public class BlockType {
 
    @Nullable
    public static Color getParticleColor(MemorySegment mem, int offset) {
-      return hasParticleColor(mem, offset) ? Color.toObject(mem, offset + 47) : null;
+      return hasParticleColor(mem, offset) ? Color.toObject(mem, offset + 48) : null;
+   }
+
+   @Nullable
+   public static Color getTextureComputedColor(MemorySegment mem) {
+      return getTextureComputedColor(mem, 0);
+   }
+
+   @Nullable
+   public static Color getTextureComputedColor(MemorySegment mem, int offset) {
+      return hasTextureComputedColor(mem, offset) ? Color.toObject(mem, offset + 51) : null;
    }
 
    @Nullable
@@ -1963,7 +1982,7 @@ public class BlockType {
 
    @Nullable
    public static ColorLight getLight(MemorySegment mem, int offset) {
-      return hasLight(mem, offset) ? ColorLight.toObject(mem, offset + 50) : null;
+      return hasLight(mem, offset) ? ColorLight.toObject(mem, offset + 54) : null;
    }
 
    @Nullable
@@ -1973,7 +1992,7 @@ public class BlockType {
 
    @Nullable
    public static Tint getTint(MemorySegment mem, int offset) {
-      return hasTint(mem, offset) ? Tint.toObject(mem, offset + 54) : null;
+      return hasTint(mem, offset) ? Tint.toObject(mem, offset + 58) : null;
    }
 
    @Nullable
@@ -1983,7 +2002,7 @@ public class BlockType {
 
    @Nullable
    public static Tint getBiomeTint(MemorySegment mem, int offset) {
-      return hasBiomeTint(mem, offset) ? Tint.toObject(mem, offset + 78) : null;
+      return hasBiomeTint(mem, offset) ? Tint.toObject(mem, offset + 82) : null;
    }
 
    public static int getGroup(MemorySegment mem) {
@@ -1991,7 +2010,7 @@ public class BlockType {
    }
 
    public static int getGroup(MemorySegment mem, int offset) {
-      return mem.get(PacketIO.PROTO_INT, offset + 102);
+      return mem.get(PacketIO.PROTO_INT, offset + 106);
    }
 
    @Nullable
@@ -2002,7 +2021,7 @@ public class BlockType {
    @Nullable
    public static String getTransitionTexture(MemorySegment mem, int offset) {
       return hasTransitionTexture(mem, offset)
-         ? PacketIO.readVarString("TransitionTexture", mem, offset + getValidatedOffset(mem, offset, 228, 272, "TransitionTexture"), 4096000, PacketIO.UTF8)
+         ? PacketIO.readVarString("TransitionTexture", mem, offset + getValidatedOffset(mem, offset, 232, 276, "TransitionTexture"), 4096000, PacketIO.UTF8)
          : null;
    }
 
@@ -2017,7 +2036,7 @@ public class BlockType {
          return null;
       }
 
-      int off = offset + getValidatedOffset(mem, offset, 232, 272, "TransitionToGroups");
+      int off = offset + getValidatedOffset(mem, offset, 236, 276, "TransitionToGroups");
       long packed = VarInt.getWithLength(mem, off);
       int len = (int)packed;
       if (len < 0) {
@@ -2046,7 +2065,7 @@ public class BlockType {
 
    @Nullable
    public static BlockMovementSettings getMovementSettings(MemorySegment mem, int offset) {
-      return hasMovementSettings(mem, offset) ? BlockMovementSettings.toObject(mem, offset + 106) : null;
+      return hasMovementSettings(mem, offset) ? BlockMovementSettings.toObject(mem, offset + 110) : null;
    }
 
    @Nullable
@@ -2056,7 +2075,7 @@ public class BlockType {
 
    @Nullable
    public static BlockFlags getFlags(MemorySegment mem, int offset) {
-      return hasFlags(mem, offset) ? BlockFlags.toObject(mem, offset + 148) : null;
+      return hasFlags(mem, offset) ? BlockFlags.toObject(mem, offset + 152) : null;
    }
 
    @Nullable
@@ -2067,7 +2086,7 @@ public class BlockType {
    @Nullable
    public static String getInteractionHint(MemorySegment mem, int offset) {
       return hasInteractionHint(mem, offset)
-         ? PacketIO.readVarString("InteractionHint", mem, offset + getValidatedOffset(mem, offset, 236, 272, "InteractionHint"), 4096000, PacketIO.UTF8)
+         ? PacketIO.readVarString("InteractionHint", mem, offset + getValidatedOffset(mem, offset, 240, 276, "InteractionHint"), 4096000, PacketIO.UTF8)
          : null;
    }
 
@@ -2078,7 +2097,7 @@ public class BlockType {
 
    @Nullable
    public static BlockGathering getGathering(MemorySegment mem, int offset) {
-      return hasGathering(mem, offset) ? BlockGathering.toObject(mem, offset + getValidatedOffset(mem, offset, 240, 272, "Gathering")) : null;
+      return hasGathering(mem, offset) ? BlockGathering.toObject(mem, offset + getValidatedOffset(mem, offset, 244, 276, "Gathering")) : null;
    }
 
    @Nullable
@@ -2088,7 +2107,7 @@ public class BlockType {
 
    @Nullable
    public static BlockPlacementSettings getPlacementSettings(MemorySegment mem, int offset) {
-      return hasPlacementSettings(mem, offset) ? BlockPlacementSettings.toObject(mem, offset + 150) : null;
+      return hasPlacementSettings(mem, offset) ? BlockPlacementSettings.toObject(mem, offset + 154) : null;
    }
 
    @Nullable
@@ -2098,7 +2117,7 @@ public class BlockType {
 
    @Nullable
    public static ModelDisplay getDisplay(MemorySegment mem, int offset) {
-      return hasDisplay(mem, offset) ? ModelDisplay.toObject(mem, offset + getValidatedOffset(mem, offset, 244, 272, "Display")) : null;
+      return hasDisplay(mem, offset) ? ModelDisplay.toObject(mem, offset + getValidatedOffset(mem, offset, 248, 276, "Display")) : null;
    }
 
    @Nullable
@@ -2108,7 +2127,7 @@ public class BlockType {
 
    @Nullable
    public static RailConfig getRail(MemorySegment mem, int offset) {
-      return hasRail(mem, offset) ? RailConfig.toObject(mem, offset + getValidatedOffset(mem, offset, 248, 272, "Rail")) : null;
+      return hasRail(mem, offset) ? RailConfig.toObject(mem, offset + getValidatedOffset(mem, offset, 252, 276, "Rail")) : null;
    }
 
    public static boolean getIgnoreSupportWhenPlaced(MemorySegment mem) {
@@ -2116,7 +2135,7 @@ public class BlockType {
    }
 
    public static boolean getIgnoreSupportWhenPlaced(MemorySegment mem, int offset) {
-      return mem.get(PacketIO.PROTO_BOOL, offset + 167);
+      return mem.get(PacketIO.PROTO_BOOL, offset + 171);
    }
 
    @Nullable
@@ -2130,7 +2149,7 @@ public class BlockType {
          return null;
       }
 
-      int off = offset + getValidatedOffset(mem, offset, 252, 272, "Interactions");
+      int off = offset + getValidatedOffset(mem, offset, 256, 276, "Interactions");
       long packed = VarInt.getWithLength(mem, off);
       int len = (int)packed;
       if (len < 0) {
@@ -2167,7 +2186,7 @@ public class BlockType {
          return null;
       }
 
-      int off = offset + getValidatedOffset(mem, offset, 256, 272, "States");
+      int off = offset + getValidatedOffset(mem, offset, 260, 276, "States");
       long packed = VarInt.getWithLength(mem, off);
       int len = (int)packed;
       if (len < 0) {
@@ -2201,7 +2220,7 @@ public class BlockType {
    }
 
    public static int getTransitionToTag(MemorySegment mem, int offset) {
-      return mem.get(PacketIO.PROTO_INT, offset + 168);
+      return mem.get(PacketIO.PROTO_INT, offset + 172);
    }
 
    @Nullable
@@ -2215,7 +2234,7 @@ public class BlockType {
          return null;
       }
 
-      int off = offset + getValidatedOffset(mem, offset, 260, 272, "TagIndexes");
+      int off = offset + getValidatedOffset(mem, offset, 264, 276, "TagIndexes");
       long packed = VarInt.getWithLength(mem, off);
       int len = (int)packed;
       if (len < 0) {
@@ -2244,7 +2263,7 @@ public class BlockType {
 
    @Nullable
    public static Bench getBench(MemorySegment mem, int offset) {
-      return hasBench(mem, offset) ? Bench.toObject(mem, offset + getValidatedOffset(mem, offset, 264, 272, "Bench")) : null;
+      return hasBench(mem, offset) ? Bench.toObject(mem, offset + getValidatedOffset(mem, offset, 268, 276, "Bench")) : null;
    }
 
    @Nullable
@@ -2255,7 +2274,7 @@ public class BlockType {
    @Nullable
    public static ConnectedBlockRuleSet getConnectedBlockRuleSet(MemorySegment mem, int offset) {
       return hasConnectedBlockRuleSet(mem, offset)
-         ? ConnectedBlockRuleSet.toObject(mem, offset + getValidatedOffset(mem, offset, 268, 272, "ConnectedBlockRuleSet"))
+         ? ConnectedBlockRuleSet.toObject(mem, offset + getValidatedOffset(mem, offset, 272, 276, "ConnectedBlockRuleSet"))
          : null;
    }
 
@@ -2264,159 +2283,164 @@ public class BlockType {
       return (b & 1) != 0;
    }
 
-   public static boolean hasLight(MemorySegment mem, int offset) {
+   public static boolean hasTextureComputedColor(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
       return (b & 2) != 0;
+   }
+
+   public static boolean hasLight(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
    }
 
    public static boolean hasTint(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
-      return (b & 4) != 0;
+      return (b & 8) != 0;
    }
 
    public static boolean hasBiomeTint(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
-      return (b & 8) != 0;
+      return (b & 16) != 0;
    }
 
    public static boolean hasMovementSettings(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
-      return (b & 16) != 0;
+      return (b & 32) != 0;
    }
 
    public static boolean hasFlags(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
-      return (b & 32) != 0;
+      return (b & 64) != 0;
    }
 
    public static boolean hasPlacementSettings(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
-      return (b & 64) != 0;
+      return (b & 128) != 0;
    }
 
    public static boolean hasItem(MemorySegment mem, int offset) {
-      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
-      return (b & 128) != 0;
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
+      return (b & 1) != 0;
    }
 
    public static boolean hasName(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
-      return (b & 1) != 0;
+      return (b & 2) != 0;
    }
 
    public static boolean hasShaderEffect(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
-      return (b & 2) != 0;
+      return (b & 4) != 0;
    }
 
    public static boolean hasModel(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
-      return (b & 4) != 0;
+      return (b & 8) != 0;
    }
 
    public static boolean hasModelTexture(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
-      return (b & 8) != 0;
+      return (b & 16) != 0;
    }
 
    public static boolean hasModelAnimation(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
-      return (b & 16) != 0;
+      return (b & 32) != 0;
    }
 
    public static boolean hasSupport(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
-      return (b & 32) != 0;
+      return (b & 64) != 0;
    }
 
    public static boolean hasSupporting(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
-      return (b & 64) != 0;
+      return (b & 128) != 0;
    }
 
    public static boolean hasCubeTextures(MemorySegment mem, int offset) {
-      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 1);
-      return (b & 128) != 0;
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 2);
+      return (b & 1) != 0;
    }
 
    public static boolean hasCubeSideMaskTexture(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 2);
-      return (b & 1) != 0;
+      return (b & 2) != 0;
    }
 
    public static boolean hasConditionalSounds(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 2);
-      return (b & 2) != 0;
+      return (b & 4) != 0;
    }
 
    public static boolean hasParticles(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 2);
-      return (b & 4) != 0;
+      return (b & 8) != 0;
    }
 
    public static boolean hasBlockParticleSetId(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 2);
-      return (b & 8) != 0;
+      return (b & 16) != 0;
    }
 
    public static boolean hasBlockBreakingDecalId(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 2);
-      return (b & 16) != 0;
+      return (b & 32) != 0;
    }
 
    public static boolean hasTransitionTexture(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 2);
-      return (b & 32) != 0;
+      return (b & 64) != 0;
    }
 
    public static boolean hasTransitionToGroups(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 2);
-      return (b & 64) != 0;
-   }
-
-   public static boolean hasInteractionHint(MemorySegment mem, int offset) {
-      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 2);
       return (b & 128) != 0;
    }
 
-   public static boolean hasGathering(MemorySegment mem, int offset) {
+   public static boolean hasInteractionHint(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 3);
       return (b & 1) != 0;
    }
 
-   public static boolean hasDisplay(MemorySegment mem, int offset) {
+   public static boolean hasGathering(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 3);
       return (b & 2) != 0;
    }
 
-   public static boolean hasRail(MemorySegment mem, int offset) {
+   public static boolean hasDisplay(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 3);
       return (b & 4) != 0;
    }
 
-   public static boolean hasInteractions(MemorySegment mem, int offset) {
+   public static boolean hasRail(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 3);
       return (b & 8) != 0;
    }
 
-   public static boolean hasStates(MemorySegment mem, int offset) {
+   public static boolean hasInteractions(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 3);
       return (b & 16) != 0;
    }
 
-   public static boolean hasTagIndexes(MemorySegment mem, int offset) {
+   public static boolean hasStates(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 3);
       return (b & 32) != 0;
    }
 
-   public static boolean hasBench(MemorySegment mem, int offset) {
+   public static boolean hasTagIndexes(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 3);
       return (b & 64) != 0;
    }
 
-   public static boolean hasConnectedBlockRuleSet(MemorySegment mem, int offset) {
+   public static boolean hasBench(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 3);
       return (b & 128) != 0;
+   }
+
+   public static boolean hasConnectedBlockRuleSet(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 4);
+      return (b & 1) != 0;
    }
 
    private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
@@ -2433,13 +2457,13 @@ public class BlockType {
    }
 
    public static BlockType toObject(MemorySegment mem, int offset) {
-      if (offset + 272 > mem.byteSize()) {
-         throw ProtocolException.bufferTooSmall("BlockType", offset + 272, (int)mem.byteSize());
+      if (offset + 276 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BlockType", offset + 276, (int)mem.byteSize());
       }
 
       ShaderType[] shaderEffect = null;
       if (hasShaderEffect(mem, offset)) {
-         int off = offset + getValidatedOffset(mem, offset, 180, 272, "ShaderEffect");
+         int off = offset + getValidatedOffset(mem, offset, 184, 276, "ShaderEffect");
          long packed = VarInt.getWithLength(mem, off);
          int len = (int)packed;
          if (len < 0) {
@@ -2465,7 +2489,7 @@ public class BlockType {
 
       ModelTexture[] modelTexture = null;
       if (hasModelTexture(mem, offset)) {
-         int off = offset + getValidatedOffset(mem, offset, 188, 272, "ModelTexture");
+         int off = offset + getValidatedOffset(mem, offset, 192, 276, "ModelTexture");
          long packed = VarInt.getWithLength(mem, off);
          int len = (int)packed;
          if (len < 0) {
@@ -2492,7 +2516,7 @@ public class BlockType {
 
       Map<BlockNeighbor, RequiredBlockFaceSupport[]> support = null;
       if (hasSupport(mem, offset)) {
-         int off = offset + getValidatedOffset(mem, offset, 196, 272, "Support");
+         int off = offset + getValidatedOffset(mem, offset, 200, 276, "Support");
          long packed = VarInt.getWithLength(mem, off);
          int len = (int)packed;
          if (len < 0) {
@@ -2539,7 +2563,7 @@ public class BlockType {
 
       Map<BlockNeighbor, BlockFaceSupport[]> supporting = null;
       if (hasSupporting(mem, offset)) {
-         int off = offset + getValidatedOffset(mem, offset, 200, 272, "Supporting");
+         int off = offset + getValidatedOffset(mem, offset, 204, 276, "Supporting");
          long packed = VarInt.getWithLength(mem, off);
          int len = (int)packed;
          if (len < 0) {
@@ -2586,7 +2610,7 @@ public class BlockType {
 
       BlockTextures[] cubeTextures = null;
       if (hasCubeTextures(mem, offset)) {
-         int off = offset + getValidatedOffset(mem, offset, 204, 272, "CubeTextures");
+         int off = offset + getValidatedOffset(mem, offset, 208, 276, "CubeTextures");
          long packed = VarInt.getWithLength(mem, off);
          int len = (int)packed;
          if (len < 0) {
@@ -2613,7 +2637,7 @@ public class BlockType {
 
       ConditionalBlockSound[] conditionalSounds = null;
       if (hasConditionalSounds(mem, offset)) {
-         int off = offset + getValidatedOffset(mem, offset, 212, 272, "ConditionalSounds");
+         int off = offset + getValidatedOffset(mem, offset, 216, 276, "ConditionalSounds");
          long packed = VarInt.getWithLength(mem, off);
          int len = (int)packed;
          if (len < 0) {
@@ -2639,7 +2663,7 @@ public class BlockType {
 
       ModelParticle[] particles = null;
       if (hasParticles(mem, offset)) {
-         int off = offset + getValidatedOffset(mem, offset, 216, 272, "Particles");
+         int off = offset + getValidatedOffset(mem, offset, 220, 276, "Particles");
          long packed = VarInt.getWithLength(mem, off);
          int len = (int)packed;
          if (len < 0) {
@@ -2666,7 +2690,7 @@ public class BlockType {
 
       int[] transitionToGroups = null;
       if (hasTransitionToGroups(mem, offset)) {
-         int off = offset + getValidatedOffset(mem, offset, 232, 272, "TransitionToGroups");
+         int off = offset + getValidatedOffset(mem, offset, 236, 276, "TransitionToGroups");
          long packed = VarInt.getWithLength(mem, off);
          int len = (int)packed;
          if (len < 0) {
@@ -2689,7 +2713,7 @@ public class BlockType {
 
       Map<InteractionType, Integer> interactions = null;
       if (hasInteractions(mem, offset)) {
-         int off = offset + getValidatedOffset(mem, offset, 252, 272, "Interactions");
+         int off = offset + getValidatedOffset(mem, offset, 256, 276, "Interactions");
          long packed = VarInt.getWithLength(mem, off);
          int len = (int)packed;
          if (len < 0) {
@@ -2715,7 +2739,7 @@ public class BlockType {
 
       Map<String, Integer> states = null;
       if (hasStates(mem, offset)) {
-         int off = offset + getValidatedOffset(mem, offset, 256, 272, "States");
+         int off = offset + getValidatedOffset(mem, offset, 260, 276, "States");
          long packed = VarInt.getWithLength(mem, off);
          int len = (int)packed;
          if (len < 0) {
@@ -2744,7 +2768,7 @@ public class BlockType {
 
       int[] tagIndexes = null;
       if (hasTagIndexes(mem, offset)) {
-         int off = offset + getValidatedOffset(mem, offset, 260, 272, "TagIndexes");
+         int off = offset + getValidatedOffset(mem, offset, 264, 276, "TagIndexes");
          long packed = VarInt.getWithLength(mem, off);
          int len = (int)packed;
          if (len < 0) {
@@ -2766,214 +2790,219 @@ public class BlockType {
       }
 
       return new BlockType(
-         hasItem(mem, offset) ? PacketIO.readVarString("Item", mem, offset + getValidatedOffset(mem, offset, 172, 272, "Item"), 4096000, PacketIO.UTF8) : null,
-         hasName(mem, offset) ? PacketIO.readVarString("Name", mem, offset + getValidatedOffset(mem, offset, 176, 272, "Name"), 4096000, PacketIO.UTF8) : null,
-         mem.get(PacketIO.PROTO_BOOL, offset + 4),
-         DrawType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 5)),
-         BlockMaterial.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 6)),
-         Opacity.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 7)),
+         hasItem(mem, offset) ? PacketIO.readVarString("Item", mem, offset + getValidatedOffset(mem, offset, 176, 276, "Item"), 4096000, PacketIO.UTF8) : null,
+         hasName(mem, offset) ? PacketIO.readVarString("Name", mem, offset + getValidatedOffset(mem, offset, 180, 276, "Name"), 4096000, PacketIO.UTF8) : null,
+         mem.get(PacketIO.PROTO_BOOL, offset + 5),
+         DrawType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 6)),
+         BlockMaterial.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 7)),
+         Opacity.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 8)),
          shaderEffect,
-         mem.get(PacketIO.PROTO_INT, offset + 8),
-         mem.get(PacketIO.PROTO_INT, offset + 12),
+         mem.get(PacketIO.PROTO_INT, offset + 9),
+         mem.get(PacketIO.PROTO_INT, offset + 13),
          hasModel(mem, offset)
-            ? PacketIO.readVarString("Model", mem, offset + getValidatedOffset(mem, offset, 184, 272, "Model"), 4096000, PacketIO.UTF8)
+            ? PacketIO.readVarString("Model", mem, offset + getValidatedOffset(mem, offset, 188, 276, "Model"), 4096000, PacketIO.UTF8)
             : null,
          modelTexture,
-         mem.get(PacketIO.PROTO_FLOAT, offset + 16),
+         mem.get(PacketIO.PROTO_FLOAT, offset + 17),
          hasModelAnimation(mem, offset)
-            ? PacketIO.readVarString("ModelAnimation", mem, offset + getValidatedOffset(mem, offset, 192, 272, "ModelAnimation"), 4096000, PacketIO.UTF8)
+            ? PacketIO.readVarString("ModelAnimation", mem, offset + getValidatedOffset(mem, offset, 196, 276, "ModelAnimation"), 4096000, PacketIO.UTF8)
             : null,
-         mem.get(PacketIO.PROTO_BOOL, offset + 20),
-         mem.get(PacketIO.PROTO_INT, offset + 21),
-         BlockSupportsRequiredForType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 25)),
+         mem.get(PacketIO.PROTO_BOOL, offset + 21),
+         mem.get(PacketIO.PROTO_INT, offset + 22),
+         BlockSupportsRequiredForType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 26)),
          support,
          supporting,
-         mem.get(PacketIO.PROTO_BOOL, offset + 26),
+         mem.get(PacketIO.PROTO_BOOL, offset + 27),
          cubeTextures,
          hasCubeSideMaskTexture(mem, offset)
             ? PacketIO.readVarString(
-               "CubeSideMaskTexture", mem, offset + getValidatedOffset(mem, offset, 208, 272, "CubeSideMaskTexture"), 4096000, PacketIO.UTF8
+               "CubeSideMaskTexture", mem, offset + getValidatedOffset(mem, offset, 212, 276, "CubeSideMaskTexture"), 4096000, PacketIO.UTF8
             )
             : null,
-         ShadingMode.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 27)),
-         RandomRotation.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 28)),
-         VariantRotation.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 29)),
-         Rotation.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 30)),
-         mem.get(PacketIO.PROTO_INT, offset + 31),
-         mem.get(PacketIO.PROTO_INT, offset + 35),
-         mem.get(PacketIO.PROTO_FLOAT, offset + 39),
-         mem.get(PacketIO.PROTO_INT, offset + 43),
+         ShadingMode.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 28)),
+         RandomRotation.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 29)),
+         VariantRotation.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 30)),
+         Rotation.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 31)),
+         mem.get(PacketIO.PROTO_INT, offset + 32),
+         mem.get(PacketIO.PROTO_INT, offset + 36),
+         mem.get(PacketIO.PROTO_FLOAT, offset + 40),
+         mem.get(PacketIO.PROTO_INT, offset + 44),
          conditionalSounds,
          particles,
          hasBlockParticleSetId(mem, offset)
             ? PacketIO.readVarString(
-               "BlockParticleSetId", mem, offset + getValidatedOffset(mem, offset, 220, 272, "BlockParticleSetId"), 4096000, PacketIO.UTF8
+               "BlockParticleSetId", mem, offset + getValidatedOffset(mem, offset, 224, 276, "BlockParticleSetId"), 4096000, PacketIO.UTF8
             )
             : null,
          hasBlockBreakingDecalId(mem, offset)
             ? PacketIO.readVarString(
-               "BlockBreakingDecalId", mem, offset + getValidatedOffset(mem, offset, 224, 272, "BlockBreakingDecalId"), 4096000, PacketIO.UTF8
+               "BlockBreakingDecalId", mem, offset + getValidatedOffset(mem, offset, 228, 276, "BlockBreakingDecalId"), 4096000, PacketIO.UTF8
             )
             : null,
-         hasParticleColor(mem, offset) ? Color.toObject(mem, offset + 47) : null,
-         hasLight(mem, offset) ? ColorLight.toObject(mem, offset + 50) : null,
-         hasTint(mem, offset) ? Tint.toObject(mem, offset + 54) : null,
-         hasBiomeTint(mem, offset) ? Tint.toObject(mem, offset + 78) : null,
-         mem.get(PacketIO.PROTO_INT, offset + 102),
+         hasParticleColor(mem, offset) ? Color.toObject(mem, offset + 48) : null,
+         hasTextureComputedColor(mem, offset) ? Color.toObject(mem, offset + 51) : null,
+         hasLight(mem, offset) ? ColorLight.toObject(mem, offset + 54) : null,
+         hasTint(mem, offset) ? Tint.toObject(mem, offset + 58) : null,
+         hasBiomeTint(mem, offset) ? Tint.toObject(mem, offset + 82) : null,
+         mem.get(PacketIO.PROTO_INT, offset + 106),
          hasTransitionTexture(mem, offset)
-            ? PacketIO.readVarString("TransitionTexture", mem, offset + getValidatedOffset(mem, offset, 228, 272, "TransitionTexture"), 4096000, PacketIO.UTF8)
+            ? PacketIO.readVarString("TransitionTexture", mem, offset + getValidatedOffset(mem, offset, 232, 276, "TransitionTexture"), 4096000, PacketIO.UTF8)
             : null,
          transitionToGroups,
-         hasMovementSettings(mem, offset) ? BlockMovementSettings.toObject(mem, offset + 106) : null,
-         hasFlags(mem, offset) ? BlockFlags.toObject(mem, offset + 148) : null,
+         hasMovementSettings(mem, offset) ? BlockMovementSettings.toObject(mem, offset + 110) : null,
+         hasFlags(mem, offset) ? BlockFlags.toObject(mem, offset + 152) : null,
          hasInteractionHint(mem, offset)
-            ? PacketIO.readVarString("InteractionHint", mem, offset + getValidatedOffset(mem, offset, 236, 272, "InteractionHint"), 4096000, PacketIO.UTF8)
+            ? PacketIO.readVarString("InteractionHint", mem, offset + getValidatedOffset(mem, offset, 240, 276, "InteractionHint"), 4096000, PacketIO.UTF8)
             : null,
-         hasGathering(mem, offset) ? BlockGathering.toObject(mem, offset + getValidatedOffset(mem, offset, 240, 272, "Gathering")) : null,
-         hasPlacementSettings(mem, offset) ? BlockPlacementSettings.toObject(mem, offset + 150) : null,
-         hasDisplay(mem, offset) ? ModelDisplay.toObject(mem, offset + getValidatedOffset(mem, offset, 244, 272, "Display")) : null,
-         hasRail(mem, offset) ? RailConfig.toObject(mem, offset + getValidatedOffset(mem, offset, 248, 272, "Rail")) : null,
-         mem.get(PacketIO.PROTO_BOOL, offset + 167),
+         hasGathering(mem, offset) ? BlockGathering.toObject(mem, offset + getValidatedOffset(mem, offset, 244, 276, "Gathering")) : null,
+         hasPlacementSettings(mem, offset) ? BlockPlacementSettings.toObject(mem, offset + 154) : null,
+         hasDisplay(mem, offset) ? ModelDisplay.toObject(mem, offset + getValidatedOffset(mem, offset, 248, 276, "Display")) : null,
+         hasRail(mem, offset) ? RailConfig.toObject(mem, offset + getValidatedOffset(mem, offset, 252, 276, "Rail")) : null,
+         mem.get(PacketIO.PROTO_BOOL, offset + 171),
          interactions,
          states,
-         mem.get(PacketIO.PROTO_INT, offset + 168),
+         mem.get(PacketIO.PROTO_INT, offset + 172),
          tagIndexes,
-         hasBench(mem, offset) ? Bench.toObject(mem, offset + getValidatedOffset(mem, offset, 264, 272, "Bench")) : null,
+         hasBench(mem, offset) ? Bench.toObject(mem, offset + getValidatedOffset(mem, offset, 268, 276, "Bench")) : null,
          hasConnectedBlockRuleSet(mem, offset)
-            ? ConnectedBlockRuleSet.toObject(mem, offset + getValidatedOffset(mem, offset, 268, 272, "ConnectedBlockRuleSet"))
+            ? ConnectedBlockRuleSet.toObject(mem, offset + getValidatedOffset(mem, offset, 272, 276, "ConnectedBlockRuleSet"))
             : null
       );
    }
 
    public void serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
-      byte[] nullBits = new byte[4];
+      byte[] nullBits = new byte[5];
       if (this.particleColor != null) {
          nullBits[0] = (byte)(nullBits[0] | 1);
       }
 
-      if (this.light != null) {
+      if (this.textureComputedColor != null) {
          nullBits[0] = (byte)(nullBits[0] | 2);
       }
 
-      if (this.tint != null) {
+      if (this.light != null) {
          nullBits[0] = (byte)(nullBits[0] | 4);
       }
 
-      if (this.biomeTint != null) {
+      if (this.tint != null) {
          nullBits[0] = (byte)(nullBits[0] | 8);
       }
 
-      if (this.movementSettings != null) {
+      if (this.biomeTint != null) {
          nullBits[0] = (byte)(nullBits[0] | 16);
       }
 
-      if (this.flags != null) {
+      if (this.movementSettings != null) {
          nullBits[0] = (byte)(nullBits[0] | 32);
       }
 
-      if (this.placementSettings != null) {
+      if (this.flags != null) {
          nullBits[0] = (byte)(nullBits[0] | 64);
       }
 
-      if (this.item != null) {
+      if (this.placementSettings != null) {
          nullBits[0] = (byte)(nullBits[0] | 128);
       }
 
-      if (this.name != null) {
+      if (this.item != null) {
          nullBits[1] = (byte)(nullBits[1] | 1);
       }
 
-      if (this.shaderEffect != null) {
+      if (this.name != null) {
          nullBits[1] = (byte)(nullBits[1] | 2);
       }
 
-      if (this.model != null) {
+      if (this.shaderEffect != null) {
          nullBits[1] = (byte)(nullBits[1] | 4);
       }
 
-      if (this.modelTexture != null) {
+      if (this.model != null) {
          nullBits[1] = (byte)(nullBits[1] | 8);
       }
 
-      if (this.modelAnimation != null) {
+      if (this.modelTexture != null) {
          nullBits[1] = (byte)(nullBits[1] | 16);
       }
 
-      if (this.support != null) {
+      if (this.modelAnimation != null) {
          nullBits[1] = (byte)(nullBits[1] | 32);
       }
 
-      if (this.supporting != null) {
+      if (this.support != null) {
          nullBits[1] = (byte)(nullBits[1] | 64);
       }
 
-      if (this.cubeTextures != null) {
+      if (this.supporting != null) {
          nullBits[1] = (byte)(nullBits[1] | 128);
       }
 
-      if (this.cubeSideMaskTexture != null) {
+      if (this.cubeTextures != null) {
          nullBits[2] = (byte)(nullBits[2] | 1);
       }
 
-      if (this.conditionalSounds != null) {
+      if (this.cubeSideMaskTexture != null) {
          nullBits[2] = (byte)(nullBits[2] | 2);
       }
 
-      if (this.particles != null) {
+      if (this.conditionalSounds != null) {
          nullBits[2] = (byte)(nullBits[2] | 4);
       }
 
-      if (this.blockParticleSetId != null) {
+      if (this.particles != null) {
          nullBits[2] = (byte)(nullBits[2] | 8);
       }
 
-      if (this.blockBreakingDecalId != null) {
+      if (this.blockParticleSetId != null) {
          nullBits[2] = (byte)(nullBits[2] | 16);
       }
 
-      if (this.transitionTexture != null) {
+      if (this.blockBreakingDecalId != null) {
          nullBits[2] = (byte)(nullBits[2] | 32);
       }
 
-      if (this.transitionToGroups != null) {
+      if (this.transitionTexture != null) {
          nullBits[2] = (byte)(nullBits[2] | 64);
       }
 
-      if (this.interactionHint != null) {
+      if (this.transitionToGroups != null) {
          nullBits[2] = (byte)(nullBits[2] | 128);
       }
 
-      if (this.gathering != null) {
+      if (this.interactionHint != null) {
          nullBits[3] = (byte)(nullBits[3] | 1);
       }
 
-      if (this.display != null) {
+      if (this.gathering != null) {
          nullBits[3] = (byte)(nullBits[3] | 2);
       }
 
-      if (this.rail != null) {
+      if (this.display != null) {
          nullBits[3] = (byte)(nullBits[3] | 4);
       }
 
-      if (this.interactions != null) {
+      if (this.rail != null) {
          nullBits[3] = (byte)(nullBits[3] | 8);
       }
 
-      if (this.states != null) {
+      if (this.interactions != null) {
          nullBits[3] = (byte)(nullBits[3] | 16);
       }
 
-      if (this.tagIndexes != null) {
+      if (this.states != null) {
          nullBits[3] = (byte)(nullBits[3] | 32);
       }
 
-      if (this.bench != null) {
+      if (this.tagIndexes != null) {
          nullBits[3] = (byte)(nullBits[3] | 64);
       }
 
-      if (this.connectedBlockRuleSet != null) {
+      if (this.bench != null) {
          nullBits[3] = (byte)(nullBits[3] | 128);
+      }
+
+      if (this.connectedBlockRuleSet != null) {
+         nullBits[4] = (byte)(nullBits[4] | 1);
       }
 
       buf.writeBytes(nullBits);
@@ -2998,6 +3027,12 @@ public class BlockType {
       buf.writeIntLE(this.ambientSoundEventIndex);
       if (this.particleColor != null) {
          this.particleColor.serialize(buf);
+      } else {
+         buf.writeZero(3);
+      }
+
+      if (this.textureComputedColor != null) {
+         this.textureComputedColor.serialize(buf);
       } else {
          buf.writeZero(3);
       }
@@ -3374,218 +3409,230 @@ public class BlockType {
          nullBits = (byte)(nullBits | 1);
       }
 
-      if (this.light != null) {
+      if (this.textureComputedColor != null) {
          nullBits = (byte)(nullBits | 2);
       }
 
-      if (this.tint != null) {
+      if (this.light != null) {
          nullBits = (byte)(nullBits | 4);
       }
 
-      if (this.biomeTint != null) {
+      if (this.tint != null) {
          nullBits = (byte)(nullBits | 8);
       }
 
-      if (this.movementSettings != null) {
+      if (this.biomeTint != null) {
          nullBits = (byte)(nullBits | 16);
       }
 
-      if (this.flags != null) {
+      if (this.movementSettings != null) {
          nullBits = (byte)(nullBits | 32);
       }
 
-      if (this.placementSettings != null) {
+      if (this.flags != null) {
          nullBits = (byte)(nullBits | 64);
       }
 
-      if (this.item != null) {
+      if (this.placementSettings != null) {
          nullBits = (byte)(nullBits | 128);
       }
 
       mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
       nullBits = 0;
-      if (this.name != null) {
+      if (this.item != null) {
          nullBits = (byte)(nullBits | 1);
       }
 
-      if (this.shaderEffect != null) {
+      if (this.name != null) {
          nullBits = (byte)(nullBits | 2);
       }
 
-      if (this.model != null) {
+      if (this.shaderEffect != null) {
          nullBits = (byte)(nullBits | 4);
       }
 
-      if (this.modelTexture != null) {
+      if (this.model != null) {
          nullBits = (byte)(nullBits | 8);
       }
 
-      if (this.modelAnimation != null) {
+      if (this.modelTexture != null) {
          nullBits = (byte)(nullBits | 16);
       }
 
-      if (this.support != null) {
+      if (this.modelAnimation != null) {
          nullBits = (byte)(nullBits | 32);
       }
 
-      if (this.supporting != null) {
+      if (this.support != null) {
          nullBits = (byte)(nullBits | 64);
       }
 
-      if (this.cubeTextures != null) {
+      if (this.supporting != null) {
          nullBits = (byte)(nullBits | 128);
       }
 
       mem.set(PacketIO.PROTO_BYTE, offset + 1, nullBits);
       nullBits = 0;
-      if (this.cubeSideMaskTexture != null) {
+      if (this.cubeTextures != null) {
          nullBits = (byte)(nullBits | 1);
       }
 
-      if (this.conditionalSounds != null) {
+      if (this.cubeSideMaskTexture != null) {
          nullBits = (byte)(nullBits | 2);
       }
 
-      if (this.particles != null) {
+      if (this.conditionalSounds != null) {
          nullBits = (byte)(nullBits | 4);
       }
 
-      if (this.blockParticleSetId != null) {
+      if (this.particles != null) {
          nullBits = (byte)(nullBits | 8);
       }
 
-      if (this.blockBreakingDecalId != null) {
+      if (this.blockParticleSetId != null) {
          nullBits = (byte)(nullBits | 16);
       }
 
-      if (this.transitionTexture != null) {
+      if (this.blockBreakingDecalId != null) {
          nullBits = (byte)(nullBits | 32);
       }
 
-      if (this.transitionToGroups != null) {
+      if (this.transitionTexture != null) {
          nullBits = (byte)(nullBits | 64);
       }
 
-      if (this.interactionHint != null) {
+      if (this.transitionToGroups != null) {
          nullBits = (byte)(nullBits | 128);
       }
 
       mem.set(PacketIO.PROTO_BYTE, offset + 2, nullBits);
       nullBits = 0;
-      if (this.gathering != null) {
+      if (this.interactionHint != null) {
          nullBits = (byte)(nullBits | 1);
       }
 
-      if (this.display != null) {
+      if (this.gathering != null) {
          nullBits = (byte)(nullBits | 2);
       }
 
-      if (this.rail != null) {
+      if (this.display != null) {
          nullBits = (byte)(nullBits | 4);
       }
 
-      if (this.interactions != null) {
+      if (this.rail != null) {
          nullBits = (byte)(nullBits | 8);
       }
 
-      if (this.states != null) {
+      if (this.interactions != null) {
          nullBits = (byte)(nullBits | 16);
       }
 
-      if (this.tagIndexes != null) {
+      if (this.states != null) {
          nullBits = (byte)(nullBits | 32);
       }
 
-      if (this.bench != null) {
+      if (this.tagIndexes != null) {
          nullBits = (byte)(nullBits | 64);
       }
 
-      if (this.connectedBlockRuleSet != null) {
+      if (this.bench != null) {
          nullBits = (byte)(nullBits | 128);
       }
 
       mem.set(PacketIO.PROTO_BYTE, offset + 3, nullBits);
-      mem.set(PacketIO.PROTO_BOOL, offset + 4, this.unknown);
-      mem.set(PacketIO.PROTO_BYTE, offset + 5, (byte)this.drawType.getValue());
-      mem.set(PacketIO.PROTO_BYTE, offset + 6, (byte)this.material.getValue());
-      mem.set(PacketIO.PROTO_BYTE, offset + 7, (byte)this.opacity.getValue());
-      mem.set(PacketIO.PROTO_INT, offset + 8, this.hitbox);
-      mem.set(PacketIO.PROTO_INT, offset + 12, this.interactionHitbox);
-      mem.set(PacketIO.PROTO_FLOAT, offset + 16, this.modelScale);
-      mem.set(PacketIO.PROTO_BOOL, offset + 20, this.looping);
-      mem.set(PacketIO.PROTO_INT, offset + 21, this.maxSupportDistance);
-      mem.set(PacketIO.PROTO_BYTE, offset + 25, (byte)this.blockSupportsRequiredFor.getValue());
-      mem.set(PacketIO.PROTO_BOOL, offset + 26, this.requiresAlphaBlending);
-      mem.set(PacketIO.PROTO_BYTE, offset + 27, (byte)this.cubeShadingMode.getValue());
-      mem.set(PacketIO.PROTO_BYTE, offset + 28, (byte)this.randomRotation.getValue());
-      mem.set(PacketIO.PROTO_BYTE, offset + 29, (byte)this.variantRotation.getValue());
-      mem.set(PacketIO.PROTO_BYTE, offset + 30, (byte)this.rotationYawPlacementOffset.getValue());
-      mem.set(PacketIO.PROTO_INT, offset + 31, this.blockSoundSetIndex);
-      mem.set(PacketIO.PROTO_INT, offset + 35, this.physicalMaterialIndex);
-      mem.set(PacketIO.PROTO_FLOAT, offset + 39, this.soundOcclusionOpacity);
-      mem.set(PacketIO.PROTO_INT, offset + 43, this.ambientSoundEventIndex);
+      nullBits = 0;
+      if (this.connectedBlockRuleSet != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, offset + 4, nullBits);
+      mem.set(PacketIO.PROTO_BOOL, offset + 5, this.unknown);
+      mem.set(PacketIO.PROTO_BYTE, offset + 6, (byte)this.drawType.getValue());
+      mem.set(PacketIO.PROTO_BYTE, offset + 7, (byte)this.material.getValue());
+      mem.set(PacketIO.PROTO_BYTE, offset + 8, (byte)this.opacity.getValue());
+      mem.set(PacketIO.PROTO_INT, offset + 9, this.hitbox);
+      mem.set(PacketIO.PROTO_INT, offset + 13, this.interactionHitbox);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 17, this.modelScale);
+      mem.set(PacketIO.PROTO_BOOL, offset + 21, this.looping);
+      mem.set(PacketIO.PROTO_INT, offset + 22, this.maxSupportDistance);
+      mem.set(PacketIO.PROTO_BYTE, offset + 26, (byte)this.blockSupportsRequiredFor.getValue());
+      mem.set(PacketIO.PROTO_BOOL, offset + 27, this.requiresAlphaBlending);
+      mem.set(PacketIO.PROTO_BYTE, offset + 28, (byte)this.cubeShadingMode.getValue());
+      mem.set(PacketIO.PROTO_BYTE, offset + 29, (byte)this.randomRotation.getValue());
+      mem.set(PacketIO.PROTO_BYTE, offset + 30, (byte)this.variantRotation.getValue());
+      mem.set(PacketIO.PROTO_BYTE, offset + 31, (byte)this.rotationYawPlacementOffset.getValue());
+      mem.set(PacketIO.PROTO_INT, offset + 32, this.blockSoundSetIndex);
+      mem.set(PacketIO.PROTO_INT, offset + 36, this.physicalMaterialIndex);
+      mem.set(PacketIO.PROTO_FLOAT, offset + 40, this.soundOcclusionOpacity);
+      mem.set(PacketIO.PROTO_INT, offset + 44, this.ambientSoundEventIndex);
       if (this.particleColor != null) {
-         this.particleColor.serialize(mem, offset + 47);
+         this.particleColor.serialize(mem, offset + 48);
       } else {
-         mem.asSlice(offset + 47, 3L).fill((byte)0);
+         mem.asSlice(offset + 48, 3L).fill((byte)0);
+      }
+
+      if (this.textureComputedColor != null) {
+         this.textureComputedColor.serialize(mem, offset + 51);
+      } else {
+         mem.asSlice(offset + 51, 3L).fill((byte)0);
       }
 
       if (this.light != null) {
-         this.light.serialize(mem, offset + 50);
+         this.light.serialize(mem, offset + 54);
       } else {
-         mem.asSlice(offset + 50, 4L).fill((byte)0);
+         mem.asSlice(offset + 54, 4L).fill((byte)0);
       }
 
       if (this.tint != null) {
-         this.tint.serialize(mem, offset + 54);
+         this.tint.serialize(mem, offset + 58);
       } else {
-         mem.asSlice(offset + 54, 24L).fill((byte)0);
+         mem.asSlice(offset + 58, 24L).fill((byte)0);
       }
 
       if (this.biomeTint != null) {
-         this.biomeTint.serialize(mem, offset + 78);
+         this.biomeTint.serialize(mem, offset + 82);
       } else {
-         mem.asSlice(offset + 78, 24L).fill((byte)0);
+         mem.asSlice(offset + 82, 24L).fill((byte)0);
       }
 
-      mem.set(PacketIO.PROTO_INT, offset + 102, this.group);
+      mem.set(PacketIO.PROTO_INT, offset + 106, this.group);
       if (this.movementSettings != null) {
-         this.movementSettings.serialize(mem, offset + 106);
+         this.movementSettings.serialize(mem, offset + 110);
       } else {
-         mem.asSlice(offset + 106, 42L).fill((byte)0);
+         mem.asSlice(offset + 110, 42L).fill((byte)0);
       }
 
       if (this.flags != null) {
-         this.flags.serialize(mem, offset + 148);
+         this.flags.serialize(mem, offset + 152);
       } else {
-         mem.asSlice(offset + 148, 2L).fill((byte)0);
+         mem.asSlice(offset + 152, 2L).fill((byte)0);
       }
 
       if (this.placementSettings != null) {
-         this.placementSettings.serialize(mem, offset + 150);
+         this.placementSettings.serialize(mem, offset + 154);
       } else {
-         mem.asSlice(offset + 150, 17L).fill((byte)0);
+         mem.asSlice(offset + 154, 17L).fill((byte)0);
       }
 
-      mem.set(PacketIO.PROTO_BOOL, offset + 167, this.ignoreSupportWhenPlaced);
-      mem.set(PacketIO.PROTO_INT, offset + 168, this.transitionToTag);
-      int varOffset = offset + 272;
+      mem.set(PacketIO.PROTO_BOOL, offset + 171, this.ignoreSupportWhenPlaced);
+      mem.set(PacketIO.PROTO_INT, offset + 172, this.transitionToTag);
+      int varOffset = offset + 276;
       if (this.item != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 172, varOffset - offset - 272);
+         mem.set(PacketIO.PROTO_INT, offset + 176, varOffset - offset - 276);
          varOffset += PacketIO.writeVarString(mem, varOffset, this.item, 4096000);
-      } else {
-         mem.set(PacketIO.PROTO_INT, offset + 172, -1);
-      }
-
-      if (this.name != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 176, varOffset - offset - 272);
-         varOffset += PacketIO.writeVarString(mem, varOffset, this.name, 4096000);
       } else {
          mem.set(PacketIO.PROTO_INT, offset + 176, -1);
       }
 
+      if (this.name != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 180, varOffset - offset - 276);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.name, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 180, -1);
+      }
+
       if (this.shaderEffect != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 180, varOffset - offset - 272);
+         mem.set(PacketIO.PROTO_INT, offset + 184, varOffset - offset - 276);
          if (this.shaderEffect.length > 4096000) {
             throw ProtocolException.arrayTooLong("ShaderEffect", this.shaderEffect.length, 4096000);
          }
@@ -3598,18 +3645,18 @@ public class BlockType {
 
          varOffset += this.shaderEffect.length * 1;
       } else {
-         mem.set(PacketIO.PROTO_INT, offset + 180, -1);
-      }
-
-      if (this.model != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 184, varOffset - offset - 272);
-         varOffset += PacketIO.writeVarString(mem, varOffset, this.model, 4096000);
-      } else {
          mem.set(PacketIO.PROTO_INT, offset + 184, -1);
       }
 
+      if (this.model != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 188, varOffset - offset - 276);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.model, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 188, -1);
+      }
+
       if (this.modelTexture != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 188, varOffset - offset - 272);
+         mem.set(PacketIO.PROTO_INT, offset + 192, varOffset - offset - 276);
          if (this.modelTexture.length > 4096000) {
             throw ProtocolException.arrayTooLong("ModelTexture", this.modelTexture.length, 4096000);
          }
@@ -3623,18 +3670,18 @@ public class BlockType {
 
          varOffset += modelTextureValueOffset;
       } else {
-         mem.set(PacketIO.PROTO_INT, offset + 188, -1);
-      }
-
-      if (this.modelAnimation != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 192, varOffset - offset - 272);
-         varOffset += PacketIO.writeVarString(mem, varOffset, this.modelAnimation, 4096000);
-      } else {
          mem.set(PacketIO.PROTO_INT, offset + 192, -1);
       }
 
+      if (this.modelAnimation != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 196, varOffset - offset - 276);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.modelAnimation, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 196, -1);
+      }
+
       if (this.support != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 196, varOffset - offset - 272);
+         mem.set(PacketIO.PROTO_INT, offset + 200, varOffset - offset - 276);
          if (this.support.size() > 4096000) {
             throw ProtocolException.dictionaryTooLarge("Support", this.support.size(), 4096000);
          }
@@ -3650,11 +3697,11 @@ public class BlockType {
             }
          }
       } else {
-         mem.set(PacketIO.PROTO_INT, offset + 196, -1);
+         mem.set(PacketIO.PROTO_INT, offset + 200, -1);
       }
 
       if (this.supporting != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 200, varOffset - offset - 272);
+         mem.set(PacketIO.PROTO_INT, offset + 204, varOffset - offset - 276);
          if (this.supporting.size() > 4096000) {
             throw ProtocolException.dictionaryTooLarge("Supporting", this.supporting.size(), 4096000);
          }
@@ -3670,11 +3717,11 @@ public class BlockType {
             }
          }
       } else {
-         mem.set(PacketIO.PROTO_INT, offset + 200, -1);
+         mem.set(PacketIO.PROTO_INT, offset + 204, -1);
       }
 
       if (this.cubeTextures != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 204, varOffset - offset - 272);
+         mem.set(PacketIO.PROTO_INT, offset + 208, varOffset - offset - 276);
          if (this.cubeTextures.length > 4096000) {
             throw ProtocolException.arrayTooLong("CubeTextures", this.cubeTextures.length, 4096000);
          }
@@ -3688,18 +3735,18 @@ public class BlockType {
 
          varOffset += cubeTexturesValueOffset;
       } else {
-         mem.set(PacketIO.PROTO_INT, offset + 204, -1);
-      }
-
-      if (this.cubeSideMaskTexture != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 208, varOffset - offset - 272);
-         varOffset += PacketIO.writeVarString(mem, varOffset, this.cubeSideMaskTexture, 4096000);
-      } else {
          mem.set(PacketIO.PROTO_INT, offset + 208, -1);
       }
 
+      if (this.cubeSideMaskTexture != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 212, varOffset - offset - 276);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.cubeSideMaskTexture, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 212, -1);
+      }
+
       if (this.conditionalSounds != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 212, varOffset - offset - 272);
+         mem.set(PacketIO.PROTO_INT, offset + 216, varOffset - offset - 276);
          if (this.conditionalSounds.length > 4096000) {
             throw ProtocolException.arrayTooLong("ConditionalSounds", this.conditionalSounds.length, 4096000);
          }
@@ -3713,11 +3760,11 @@ public class BlockType {
 
          varOffset += conditionalSoundsValueOffset;
       } else {
-         mem.set(PacketIO.PROTO_INT, offset + 212, -1);
+         mem.set(PacketIO.PROTO_INT, offset + 216, -1);
       }
 
       if (this.particles != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 216, varOffset - offset - 272);
+         mem.set(PacketIO.PROTO_INT, offset + 220, varOffset - offset - 276);
          if (this.particles.length > 4096000) {
             throw ProtocolException.arrayTooLong("Particles", this.particles.length, 4096000);
          }
@@ -3731,32 +3778,32 @@ public class BlockType {
 
          varOffset += particlesValueOffset;
       } else {
-         mem.set(PacketIO.PROTO_INT, offset + 216, -1);
-      }
-
-      if (this.blockParticleSetId != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 220, varOffset - offset - 272);
-         varOffset += PacketIO.writeVarString(mem, varOffset, this.blockParticleSetId, 4096000);
-      } else {
          mem.set(PacketIO.PROTO_INT, offset + 220, -1);
       }
 
-      if (this.blockBreakingDecalId != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 224, varOffset - offset - 272);
-         varOffset += PacketIO.writeVarString(mem, varOffset, this.blockBreakingDecalId, 4096000);
+      if (this.blockParticleSetId != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 224, varOffset - offset - 276);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.blockParticleSetId, 4096000);
       } else {
          mem.set(PacketIO.PROTO_INT, offset + 224, -1);
       }
 
-      if (this.transitionTexture != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 228, varOffset - offset - 272);
-         varOffset += PacketIO.writeVarString(mem, varOffset, this.transitionTexture, 4096000);
+      if (this.blockBreakingDecalId != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 228, varOffset - offset - 276);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.blockBreakingDecalId, 4096000);
       } else {
          mem.set(PacketIO.PROTO_INT, offset + 228, -1);
       }
 
+      if (this.transitionTexture != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 232, varOffset - offset - 276);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.transitionTexture, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 232, -1);
+      }
+
       if (this.transitionToGroups != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 232, varOffset - offset - 272);
+         mem.set(PacketIO.PROTO_INT, offset + 236, varOffset - offset - 276);
          if (this.transitionToGroups.length > 4096000) {
             throw ProtocolException.arrayTooLong("TransitionToGroups", this.transitionToGroups.length, 4096000);
          }
@@ -3765,39 +3812,39 @@ public class BlockType {
          MemorySegment.copy(this.transitionToGroups, 0, mem, PacketIO.PROTO_INT, varOffset, this.transitionToGroups.length);
          varOffset += this.transitionToGroups.length * 4;
       } else {
-         mem.set(PacketIO.PROTO_INT, offset + 232, -1);
-      }
-
-      if (this.interactionHint != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 236, varOffset - offset - 272);
-         varOffset += PacketIO.writeVarString(mem, varOffset, this.interactionHint, 4096000);
-      } else {
          mem.set(PacketIO.PROTO_INT, offset + 236, -1);
       }
 
-      if (this.gathering != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 240, varOffset - offset - 272);
-         varOffset += this.gathering.serialize(mem, varOffset);
+      if (this.interactionHint != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 240, varOffset - offset - 276);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.interactionHint, 4096000);
       } else {
          mem.set(PacketIO.PROTO_INT, offset + 240, -1);
       }
 
-      if (this.display != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 244, varOffset - offset - 272);
-         varOffset += this.display.serialize(mem, varOffset);
+      if (this.gathering != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 244, varOffset - offset - 276);
+         varOffset += this.gathering.serialize(mem, varOffset);
       } else {
          mem.set(PacketIO.PROTO_INT, offset + 244, -1);
       }
 
-      if (this.rail != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 248, varOffset - offset - 272);
-         varOffset += this.rail.serialize(mem, varOffset);
+      if (this.display != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 248, varOffset - offset - 276);
+         varOffset += this.display.serialize(mem, varOffset);
       } else {
          mem.set(PacketIO.PROTO_INT, offset + 248, -1);
       }
 
+      if (this.rail != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 252, varOffset - offset - 276);
+         varOffset += this.rail.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 252, -1);
+      }
+
       if (this.interactions != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 252, varOffset - offset - 272);
+         mem.set(PacketIO.PROTO_INT, offset + 256, varOffset - offset - 276);
          if (this.interactions.size() > 4096000) {
             throw ProtocolException.dictionaryTooLarge("Interactions", this.interactions.size(), 4096000);
          }
@@ -3810,11 +3857,11 @@ public class BlockType {
             varOffset += 4;
          }
       } else {
-         mem.set(PacketIO.PROTO_INT, offset + 252, -1);
+         mem.set(PacketIO.PROTO_INT, offset + 256, -1);
       }
 
       if (this.states != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 256, varOffset - offset - 272);
+         mem.set(PacketIO.PROTO_INT, offset + 260, varOffset - offset - 276);
          if (this.states.size() > 4096000) {
             throw ProtocolException.dictionaryTooLarge("States", this.states.size(), 4096000);
          }
@@ -3827,11 +3874,11 @@ public class BlockType {
             varOffset += 4;
          }
       } else {
-         mem.set(PacketIO.PROTO_INT, offset + 256, -1);
+         mem.set(PacketIO.PROTO_INT, offset + 260, -1);
       }
 
       if (this.tagIndexes != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 260, varOffset - offset - 272);
+         mem.set(PacketIO.PROTO_INT, offset + 264, varOffset - offset - 276);
          if (this.tagIndexes.length > 4096000) {
             throw ProtocolException.arrayTooLong("TagIndexes", this.tagIndexes.length, 4096000);
          }
@@ -3840,28 +3887,28 @@ public class BlockType {
          MemorySegment.copy(this.tagIndexes, 0, mem, PacketIO.PROTO_INT, varOffset, this.tagIndexes.length);
          varOffset += this.tagIndexes.length * 4;
       } else {
-         mem.set(PacketIO.PROTO_INT, offset + 260, -1);
-      }
-
-      if (this.bench != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 264, varOffset - offset - 272);
-         varOffset += this.bench.serialize(mem, varOffset);
-      } else {
          mem.set(PacketIO.PROTO_INT, offset + 264, -1);
       }
 
-      if (this.connectedBlockRuleSet != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 268, varOffset - offset - 272);
-         varOffset += this.connectedBlockRuleSet.serialize(mem, varOffset);
+      if (this.bench != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 268, varOffset - offset - 276);
+         varOffset += this.bench.serialize(mem, varOffset);
       } else {
          mem.set(PacketIO.PROTO_INT, offset + 268, -1);
+      }
+
+      if (this.connectedBlockRuleSet != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 272, varOffset - offset - 276);
+         varOffset += this.connectedBlockRuleSet.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 272, -1);
       }
 
       return varOffset - offset;
    }
 
    public int computeSize() {
-      int size = 272;
+      int size = 276;
       if (this.item != null) {
          size += PacketIO.stringSize(this.item);
       }
@@ -4002,58 +4049,58 @@ public class BlockType {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      if (buffer.readableBytes() - offset < 272) {
-         return ValidationResult.error("Buffer too small: expected at least 272 bytes");
+      if (buffer.readableBytes() - offset < 276) {
+         return ValidationResult.error("Buffer too small: expected at least 276 bytes");
       }
 
-      byte[] nullBits = PacketIO.readBytes(buffer, offset, 4);
-      int v = buffer.getByte(offset + 5) & 255;
+      byte[] nullBits = PacketIO.readBytes(buffer, offset, 5);
+      int v = buffer.getByte(offset + 6) & 255;
       if (v >= 5) {
          return ValidationResult.error("Invalid DrawType value for DrawType");
       }
 
-      v = buffer.getByte(offset + 6) & 255;
+      v = buffer.getByte(offset + 7) & 255;
       if (v >= 2) {
          return ValidationResult.error("Invalid BlockMaterial value for Material");
       }
 
-      v = buffer.getByte(offset + 7) & 255;
+      v = buffer.getByte(offset + 8) & 255;
       if (v >= 4) {
          return ValidationResult.error("Invalid Opacity value for Opacity");
       }
 
-      v = buffer.getByte(offset + 25) & 255;
+      v = buffer.getByte(offset + 26) & 255;
       if (v >= 2) {
          return ValidationResult.error("Invalid BlockSupportsRequiredForType value for BlockSupportsRequiredFor");
       }
 
-      v = buffer.getByte(offset + 27) & 255;
+      v = buffer.getByte(offset + 28) & 255;
       if (v >= 4) {
          return ValidationResult.error("Invalid ShadingMode value for CubeShadingMode");
       }
 
-      v = buffer.getByte(offset + 28) & 255;
+      v = buffer.getByte(offset + 29) & 255;
       if (v >= 5) {
          return ValidationResult.error("Invalid RandomRotation value for RandomRotation");
       }
 
-      v = buffer.getByte(offset + 29) & 255;
+      v = buffer.getByte(offset + 30) & 255;
       if (v >= 8) {
          return ValidationResult.error("Invalid VariantRotation value for VariantRotation");
       }
 
-      v = buffer.getByte(offset + 30) & 255;
+      v = buffer.getByte(offset + 31) & 255;
       if (v >= 4) {
          return ValidationResult.error("Invalid Rotation value for RotationYawPlacementOffset");
       }
 
-      if ((nullBits[0] & 128) != 0) {
-         v = buffer.getIntLE(offset + 172);
-         if (v < 0 || v > buffer.writerIndex() - offset - 272) {
+      if ((nullBits[1] & 1) != 0) {
+         v = buffer.getIntLE(offset + 176);
+         if (v < 0 || v > buffer.writerIndex() - offset - 276) {
             return ValidationResult.error("Invalid offset for Item");
          }
 
-         int pos = offset + 272 + v;
+         int pos = offset + 276 + v;
          int itemLen = VarInt.peek(buffer, pos);
          if (itemLen < 0) {
             return ValidationResult.error("Invalid string length for Item");
@@ -4070,13 +4117,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[1] & 1) != 0) {
-         v = buffer.getIntLE(offset + 176);
-         if (v < 0 || v > buffer.writerIndex() - offset - 272) {
+      if ((nullBits[1] & 2) != 0) {
+         v = buffer.getIntLE(offset + 180);
+         if (v < 0 || v > buffer.writerIndex() - offset - 276) {
             return ValidationResult.error("Invalid offset for Name");
          }
 
-         int pos = offset + 272 + v;
+         int pos = offset + 276 + v;
          int nameLen = VarInt.peek(buffer, pos);
          if (nameLen < 0) {
             return ValidationResult.error("Invalid string length for Name");
@@ -4093,13 +4140,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[1] & 2) != 0) {
-         v = buffer.getIntLE(offset + 180);
-         if (v < 0 || v > buffer.writerIndex() - offset - 272) {
+      if ((nullBits[1] & 4) != 0) {
+         v = buffer.getIntLE(offset + 184);
+         if (v < 0 || v > buffer.writerIndex() - offset - 276) {
             return ValidationResult.error("Invalid offset for ShaderEffect");
          }
 
-         int pos = offset + 272 + v;
+         int pos = offset + 276 + v;
          int shaderEffectCount = VarInt.peek(buffer, pos);
          if (shaderEffectCount < 0) {
             return ValidationResult.error("Invalid array count for ShaderEffect");
@@ -4124,13 +4171,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[1] & 4) != 0) {
-         v = buffer.getIntLE(offset + 184);
-         if (v < 0 || v > buffer.writerIndex() - offset - 272) {
+      if ((nullBits[1] & 8) != 0) {
+         v = buffer.getIntLE(offset + 188);
+         if (v < 0 || v > buffer.writerIndex() - offset - 276) {
             return ValidationResult.error("Invalid offset for Model");
          }
 
-         int pos = offset + 272 + v;
+         int pos = offset + 276 + v;
          int modelLen = VarInt.peek(buffer, pos);
          if (modelLen < 0) {
             return ValidationResult.error("Invalid string length for Model");
@@ -4147,13 +4194,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[1] & 8) != 0) {
-         v = buffer.getIntLE(offset + 188);
-         if (v < 0 || v > buffer.writerIndex() - offset - 272) {
+      if ((nullBits[1] & 16) != 0) {
+         v = buffer.getIntLE(offset + 192);
+         if (v < 0 || v > buffer.writerIndex() - offset - 276) {
             return ValidationResult.error("Invalid offset for ModelTexture");
          }
 
-         int pos = offset + 272 + v;
+         int pos = offset + 276 + v;
          int modelTextureCount = VarInt.peek(buffer, pos);
          if (modelTextureCount < 0) {
             return ValidationResult.error("Invalid array count for ModelTexture");
@@ -4175,13 +4222,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[1] & 16) != 0) {
-         v = buffer.getIntLE(offset + 192);
-         if (v < 0 || v > buffer.writerIndex() - offset - 272) {
+      if ((nullBits[1] & 32) != 0) {
+         v = buffer.getIntLE(offset + 196);
+         if (v < 0 || v > buffer.writerIndex() - offset - 276) {
             return ValidationResult.error("Invalid offset for ModelAnimation");
          }
 
-         int pos = offset + 272 + v;
+         int pos = offset + 276 + v;
          int modelAnimationLen = VarInt.peek(buffer, pos);
          if (modelAnimationLen < 0) {
             return ValidationResult.error("Invalid string length for ModelAnimation");
@@ -4198,13 +4245,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[1] & 32) != 0) {
-         v = buffer.getIntLE(offset + 196);
-         if (v < 0 || v > buffer.writerIndex() - offset - 272) {
+      if ((nullBits[1] & 64) != 0) {
+         v = buffer.getIntLE(offset + 200);
+         if (v < 0 || v > buffer.writerIndex() - offset - 276) {
             return ValidationResult.error("Invalid offset for Support");
          }
 
-         int pos = offset + 272 + v;
+         int pos = offset + 276 + v;
          int supportCount = VarInt.peek(buffer, pos);
          if (supportCount < 0) {
             return ValidationResult.error("Invalid dictionary count for Support");
@@ -4235,13 +4282,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[1] & 64) != 0) {
-         v = buffer.getIntLE(offset + 200);
-         if (v < 0 || v > buffer.writerIndex() - offset - 272) {
+      if ((nullBits[1] & 128) != 0) {
+         v = buffer.getIntLE(offset + 204);
+         if (v < 0 || v > buffer.writerIndex() - offset - 276) {
             return ValidationResult.error("Invalid offset for Supporting");
          }
 
-         int pos = offset + 272 + v;
+         int pos = offset + 276 + v;
          int supportingCount = VarInt.peek(buffer, pos);
          if (supportingCount < 0) {
             return ValidationResult.error("Invalid dictionary count for Supporting");
@@ -4272,13 +4319,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[1] & 128) != 0) {
-         v = buffer.getIntLE(offset + 204);
-         if (v < 0 || v > buffer.writerIndex() - offset - 272) {
+      if ((nullBits[2] & 1) != 0) {
+         v = buffer.getIntLE(offset + 208);
+         if (v < 0 || v > buffer.writerIndex() - offset - 276) {
             return ValidationResult.error("Invalid offset for CubeTextures");
          }
 
-         int pos = offset + 272 + v;
+         int pos = offset + 276 + v;
          int cubeTexturesCount = VarInt.peek(buffer, pos);
          if (cubeTexturesCount < 0) {
             return ValidationResult.error("Invalid array count for CubeTextures");
@@ -4300,13 +4347,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[2] & 1) != 0) {
-         v = buffer.getIntLE(offset + 208);
-         if (v < 0 || v > buffer.writerIndex() - offset - 272) {
+      if ((nullBits[2] & 2) != 0) {
+         v = buffer.getIntLE(offset + 212);
+         if (v < 0 || v > buffer.writerIndex() - offset - 276) {
             return ValidationResult.error("Invalid offset for CubeSideMaskTexture");
          }
 
-         int pos = offset + 272 + v;
+         int pos = offset + 276 + v;
          int cubeSideMaskTextureLen = VarInt.peek(buffer, pos);
          if (cubeSideMaskTextureLen < 0) {
             return ValidationResult.error("Invalid string length for CubeSideMaskTexture");
@@ -4323,13 +4370,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[2] & 2) != 0) {
-         v = buffer.getIntLE(offset + 212);
-         if (v < 0 || v > buffer.writerIndex() - offset - 272) {
+      if ((nullBits[2] & 4) != 0) {
+         v = buffer.getIntLE(offset + 216);
+         if (v < 0 || v > buffer.writerIndex() - offset - 276) {
             return ValidationResult.error("Invalid offset for ConditionalSounds");
          }
 
-         int pos = offset + 272 + v;
+         int pos = offset + 276 + v;
          int conditionalSoundsCount = VarInt.peek(buffer, pos);
          if (conditionalSoundsCount < 0) {
             return ValidationResult.error("Invalid array count for ConditionalSounds");
@@ -4346,13 +4393,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[2] & 4) != 0) {
-         v = buffer.getIntLE(offset + 216);
-         if (v < 0 || v > buffer.writerIndex() - offset - 272) {
+      if ((nullBits[2] & 8) != 0) {
+         v = buffer.getIntLE(offset + 220);
+         if (v < 0 || v > buffer.writerIndex() - offset - 276) {
             return ValidationResult.error("Invalid offset for Particles");
          }
 
-         int pos = offset + 272 + v;
+         int pos = offset + 276 + v;
          int particlesCount = VarInt.peek(buffer, pos);
          if (particlesCount < 0) {
             return ValidationResult.error("Invalid array count for Particles");
@@ -4374,13 +4421,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[2] & 8) != 0) {
-         v = buffer.getIntLE(offset + 220);
-         if (v < 0 || v > buffer.writerIndex() - offset - 272) {
+      if ((nullBits[2] & 16) != 0) {
+         v = buffer.getIntLE(offset + 224);
+         if (v < 0 || v > buffer.writerIndex() - offset - 276) {
             return ValidationResult.error("Invalid offset for BlockParticleSetId");
          }
 
-         int pos = offset + 272 + v;
+         int pos = offset + 276 + v;
          int blockParticleSetIdLen = VarInt.peek(buffer, pos);
          if (blockParticleSetIdLen < 0) {
             return ValidationResult.error("Invalid string length for BlockParticleSetId");
@@ -4397,13 +4444,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[2] & 16) != 0) {
-         v = buffer.getIntLE(offset + 224);
-         if (v < 0 || v > buffer.writerIndex() - offset - 272) {
+      if ((nullBits[2] & 32) != 0) {
+         v = buffer.getIntLE(offset + 228);
+         if (v < 0 || v > buffer.writerIndex() - offset - 276) {
             return ValidationResult.error("Invalid offset for BlockBreakingDecalId");
          }
 
-         int pos = offset + 272 + v;
+         int pos = offset + 276 + v;
          int blockBreakingDecalIdLen = VarInt.peek(buffer, pos);
          if (blockBreakingDecalIdLen < 0) {
             return ValidationResult.error("Invalid string length for BlockBreakingDecalId");
@@ -4420,13 +4467,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[2] & 32) != 0) {
-         v = buffer.getIntLE(offset + 228);
-         if (v < 0 || v > buffer.writerIndex() - offset - 272) {
+      if ((nullBits[2] & 64) != 0) {
+         v = buffer.getIntLE(offset + 232);
+         if (v < 0 || v > buffer.writerIndex() - offset - 276) {
             return ValidationResult.error("Invalid offset for TransitionTexture");
          }
 
-         int pos = offset + 272 + v;
+         int pos = offset + 276 + v;
          int transitionTextureLen = VarInt.peek(buffer, pos);
          if (transitionTextureLen < 0) {
             return ValidationResult.error("Invalid string length for TransitionTexture");
@@ -4443,13 +4490,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[2] & 64) != 0) {
-         v = buffer.getIntLE(offset + 232);
-         if (v < 0 || v > buffer.writerIndex() - offset - 272) {
+      if ((nullBits[2] & 128) != 0) {
+         v = buffer.getIntLE(offset + 236);
+         if (v < 0 || v > buffer.writerIndex() - offset - 276) {
             return ValidationResult.error("Invalid offset for TransitionToGroups");
          }
 
-         int pos = offset + 272 + v;
+         int pos = offset + 276 + v;
          int transitionToGroupsCount = VarInt.peek(buffer, pos);
          if (transitionToGroupsCount < 0) {
             return ValidationResult.error("Invalid array count for TransitionToGroups");
@@ -4466,13 +4513,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[2] & 128) != 0) {
-         v = buffer.getIntLE(offset + 236);
-         if (v < 0 || v > buffer.writerIndex() - offset - 272) {
+      if ((nullBits[3] & 1) != 0) {
+         v = buffer.getIntLE(offset + 240);
+         if (v < 0 || v > buffer.writerIndex() - offset - 276) {
             return ValidationResult.error("Invalid offset for InteractionHint");
          }
 
-         int pos = offset + 272 + v;
+         int pos = offset + 276 + v;
          int interactionHintLen = VarInt.peek(buffer, pos);
          if (interactionHintLen < 0) {
             return ValidationResult.error("Invalid string length for InteractionHint");
@@ -4489,13 +4536,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[3] & 1) != 0) {
-         v = buffer.getIntLE(offset + 240);
-         if (v < 0 || v > buffer.writerIndex() - offset - 272) {
+      if ((nullBits[3] & 2) != 0) {
+         v = buffer.getIntLE(offset + 244);
+         if (v < 0 || v > buffer.writerIndex() - offset - 276) {
             return ValidationResult.error("Invalid offset for Gathering");
          }
 
-         int pos = offset + 272 + v;
+         int pos = offset + 276 + v;
          ValidationResult gatheringResult = BlockGathering.validateStructure(buffer, pos);
          if (!gatheringResult.isValid()) {
             return ValidationResult.error("Invalid Gathering: " + gatheringResult.error());
@@ -4504,13 +4551,13 @@ public class BlockType {
          pos += BlockGathering.computeBytesConsumed(buffer, pos);
       }
 
-      if ((nullBits[3] & 2) != 0) {
-         v = buffer.getIntLE(offset + 244);
-         if (v < 0 || v > buffer.writerIndex() - offset - 272) {
+      if ((nullBits[3] & 4) != 0) {
+         v = buffer.getIntLE(offset + 248);
+         if (v < 0 || v > buffer.writerIndex() - offset - 276) {
             return ValidationResult.error("Invalid offset for Display");
          }
 
-         int pos = offset + 272 + v;
+         int pos = offset + 276 + v;
          ValidationResult displayResult = ModelDisplay.validateStructure(buffer, pos);
          if (!displayResult.isValid()) {
             return ValidationResult.error("Invalid Display: " + displayResult.error());
@@ -4519,13 +4566,13 @@ public class BlockType {
          pos += ModelDisplay.computeBytesConsumed(buffer, pos);
       }
 
-      if ((nullBits[3] & 4) != 0) {
-         v = buffer.getIntLE(offset + 248);
-         if (v < 0 || v > buffer.writerIndex() - offset - 272) {
+      if ((nullBits[3] & 8) != 0) {
+         v = buffer.getIntLE(offset + 252);
+         if (v < 0 || v > buffer.writerIndex() - offset - 276) {
             return ValidationResult.error("Invalid offset for Rail");
          }
 
-         int pos = offset + 272 + v;
+         int pos = offset + 276 + v;
          ValidationResult railResult = RailConfig.validateStructure(buffer, pos);
          if (!railResult.isValid()) {
             return ValidationResult.error("Invalid Rail: " + railResult.error());
@@ -4534,13 +4581,13 @@ public class BlockType {
          pos += RailConfig.computeBytesConsumed(buffer, pos);
       }
 
-      if ((nullBits[3] & 8) != 0) {
-         v = buffer.getIntLE(offset + 252);
-         if (v < 0 || v > buffer.writerIndex() - offset - 272) {
+      if ((nullBits[3] & 16) != 0) {
+         v = buffer.getIntLE(offset + 256);
+         if (v < 0 || v > buffer.writerIndex() - offset - 276) {
             return ValidationResult.error("Invalid offset for Interactions");
          }
 
-         int pos = offset + 272 + v;
+         int pos = offset + 276 + v;
          int interactionsCount = VarInt.peek(buffer, pos);
          if (interactionsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for Interactions");
@@ -4565,13 +4612,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[3] & 16) != 0) {
-         v = buffer.getIntLE(offset + 256);
-         if (v < 0 || v > buffer.writerIndex() - offset - 272) {
+      if ((nullBits[3] & 32) != 0) {
+         v = buffer.getIntLE(offset + 260);
+         if (v < 0 || v > buffer.writerIndex() - offset - 276) {
             return ValidationResult.error("Invalid offset for States");
          }
 
-         int pos = offset + 272 + v;
+         int pos = offset + 276 + v;
          int statesCount = VarInt.peek(buffer, pos);
          if (statesCount < 0) {
             return ValidationResult.error("Invalid dictionary count for States");
@@ -4606,13 +4653,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[3] & 32) != 0) {
-         v = buffer.getIntLE(offset + 260);
-         if (v < 0 || v > buffer.writerIndex() - offset - 272) {
+      if ((nullBits[3] & 64) != 0) {
+         v = buffer.getIntLE(offset + 264);
+         if (v < 0 || v > buffer.writerIndex() - offset - 276) {
             return ValidationResult.error("Invalid offset for TagIndexes");
          }
 
-         int pos = offset + 272 + v;
+         int pos = offset + 276 + v;
          int tagIndexesCount = VarInt.peek(buffer, pos);
          if (tagIndexesCount < 0) {
             return ValidationResult.error("Invalid array count for TagIndexes");
@@ -4629,13 +4676,13 @@ public class BlockType {
          }
       }
 
-      if ((nullBits[3] & 64) != 0) {
-         v = buffer.getIntLE(offset + 264);
-         if (v < 0 || v > buffer.writerIndex() - offset - 272) {
+      if ((nullBits[3] & 128) != 0) {
+         v = buffer.getIntLE(offset + 268);
+         if (v < 0 || v > buffer.writerIndex() - offset - 276) {
             return ValidationResult.error("Invalid offset for Bench");
          }
 
-         int pos = offset + 272 + v;
+         int pos = offset + 276 + v;
          ValidationResult benchResult = Bench.validateStructure(buffer, pos);
          if (!benchResult.isValid()) {
             return ValidationResult.error("Invalid Bench: " + benchResult.error());
@@ -4644,13 +4691,13 @@ public class BlockType {
          pos += Bench.computeBytesConsumed(buffer, pos);
       }
 
-      if ((nullBits[3] & 128) != 0) {
-         v = buffer.getIntLE(offset + 268);
-         if (v < 0 || v > buffer.writerIndex() - offset - 272) {
+      if ((nullBits[4] & 1) != 0) {
+         v = buffer.getIntLE(offset + 272);
+         if (v < 0 || v > buffer.writerIndex() - offset - 276) {
             return ValidationResult.error("Invalid offset for ConnectedBlockRuleSet");
          }
 
-         int pos = offset + 272 + v;
+         int pos = offset + 276 + v;
          ValidationResult connectedBlockRuleSetResult = ConnectedBlockRuleSet.validateStructure(buffer, pos);
          if (!connectedBlockRuleSetResult.isValid()) {
             return ValidationResult.error("Invalid ConnectedBlockRuleSet: " + connectedBlockRuleSetResult.error());
@@ -4718,6 +4765,7 @@ public class BlockType {
       copy.blockParticleSetId = this.blockParticleSetId;
       copy.blockBreakingDecalId = this.blockBreakingDecalId;
       copy.particleColor = this.particleColor != null ? this.particleColor.clone() : null;
+      copy.textureComputedColor = this.textureComputedColor != null ? this.textureComputedColor.clone() : null;
       copy.light = this.light != null ? this.light.clone() : null;
       copy.tint = this.tint != null ? this.tint.clone() : null;
       copy.biomeTint = this.biomeTint != null ? this.biomeTint.clone() : null;
@@ -4782,6 +4830,7 @@ public class BlockType {
                && Objects.equals(this.blockParticleSetId, other.blockParticleSetId)
                && Objects.equals(this.blockBreakingDecalId, other.blockBreakingDecalId)
                && Objects.equals(this.particleColor, other.particleColor)
+               && Objects.equals(this.textureComputedColor, other.textureComputedColor)
                && Objects.equals(this.light, other.light)
                && Objects.equals(this.tint, other.tint)
                && Objects.equals(this.biomeTint, other.biomeTint)
@@ -4842,6 +4891,7 @@ public class BlockType {
       result = 31 * result + Objects.hashCode(this.blockParticleSetId);
       result = 31 * result + Objects.hashCode(this.blockBreakingDecalId);
       result = 31 * result + Objects.hashCode(this.particleColor);
+      result = 31 * result + Objects.hashCode(this.textureComputedColor);
       result = 31 * result + Objects.hashCode(this.light);
       result = 31 * result + Objects.hashCode(this.tint);
       result = 31 * result + Objects.hashCode(this.biomeTint);

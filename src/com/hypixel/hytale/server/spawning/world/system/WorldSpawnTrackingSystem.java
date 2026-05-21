@@ -86,9 +86,9 @@ public class WorldSpawnTrackingSystem extends RefSystem<EntityStore> {
                int originX = ChunkUtil.chunkCoordinate(position.x());
                int originZ = ChunkUtil.chunkCoordinate(position.z());
                Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(ChunkUtil.indexChunk(originX, originZ));
-               double count = trackNewNPC(
-                  chunkRef, environmentIndex, 1.0, this.chunkSpawnDataComponentType, this.chunkSpawnedNPCDataComponentType, chunkComponentStore
-               );
+               double count = chunkRef != null
+                  ? trackNewNPC(chunkRef, environmentIndex, 1.0, this.chunkSpawnDataComponentType, this.chunkSpawnedNPCDataComponentType, chunkComponentStore)
+                  : 1.0;
                if (count <= 0.0) {
                   return;
                }
@@ -188,9 +188,11 @@ public class WorldSpawnTrackingSystem extends RefSystem<EntityStore> {
                int originX = ChunkUtil.chunkCoordinate(position.x());
                int originZ = ChunkUtil.chunkCoordinate(position.z());
                Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(ChunkUtil.indexChunk(originX, originZ));
-               double count = untrackRemovedNPC(
-                  chunkRef, environmentIndex, 1.0, this.chunkSpawnDataComponentType, this.chunkSpawnedNPCDataComponentType, chunkComponentStore
-               );
+               double count = chunkRef != null
+                  ? untrackRemovedNPC(
+                     chunkRef, environmentIndex, 1.0, this.chunkSpawnDataComponentType, this.chunkSpawnedNPCDataComponentType, chunkComponentStore
+                  )
+                  : 1.0;
                if (count <= 0.0) {
                   return;
                }

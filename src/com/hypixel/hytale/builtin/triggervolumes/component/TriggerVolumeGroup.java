@@ -2,13 +2,13 @@ package com.hypixel.hytale.builtin.triggervolumes.component;
 
 import com.hypixel.hytale.builtin.triggervolumes.EntityTargetType;
 import com.hypixel.hytale.builtin.triggervolumes.effect.TriggerEffect;
+import com.hypixel.hytale.builtin.triggervolumes.effect.TriggerVolumeCodecs;
 import com.hypixel.hytale.builtin.triggervolumes.manager.GroupEntry;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.EnumCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
-import com.hypixel.hytale.codec.codecs.map.MapCodec;
 import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.ArrayList;
@@ -43,11 +43,7 @@ public class TriggerVolumeGroup implements Component<EntityStore> {
       .add()
       .append(new KeyedCodec<>("Color", Codec.INTEGER, false), (c, v) -> c.color = v, c -> c.color)
       .add()
-      .append(
-         new KeyedCodec<>("Tags", new MapCodec<>(Codec.STRING_ARRAY, HashMap::new, false), false),
-         (c, v) -> c.rawTags = v,
-         c -> c.rawTags.isEmpty() ? null : c.rawTags
-      )
+      .append(new KeyedCodec<>("Tags", TriggerVolumeCodecs.TAGS, false), (c, v) -> c.rawTags = v, c -> c.rawTags.isEmpty() ? null : c.rawTags)
       .add()
       .build();
    @Nullable
@@ -59,7 +55,7 @@ public class TriggerVolumeGroup implements Component<EntityStore> {
    private boolean enabled = true;
    private int color;
    @Nonnull
-   private Map<String, String[]> rawTags = Collections.emptyMap();
+   private Map<String, String> rawTags = Collections.emptyMap();
 
    @Nonnull
    public static TriggerVolumeGroup fromGroupEntry(@Nonnull String groupLinkId, @Nonnull GroupEntry entry) {
@@ -111,15 +107,15 @@ public class TriggerVolumeGroup implements Component<EntityStore> {
    }
 
    @Nonnull
-   private static Map<String, String[]> copyTags(@Nonnull Map<String, String[]> tags) {
+   private static Map<String, String> copyTags(@Nonnull Map<String, String> tags) {
       if (tags.isEmpty()) {
          return Collections.emptyMap();
       }
 
-      HashMap<String, String[]> copy = new HashMap<>();
+      HashMap<String, String> copy = new HashMap<>();
 
-      for (Entry<String, String[]> entry : tags.entrySet()) {
-         copy.put(entry.getKey(), (String[])entry.getValue().clone());
+      for (Entry<String, String> entry : tags.entrySet()) {
+         copy.put(entry.getKey(), entry.getValue());
       }
 
       return copy;

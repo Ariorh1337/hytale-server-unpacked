@@ -53,7 +53,7 @@ public class MotionControllerDive extends MotionControllerBase {
    protected final double relativeSwimDepth;
    protected final double sinkRatio;
    protected final double fastDiveThreshold;
-   protected final double minSpeedAfterForceSquared;
+   protected final double externalVelocityStopThresholdSquared;
    protected final double desiredDepthWeight;
    protected double swimDepth;
    protected double climbSpeed;
@@ -86,8 +86,8 @@ public class MotionControllerDive extends MotionControllerBase {
       this.sinkRatio = builder.getSinkRatio();
       this.fastDiveThreshold = builder.getFastDiveThreshold();
       this.desiredDepthWeight = builder.getDesiredDepthWeight();
-      double minSpeedAfterForceSquared = MathUtil.minValue(this.maxVerticalSpeed, this.maxSinkSpeed, this.maxFallSpeed);
-      this.minSpeedAfterForceSquared = minSpeedAfterForceSquared * minSpeedAfterForceSquared;
+      double externalVelocityStopThreshold = MathUtil.minValue(this.maxVerticalSpeed, this.maxSinkSpeed, this.maxFallSpeed);
+      this.externalVelocityStopThresholdSquared = externalVelocityStopThreshold * externalVelocityStopThreshold;
    }
 
    @Override
@@ -148,7 +148,7 @@ public class MotionControllerDive extends MotionControllerBase {
       if (this.collisionWithSolid) {
          this.moveSpeed = 0.0;
          this.climbSpeed = 0.0;
-         this.forceVelocity.zero();
+         this.externalVelocity.zero();
          this.appliedVelocities.clear();
       }
 
@@ -240,7 +240,7 @@ public class MotionControllerDive extends MotionControllerBase {
          if (!this.isAlive(ref, componentAccessor)) {
             steering.setYaw(this.getYaw());
             steering.setPitch(onGround ? 0.0F : this.getPitch());
-            this.forceVelocity.zero();
+            this.externalVelocity.zero();
             this.appliedVelocities.clear();
             this.moveSpeed = 0.0;
             this.climbSpeed = 0.0;
@@ -254,7 +254,7 @@ public class MotionControllerDive extends MotionControllerBase {
             }
 
             return dt;
-         } else if (this.forceVelocity.equals(Vector3dUtil.ZERO) && this.appliedVelocities.isEmpty()) {
+         } else if (this.externalVelocity.equals(Vector3dUtil.ZERO) && this.appliedVelocities.isEmpty()) {
             if (!steering.hasYaw()) {
                steering.setYaw(heading);
             }
@@ -270,11 +270,11 @@ public class MotionControllerDive extends MotionControllerBase {
             this.moveSpeed = 0.0;
             this.climbSpeed = 0.0;
             if (!this.isObstructed()) {
-               translation.set(this.forceVelocity);
+               translation.set(this.externalVelocity);
 
                for (int i = 0; i < this.appliedVelocities.size(); i++) {
                   MotionControllerBase.AppliedVelocity entry = this.appliedVelocities.get(i);
-                  if (entry.velocity.y + this.forceVelocity.y <= 0.0 || entry.velocity.y < 0.0) {
+                  if (entry.velocity.y + this.externalVelocity.y <= 0.0 || entry.velocity.y < 0.0) {
                      entry.canClear = true;
                   }
 
@@ -287,10 +287,10 @@ public class MotionControllerDive extends MotionControllerBase {
             } else {
                translation.zero();
                this.appliedVelocities.clear();
-               this.forceVelocity.zero();
+               this.externalVelocity.zero();
             }
 
-            translation.y = NPCPhysicsMath.gravityDrag(this.forceVelocity.y, 5.0 * this.gravity, dt, maxSpeed);
+            translation.y = NPCPhysicsMath.gravityDrag(this.externalVelocity.y, 5.0 * this.gravity, dt, maxSpeed);
             translation.mul(dt);
             steering.setYaw(this.getYaw());
             steering.setPitch(this.getPitch());
@@ -698,13 +698,13 @@ public class MotionControllerDive extends MotionControllerBase {
    }
 
    @Override
-   protected void dampForceVelocity(
-      @Nonnull Vector3d forceVelocity, double forceVelocityDamping, double interval, ComponentAccessor<EntityStore> componentAccessor
+   protected void dampExternalVelocity(
+      @Nonnull Vector3d externalVelocity, double externalVelocityDamping, double interval, ComponentAccessor<EntityStore> componentAccessor
    ) {
-      if (forceVelocity.lengthSquared() < this.minSpeedAfterForceSquared) {
-         forceVelocity.zero();
+      if (externalVelocity.lengthSquared() < this.externalVelocityStopThresholdSquared) {
+         externalVelocity.zero();
       } else {
-         NPCPhysicsMath.deccelerateToStop(forceVelocity, this.getDampingDeceleration(), interval);
+         NPCPhysicsMath.deccelerateToStop(externalVelocity, this.getDampingDeceleration(), interval);
       }
    }
 
@@ -729,6 +729,6 @@ public class MotionControllerDive extends MotionControllerBase {
    }
 
    public double getDampingDeceleration() {
-      return this.forceVelocityDamping * DAMPING_FACTOR;
+      return this.externalVelocityDamping * DAMPING_FACTOR;
    }
 }

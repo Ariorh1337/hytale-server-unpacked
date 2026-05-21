@@ -5,6 +5,8 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.codec.codecs.simple.BooleanCodec;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.Axis;
 import com.hypixel.hytale.math.block.BlockUtil;
 import com.hypixel.hytale.math.util.ChunkUtil;
@@ -14,8 +16,11 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.Rotation;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
 import com.hypixel.hytale.server.core.asset.type.buildertool.config.BlockTypeListAsset;
 import com.hypixel.hytale.server.core.prefab.selection.mask.BlockPattern;
-import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
+import com.hypixel.hytale.server.core.universe.world.chunk.ChunkFlag;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
+import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import it.unimi.dsi.fastutil.Pair;
 import java.util.HashSet;
 import java.util.List;
@@ -29,6 +34,7 @@ import org.joml.Vector3i;
 import org.joml.Vector3ic;
 
 public class CustomConnectedBlockPattern extends CustomTemplateConnectedBlockPattern {
+   @Nonnull
    public static final BuilderCodec<CustomConnectedBlockPattern> CODEC = BuilderCodec.builder(
          CustomConnectedBlockPattern.class, CustomConnectedBlockPattern::new
       )
@@ -93,10 +99,9 @@ public class CustomConnectedBlockPattern extends CustomTemplateConnectedBlockPat
    private static boolean checkPatternRuleAgainstBlockType(
       @Nonnull CustomTemplateConnectedBlockRuleSet placedRuleset,
       @Nonnull CustomConnectedBlockTemplateAsset template,
-      @Nonnull String block,
       @Nonnull ConnectedBlockPatternRule rule,
       @Nonnull String blockToTest,
-      RotationTuple rotationToCheckUnrotated,
+      @Nonnull RotationTuple rotationToCheckUnrotated,
       int fillerToCheckUnrotated
    ) {
       if (!rule.getFaceTags().getDirections().isEmpty()) {
@@ -105,14 +110,14 @@ public class CustomConnectedBlockPattern extends CustomTemplateConnectedBlockPat
             return !rule.isInclude();
          }
 
-         int blockTypeListAsset = BlockType.getAssetMap().getIndex(blockToTest);
-         Set shapeNames = checkingConnectedBlockRuleSet.getShapesForBlockType(blockTypeListAsset);
+         int index = BlockType.getAssetMap().getIndex(blockToTest);
+         Set blockTypeListAsset = checkingConnectedBlockRuleSet.getShapesForBlockType(index);
          CustomConnectedBlockTemplateAsset checkingTemplateAsset = checkingConnectedBlockRuleSet.getShapeTemplateAsset();
          if (checkingTemplateAsset == null) {
             return !rule.isInclude();
          }
 
-         for (String shapeName : shapeNames) {
+         for (String shapeName : blockTypeListAsset) {
             if (template.connectsToOtherMaterials
                || placedRuleset.getShapeNameToBlockPatternMap().equals(checkingConnectedBlockRuleSet.getShapeNameToBlockPatternMap())) {
                ConnectedBlockShape blockToCheckConnectedBlockShape = checkingTemplateAsset.connectedBlockShapes.get(shapeName);
@@ -141,9 +146,9 @@ public class CustomConnectedBlockPattern extends CustomTemplateConnectedBlockPat
             return !rule.isInclude();
          }
 
-         int var29 = BlockType.getAssetMap().getIndex(blockToTest);
+         int var28 = BlockType.getAssetMap().getIndex(blockToTest);
 
-         for (String shapeName : checkingConnectedBlockRuleSet.getShapesForBlockType(var29)) {
+         for (String shapeName : checkingConnectedBlockRuleSet.getShapesForBlockType(var28)) {
             if ((
                   template.connectsToOtherMaterials
                      || placedRuleset.getShapeNameToBlockPatternMap().equals(checkingConnectedBlockRuleSet.getShapeNameToBlockPatternMap())
@@ -154,7 +159,8 @@ public class CustomConnectedBlockPattern extends CustomTemplateConnectedBlockPat
          }
       }
 
-      if (!rule.getBlockTypes().isEmpty() && rule.getBlockTypes().contains(blockToTest)) {
+      HashSet<String> ruleBlockTypes = rule.getBlockTypes();
+      if (!ruleBlockTypes.isEmpty() && ruleBlockTypes.contains(blockToTest)) {
          return rule.isInclude();
       }
 
@@ -172,8 +178,8 @@ public class CustomConnectedBlockPattern extends CustomTemplateConnectedBlockPat
    @Nonnull
    @Override
    public Optional<ConnectedBlocksUtil.ConnectedBlockResult> getConnectedBlockTypeKey(
-      String shapeName,
-      @Nonnull World world,
+      @Nonnull String shapeName,
+      @Nonnull ChunkStore chunkStore,
       @Nonnull Vector3ic coordinate,
       @Nonnull CustomTemplateConnectedBlockRuleSet connectedBlockRuleset,
       @Nonnull BlockType blockType,
@@ -191,9 +197,10 @@ public class CustomConnectedBlockPattern extends CustomTemplateConnectedBlockPat
          Rotation3D totalRotation = new Rotation3D(Rotation.None, Rotation.None, Rotation.None);
          Rotation3D tempRotation = new Rotation3D(Rotation.None, Rotation.None, Rotation.None);
          List<Pair<Rotation, PatternRotationDefinition.MirrorAxis>> rotations = this.patternRotationDefinition.getRotations();
+         int i = 0;
 
-         label99:
-         for (int i = 0; i < rotations.size(); i++) {
+         label126:
+         while (i < rotations.size()) {
             Pair<Rotation, PatternRotationDefinition.MirrorAxis> patternTransform = rotations.get(i);
             totalRotation.assign(patternTransform.first(), Rotation.None, Rotation.None);
             if (this.transformRulesToOrientation) {
@@ -202,7 +209,7 @@ public class CustomConnectedBlockPattern extends CustomTemplateConnectedBlockPat
                totalRotation.add(tempRotation);
             }
 
-            label96:
+            label124:
             for (ConnectedBlockPatternRule ruleToMatch : this.rulesToMatch) {
                coordinateToTest.set(ruleToMatch.getRelativePosition());
                switch ((PatternRotationDefinition.MirrorAxis)patternTransform.second()) {
@@ -217,7 +224,7 @@ public class CustomConnectedBlockPattern extends CustomTemplateConnectedBlockPat
                if (ruleToMatch.getPlacementNormals() != null) {
                   for (ConnectedBlockPatternRule.AdjacentSide normal : ruleToMatch.getPlacementNormals()) {
                      if (normal.relativePosition.equals(placementNormal)) {
-                        continue label96;
+                        continue label124;
                      }
                   }
 
@@ -225,16 +232,38 @@ public class CustomConnectedBlockPattern extends CustomTemplateConnectedBlockPat
                } else {
                   coordinateToTest = Rotation.rotate(coordinateToTest, totalRotation.rotationYaw, totalRotation.rotationPitch, totalRotation.rotationRoll);
                   coordinateToTest.add(coordinate);
-                  WorldChunk chunkIfLoaded = world.getChunkIfLoaded(ChunkUtil.indexChunkFromBlock(coordinateToTest.x, coordinateToTest.z));
-                  if (chunkIfLoaded == null) {
+                  long chunkIndex = ChunkUtil.indexChunkFromBlock(coordinateToTest.x, coordinateToTest.z);
+                  Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(chunkIndex);
+                  if (chunkRef == null || !chunkRef.isValid()) {
                      return Optional.empty();
                   }
 
-                  String blockToCheckUnrotated = chunkIfLoaded.getBlockType(coordinateToTest).getId();
-                  RotationTuple rotationToCheckUnrotated = chunkIfLoaded.getRotation(coordinateToTest.x, coordinateToTest.y, coordinateToTest.z);
+                  Store<ChunkStore> store = chunkStore.getStore();
+                  WorldChunk worldChunkComponent = store.getComponent(chunkRef, WorldChunk.getComponentType());
+                  if (worldChunkComponent == null || !worldChunkComponent.is(ChunkFlag.TICKING)) {
+                     return Optional.empty();
+                  }
+
+                  BlockChunk blockChunkComponent = store.getComponent(chunkRef, BlockChunk.getComponentType());
+                  if (blockChunkComponent == null) {
+                     return Optional.empty();
+                  }
+
+                  String blockToCheckUnrotated = worldChunkComponent.getBlockType(coordinateToTest).getId();
+                  int testY = coordinateToTest.y;
+                  RotationTuple rotationToCheckUnrotated;
+                  int fillerToCheckUnrotated;
+                  if (testY >= 0 && testY < 320) {
+                     BlockSection section = blockChunkComponent.getSectionAtBlockY(testY);
+                     rotationToCheckUnrotated = section.getRotation(coordinateToTest.x, testY, coordinateToTest.z);
+                     fillerToCheckUnrotated = section.getFiller(coordinateToTest.x, testY, coordinateToTest.z);
+                  } else {
+                     rotationToCheckUnrotated = RotationTuple.NONE;
+                     fillerToCheckUnrotated = 0;
+                  }
+
                   tempRotation.assign(rotationToCheckUnrotated);
                   tempRotation.subtract(totalRotation);
-                  int fillerToCheckUnrotated = chunkIfLoaded.getFiller(coordinateToTest.x, coordinateToTest.y, coordinateToTest.z);
                   fillerToCheckUnrotated = tempRotation.rotationPitch.subtract(rotationToCheckUnrotated.pitch()).rotateX(fillerToCheckUnrotated);
                   fillerToCheckUnrotated = tempRotation.rotationYaw.subtract(rotationToCheckUnrotated.yaw()).rotateY(fillerToCheckUnrotated);
                   fillerToCheckUnrotated = tempRotation.rotationRoll.subtract(rotationToCheckUnrotated.roll()).rotateY(fillerToCheckUnrotated);
@@ -248,16 +277,11 @@ public class CustomConnectedBlockPattern extends CustomTemplateConnectedBlockPat
                   }
 
                   boolean patternMatches = checkPatternRuleAgainstBlockType(
-                     connectedBlockRuleset,
-                     shapeTemplate,
-                     blockType.getId(),
-                     ruleToMatch,
-                     blockToCheckUnrotated,
-                     rotationToCheckUnrotated,
-                     fillerToCheckUnrotated
+                     connectedBlockRuleset, shapeTemplate, ruleToMatch, blockToCheckUnrotated, rotationToCheckUnrotated, fillerToCheckUnrotated
                   );
                   if (!patternMatches) {
-                     continue label99;
+                     i++;
+                     continue label126;
                   }
                }
             }

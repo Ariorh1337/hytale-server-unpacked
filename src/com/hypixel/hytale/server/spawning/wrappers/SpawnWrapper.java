@@ -1,11 +1,13 @@
 package com.hypixel.hytale.server.spawning.wrappers;
 
 import com.hypixel.hytale.component.ComponentAccessor;
+import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.modules.blockset.BlockSetModule;
 import com.hypixel.hytale.server.core.modules.time.WorldTimeResource;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.spawning.SpawningContext;
@@ -105,11 +107,22 @@ public abstract class SpawnWrapper<T extends NPCSpawn> {
    }
 
    public boolean withinLightRange(@Nonnull SpawningContext spawningContext) {
-      BlockChunk blockChunk = spawningContext.worldChunk.getBlockChunk();
-      Store<EntityStore> store = spawningContext.world.getEntityStore().getStore();
-      WorldTimeResource worldTimeResource = store.getResource(WorldTimeResource.getResourceType());
-      return this.lightRangePredicate
-         .test(blockChunk, spawningContext.xBlock, spawningContext.yBlock, spawningContext.zBlock, worldTimeResource.getSunlightFactor());
+      World world = spawningContext.getWorld();
+      Ref<ChunkStore> chunkRef = spawningContext.getChunkRef();
+      ComponentAccessor<ChunkStore> chunkStore = spawningContext.getChunkStore();
+      if (world != null && chunkRef != null && chunkStore != null) {
+         BlockChunk blockChunk = chunkStore.getComponent(chunkRef, BlockChunk.getComponentType());
+         if (blockChunk == null) {
+            return false;
+         }
+
+         Store<EntityStore> store = world.getEntityStore().getStore();
+         WorldTimeResource worldTimeResource = store.getResource(WorldTimeResource.getResourceType());
+         return this.lightRangePredicate
+            .test(blockChunk, spawningContext.xBlock, spawningContext.yBlock, spawningContext.zBlock, worldTimeResource.getSunlightFactor());
+      } else {
+         return false;
+      }
    }
 
    private void addRoles() {

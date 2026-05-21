@@ -247,18 +247,21 @@ public class ActionSpawn extends ActionBase {
          Role role = npcComponent.getRole();
          Vector3d position = transformComponent.getPosition();
          this.launchDirection.set(this.targetPosition).sub(position).normalize();
-         double distance = position.distance(this.targetPosition);
          if (role.getActiveMotionController() instanceof MotionControllerFly flyController) {
-            double endVelocity = flyController.getMinSpeedAfterForceSquared();
+            double distance = position.distance(this.targetPosition);
+            double endVelocity = flyController.getExternalVelocityStopThresholdSquared();
             double acceleration = -flyController.getDampingDeceleration();
             double v0 = Math.sqrt(endVelocity - 2.0 * acceleration * distance);
             this.launchDirection.mul(v0);
-            role.forceVelocity(this.launchDirection, null, false);
+            role.setVelocity(this.launchDirection, null, false);
          } else {
+            double dx = this.targetPosition.x - position.x;
+            double dz = this.targetPosition.z - position.z;
+            double distance = Math.sqrt(dx * dx + dz * dz);
             double height = this.targetPosition.y - position.y;
-            double gravity = role.getActiveMotionController().getGravity() * 5.0;
-            double throwSpeed = AimingHelper.ensurePossibleThrowSpeed(distance, height, gravity, 1.0);
-            if (!AimingHelper.computePitch(distance, height, throwSpeed, gravity, this.pitch)) {
+            double gravity = 32.0;
+            double throwSpeed = AimingHelper.ensurePossibleThrowSpeed(distance, height, 32.0, 1.0);
+            if (!AimingHelper.computePitch(distance, height, throwSpeed, 32.0, this.pitch)) {
                throw new IllegalStateException(
                   String.format(
                      "Error in computing pitch with distance %s, height %s, and speed %s despite ensuring possible throw speed", distance, height, throwSpeed
@@ -269,7 +272,7 @@ public class ActionSpawn extends ActionBase {
             float heading = PhysicsMath.headingFromDirection(this.launchDirection.x, this.launchDirection.z);
             PhysicsMath.vectorFromAngles(heading, this.pitchHigh ? this.pitch[1] : this.pitch[0], this.launchDirection).normalize();
             this.launchDirection.mul(throwSpeed);
-            role.forceVelocity(this.launchDirection, null, true);
+            role.setVelocity(this.launchDirection, null, true);
          }
       }
    }

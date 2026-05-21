@@ -12,6 +12,7 @@ import com.hypixel.hytale.procedurallib.json.SeedString;
 import com.hypixel.hytale.server.core.asset.type.environment.config.Environment;
 import com.hypixel.hytale.server.worldgen.SeedStringResource;
 import com.hypixel.hytale.server.worldgen.container.PrefabContainer;
+import com.hypixel.hytale.server.worldgen.prefab.PrefabBaseCheck;
 import com.hypixel.hytale.server.worldgen.prefab.PrefabCategory;
 import com.hypixel.hytale.server.worldgen.prefab.PrefabPatternGenerator;
 import javax.annotation.Nonnull;
@@ -29,6 +30,9 @@ public class BiomePrefabContent extends PrefabContent {
       .<Boolean>append(new KeyedCodec<>("Submerge", Codec.BOOLEAN), (t, v) -> t.submerge = v, t -> t.submerge)
       .documentation("Whether the prefab should be submerged if placed underwater")
       .add()
+      .<PrefabBaseCheck[]>append(new KeyedCodec<>("BaseChecks", PrefabBaseCheck.ARRAY_CODEC), (p, v) -> p.baseChecks = v, p -> p.baseChecks)
+      .documentation("List of prefab base-check rules")
+      .add()
       .<BlockMask>append(new KeyedCodec<>("ParentMask", BlockMask.CODEC), (p, v) -> p.parentMask = v, p -> p.parentMask)
       .documentation("Define which blocks the prefab can be placed on")
       .add()
@@ -42,6 +46,7 @@ public class BiomePrefabContent extends PrefabContent {
    protected boolean submerge = false;
    protected PointGrid grid = PointGrid.DEFAULT;
    protected BlockMask parentMask = BlockMask.REPLACE_SOLID;
+   protected PrefabBaseCheck[] baseChecks = PrefabBaseCheck.EMPTY_ARRAY;
 
    @Override
    public <T> void applyTo(ModifyEvent<T> event) throws Exception {
@@ -74,7 +79,8 @@ public class BiomePrefabContent extends PrefabContent {
          false,
          this.submerge,
          24,
-         0
+         0,
+         this.baseChecks
       );
    }
 }

@@ -24,6 +24,12 @@ public class StateDeltaConfig {
       .<Boolean>append(new KeyedCodec<>("Mute", Codec.BOOLEAN), (d, b) -> d.mute = b, d -> d.mute)
       .documentation("When true, forces the subscriber silent for this state value. Fading is still applied.")
       .add()
+      .<Float>append(new KeyedCodec<>("PitchSemitones", Codec.FLOAT), (d, f) -> d.pitchSemitones = f, d -> d.pitchSemitones)
+      .addValidator(Validators.range(-60.0F, 12.0F))
+      .documentation(
+         "Signed semitone offset applied to the subscriber's playback pitch when this state value is active. 0 = no change. 12 = one octave up, -12 = one octave down, -6 = half octave down (tritone), -60 = perceptually frozen / time-stop effect."
+      )
+      .add()
       .build();
    @Nonnull
    public static final ArrayCodec<StateDeltaConfig> CODEC_ARRAY = new ArrayCodec<>(CODEC, StateDeltaConfig[]::new);
@@ -31,6 +37,7 @@ public class StateDeltaConfig {
    protected String valueName;
    protected float volumeDb;
    protected boolean mute;
+   protected float pitchSemitones;
    transient int valueIndex = -1;
 
    public StateDelta toPacket() {
@@ -38,6 +45,7 @@ public class StateDeltaConfig {
       packet.valueIndex = this.valueIndex;
       packet.volumeDb = this.volumeDb;
       packet.mute = this.mute;
+      packet.pitchSemitones = this.pitchSemitones;
       return packet;
    }
 }

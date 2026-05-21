@@ -21,6 +21,8 @@ import com.hypixel.hytale.server.core.asset.type.audiostate.config.AudioStateRes
 import com.hypixel.hytale.server.core.asset.type.audiostate.config.StateBindingConfig;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -29,7 +31,21 @@ public class AudioCategory
    NetworkSerializable<com.hypixel.hytale.protocol.AudioCategory> {
    public static final int EMPTY_ID = 0;
    public static final String EMPTY = "EMPTY";
+   public static final String MUSIC = "AudioCat_Music";
+   public static final String AMBIENT = "AudioCat_Ambient";
+   public static final String SFX = "AudioCat_SFX";
+   public static final String VOICE = "AudioCat_Voice";
+   public static final String UI = "AudioCat_UI";
    public static final AudioCategory EMPTY_AUDIO_CATEGORY = new AudioCategory("EMPTY");
+   public static final AudioCategory MUSIC_AUDIO_CATEGORY = new AudioCategory("AudioCat_Music");
+   public static final AudioCategory AMBIENT_AUDIO_CATEGORY = new AudioCategory("AudioCat_Ambient");
+   public static final AudioCategory SFX_AUDIO_CATEGORY = new AudioCategory("AudioCat_SFX");
+   public static final AudioCategory VOICE_AUDIO_CATEGORY = new AudioCategory("AudioCat_Voice");
+   public static final AudioCategory UI_AUDIO_CATEGORY = new AudioCategory("AudioCat_UI");
+   public static final List<AudioCategory> PRELOAD_ORDER = List.of(
+      EMPTY_AUDIO_CATEGORY, MUSIC_AUDIO_CATEGORY, AMBIENT_AUDIO_CATEGORY, SFX_AUDIO_CATEGORY, VOICE_AUDIO_CATEGORY, UI_AUDIO_CATEGORY
+   );
+   public static final Set<String> WELL_KNOWN_ROOT_NAMES = Set.of("AudioCat_Music", "AudioCat_Ambient", "AudioCat_SFX", "AudioCat_Voice", "AudioCat_UI");
    private static final int MAX_PARENT_DEPTH = 128;
    public static final AssetBuilderCodec<String, AudioCategory> CODEC = AssetBuilderCodec.<String, AudioCategory>builder(
          AudioCategory.class, AudioCategory::new, Codec.STRING, (t, k) -> t.id = k, t -> t.id, (asset, data) -> asset.data = data, asset -> asset.data
@@ -56,6 +72,8 @@ public class AudioCategory
       .afterDecode(category -> AudioStateResolver.resolveBindings(category.stateBindings))
       .validator((category, results) -> {
          validateParentChain(category, results);
+         validateWellKnownRootHasNoParent(category, results);
+         validateWellKnownRootHasUnityVolume(category, results);
          AudioStateResolver.validateBindings(category.stateBindings, "AudioCategory '" + category.id + "'", results);
       })
       .build();
@@ -97,6 +115,32 @@ public class AudioCategory
          }
 
          results.fail("AudioCategory '" + category.id + "' parent chain exceeds max depth 128 - likely a cycle or pathological hierarchy");
+      }
+   }
+
+   private static void validateWellKnownRootHasNoParent(@Nonnull AudioCategory category, @Nonnull ValidationResults results) {
+      if (WELL_KNOWN_ROOT_NAMES.contains(category.id)) {
+         if (category.data != null) {
+            Object parentKey = category.data.getParentKey();
+            if (parentKey != null) {
+               results.fail(
+                  "Well-known root AudioCategory '"
+                     + category.id
+                     + "' cannot have a Parent (got '"
+                     + parentKey
+                     + "'). The 5 well-known roots (AudioCat_Music, AudioCat_Ambient, AudioCat_SFX, AudioCat_Voice, AudioCat_UI) must remain top-level - they occupy reserved indices 1-5 used by client routing."
+               );
+            }
+         }
+      }
+   }
+
+   private static void validateWellKnownRootHasUnityVolume(@Nonnull AudioCategory category, @Nonnull ValidationResults results) {
+      if (WELL_KNOWN_ROOT_NAMES.contains(category.id)) {
+         if (Math.abs(category.volume - 1.0F) > 1.0E-4F) {
+            float decibels = AudioUtil.linearGainToDecibels(category.volume);
+            results.fail("Well-known root AudioCategory '" + category.id + "' must author Volume = 0 dB (got " + decibels + " dB).");
+         }
       }
    }
 

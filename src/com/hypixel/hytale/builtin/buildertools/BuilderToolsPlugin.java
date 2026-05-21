@@ -815,8 +815,9 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             Item item = itemStack.getItem();
             BuilderTool builderToolData = item.getBuilderTool();
             if (builderToolData == null) {
-               Message itemMessage = item.getTranslationMessage();
-               MessageUtil.sendFailureReply(playerRef, packet.token, Message.translation("server.builderTools.invalidTool").param("item", itemMessage));
+               MessageUtil.sendFailureReply(
+                  playerRef, packet.token, Message.translation("server.builderTools.invalidTool").param("item", itemStack.getDisplayName())
+               );
             } else {
                try {
                   ItemStack updatedItemStack = builderToolData.updateArgMetadata(itemStack, packet.id, packet.value);

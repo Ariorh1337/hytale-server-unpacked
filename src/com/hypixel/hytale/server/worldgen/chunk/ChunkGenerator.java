@@ -235,9 +235,9 @@ public class ChunkGenerator implements IBenchmarkableWorldGen, ValidatableWorldG
          double time = (end + start) / 1.0E9;
          double avg = this.timings.reportChunk(end + start);
          if (avg != this.timings.getWarmupValue()) {
-            LogUtil.getLogger().at(Level.FINE).log("Time taken: %s (avg: %s) (%s)", time, avg, this.timings);
+            LogUtil.getLogger().at(Level.FINEST).log("Time taken: %s (avg: %s) (%s)", time, avg, this.timings);
          } else {
-            LogUtil.getLogger().at(Level.FINE).log("Time taken: %s (warming up)", time);
+            LogUtil.getLogger().at(Level.FINEST).log("Time taken: %s (warming up)", time);
          }
 
          return generatedChunk;

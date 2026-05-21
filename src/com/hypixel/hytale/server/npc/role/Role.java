@@ -1070,28 +1070,28 @@ public class Role implements IAnnotatedComponentCollection {
       return this.positionCache.couldBreatheCached();
    }
 
-   public void addForce(@Nonnull Vector3d velocity, @Nullable VelocityConfig velocityConfig) {
+   public void addVelocity(@Nonnull Vector3d velocity, @Nullable VelocityConfig velocityConfig) {
       if (this.activeMotionController != null) {
-         this.activeMotionController.addForce(velocity, velocityConfig);
+         this.activeMotionController.addVelocity(velocity, velocityConfig);
       }
    }
 
-   public void forceVelocity(@Nonnull Vector3d velocity, @Nullable VelocityConfig velocityConfig, boolean ignoreDamping) {
+   public void setVelocity(@Nonnull Vector3d velocity, @Nullable VelocityConfig velocityConfig, boolean ignoreDamping) {
       if (this.activeMotionController != null) {
-         this.activeMotionController.forceVelocity(velocity, velocityConfig, ignoreDamping);
+         this.activeMotionController.setVelocity(velocity, velocityConfig, ignoreDamping);
       }
    }
 
    public void processAddVelocityInstruction(@Nonnull Vector3d velocity, @Nullable VelocityConfig velocityConfig) {
       if (this.activeMotionController != null) {
-         this.activeMotionController.addForce(velocity, velocityConfig);
+         this.activeMotionController.addVelocity(velocity, velocityConfig);
       }
    }
 
    public void processSetVelocityInstruction(@Nonnull Vector3d velocity, @Nullable VelocityConfig velocityConfig) {
       if (this.activeMotionController != null) {
-         this.activeMotionController.forceVelocity(Vector3dUtil.ZERO, null, false);
-         this.activeMotionController.addForce(velocity, velocityConfig);
+         this.activeMotionController.setVelocity(Vector3dUtil.ZERO, null, false);
+         this.activeMotionController.addVelocity(velocity, velocityConfig);
       }
    }
 

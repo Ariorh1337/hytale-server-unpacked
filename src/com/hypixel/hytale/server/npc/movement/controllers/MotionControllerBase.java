@@ -80,7 +80,7 @@ public abstract class MotionControllerBase implements MotionController {
    protected final String type;
    protected final double epsilonSpeed;
    protected final float epsilonAngle;
-   protected final double forceVelocityDamping;
+   protected final double externalVelocityDamping;
    protected final double maxHorizontalSpeed;
    protected final double fastMotionThreshold;
    protected final double fastMotionThresholdRange;
@@ -106,8 +106,8 @@ public abstract class MotionControllerBase implements MotionController {
    protected final Vector3d bisectValidPosition = new Vector3d();
    protected final Vector3d bisectInvalidPosition = new Vector3d();
    protected final Vector3d lastValidPosition = new Vector3d();
-   protected final Vector3d forceVelocity = new Vector3d();
-   protected final Vector3d appliedForce = new Vector3d();
+   protected final Vector3d externalVelocity = new Vector3d();
+   protected final Vector3d appliedVelocity = new Vector3d();
    protected boolean ignoreDamping;
    protected final List<MotionControllerBase.AppliedVelocity> appliedVelocities = new ObjectArrayList<>();
    protected boolean isObstructed;
@@ -148,7 +148,7 @@ public abstract class MotionControllerBase implements MotionController {
    private float yaw;
    private float pitch;
    private float roll;
-   private final Vector3d beforeTriggerForce = new Vector3d();
+   private final Vector3d beforeTriggerExternalVelocity = new Vector3d();
    private final Vector3d beforeTriggerPosition = new Vector3d();
    private boolean processTriggersHasMoved;
    protected MovementSettings movementSettings;
@@ -158,7 +158,7 @@ public abstract class MotionControllerBase implements MotionController {
       this.type = builder.getType();
       this.epsilonSpeed = builder.getEpsilonSpeed();
       this.epsilonAngle = builder.getEpsilonAngle();
-      this.forceVelocityDamping = builder.getForceVelocityDamping();
+      this.externalVelocityDamping = builder.getExternalVelocityDamping();
       this.maxHorizontalSpeed = builder.getMaxHorizontalSpeed(builderSupport);
       this.fastMotionThreshold = builder.getFastHorizontalThreshold(builderSupport);
       this.fastMotionThresholdRange = builder.getFastHorizontalThresholdRange();
@@ -502,12 +502,12 @@ public abstract class MotionControllerBase implements MotionController {
       headRotation.setYaw(headSteering.getYaw());
       headRotation.setPitch(headSteering.getPitch());
       headRotation.setRoll(headSteering.getRoll());
-      if (!this.forceVelocity.equals(Vector3dUtil.ZERO) && !this.ignoreDamping) {
+      if (!this.externalVelocity.equals(Vector3dUtil.ZERO) && !this.ignoreDamping) {
          double movementThresholdSquared = 1.0000000000000002E-10;
-         if (this.forceVelocity.lengthSquared() >= movementThresholdSquared) {
-            this.dampForceVelocity(this.forceVelocity, this.forceVelocityDamping, interval, componentAccessor);
+         if (this.externalVelocity.lengthSquared() >= movementThresholdSquared) {
+            this.dampExternalVelocity(this.externalVelocity, this.externalVelocityDamping, interval, componentAccessor);
          } else {
-            this.forceVelocity.zero();
+            this.externalVelocity.zero();
          }
       }
 
@@ -715,14 +715,14 @@ public abstract class MotionControllerBase implements MotionController {
       }
    }
 
-   protected void dampForceVelocity(
-      @Nonnull Vector3d forceVelocity, double forceVelocityDamping, double interval, ComponentAccessor<EntityStore> componentAccessor
+   protected void dampExternalVelocity(
+      @Nonnull Vector3d externalVelocity, double externalVelocityDamping, double interval, ComponentAccessor<EntityStore> componentAccessor
    ) {
       World world = componentAccessor.getExternalData().getWorld();
       double drag = 0.0;
       if (this.motionKind != MotionKind.FLYING) {
          if (!this.onGround() && this.motionKind != MotionKind.SWIMMING && this.motionKind != MotionKind.SWIMMING_TURNING) {
-            double horizontalSpeed = Math.sqrt(forceVelocity.x * forceVelocity.x + forceVelocity.z * forceVelocity.z);
+            double horizontalSpeed = Math.sqrt(externalVelocity.x * externalVelocity.x + externalVelocity.z * externalVelocity.z);
             drag = convertToNewRange(
                horizontalSpeed,
                this.movementSettings.airDragMinSpeed,
@@ -739,19 +739,19 @@ public abstract class MotionControllerBase implements MotionController {
       int serverTps = world.getTps();
       double rate = 60.0 / serverTps;
       drag = Math.pow(drag, rate);
-      forceVelocity.x *= drag;
-      forceVelocity.z *= drag;
+      externalVelocity.x *= drag;
+      externalVelocity.z *= drag;
       float velocityEpsilon = 0.1F;
-      if (Math.abs(forceVelocity.x) <= velocityEpsilon) {
-         forceVelocity.x = 0.0;
+      if (Math.abs(externalVelocity.x) <= velocityEpsilon) {
+         externalVelocity.x = 0.0;
       }
 
-      if (Math.abs(forceVelocity.y) <= velocityEpsilon) {
-         forceVelocity.y = 0.0;
+      if (Math.abs(externalVelocity.y) <= velocityEpsilon) {
+         externalVelocity.y = 0.0;
       }
 
-      if (Math.abs(forceVelocity.z) <= velocityEpsilon) {
-         forceVelocity.z = 0.0;
+      if (Math.abs(externalVelocity.z) <= velocityEpsilon) {
+         externalVelocity.z = 0.0;
       }
    }
 
@@ -971,7 +971,7 @@ public abstract class MotionControllerBase implements MotionController {
 
    @Override
    public boolean isForcePushed() {
-      return !this.forceVelocity.equals(Vector3dUtil.ZERO) || !this.appliedVelocities.isEmpty();
+      return !this.externalVelocity.equals(Vector3dUtil.ZERO) || !this.appliedVelocities.isEmpty();
    }
 
    @Override
@@ -1080,36 +1080,37 @@ public abstract class MotionControllerBase implements MotionController {
 
    @Nonnull
    @Override
-   public Vector3d getForce() {
-      return this.forceVelocity;
+   public Vector3d getExternalVelocity() {
+      return this.externalVelocity;
    }
 
    @Override
-   public void addForce(@Nonnull Vector3d force, VelocityConfig velocityConfig) {
+   public void addVelocity(@Nonnull Vector3d velocity, VelocityConfig velocityConfig) {
       double scale = this.knockbackScale;
       if (!SplitVelocity.SHOULD_MODIFY_VELOCITY && velocityConfig != null) {
-         this.appliedVelocities.add(new MotionControllerBase.AppliedVelocity(new Vector3d(force.x * scale, force.y * scale, force.z * scale), velocityConfig));
+         this.appliedVelocities
+            .add(new MotionControllerBase.AppliedVelocity(new Vector3d(velocity.x * scale, velocity.y * scale, velocity.z * scale), velocityConfig));
       } else {
          double horzMul = 0.18000000000000005 * this.movementSettings.velocityResistance;
-         this.forceVelocity.add(force.x * scale * horzMul, force.y * scale, force.z * scale * horzMul);
-         this.appliedForce.set(this.forceVelocity);
+         this.externalVelocity.add(velocity.x * scale * horzMul, velocity.y * scale, velocity.z * scale * horzMul);
+         this.appliedVelocity.set(this.externalVelocity);
          this.ignoreDamping = false;
       }
    }
 
    @Override
-   public void forceVelocity(@Nonnull Vector3dc velocity, @Nullable VelocityConfig velocityConfig, boolean ignoreDamping) {
+   public void setVelocity(@Nonnull Vector3dc velocity, @Nullable VelocityConfig velocityConfig, boolean ignoreDamping) {
       if (!SplitVelocity.SHOULD_MODIFY_VELOCITY && velocityConfig != null) {
          this.appliedVelocities.clear();
          this.appliedVelocities.add(new MotionControllerBase.AppliedVelocity(new Vector3d(velocity), velocityConfig));
       } else {
-         this.forceVelocity.set(velocity);
+         this.externalVelocity.set(velocity);
          this.ignoreDamping = ignoreDamping;
       }
    }
 
-   public void clearForce() {
-      this.forceVelocity.zero();
+   public void clearExternalVelocity() {
+      this.externalVelocity.zero();
    }
 
    protected void dumpCollisionResults() {
@@ -1197,7 +1198,7 @@ public abstract class MotionControllerBase implements MotionController {
          int count = collisionResult.getTriggerBlocks().size();
          if (count != 0) {
             if (this.enableTriggers) {
-               this.beforeTriggerForce.set(this.getForce());
+               this.beforeTriggerExternalVelocity.set(this.getExternalVelocity());
                this.beforeTriggerPosition.set(this.position);
             }
 
@@ -1215,7 +1216,8 @@ public abstract class MotionControllerBase implements MotionController {
 
             this.readEntityPosition(ref, componentAccessor);
             if (this.enableTriggers) {
-               this.processTriggersHasMoved = !this.beforeTriggerForce.equals(this.getForce()) || !this.beforeTriggerPosition.equals(this.position);
+               this.processTriggersHasMoved = !this.beforeTriggerExternalVelocity.equals(this.getExternalVelocity())
+                  || !this.beforeTriggerPosition.equals(this.position);
             }
          }
       }

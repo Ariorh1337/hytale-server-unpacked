@@ -45,6 +45,7 @@ import com.hypixel.hytale.server.spawning.world.component.ChunkSpawnData;
 import com.hypixel.hytale.server.spawning.world.component.ChunkSpawnedNPCData;
 import com.hypixel.hytale.server.spawning.world.component.SpawnJobData;
 import com.hypixel.hytale.server.spawning.world.component.WorldSpawnData;
+import com.hypixel.hytale.server.spawning.wrappers.SpawnWrapper;
 import it.unimi.dsi.fastutil.Pair;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
@@ -61,6 +62,8 @@ public class WorldSpawnJobSystems {
 
    @Nonnull
    private static WorldSpawnJobSystems.Result run(
+      @Nonnull World world,
+      @Nonnull Ref<ChunkStore> chunkRef,
       @Nonnull SpawnJobData spawnJobData,
       @Nonnull WorldChunk chunk,
       @Nonnull ChunkEnvironmentSpawnData chunkEnvironmentSpawnData,
@@ -94,7 +97,8 @@ public class WorldSpawnJobSystems {
 
             return endProbing(WorldSpawnJobSystems.Result.FAILED, spawnJobData, chunk, worldSpawnData);
          } else {
-            RoleSpawnParameters roleParams = spawnJobData.getSpawnConfig().getRoles().get(roleIndex);
+            SpawnWrapper<?> spawnConfig = spawnJobData.getSpawnConfig();
+            RoleSpawnParameters roleParams = spawnConfig.getRoles().get(roleIndex);
             double[] weights = roleParams.getOrComputeMovementModeWeights(spawnable, spawningContext);
             if (weights == null) {
                return endProbing(WorldSpawnJobSystems.Result.PERMANENT_FAILURE, spawnJobData, chunk, worldSpawnData);
@@ -104,14 +108,14 @@ public class WorldSpawnJobSystems {
                return endProbing(WorldSpawnJobSystems.Result.PERMANENT_FAILURE, spawnJobData, chunk, worldSpawnData);
             }
 
-            spawningContext.setChunk(chunk, spawnJobData.getEnvironmentIndex());
+            spawningContext.setChunk(world, chunkRef, spawnJobData.getEnvironmentIndex());
             SuppressionSpanHelper suppressionSpanHelper = spawnJobData.getSuppressionSpanHelper();
             Long2ObjectConcurrentHashMap<ChunkSuppressionEntry> chunkSuppressionMap = spawnSuppressionController.getChunkSuppressionMap();
             suppressionSpanHelper.optimiseSuppressedSpans(roleIndex, chunkSuppressionMap.get(chunk.getIndex()));
 
             try {
-               IntSet spawnBlockSet = spawnJobData.getSpawnConfig().getSpawnBlockSet(roleIndex);
-               int spawnFluidTag = spawnJobData.getSpawnConfig().getSpawnFluidTag(roleIndex);
+               IntSet spawnBlockSet = spawnConfig.getSpawnBlockSet(roleIndex);
+               int spawnFluidTag = spawnConfig.getSpawnFluidTag(roleIndex);
                RandomChunkColumnIterator iterator = chunkEnvironmentSpawnData.getRandomChunkColumnIterator();
                spawnJobData.setBudgetUsed(0);
 
@@ -152,7 +156,7 @@ public class WorldSpawnJobSystems {
    @Nonnull
    private static WorldSpawnJobSystems.Result trySpawn(
       @Nonnull ISpawnableWithModel spawnable,
-      IntSet spawnBlockSet,
+      @Nullable IntSet spawnBlockSet,
       int spawnFluidTag,
       @Nonnull SpawnJobData spawnJobData,
       @Nonnull WorldChunk worldChunk,
@@ -178,7 +182,9 @@ public class WorldSpawnJobSystems {
             } else {
                SpawnTestResult spawnTestResult = spawningContext.canSpawn();
                if (spawnTestResult == SpawnTestResult.TEST_OK) {
-                  return spawn(spawnJobData, worldChunk, worldSpawnData);
+                  World contextWorld = spawningContext.getWorld();
+                  assert contextWorld != null : "Context lost its bound world between setChunk and trySpawn";
+                  return spawn(spawnJobData, contextWorld, worldChunk, worldSpawnData);
                }
 
                if (spawnTestResult == SpawnTestResult.FAIL_INVALID_POSITION) {
@@ -216,7 +222,7 @@ public class WorldSpawnJobSystems {
          if (spansBlocked > 0 && spansTested == spansBlocked) {
             spawnJobData.incrementTotalColumnsBlocked();
          }
-      } catch (IllegalStateException | NullPointerException e) {
+      } catch (IllegalStateException e) {
          LOGGER.at(Level.WARNING)
             .log(
                "%s with spawnable=%s spwnCfg=%s X/Y/Z=%s/%s/%s",
@@ -262,7 +268,9 @@ public class WorldSpawnJobSystems {
    }
 
    @Nonnull
-   private static WorldSpawnJobSystems.Result spawn(@Nonnull SpawnJobData spawnJobData, @Nonnull WorldChunk worldChunk, @Nonnull WorldSpawnData worldSpawnData) {
+   private static WorldSpawnJobSystems.Result spawn(
+      @Nonnull SpawnJobData spawnJobData, @Nonnull World world, @Nonnull WorldChunk worldChunk, @Nonnull WorldSpawnData worldSpawnData
+   ) {
       NPCPlugin npcModule = NPCPlugin.get();
       SpawningContext spawningContext = spawnJobData.getSpawningContext();
       Vector3d position = spawningContext.newPosition();
@@ -270,7 +278,7 @@ public class WorldSpawnJobSystems {
       int roleIndex = spawnJobData.getRoleIndex();
 
       try {
-         Store<EntityStore> store = spawningContext.world.getEntityStore().getStore();
+         Store<EntityStore> store = world.getEntityStore().getStore();
          Pair<Ref<EntityStore>, NPCEntity> npcPair = npcModule.spawnEntity(
             store,
             roleIndex,
@@ -299,7 +307,7 @@ public class WorldSpawnJobSystems {
             rotation,
             spawnJobData.getFlockSize(),
             spawnJobData.getFlockAsset(),
-            (_npc, _holder, _store) -> preAddToWorld(_npc, _holder, roleIndex, spawnJobData),
+            (_npc, _holder, var4x) -> preAddToWorld(_npc, _holder, roleIndex, spawnJobData),
             null,
             store
          );
@@ -344,8 +352,9 @@ public class WorldSpawnJobSystems {
       rejectionMap.mergeInt(rejection, 1, Integer::sum);
    }
 
+   @Nonnull
    protected static WorldSpawnJobSystems.Result endProbing(
-      WorldSpawnJobSystems.Result result, @Nonnull SpawnJobData spawnJobData, @Nonnull WorldChunk worldChunk, @Nonnull WorldSpawnData worldSpawnData
+      @Nonnull WorldSpawnJobSystems.Result result, @Nonnull SpawnJobData spawnJobData, @Nonnull WorldChunk worldChunk, @Nonnull WorldSpawnData worldSpawnData
    ) {
       HytaleLogger.Api context = LOGGER.at(Level.FINEST);
       if (context.isEnabled()) {
@@ -413,8 +422,12 @@ public class WorldSpawnJobSystems {
       @Override
       public void onEntityRemoved(@Nonnull Holder<ChunkStore> entityHolder, @Nonnull RemoveReason reason, @Nonnull Store<ChunkStore> store) {
          SpawnJobData spawnJobData = entityHolder.getComponent(this.spawnJobDataComponentType);
+         assert spawnJobData != null;
          WorldChunk worldChunk = entityHolder.getComponent(this.worldChunkComponentType);
-         WorldSpawnData worldSpawnData = store.getExternalData().getWorld().getEntityStore().getStore().getResource(this.worldSpawnDataResourceType);
+         assert worldChunk != null;
+         World world = store.getExternalData().getWorld();
+         Store<EntityStore> entityComponentStore = world.getEntityStore().getStore();
+         WorldSpawnData worldSpawnData = entityComponentStore.getResource(this.worldSpawnDataResourceType);
          WorldSpawnJobSystems.endProbing(WorldSpawnJobSystems.Result.FAILED, spawnJobData, worldChunk, worldSpawnData);
          entityHolder.removeComponent(this.spawnJobDataComponentType);
       }
@@ -470,20 +483,25 @@ public class WorldSpawnJobSystems {
       ) {
          World world = store.getExternalData().getWorld();
          Store<EntityStore> entityStore = world.getEntityStore().getStore();
-         SpawnJobData spawnJobData = archetypeChunk.getComponent(index, this.spawnJobDataComponentType);
          WorldSpawnData worldSpawnData = entityStore.getResource(this.worldSpawnDataResourceType);
+         SpawnJobData spawnJobData = archetypeChunk.getComponent(index, this.spawnJobDataComponentType);
+         assert spawnJobData != null;
          WorldChunk worldChunk = archetypeChunk.getComponent(index, this.worldChunkComponentType);
+         assert worldChunk != null;
          if (!spawnJobData.isTerminated() && !(worldSpawnData.getActualNPCs() > worldSpawnData.getExpectedNPCs())) {
-            ChunkSpawnData chunkSpawnData = archetypeChunk.getComponent(index, this.chunkSpawnDataComponentType);
             ChunkSpawnedNPCData chunkSpawnedNPCData = archetypeChunk.getComponent(index, this.chunkSpawnedNPCDataComponentType);
+            assert chunkSpawnedNPCData != null;
+            ChunkSpawnData chunkSpawnData = archetypeChunk.getComponent(index, this.chunkSpawnDataComponentType);
+            assert chunkSpawnData != null;
             int environmentIndex = spawnJobData.getEnvironmentIndex();
             double spawnedNPCs = chunkSpawnedNPCData.getEnvironmentSpawnCount(environmentIndex);
             ChunkEnvironmentSpawnData chunkEnvironmentSpawnData = chunkSpawnData.getEnvironmentSpawnData(environmentIndex);
             if (!chunkEnvironmentSpawnData.allRolesUnspawnable()
                && (spawnJobData.isIgnoreFullyPopulated() || !chunkEnvironmentSpawnData.isFullyPopulated(spawnedNPCs))) {
+               Ref<ChunkStore> ref = archetypeChunk.getReferenceTo(index);
                SpawnSuppressionController spawnSuppressionController = entityStore.getResource(this.spawnSuppressionControllerResourceType);
                WorldSpawnJobSystems.Result result = WorldSpawnJobSystems.run(
-                  spawnJobData, worldChunk, chunkEnvironmentSpawnData, worldSpawnData, spawnSuppressionController
+                  world, ref, spawnJobData, worldChunk, chunkEnvironmentSpawnData, worldSpawnData, spawnSuppressionController
                );
                if (result == WorldSpawnJobSystems.Result.SUCCESS) {
                   chunkSpawnData.setLastSpawn(System.nanoTime());
@@ -534,8 +552,12 @@ public class WorldSpawnJobSystems {
          @Nonnull CommandBuffer<ChunkStore> commandBuffer
       ) {
          SpawnJobData spawnJobData = store.getComponent(ref, this.spawnJobDataComponentType);
+         assert spawnJobData != null;
          WorldChunk worldChunk = store.getComponent(ref, this.worldChunkComponentType);
-         WorldSpawnData worldSpawnData = store.getExternalData().getWorld().getEntityStore().getStore().getResource(this.worldSpawnDataResourceType);
+         assert worldChunk != null;
+         World world = store.getExternalData().getWorld();
+         Store<EntityStore> entityComponentStore = world.getEntityStore().getStore();
+         WorldSpawnData worldSpawnData = entityComponentStore.getResource(this.worldSpawnDataResourceType);
          WorldSpawnJobSystems.endProbing(WorldSpawnJobSystems.Result.FAILED, spawnJobData, worldChunk, worldSpawnData);
          commandBuffer.removeComponent(ref, this.spawnJobDataComponentType);
       }

@@ -385,7 +385,13 @@ public class BlockPlaceUtils {
          }
 
          ConnectedBlocksUtil.setConnectedBlockAndNotifyNeighbors(
-            BlockType.getAssetMap().getIndex(blockTypeKey), rotation, placementNormal, blockPosition, worldChunkComponent, blockChunkComponent
+            chunkStore.getExternalData(),
+            BlockType.getAssetMap().getIndex(blockTypeKey),
+            rotation,
+            placementNormal,
+            blockPosition,
+            worldChunkComponent,
+            blockChunkComponent
          );
          return true;
       } else {

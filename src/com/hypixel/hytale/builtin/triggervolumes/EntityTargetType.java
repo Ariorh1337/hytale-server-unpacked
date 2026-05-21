@@ -2,5 +2,7 @@ package com.hypixel.hytale.builtin.triggervolumes;
 
 public enum EntityTargetType {
    PLAYER,
-   NPC;
+   NPC,
+   ITEM_DROP,
+   PROJECTILE;
 }

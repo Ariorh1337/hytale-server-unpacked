@@ -18,6 +18,8 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.update.command.UpdateCommand;
 import java.awt.Color;
+import java.io.IOException;
+import java.time.Instant;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
@@ -57,6 +59,7 @@ public class UpdateModule extends JavaPlugin {
    private final AtomicLong totalBytes = new AtomicLong(0L);
    private final AtomicLong autoApplyScheduledTime = new AtomicLong(0L);
    private final AtomicLong lastWarningTime = new AtomicLong(0L);
+   private final AtomicBoolean patchlineExpiryChecked = new AtomicBoolean(false);
 
    public UpdateModule(@Nonnull JavaPluginInit init) {
       super(init);
@@ -212,6 +215,35 @@ public class UpdateModule extends JavaPlugin {
       return true;
    }
 
+   private boolean checkPatchlineExpiry(UpdateService updateService) throws IOException, InterruptedException {
+      ServerAuthManager authManager = ServerAuthManager.getInstance();
+      String accessToken = authManager.getOAuthAccessToken();
+      if (accessToken == null) {
+         return false;
+      }
+
+      UpdateService.PatchlineSummary[] patchlines = updateService.fetchPatchlines(accessToken);
+      if (patchlines == null) {
+         return false;
+      }
+
+      String patchline = UpdateService.getEffectivePatchline();
+
+      for (UpdateService.PatchlineSummary summary : patchlines) {
+         if (summary.name.equals(patchline) && summary.expiresAt > 0L) {
+            Instant expiryTime = Instant.ofEpochMilli(summary.expiresAt);
+            if (expiryTime.isBefore(Instant.now())) {
+               LOGGER.at(Level.SEVERE).log("Patchline '%s' expired at %s", patchline, expiryTime);
+            } else {
+               LOGGER.at(Level.WARNING).log("Patchline '%s' will expire at %s", patchline, expiryTime);
+            }
+            break;
+         }
+      }
+
+      return true;
+   }
+
    private boolean shouldEnableUpdateChecker() {
       if (!ManifestUtil.isJar()) {
          LOGGER.at(Level.INFO).log("Update checker disabled: not running from JAR");
@@ -250,6 +282,25 @@ public class UpdateModule extends JavaPlugin {
       if (!authManager.hasSessionToken()) {
          LOGGER.at(Level.FINE).log("Not authenticated - skipping update check");
       } else {
+         UpdateService updateService = new UpdateService();
+         if (this.patchlineExpiryChecked.compareAndSet(false, true)) {
+            CompletableFuture.<Boolean>supplyAsync(() -> {
+               try {
+                  return this.checkPatchlineExpiry(updateService);
+               } catch (InterruptedException e) {
+                  Thread.currentThread().interrupt();
+                  return false;
+               } catch (Exception e) {
+                  LOGGER.at(Level.WARNING).withCause(e).log("Failed to check patchline expiry");
+                  return false;
+               }
+            }).thenAccept(success -> {
+               if (!success) {
+                  this.patchlineExpiryChecked.set(false);
+               }
+            });
+         }
+
          String stagedVersion = UpdateService.getStagedVersion();
          if (stagedVersion != null) {
             LOGGER.at(Level.FINE).log("Staged update already exists (%s) - skipping update check", stagedVersion);
@@ -257,7 +308,6 @@ public class UpdateModule extends JavaPlugin {
          } else if (this.isDownloadInProgress()) {
             LOGGER.at(Level.FINE).log("Download in progress - skipping update check");
          } else {
-            UpdateService updateService = new UpdateService();
             String patchline = UpdateService.getEffectivePatchline();
             updateService.checkForUpdate(patchline).thenAccept(manifest -> {
                if (manifest == null) {

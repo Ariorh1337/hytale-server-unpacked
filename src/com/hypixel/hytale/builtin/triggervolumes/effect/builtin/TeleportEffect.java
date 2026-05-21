@@ -30,6 +30,8 @@ public class TeleportEffect extends TriggerEffect {
       .add()
       .append(new KeyedCodec<>("RelativeToEntity", Codec.BOOLEAN, false), (e, v) -> e.relativeToEntity = v, e -> e.relativeToEntity)
       .add()
+      .append(new KeyedCodec<>("RelativeToVolume", Codec.BOOLEAN, false), (e, v) -> e.relativeToVolume = v, e -> e.relativeToVolume)
+      .add()
       .append(new KeyedCodec<>("UseRotation", Codec.BOOLEAN, false), (e, v) -> e.useRotation = v, e -> e.useRotation)
       .add()
       .append(new KeyedCodec<>("Rotation", Vector3dUtil.CODEC, false), (e, v) -> e.rotation = v, e -> e.rotation)
@@ -40,6 +42,7 @@ public class TeleportEffect extends TriggerEffect {
    private String world;
    private boolean resetVelocity = true;
    private boolean relativeToEntity;
+   private boolean relativeToVolume;
    private boolean useRotation;
    @Nonnull
    private Vector3d rotation = new Vector3d();
@@ -53,7 +56,13 @@ public class TeleportEffect extends TriggerEffect {
          if (transformComponent != null) {
             Vector3d destination = new Vector3d(this.position);
             if (this.relativeToEntity) {
+               if (this.relativeToVolume) {
+                  LOGGER.atWarning().log("TeleportEffect has both RelativeToEntity and RelativeToVolume set; using RelativeToEntity");
+               }
+
                destination.add(transformComponent.getPosition());
+            } else if (this.relativeToVolume) {
+               destination.add(context.getVolume().getPosition());
             }
 
             Rotation3f teleportRotation = this.useRotation ? toRotation(this.rotation) : transformComponent.getRotation();

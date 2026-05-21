@@ -39,9 +39,7 @@ public class ControlDoorsEffect extends TriggerEffect {
    private static final String CLOSE_DOOR_OUT = "CloseDoorOut";
    @Nonnull
    public static final BuilderCodec<ControlDoorsEffect> CODEC = BuilderCodec.builder(ControlDoorsEffect.class, ControlDoorsEffect::new, BASE_CODEC)
-      .append(
-         new KeyedCodec<>("Action", new EnumCodec<>(ControlDoorsEffect.DoorAction.class, EnumCodec.EnumStyle.LEGACY)), (e, v) -> e.action = v, e -> e.action
-      )
+      .append(new KeyedCodec<>("Action", new EnumCodec<>(ControlDoorsEffect.DoorAction.class)), (e, v) -> e.action = v, e -> e.action)
       .add()
       .build();
    @Nonnull

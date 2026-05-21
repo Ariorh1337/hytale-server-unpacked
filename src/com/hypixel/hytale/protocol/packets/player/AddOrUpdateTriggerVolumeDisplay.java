@@ -19,7 +19,7 @@ public class AddOrUpdateTriggerVolumeDisplay implements Packet, ToClientPacket {
    public static final int FIXED_BLOCK_SIZE = 0;
    public static final int VARIABLE_FIELD_COUNT = 2;
    public static final int VARIABLE_BLOCK_START = 8;
-   public static final int MAX_SIZE = 65536098;
+   public static final int MAX_SIZE = 65536099;
    @Nonnull
    public String volumeId = "";
    @Nonnull

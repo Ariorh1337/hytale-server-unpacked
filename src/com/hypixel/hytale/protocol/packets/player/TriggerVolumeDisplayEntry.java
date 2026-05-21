@@ -13,10 +13,10 @@ import org.joml.Vector3fc;
 
 public class TriggerVolumeDisplayEntry {
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
-   public static final int FIXED_BLOCK_SIZE = 58;
+   public static final int FIXED_BLOCK_SIZE = 59;
    public static final int VARIABLE_FIELD_COUNT = 3;
-   public static final int VARIABLE_BLOCK_START = 70;
-   public static final int MAX_SIZE = 49152085;
+   public static final int VARIABLE_BLOCK_START = 71;
+   public static final int MAX_SIZE = 49152086;
    @Nonnull
    public TriggerVolumeShapeType shapeType = TriggerVolumeShapeType.Box;
    @Nonnull
@@ -39,6 +39,8 @@ public class TriggerVolumeDisplayEntry {
    public float cooldown;
    public byte cooldownMode;
    public float activationDelay;
+   @Nonnull
+   public TriggerVolumeConditionTiming conditionTiming = TriggerVolumeConditionTiming.BeforeVolumeDelay;
 
    public TriggerVolumeDisplayEntry() {
    }
@@ -58,7 +60,8 @@ public class TriggerVolumeDisplayEntry {
       boolean cancelDelayedOnExit,
       float cooldown,
       byte cooldownMode,
-      float activationDelay
+      float activationDelay,
+      @Nonnull TriggerVolumeConditionTiming conditionTiming
    ) {
       this.shapeType = shapeType;
       this.position = position;
@@ -75,6 +78,7 @@ public class TriggerVolumeDisplayEntry {
       this.cooldown = cooldown;
       this.cooldownMode = cooldownMode;
       this.activationDelay = activationDelay;
+      this.conditionTiming = conditionTiming;
    }
 
    public TriggerVolumeDisplayEntry(@Nonnull TriggerVolumeDisplayEntry other) {
@@ -93,12 +97,13 @@ public class TriggerVolumeDisplayEntry {
       this.cooldown = other.cooldown;
       this.cooldownMode = other.cooldownMode;
       this.activationDelay = other.activationDelay;
+      this.conditionTiming = other.conditionTiming;
    }
 
    @Nonnull
    public static TriggerVolumeDisplayEntry deserialize(@Nonnull ByteBuf buf, int offset) {
-      if (buf.readableBytes() - offset < 70) {
-         throw ProtocolException.bufferTooSmall("TriggerVolumeDisplayEntry", 70, buf.readableBytes() - offset);
+      if (buf.readableBytes() - offset < 71) {
+         throw ProtocolException.bufferTooSmall("TriggerVolumeDisplayEntry", 71, buf.readableBytes() - offset);
       }
 
       TriggerVolumeDisplayEntry obj = new TriggerVolumeDisplayEntry();
@@ -115,13 +120,14 @@ public class TriggerVolumeDisplayEntry {
       obj.cooldown = buf.getFloatLE(offset + 49);
       obj.cooldownMode = buf.getByte(offset + 53);
       obj.activationDelay = buf.getFloatLE(offset + 54);
+      obj.conditionTiming = TriggerVolumeConditionTiming.fromValue(buf.getByte(offset + 58));
       if ((nullBits & 1) != 0) {
-         int varPosBase0 = buf.getIntLE(offset + 58);
-         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 70) {
+         int varPosBase0 = buf.getIntLE(offset + 59);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 71) {
             throw ProtocolException.invalidOffset("Name", varPosBase0, buf.readableBytes());
          }
 
-         int varPos0 = offset + 70 + varPosBase0;
+         int varPos0 = offset + 71 + varPosBase0;
          int nameLen = VarInt.peek(buf, varPos0);
          if (nameLen < 0) {
             throw ProtocolException.invalidVarInt("Name");
@@ -140,12 +146,12 @@ public class TriggerVolumeDisplayEntry {
       }
 
       if ((nullBits & 2) != 0) {
-         int varPosBase1 = buf.getIntLE(offset + 62);
-         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 70) {
+         int varPosBase1 = buf.getIntLE(offset + 63);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 71) {
             throw ProtocolException.invalidOffset("GroupId", varPosBase1, buf.readableBytes());
          }
 
-         int varPos1 = offset + 70 + varPosBase1;
+         int varPos1 = offset + 71 + varPosBase1;
          int groupIdLen = VarInt.peek(buf, varPos1);
          if (groupIdLen < 0) {
             throw ProtocolException.invalidVarInt("GroupId");
@@ -164,12 +170,12 @@ public class TriggerVolumeDisplayEntry {
       }
 
       if ((nullBits & 4) != 0) {
-         int varPosBase2 = buf.getIntLE(offset + 66);
-         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 70) {
+         int varPosBase2 = buf.getIntLE(offset + 67);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 71) {
             throw ProtocolException.invalidOffset("EffectAssetRef", varPosBase2, buf.readableBytes());
          }
 
-         int varPos2 = offset + 70 + varPosBase2;
+         int varPos2 = offset + 71 + varPosBase2;
          int effectAssetRefLen = VarInt.peek(buf, varPos2);
          if (effectAssetRefLen < 0) {
             throw ProtocolException.invalidVarInt("EffectAssetRef");
@@ -192,14 +198,14 @@ public class TriggerVolumeDisplayEntry {
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte nullBits = buf.getByte(offset);
-      int maxEnd = 70;
+      int maxEnd = 71;
       if ((nullBits & 1) != 0) {
-         int fieldOffset0 = buf.getIntLE(offset + 58);
-         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 70) {
+         int fieldOffset0 = buf.getIntLE(offset + 59);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 71) {
             throw ProtocolException.invalidOffset("Name", fieldOffset0, maxEnd);
          }
 
-         int pos0 = offset + 70 + fieldOffset0;
+         int pos0 = offset + 71 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
          pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
@@ -208,12 +214,12 @@ public class TriggerVolumeDisplayEntry {
       }
 
       if ((nullBits & 2) != 0) {
-         int fieldOffset1 = buf.getIntLE(offset + 62);
-         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 70) {
+         int fieldOffset1 = buf.getIntLE(offset + 63);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 71) {
             throw ProtocolException.invalidOffset("GroupId", fieldOffset1, maxEnd);
          }
 
-         int pos1 = offset + 70 + fieldOffset1;
+         int pos1 = offset + 71 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
          pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
@@ -222,12 +228,12 @@ public class TriggerVolumeDisplayEntry {
       }
 
       if ((nullBits & 4) != 0) {
-         int fieldOffset2 = buf.getIntLE(offset + 66);
-         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 70) {
+         int fieldOffset2 = buf.getIntLE(offset + 67);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 71) {
             throw ProtocolException.invalidOffset("EffectAssetRef", fieldOffset2, maxEnd);
          }
 
-         int pos2 = offset + 70 + fieldOffset2;
+         int pos2 = offset + 71 + fieldOffset2;
          int sl = VarInt.peek(buf, pos2);
          pos2 += VarInt.size(sl) + sl;
          if (pos2 - offset > maxEnd) {
@@ -239,7 +245,7 @@ public class TriggerVolumeDisplayEntry {
    }
 
    public static boolean isBufferTooSmall(MemorySegment mem) {
-      return mem.byteSize() < 70L;
+      return mem.byteSize() < 71L;
    }
 
    public static TriggerVolumeShapeType getShapeType(MemorySegment mem) {
@@ -290,7 +296,7 @@ public class TriggerVolumeDisplayEntry {
    @Nullable
    public static String getName(MemorySegment mem, int offset) {
       return hasName(mem, offset)
-         ? PacketIO.readVarString("Name", mem, offset + getValidatedOffset(mem, offset, 58, 70, "Name"), 4096000, PacketIO.UTF8)
+         ? PacketIO.readVarString("Name", mem, offset + getValidatedOffset(mem, offset, 59, 71, "Name"), 4096000, PacketIO.UTF8)
          : null;
    }
 
@@ -302,7 +308,7 @@ public class TriggerVolumeDisplayEntry {
    @Nullable
    public static String getGroupId(MemorySegment mem, int offset) {
       return hasGroupId(mem, offset)
-         ? PacketIO.readVarString("GroupId", mem, offset + getValidatedOffset(mem, offset, 62, 70, "GroupId"), 4096000, PacketIO.UTF8)
+         ? PacketIO.readVarString("GroupId", mem, offset + getValidatedOffset(mem, offset, 63, 71, "GroupId"), 4096000, PacketIO.UTF8)
          : null;
    }
 
@@ -322,7 +328,7 @@ public class TriggerVolumeDisplayEntry {
    @Nullable
    public static String getEffectAssetRef(MemorySegment mem, int offset) {
       return hasEffectAssetRef(mem, offset)
-         ? PacketIO.readVarString("EffectAssetRef", mem, offset + getValidatedOffset(mem, offset, 66, 70, "EffectAssetRef"), 4096000, PacketIO.UTF8)
+         ? PacketIO.readVarString("EffectAssetRef", mem, offset + getValidatedOffset(mem, offset, 67, 71, "EffectAssetRef"), 4096000, PacketIO.UTF8)
          : null;
    }
 
@@ -374,6 +380,14 @@ public class TriggerVolumeDisplayEntry {
       return mem.get(PacketIO.PROTO_FLOAT, offset + 54);
    }
 
+   public static TriggerVolumeConditionTiming getConditionTiming(MemorySegment mem) {
+      return getConditionTiming(mem, 0);
+   }
+
+   public static TriggerVolumeConditionTiming getConditionTiming(MemorySegment mem, int offset) {
+      return TriggerVolumeConditionTiming.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 58));
+   }
+
    public static boolean hasName(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
       return (b & 1) != 0;
@@ -403,8 +417,8 @@ public class TriggerVolumeDisplayEntry {
    }
 
    public static TriggerVolumeDisplayEntry toObject(MemorySegment mem, int offset) {
-      if (offset + 70 > mem.byteSize()) {
-         throw ProtocolException.bufferTooSmall("TriggerVolumeDisplayEntry", offset + 70, (int)mem.byteSize());
+      if (offset + 71 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("TriggerVolumeDisplayEntry", offset + 71, (int)mem.byteSize());
       } else {
          return new TriggerVolumeDisplayEntry(
             TriggerVolumeShapeType.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 1)),
@@ -412,20 +426,21 @@ public class TriggerVolumeDisplayEntry {
             PacketIO.readVector3f(mem, offset + 14),
             PacketIO.readVector3f(mem, offset + 26),
             mem.get(PacketIO.PROTO_FLOAT, offset + 38),
-            hasName(mem, offset) ? PacketIO.readVarString("Name", mem, offset + getValidatedOffset(mem, offset, 58, 70, "Name"), 4096000, PacketIO.UTF8) : null,
+            hasName(mem, offset) ? PacketIO.readVarString("Name", mem, offset + getValidatedOffset(mem, offset, 59, 71, "Name"), 4096000, PacketIO.UTF8) : null,
             hasGroupId(mem, offset)
-               ? PacketIO.readVarString("GroupId", mem, offset + getValidatedOffset(mem, offset, 62, 70, "GroupId"), 4096000, PacketIO.UTF8)
+               ? PacketIO.readVarString("GroupId", mem, offset + getValidatedOffset(mem, offset, 63, 71, "GroupId"), 4096000, PacketIO.UTF8)
                : null,
             mem.get(PacketIO.PROTO_INT, offset + 42),
             hasEffectAssetRef(mem, offset)
-               ? PacketIO.readVarString("EffectAssetRef", mem, offset + getValidatedOffset(mem, offset, 66, 70, "EffectAssetRef"), 4096000, PacketIO.UTF8)
+               ? PacketIO.readVarString("EffectAssetRef", mem, offset + getValidatedOffset(mem, offset, 67, 71, "EffectAssetRef"), 4096000, PacketIO.UTF8)
                : null,
             mem.get(PacketIO.PROTO_BYTE, offset + 46),
             mem.get(PacketIO.PROTO_BOOL, offset + 47),
             mem.get(PacketIO.PROTO_BOOL, offset + 48),
             mem.get(PacketIO.PROTO_FLOAT, offset + 49),
             mem.get(PacketIO.PROTO_BYTE, offset + 53),
-            mem.get(PacketIO.PROTO_FLOAT, offset + 54)
+            mem.get(PacketIO.PROTO_FLOAT, offset + 54),
+            TriggerVolumeConditionTiming.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 58))
          );
       }
    }
@@ -458,6 +473,7 @@ public class TriggerVolumeDisplayEntry {
       buf.writeFloatLE(this.cooldown);
       buf.writeByte(this.cooldownMode);
       buf.writeFloatLE(this.activationDelay);
+      buf.writeByte(this.conditionTiming.getValue());
       int nameOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
       int groupIdOffsetSlot = buf.writerIndex();
@@ -514,33 +530,34 @@ public class TriggerVolumeDisplayEntry {
       mem.set(PacketIO.PROTO_FLOAT, offset + 49, this.cooldown);
       mem.set(PacketIO.PROTO_BYTE, offset + 53, this.cooldownMode);
       mem.set(PacketIO.PROTO_FLOAT, offset + 54, this.activationDelay);
-      int varOffset = offset + 70;
+      mem.set(PacketIO.PROTO_BYTE, offset + 58, (byte)this.conditionTiming.getValue());
+      int varOffset = offset + 71;
       if (this.name != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 58, varOffset - offset - 70);
+         mem.set(PacketIO.PROTO_INT, offset + 59, varOffset - offset - 71);
          varOffset += PacketIO.writeVarString(mem, varOffset, this.name, 4096000);
       } else {
-         mem.set(PacketIO.PROTO_INT, offset + 58, -1);
+         mem.set(PacketIO.PROTO_INT, offset + 59, -1);
       }
 
       if (this.groupId != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 62, varOffset - offset - 70);
+         mem.set(PacketIO.PROTO_INT, offset + 63, varOffset - offset - 71);
          varOffset += PacketIO.writeVarString(mem, varOffset, this.groupId, 4096000);
       } else {
-         mem.set(PacketIO.PROTO_INT, offset + 62, -1);
+         mem.set(PacketIO.PROTO_INT, offset + 63, -1);
       }
 
       if (this.effectAssetRef != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 66, varOffset - offset - 70);
+         mem.set(PacketIO.PROTO_INT, offset + 67, varOffset - offset - 71);
          varOffset += PacketIO.writeVarString(mem, varOffset, this.effectAssetRef, 4096000);
       } else {
-         mem.set(PacketIO.PROTO_INT, offset + 66, -1);
+         mem.set(PacketIO.PROTO_INT, offset + 67, -1);
       }
 
       return varOffset - offset;
    }
 
    public int computeSize() {
-      int size = 70;
+      int size = 71;
       if (this.name != null) {
          size += PacketIO.stringSize(this.name);
       }
@@ -557,8 +574,8 @@ public class TriggerVolumeDisplayEntry {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      if (buffer.readableBytes() - offset < 70) {
-         return ValidationResult.error("Buffer too small: expected at least 70 bytes");
+      if (buffer.readableBytes() - offset < 71) {
+         return ValidationResult.error("Buffer too small: expected at least 71 bytes");
       }
 
       byte nullBits = buffer.getByte(offset);
@@ -567,13 +584,18 @@ public class TriggerVolumeDisplayEntry {
          return ValidationResult.error("Invalid TriggerVolumeShapeType value for ShapeType");
       }
 
+      v = buffer.getByte(offset + 58) & 255;
+      if (v >= 2) {
+         return ValidationResult.error("Invalid TriggerVolumeConditionTiming value for ConditionTiming");
+      }
+
       if ((nullBits & 1) != 0) {
-         v = buffer.getIntLE(offset + 58);
-         if (v < 0 || v > buffer.writerIndex() - offset - 70) {
+         v = buffer.getIntLE(offset + 59);
+         if (v < 0 || v > buffer.writerIndex() - offset - 71) {
             return ValidationResult.error("Invalid offset for Name");
          }
 
-         int pos = offset + 70 + v;
+         int pos = offset + 71 + v;
          int nameLen = VarInt.peek(buffer, pos);
          if (nameLen < 0) {
             return ValidationResult.error("Invalid string length for Name");
@@ -591,12 +613,12 @@ public class TriggerVolumeDisplayEntry {
       }
 
       if ((nullBits & 2) != 0) {
-         v = buffer.getIntLE(offset + 62);
-         if (v < 0 || v > buffer.writerIndex() - offset - 70) {
+         v = buffer.getIntLE(offset + 63);
+         if (v < 0 || v > buffer.writerIndex() - offset - 71) {
             return ValidationResult.error("Invalid offset for GroupId");
          }
 
-         int pos = offset + 70 + v;
+         int pos = offset + 71 + v;
          int groupIdLen = VarInt.peek(buffer, pos);
          if (groupIdLen < 0) {
             return ValidationResult.error("Invalid string length for GroupId");
@@ -614,12 +636,12 @@ public class TriggerVolumeDisplayEntry {
       }
 
       if ((nullBits & 4) != 0) {
-         v = buffer.getIntLE(offset + 66);
-         if (v < 0 || v > buffer.writerIndex() - offset - 70) {
+         v = buffer.getIntLE(offset + 67);
+         if (v < 0 || v > buffer.writerIndex() - offset - 71) {
             return ValidationResult.error("Invalid offset for EffectAssetRef");
          }
 
-         int pos = offset + 70 + v;
+         int pos = offset + 71 + v;
          int effectAssetRefLen = VarInt.peek(buffer, pos);
          if (effectAssetRefLen < 0) {
             return ValidationResult.error("Invalid string length for EffectAssetRef");
@@ -656,6 +678,7 @@ public class TriggerVolumeDisplayEntry {
       copy.cooldown = this.cooldown;
       copy.cooldownMode = this.cooldownMode;
       copy.activationDelay = this.activationDelay;
+      copy.conditionTiming = this.conditionTiming;
       return copy;
    }
 
@@ -680,7 +703,8 @@ public class TriggerVolumeDisplayEntry {
                && this.cancelDelayedOnExit == other.cancelDelayedOnExit
                && this.cooldown == other.cooldown
                && this.cooldownMode == other.cooldownMode
-               && this.activationDelay == other.activationDelay;
+               && this.activationDelay == other.activationDelay
+               && Objects.equals(this.conditionTiming, other.conditionTiming);
       }
    }
 
@@ -701,7 +725,8 @@ public class TriggerVolumeDisplayEntry {
          this.cancelDelayedOnExit,
          this.cooldown,
          this.cooldownMode,
-         this.activationDelay
+         this.activationDelay,
+         this.conditionTiming
       );
    }
 }

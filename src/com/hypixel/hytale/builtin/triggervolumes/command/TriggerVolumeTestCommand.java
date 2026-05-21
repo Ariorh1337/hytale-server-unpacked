@@ -4,13 +4,21 @@ import com.hypixel.hytale.builtin.triggervolumes.EntityTargetType;
 import com.hypixel.hytale.builtin.triggervolumes.TriggerVolumesPlugin;
 import com.hypixel.hytale.builtin.triggervolumes.effect.TriggerEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.TriggerEventType;
-import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.ConditionalEffect;
-import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.DestroyVolumeEffect;
+import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.DeleteVolumeEffect;
+import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.ItemCondition;
+import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.ModifyTagsEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.PlaySoundEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.PlayVfxEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.SendMessageEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.SetVelocityEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.ShowEventTitleEffect;
+import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.conditions.BlockTypeCondition;
+import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.conditions.CooldownCondition;
+import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.conditions.GameModeCondition;
+import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.conditions.PermissionCondition;
+import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.conditions.RandomChanceCondition;
+import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.conditions.TagCondition;
+import com.hypixel.hytale.builtin.triggervolumes.manager.ConditionTiming;
 import com.hypixel.hytale.builtin.triggervolumes.manager.CooldownMode;
 import com.hypixel.hytale.builtin.triggervolumes.manager.TriggerVolumeManager;
 import com.hypixel.hytale.builtin.triggervolumes.manager.VolumeEntry;
@@ -20,6 +28,7 @@ import com.hypixel.hytale.builtin.triggervolumes.shape.SphereShape;
 import com.hypixel.hytale.builtin.triggervolumes.shape.TriggerVolumeShape;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.FlagArg;
@@ -31,6 +40,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
 import javax.annotation.Nonnull;
@@ -112,17 +122,118 @@ public class TriggerVolumeTestCommand extends AbstractWorldCommand {
                      List.of(tickMsg),
                      targets
                   );
-                  SendMessageEffect innerMsg = SendMessageEffect.create(TriggerEventType.ENTER, "server.commands.triggervolume.test.msg.conditional");
-                  ConditionalEffect conditional = ConditionalEffect.create(TriggerEventType.ENTER, null, 3.0F, innerMsg);
-                  created += this.registerVolume(
+                  VolumeEntry conditional = this.registerVolumeEntry(
                      manager,
                      worldName,
-                     "tvtest_conditional_3s_cooldown",
+                     "tvtest_condition_random_chance",
                      slotPosition(position, forwardX, forwardZ, ++slot),
                      box,
-                     List.of(conditional),
+                     List.of(SendMessageEffect.create(TriggerEventType.ENTER, "server.commands.triggervolume.test.msg.conditional")),
                      targets
                   );
+                  if (conditional != null) {
+                     conditional.getConditions().add(RandomChanceCondition.create(TriggerEventType.ENTER, 0.5F));
+                     created++;
+                  }
+
+                  VolumeEntry cooldownPerPlayer = this.registerVolumeEntry(
+                     manager,
+                     worldName,
+                     "tvtest_condition_cooldown_per_player",
+                     slotPosition(position, forwardX, forwardZ, ++slot),
+                     box,
+                     List.of(SendMessageEffect.create(TriggerEventType.ENTER, "server.commands.triggervolume.test.msg.cooldownConditionPerPlayerAccepted")),
+                     targets
+                  );
+                  if (cooldownPerPlayer != null) {
+                     cooldownPerPlayer.getConditions().add(CooldownCondition.create(TriggerEventType.ENTER, 5.0F, CooldownCondition.Scope.PER_PLAYER));
+                     cooldownPerPlayer.getRejectionEffects()
+                        .add(SendMessageEffect.create(TriggerEventType.ENTER, "server.commands.triggervolume.test.msg.cooldownConditionPerPlayerRejected"));
+                     created++;
+                  }
+
+                  VolumeEntry cooldownWholeVolume = this.registerVolumeEntry(
+                     manager,
+                     worldName,
+                     "tvtest_condition_cooldown_whole_volume",
+                     slotPosition(position, forwardX, forwardZ, ++slot),
+                     box,
+                     List.of(SendMessageEffect.create(TriggerEventType.ENTER, "server.commands.triggervolume.test.msg.cooldownConditionWholeVolumeAccepted")),
+                     targets
+                  );
+                  if (cooldownWholeVolume != null) {
+                     cooldownWholeVolume.getConditions().add(CooldownCondition.create(TriggerEventType.ENTER, 5.0F, CooldownCondition.Scope.WHOLE_VOLUME));
+                     cooldownWholeVolume.getRejectionEffects()
+                        .add(SendMessageEffect.create(TriggerEventType.ENTER, "server.commands.triggervolume.test.msg.cooldownConditionWholeVolumeRejected"));
+                     created++;
+                  }
+
+                  VolumeEntry gameModeReject = this.registerVolumeEntry(
+                     manager,
+                     worldName,
+                     "tvtest_condition_reject_gamemode",
+                     slotPosition(position, forwardX, forwardZ, ++slot),
+                     box,
+                     List.of(SendMessageEffect.create(TriggerEventType.ENTER, "server.commands.triggervolume.test.msg.gameModeAccepted")),
+                     targets
+                  );
+                  if (gameModeReject != null) {
+                     gameModeReject.getConditions().add(GameModeCondition.create(TriggerEventType.ENTER, GameMode.Creative));
+                     gameModeReject.getRejectionEffects()
+                        .add(SendMessageEffect.create(TriggerEventType.ENTER, "server.commands.triggervolume.test.msg.gameModeRejected"));
+                     created++;
+                  }
+
+                  VolumeEntry permissionReject = this.registerVolumeEntry(
+                     manager,
+                     worldName,
+                     "tvtest_condition_reject_permission",
+                     slotPosition(position, forwardX, forwardZ, ++slot),
+                     box,
+                     List.of(SendMessageEffect.create(TriggerEventType.ENTER, "server.commands.triggervolume.test.msg.permissionAccepted")),
+                     targets
+                  );
+                  if (permissionReject != null) {
+                     permissionReject.getConditions().add(PermissionCondition.create(TriggerEventType.ENTER, "hytale.triggervolume.test.permission"));
+                     permissionReject.getRejectionEffects()
+                        .add(SendMessageEffect.create(TriggerEventType.ENTER, "server.commands.triggervolume.test.msg.permissionRejected"));
+                     created++;
+                  }
+
+                  VolumeEntry itemReject = this.registerVolumeEntry(
+                     manager,
+                     worldName,
+                     "tvtest_condition_reject_item",
+                     slotPosition(position, forwardX, forwardZ, ++slot),
+                     box,
+                     List.of(SendMessageEffect.create(TriggerEventType.ENTER, "server.commands.triggervolume.test.msg.itemAccepted")),
+                     targets
+                  );
+                  if (itemReject != null) {
+                     itemReject.getConditions().add(ItemCondition.create(TriggerEventType.ENTER, "Potion_Empty", ItemCondition.Location.IN_HAND, 1));
+                     itemReject.getRejectionEffects()
+                        .add(SendMessageEffect.create(TriggerEventType.ENTER, "server.commands.triggervolume.test.msg.itemRejected"));
+                     created++;
+                  }
+
+                  VolumeEntry delayedCondition = this.registerVolumeEntry(
+                     manager,
+                     worldName,
+                     "tvtest_condition_after_delay",
+                     slotPosition(position, forwardX, forwardZ, ++slot),
+                     box,
+                     List.of(SendMessageEffect.create(TriggerEventType.ENTER, "server.commands.triggervolume.test.msg.afterDelayAccepted")),
+                     targets
+                  );
+                  if (delayedCondition != null) {
+                     delayedCondition.setActivationDelay(2.0F);
+                     delayedCondition.setConditionTiming(ConditionTiming.AFTER_VOLUME_DELAY);
+                     delayedCondition.getConditions().add(RandomChanceCondition.create(TriggerEventType.ENTER, 1.0F));
+                     delayedCondition.getRejectionEffects()
+                        .add(SendMessageEffect.create(TriggerEventType.ENTER, "server.commands.triggervolume.test.msg.afterDelayRejected"));
+                     created++;
+                  }
+
                   VolumeEntry delayedVol = this.registerVolumeEntry(
                      manager,
                      worldName,
@@ -175,7 +286,7 @@ public class TriggerVolumeTestCommand extends AbstractWorldCommand {
                      box,
                      List.of(
                         SendMessageEffect.create(TriggerEventType.ENTER, "server.commands.triggervolume.test.msg.oneShot"),
-                        DestroyVolumeEffect.create(TriggerEventType.ENTER)
+                        DeleteVolumeEffect.create(TriggerEventType.ENTER)
                      ),
                      targets
                   );
@@ -227,6 +338,76 @@ public class TriggerVolumeTestCommand extends AbstractWorldCommand {
                      created++;
                   }
 
+                  VolumeEntry blockPlaced = this.registerVolumeEntry(
+                     manager,
+                     worldName,
+                     "tvtest_block_placed_soil_dirt",
+                     slotPosition(position, forwardX, forwardZ, ++slot),
+                     box,
+                     List.of(SendMessageEffect.create(TriggerEventType.BLOCK_PLACED, "server.commands.triggervolume.test.msg.blockPlaced")),
+                     targets
+                  );
+                  if (blockPlaced != null) {
+                     blockPlaced.getConditions().add(BlockTypeCondition.create(TriggerEventType.BLOCK_PLACED, "Soil_Dirt"));
+                     created++;
+                  }
+
+                  VolumeEntry tagMutation = this.registerVolumeEntry(
+                     manager,
+                     worldName,
+                     "tvtest_tag_mutation",
+                     slotPosition(position, forwardX, forwardZ, ++slot),
+                     box,
+                     List.of(
+                        SendMessageEffect.create(TriggerEventType.ENTER, "server.commands.triggervolume.test.msg.tagMutationEnter"),
+                        ModifyTagsEffect.set(TriggerEventType.ENTER, "tvtest_state", "active"),
+                        ModifyTagsEffect.remove(TriggerEventType.EXIT, "tvtest_state", null),
+                        SendMessageEffect.create(TriggerEventType.TAG_ADDED, "server.commands.triggervolume.test.msg.tagAdded"),
+                        SendMessageEffect.create(TriggerEventType.TAG_REMOVED, "server.commands.triggervolume.test.msg.tagRemoved")
+                     ),
+                     targets
+                  );
+                  if (tagMutation != null) {
+                     tagMutation.getConditions().add(TagCondition.forEvent(TriggerEventType.TAG_ADDED, "tvtest_state", "active"));
+                     tagMutation.getConditions().add(TagCondition.forEvent(TriggerEventType.TAG_REMOVED, "tvtest_state", "active"));
+                     created++;
+                  }
+
+                  String remoteTag = "tvtest_remote_target";
+                  String remoteStateTag = "tvtest_remote_state";
+                  VolumeEntry remoteTarget = this.registerVolumeEntry(
+                     manager,
+                     worldName,
+                     "tvtest_remote_tag_target",
+                     slotPosition(position, forwardX, forwardZ, ++slot),
+                     box,
+                     List.of(
+                        SendMessageEffect.create(TriggerEventType.TAG_ADDED, "server.commands.triggervolume.test.msg.remoteTagAdded"),
+                        SendMessageEffect.create(TriggerEventType.TAG_REMOVED, "server.commands.triggervolume.test.msg.remoteTagRemoved")
+                     ),
+                     targets
+                  );
+                  if (remoteTarget != null) {
+                     remoteTarget.setTags(Map.of(remoteTag, "target"));
+                     remoteTarget.getConditions().add(TagCondition.forEvent(TriggerEventType.TAG_ADDED, remoteStateTag, "armed"));
+                     remoteTarget.getConditions().add(TagCondition.forEvent(TriggerEventType.TAG_REMOVED, remoteStateTag, "armed"));
+                     created++;
+                  }
+
+                  created += this.registerVolume(
+                     manager,
+                     worldName,
+                     "tvtest_remote_tag_controller",
+                     slotPosition(position, forwardX, forwardZ, ++slot),
+                     box,
+                     List.of(
+                        SendMessageEffect.create(TriggerEventType.ENTER, "server.commands.triggervolume.test.msg.remoteControllerEnter"),
+                        ModifyTagsEffect.set(TriggerEventType.ENTER, remoteStateTag, "armed").withMatchTag(remoteTag, null),
+                        SendMessageEffect.create(TriggerEventType.EXIT, "server.commands.triggervolume.test.msg.remoteControllerExit"),
+                        ModifyTagsEffect.remove(TriggerEventType.EXIT, remoteStateTag, null).withMatchTag(remoteTag, null)
+                     ),
+                     targets
+                  );
                   context.sendMessage(Message.translation("server.commands.triggervolume.test.success").param("count", created));
                }
             }

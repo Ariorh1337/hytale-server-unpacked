@@ -2,6 +2,7 @@ package com.hypixel.hytale.builtin.triggervolumes.interaction;
 
 import com.hypixel.hytale.assetstore.AssetRegistry;
 import com.hypixel.hytale.builtin.triggervolumes.TriggerVolumesPlugin;
+import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.TaggedVolumeEffectUtil;
 import com.hypixel.hytale.builtin.triggervolumes.manager.TriggerVolumeManager;
 import com.hypixel.hytale.builtin.triggervolumes.manager.VolumeEntry;
 import com.hypixel.hytale.codec.Codec;
@@ -31,13 +32,31 @@ public class DestroyTaggedVolumesInteraction extends SimpleInstantInteraction {
          DestroyTaggedVolumesInteraction.class, DestroyTaggedVolumesInteraction::new, SimpleInstantInteraction.CODEC
       )
       .documentation("Destroys all trigger volumes with a given tag within a radius of the target point.")
-      .appendInherited(new KeyedCodec<>("Tag", Codec.STRING), (i, s) -> i.tag = s, i -> i.tag, (i, p) -> i.tag = p.tag)
+      .appendInherited(
+         new KeyedCodec<>("MatchKey", Codec.STRING),
+         (interaction, matchKey) -> interaction.matchKey = matchKey,
+         interaction -> interaction.matchKey,
+         (interaction, parent) -> interaction.matchKey = parent.matchKey
+      )
       .add()
-      .appendInherited(new KeyedCodec<>("Radius", Codec.DOUBLE), (i, d) -> i.radius = d, i -> i.radius, (i, p) -> i.radius = p.radius)
+      .appendInherited(
+         new KeyedCodec<>("MatchValue", Codec.STRING, false),
+         (interaction, matchValue) -> interaction.matchValue = matchValue,
+         interaction -> interaction.matchValue,
+         (interaction, parent) -> interaction.matchValue = parent.matchValue
+      )
+      .add()
+      .appendInherited(
+         new KeyedCodec<>("Radius", Codec.DOUBLE, false),
+         (interaction, radius) -> interaction.radius = radius,
+         interaction -> interaction.radius,
+         (interaction, parent) -> interaction.radius = parent.radius
+      )
       .add()
       .build();
-   private String tag;
-   private double radius;
+   private String matchKey;
+   private String matchValue;
+   private double radius = 50.0;
 
    @Override
    protected void firstRun(@Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
@@ -55,26 +74,29 @@ public class DestroyTaggedVolumesInteraction extends SimpleInstantInteraction {
          center = new Vector3d(transform.getPosition());
       }
 
-      int tagIndex = AssetRegistry.getTagIndex(this.tag);
-      if (tagIndex == Integer.MIN_VALUE) {
-         LOGGER.at(Level.WARNING).log("DestroyTaggedVolumes: unknown tag '%s'", this.tag);
-      } else {
-         TriggerVolumesPlugin plugin = TriggerVolumesPlugin.get();
-         Store<EntityStore> store = context.getOwningEntity().getStore();
-         TriggerVolumeManager manager = store.getResource(plugin.getManagerResourceType());
-         if (manager != null) {
-            double radiusSq = this.radius * this.radius;
-            ArrayList<VolumeEntry> toDestroy = new ArrayList<>();
+      String tagFilter = TaggedVolumeEffectUtil.composeTagFilter(this.matchKey, this.matchValue);
+      if (tagFilter != null) {
+         int tagIndex = AssetRegistry.getTagIndex(tagFilter);
+         if (tagIndex == Integer.MIN_VALUE) {
+            LOGGER.at(Level.WARNING).log("DestroyTaggedVolumes: unknown tag '%s'", tagFilter);
+         } else {
+            TriggerVolumesPlugin plugin = TriggerVolumesPlugin.get();
+            Store<EntityStore> store = context.getOwningEntity().getStore();
+            TriggerVolumeManager manager = store.getResource(plugin.getManagerResourceType());
+            if (manager != null) {
+               double radiusSq = this.radius * this.radius;
+               ArrayList<VolumeEntry> toDestroy = new ArrayList<>();
 
-            for (VolumeEntry entry : manager.getVolumesByTag(tagIndex)) {
-               if (entry.getPosition().distanceSquared(center) <= radiusSq) {
-                  toDestroy.add(entry);
+               for (VolumeEntry entry : manager.getVolumesByTag(tagIndex)) {
+                  if (this.radius <= 0.0 || entry.getPosition().distanceSquared(center) <= radiusSq) {
+                     toDestroy.add(entry);
+                  }
                }
-            }
 
-            for (VolumeEntry entry : toDestroy) {
-               manager.unregister(entry.getId());
-               manager.notifyViewersRemove(entry.getId());
+               for (VolumeEntry entry : toDestroy) {
+                  manager.unregister(entry.getId());
+                  manager.notifyViewersRemove(entry.getId());
+               }
             }
          }
       }
@@ -83,6 +105,13 @@ public class DestroyTaggedVolumesInteraction extends SimpleInstantInteraction {
    @Nonnull
    @Override
    public String toString() {
-      return "DestroyTaggedVolumesInteraction{tag=" + this.tag + ", radius=" + this.radius + "} " + super.toString();
+      return "DestroyTaggedVolumesInteraction{matchKey="
+         + this.matchKey
+         + ", matchValue="
+         + this.matchValue
+         + ", radius="
+         + this.radius
+         + "} "
+         + super.toString();
    }
 }

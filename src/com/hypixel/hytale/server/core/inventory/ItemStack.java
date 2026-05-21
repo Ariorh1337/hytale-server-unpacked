@@ -7,7 +7,9 @@ import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.protocol.ItemQuantity;
 import com.hypixel.hytale.protocol.ItemWithAllMetadata;
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
+import com.hypixel.hytale.server.core.asset.type.item.config.metadata.ItemDisplayMetadata;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -312,6 +314,18 @@ public class ItemStack implements NetworkSerializable<ItemWithAllMetadata> {
 
       BsonValue bsonValue = clonedMeta.get(key);
       return bsonValue == null ? codec.getDefaultValue() : codec.decode(bsonValue);
+   }
+
+   @Nonnull
+   public Message getDisplayName() {
+      ItemDisplayMetadata displayMeta = this.getFromMetadataOrNull(ItemDisplayMetadata.KEYED_CODEC);
+      return displayMeta != null && displayMeta.getName() != null ? displayMeta.getName() : this.getItem().getTranslationMessage();
+   }
+
+   @Nonnull
+   public Message getDisplayDescription() {
+      ItemDisplayMetadata displayMeta = this.getFromMetadataOrNull(ItemDisplayMetadata.KEYED_CODEC);
+      return displayMeta != null && displayMeta.getDescription() != null ? displayMeta.getDescription() : this.getItem().getDescriptionTranslationMessage();
    }
 
    @Override

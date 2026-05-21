@@ -14,6 +14,7 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.SystemGroup;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.RefSystem;
+import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.entity.component.FromPrefabInstance;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -69,6 +70,11 @@ public class TriggerVolumeWorldGenHandler extends RefSystem<EntityStore> {
             if (tvComponent != null && transform != null && transform.getPosition() != null && fromPrefabInstance != null) {
                String worldName = world.getName().toLowerCase(Locale.ROOT);
                Vector3d position = new Vector3d(transform.getPosition());
+               long chunkIndex = ChunkUtil.indexChunkFromBlock(position.x(), position.z());
+               if (manager.consumeWorldGenRegenChunk(chunkIndex)) {
+                  manager.removeWorldGenVolumesInChunk(chunkIndex);
+               }
+
                String id = manager.generateUniqueVolumeId();
                VolumeEntry entry = tvComponent.toVolumeEntry(id, worldName, position, transform.getRotation().yaw());
                entry.setFromWorldGen(true);

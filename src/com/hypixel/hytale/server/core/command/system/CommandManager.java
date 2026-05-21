@@ -21,6 +21,7 @@ import com.hypixel.hytale.server.core.command.commands.debug.StopNetworkChunkSen
 import com.hypixel.hytale.server.core.command.commands.debug.TagPatternCommand;
 import com.hypixel.hytale.server.core.command.commands.debug.VersionCommand;
 import com.hypixel.hytale.server.core.command.commands.debug.component.hitboxcollision.HitboxCollisionCommand;
+import com.hypixel.hytale.server.core.command.commands.debug.component.knockback.KnockbackCommand;
 import com.hypixel.hytale.server.core.command.commands.debug.component.repulsion.RepulsionCommand;
 import com.hypixel.hytale.server.core.command.commands.debug.packs.PacksCommand;
 import com.hypixel.hytale.server.core.command.commands.debug.server.ServerCommand;
@@ -135,6 +136,7 @@ public class CommandManager implements CommandOwner {
       this.registerSystemCommand(new MessageTranslationTestCommand());
       this.registerSystemCommand(new HudManagerTestCommand());
       this.registerSystemCommand(new RepulsionCommand());
+      this.registerSystemCommand(new KnockbackCommand());
       this.registerSystemCommand(new StopNetworkChunkSendingCommand());
       this.registerSystemCommand(new ShowBuilderToolsHudCommand());
       this.registerSystemCommand(new VersionCommand());

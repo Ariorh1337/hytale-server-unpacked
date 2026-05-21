@@ -29,6 +29,7 @@ import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.core.util.FillerBlockUtil;
 import com.hypixel.hytale.server.core.util.TargetUtil;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
@@ -48,7 +49,7 @@ public abstract class SimpleBlockInteraction extends SimpleInteraction {
       .documentation("Determines whether to use the clients latest target block position for this interaction.")
       .add()
       .build();
-   private boolean useLatestTarget = false;
+   private boolean useLatestTarget;
 
    public SimpleBlockInteraction(@Nonnull String id) {
       super(id);
@@ -83,7 +84,7 @@ public abstract class SimpleBlockInteraction extends SimpleInteraction {
             BlockPosition latestBlockPos = clientState.blockPosition;
             TransformComponent transformComponent = commandBuffer.getComponent(ref, TransformComponent.getComponentType());
             assert transformComponent != null;
-            BlockPosition baseBlock = world.getBaseBlock(latestBlockPos);
+            BlockPosition baseBlock = resolveBaseBlockPosition(world, latestBlockPos);
             context.getMetaStore().putMetaObject(Interaction.TARGET_BLOCK, baseBlock);
             context.getMetaStore().putMetaObject(Interaction.TARGET_BLOCK_RAW, latestBlockPos);
          }
@@ -100,19 +101,27 @@ public abstract class SimpleBlockInteraction extends SimpleInteraction {
          } else {
             ItemStack itemInHand = InventoryComponent.getItemInHand(commandBuffer, ref);
             Vector3i targetBlock = new Vector3i(targetBlockPos.x, targetBlockPos.y, targetBlockPos.z);
-            WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z));
-            if (chunk == null) {
-               context.getState().state = InteractionState.Failed;
-               super.tick0(firstRun, time, type, context, cooldownHandler);
-            } else {
-               int blockId = chunk.getBlock(targetBlock);
-               if (blockId != 1 && blockId != 0) {
-                  this.interactWithBlock(world, commandBuffer, type, context, itemInHand, targetBlock, cooldownHandler);
-                  super.tick0(firstRun, time, type, context, cooldownHandler);
-               } else {
+            ChunkStore chunkStore = world.getChunkStore();
+            long chunkIndex = ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z);
+            Ref<ChunkStore> chunkReference = chunkStore.getChunkReference(chunkIndex);
+            if (chunkReference != null && chunkReference.isValid()) {
+               WorldChunk worldChunkComponent = chunkStore.getStore().getComponent(chunkReference, WorldChunk.getComponentType());
+               if (worldChunkComponent == null) {
                   context.getState().state = InteractionState.Failed;
                   super.tick0(firstRun, time, type, context, cooldownHandler);
+               } else {
+                  int blockId = worldChunkComponent.getBlock(targetBlock);
+                  if (blockId != 1 && blockId != 0) {
+                     this.interactWithBlock(world, commandBuffer, type, context, itemInHand, targetBlock, cooldownHandler);
+                     super.tick0(firstRun, time, type, context, cooldownHandler);
+                  } else {
+                     context.getState().state = InteractionState.Failed;
+                     super.tick0(firstRun, time, type, context, cooldownHandler);
+                  }
                }
+            } else {
+               context.getState().state = InteractionState.Failed;
+               super.tick0(firstRun, time, type, context, cooldownHandler);
             }
          }
       }
@@ -155,19 +164,27 @@ public abstract class SimpleBlockInteraction extends SimpleInteraction {
             targetBlock = new Vector3i(contextTargetBlock.x, contextTargetBlock.y, contextTargetBlock.z);
          }
 
-         WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z));
-         if (chunk == null) {
-            context.getState().state = InteractionState.Failed;
-            super.tick0(firstRun, time, type, context, cooldownHandler);
-         } else {
-            int blockId = chunk.getBlock(targetBlock);
-            if (blockId != 1 && blockId != 0) {
-               this.simulateInteractWithBlock(type, context, itemInHand, world, targetBlock);
-               super.tick0(firstRun, time, type, context, cooldownHandler);
-            } else {
+         ChunkStore chunkStore = world.getChunkStore();
+         long chunkIndex = ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z);
+         Ref<ChunkStore> chunkReference = chunkStore.getChunkReference(chunkIndex);
+         if (chunkReference != null && chunkReference.isValid()) {
+            WorldChunk worldChunkComponent = chunkStore.getStore().getComponent(chunkReference, WorldChunk.getComponentType());
+            if (worldChunkComponent == null) {
                context.getState().state = InteractionState.Failed;
                super.tick0(firstRun, time, type, context, cooldownHandler);
+            } else {
+               int blockId = worldChunkComponent.getBlock(targetBlock);
+               if (blockId != 1 && blockId != 0) {
+                  this.simulateInteractWithBlock(type, context, itemInHand, world, targetBlock);
+                  super.tick0(firstRun, time, type, context, cooldownHandler);
+               } else {
+                  context.getState().state = InteractionState.Failed;
+                  super.tick0(firstRun, time, type, context, cooldownHandler);
+               }
             }
+         } else {
+            context.getState().state = InteractionState.Failed;
+            super.tick0(firstRun, time, type, context, cooldownHandler);
          }
       }
    }
@@ -176,25 +193,54 @@ public abstract class SimpleBlockInteraction extends SimpleInteraction {
       @Nonnull InteractionType var1, @Nonnull InteractionContext var2, @Nullable ItemStack var3, @Nonnull World var4, @Nonnull Vector3i var5
    );
 
-   protected void computeCurrentBlockSyncData(@Nonnull InteractionContext context) {
-      BlockPosition targetBlockPos = context.getTargetBlock();
-      if (targetBlockPos != null) {
-         CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
-         assert commandBuffer != null;
-         World world = commandBuffer.getStore().getExternalData().getWorld();
+   @Nonnull
+   private static BlockPosition resolveBaseBlockPosition(@Nonnull World world, @Nonnull BlockPosition position) {
+      if (position.y >= 0 && position.y < 320) {
          ChunkStore chunkStore = world.getChunkStore();
-         long chunkIndex = ChunkUtil.indexChunkFromBlock(targetBlockPos.x, targetBlockPos.z);
+         long chunkIndex = ChunkUtil.indexChunkFromBlock(position.x, position.z);
          Ref<ChunkStore> chunkReference = chunkStore.getChunkReference(chunkIndex);
          if (chunkReference != null && chunkReference.isValid()) {
             BlockChunk blockChunk = chunkStore.getStore().getComponent(chunkReference, BlockChunk.getComponentType());
-            if (targetBlockPos.y >= 0 && targetBlockPos.y < 320) {
-               BlockSection section = blockChunk.getSectionAtBlockY(targetBlockPos.y);
-               context.getState().blockPosition = new BlockPosition(targetBlockPos.x, targetBlockPos.y, targetBlockPos.z);
-               context.getState().placedBlockId = section.get(targetBlockPos.x, targetBlockPos.y, targetBlockPos.z);
-               RotationTuple resultRotation = section.getRotation(targetBlockPos.x, targetBlockPos.y, targetBlockPos.z);
-               context.getState().blockRotation = new BlockRotation(
-                  resultRotation.yaw().toPacket(), resultRotation.pitch().toPacket(), resultRotation.roll().toPacket()
+            if (blockChunk == null) {
+               return position;
+            }
+
+            BlockSection section = blockChunk.getSectionAtBlockY(position.y);
+            int filler = section.getFiller(position.x, position.y, position.z);
+            return filler == 0
+               ? position
+               : new BlockPosition(
+                  position.x - FillerBlockUtil.unpackX(filler), position.y - FillerBlockUtil.unpackY(filler), position.z - FillerBlockUtil.unpackZ(filler)
                );
+         } else {
+            return position;
+         }
+      } else {
+         return position;
+      }
+   }
+
+   protected static void computeCurrentBlockSyncData(@Nonnull InteractionContext context) {
+      BlockPosition targetBlockPos = context.getTargetBlock();
+      if (targetBlockPos != null) {
+         if (targetBlockPos.y >= 0 && targetBlockPos.y < 320) {
+            CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
+            assert commandBuffer != null;
+            World world = commandBuffer.getStore().getExternalData().getWorld();
+            ChunkStore chunkStore = world.getChunkStore();
+            long chunkIndex = ChunkUtil.indexChunkFromBlock(targetBlockPos.x, targetBlockPos.z);
+            Ref<ChunkStore> chunkReference = chunkStore.getChunkReference(chunkIndex);
+            if (chunkReference != null && chunkReference.isValid()) {
+               BlockChunk blockChunk = chunkStore.getStore().getComponent(chunkReference, BlockChunk.getComponentType());
+               if (blockChunk != null) {
+                  BlockSection section = blockChunk.getSectionAtBlockY(targetBlockPos.y);
+                  context.getState().blockPosition = new BlockPosition(targetBlockPos.x, targetBlockPos.y, targetBlockPos.z);
+                  context.getState().placedBlockId = section.get(targetBlockPos.x, targetBlockPos.y, targetBlockPos.z);
+                  RotationTuple resultRotation = section.getRotation(targetBlockPos.x, targetBlockPos.y, targetBlockPos.z);
+                  context.getState().blockRotation = new BlockRotation(
+                     resultRotation.yaw().toPacket(), resultRotation.pitch().toPacket(), resultRotation.roll().toPacket()
+                  );
+               }
             }
          }
       }

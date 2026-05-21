@@ -281,7 +281,7 @@ public class KernelErosionOperation extends SequenceBrushOperation {
       Normal(SculptOperation.NORMAL_KERNEL, SculptOperation.NORMAL_HEIGHTMAP, SculptOperation.NORMAL_FLAT),
       Uniform(SculptOperation.UNIFORM_KERNEL, SculptOperation.UNIFORM_HEIGHTMAP, SculptOperation.UNIFORM_FLAT),
       Gaussian(SculptOperation.GAUSS_KERNEL, SculptOperation.GAUSS_HEIGHTMAP, SculptOperation.GAUSS_FLAT),
-      Neighbour(SculptOperation.NEIGHBOUR_KERNEL, SculptOperation.NEIGHBOUR_HEIGHTMAP, SculptOperation.NEIGHBOUR_FLAT),
+      Neighbor(SculptOperation.NEIGHBOUR_KERNEL, SculptOperation.NEIGHBOUR_HEIGHTMAP, SculptOperation.NEIGHBOUR_FLAT),
       Square(SculptOperation.SQUARE_KERNEL, SculptOperation.SQUARE_HEIGHTMAP, SculptOperation.SQUARE_FLAT);
 
       final SculptOperation.Kernel full;

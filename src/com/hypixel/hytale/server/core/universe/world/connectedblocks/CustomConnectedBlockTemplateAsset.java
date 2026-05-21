@@ -13,7 +13,7 @@ import com.hypixel.hytale.codec.codecs.map.MapCodec;
 import com.hypixel.hytale.codec.validation.ValidatorCache;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.prefab.selection.mask.BlockPattern;
-import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -23,6 +23,7 @@ import javax.annotation.Nonnull;
 import org.joml.Vector3ic;
 
 public class CustomConnectedBlockTemplateAsset implements JsonAssetWithMap<String, DefaultAssetMap<String, CustomConnectedBlockTemplateAsset>> {
+   @Nonnull
    public static final AssetBuilderCodec<String, CustomConnectedBlockTemplateAsset> CODEC = AssetBuilderCodec.builder(
          CustomConnectedBlockTemplateAsset.class,
          CustomConnectedBlockTemplateAsset::new,
@@ -59,6 +60,7 @@ public class CustomConnectedBlockTemplateAsset implements JsonAssetWithMap<Strin
       )
       .add()
       .build();
+   @Nonnull
    public static final ValidatorCache<String> VALIDATOR_CACHE = new ValidatorCache<>(new AssetKeyValidator<>(CustomConnectedBlockTemplateAsset::getAssetStore));
    private static AssetStore<String, CustomConnectedBlockTemplateAsset, DefaultAssetMap<String, CustomConnectedBlockTemplateAsset>> ASSET_STORE;
    private String id;
@@ -68,6 +70,7 @@ public class CustomConnectedBlockTemplateAsset implements JsonAssetWithMap<Strin
    private String defaultShapeName;
    protected Map<String, ConnectedBlockShape> connectedBlockShapes;
 
+   @Nonnull
    public static AssetStore<String, CustomConnectedBlockTemplateAsset, DefaultAssetMap<String, CustomConnectedBlockTemplateAsset>> getAssetStore() {
       if (ASSET_STORE == null) {
          ASSET_STORE = AssetRegistry.getAssetStore(CustomConnectedBlockTemplateAsset.class);
@@ -76,18 +79,19 @@ public class CustomConnectedBlockTemplateAsset implements JsonAssetWithMap<Strin
       return ASSET_STORE;
    }
 
+   @Nonnull
    public static DefaultAssetMap<String, CustomConnectedBlockTemplateAsset> getAssetMap() {
       return (DefaultAssetMap<String, CustomConnectedBlockTemplateAsset>)getAssetStore().getAssetMap();
    }
 
    @Nonnull
    public Optional<ConnectedBlocksUtil.ConnectedBlockResult> getConnectedBlockType(
-      World world,
-      Vector3ic coordinate,
-      CustomTemplateConnectedBlockRuleSet ruleSet,
-      BlockType blockType,
+      @Nonnull ChunkStore chunkStore,
+      @Nonnull Vector3ic coordinate,
+      @Nonnull CustomTemplateConnectedBlockRuleSet ruleSet,
+      @Nonnull BlockType blockType,
       int rotation,
-      Vector3ic placementNormal,
+      @Nonnull Vector3ic placementNormal,
       boolean useDefaultShapeIfNoMatch,
       boolean isPlacement
    ) {
@@ -98,7 +102,7 @@ public class CustomConnectedBlockTemplateAsset implements JsonAssetWithMap<Strin
             if (patterns != null) {
                for (CustomTemplateConnectedBlockPattern connectedBlockPattern : patterns) {
                   Optional<ConnectedBlocksUtil.ConnectedBlockResult> blockRotationIfMatchedOptional = connectedBlockPattern.getConnectedBlockTypeKey(
-                     entry.getKey(), world, coordinate, ruleSet, blockType, rotation, placementNormal, isPlacement
+                     entry.getKey(), chunkStore, coordinate, ruleSet, blockType, rotation, placementNormal, isPlacement
                   );
                   if (!blockRotationIfMatchedOptional.isEmpty()) {
                      return blockRotationIfMatchedOptional;
@@ -115,7 +119,7 @@ public class CustomConnectedBlockTemplateAsset implements JsonAssetWithMap<Strin
          }
 
          BlockPattern.BlockEntry defaultBlock = defaultShapeBlockPattern.nextBlockTypeKey(ThreadLocalRandom.current());
-         return Optional.of(new ConnectedBlocksUtil.ConnectedBlockResult(defaultBlock.blockTypeKey(), rotation));
+         return defaultBlock == null ? Optional.empty() : Optional.of(new ConnectedBlocksUtil.ConnectedBlockResult(defaultBlock.blockTypeKey(), rotation));
       } else {
          return Optional.empty();
       }
@@ -125,6 +129,7 @@ public class CustomConnectedBlockTemplateAsset implements JsonAssetWithMap<Strin
       return this.dontUpdateAfterInitialPlacement;
    }
 
+   @Nonnull
    public String getId() {
       return this.id;
    }

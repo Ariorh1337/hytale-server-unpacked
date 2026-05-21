@@ -2,7 +2,9 @@ package com.hypixel.hytale.builtin.triggervolumes;
 
 import com.hypixel.hytale.builtin.buildertools.BuilderToolsPlugin;
 import com.hypixel.hytale.builtin.buildertools.snapshot.SelectionSnapshot;
+import com.hypixel.hytale.builtin.triggervolumes.effect.TriggerCondition;
 import com.hypixel.hytale.builtin.triggervolumes.effect.TriggerEffect;
+import com.hypixel.hytale.builtin.triggervolumes.manager.ConditionTiming;
 import com.hypixel.hytale.builtin.triggervolumes.manager.CooldownMode;
 import com.hypixel.hytale.builtin.triggervolumes.manager.GroupEntry;
 import com.hypixel.hytale.builtin.triggervolumes.manager.TriggerVolumeManager;
@@ -11,11 +13,13 @@ import com.hypixel.hytale.builtin.triggervolumes.shape.BoxShape;
 import com.hypixel.hytale.builtin.triggervolumes.shape.CylinderShape;
 import com.hypixel.hytale.builtin.triggervolumes.shape.SphereShape;
 import com.hypixel.hytale.builtin.triggervolumes.shape.TriggerVolumeShape;
+import com.hypixel.hytale.builtin.triggervolumes.snapshot.TriggerVolumeGroupSnapshot;
 import com.hypixel.hytale.builtin.triggervolumes.snapshot.TriggerVolumeSnapshot;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.protocol.packets.player.SelectionToolShowTriggerVolumes;
+import com.hypixel.hytale.protocol.packets.player.TriggerVolumeConditionTiming;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeShapeType;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolCreate;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolCreateResponse;
@@ -32,6 +36,7 @@ import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolSelect;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolSetActivationDelay;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolSetCancelDelayedOnExit;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolSetColor;
+import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolSetConditionTiming;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolSetCooldown;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolSetKeepLoaded;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolSetTargetTypes;
@@ -150,6 +155,7 @@ public class TriggerVolumeToolPacketHandler implements SubPacketHandler {
       IWorldPacketHandler.registerHandler(this.packetHandler, 501, this::handleSetCooldown, TriggerVolumeToolPacketHandler::hasPermission);
       IWorldPacketHandler.registerHandler(this.packetHandler, 502, this::handleSetActivationDelay, TriggerVolumeToolPacketHandler::hasPermission);
       IWorldPacketHandler.registerHandler(this.packetHandler, 504, this::handleSetCancelDelayedOnExit, TriggerVolumeToolPacketHandler::hasPermission);
+      IWorldPacketHandler.registerHandler(this.packetHandler, 506, this::handleSetConditionTiming, TriggerVolumeToolPacketHandler::hasPermission);
       IWorldPacketHandler.registerHandler(this.packetHandler, 503, this::handleSelectionToolShowTriggerVolumes, TriggerVolumeToolPacketHandler::hasPermission);
    }
 
@@ -283,6 +289,11 @@ public class TriggerVolumeToolPacketHandler implements SubPacketHandler {
          EnumSet.copyOf(source.getTargetTypes()),
          source.isEnabled()
       );
+      entry.getConditions().addAll(TriggerCondition.deepCopyList(source.getConditions()));
+      entry.getRejectionEffects().addAll(TriggerEffect.deepCopyList(source.getRejectionEffects()));
+      entry.setConditionTiming(source.getConditionTiming());
+      entry.setRejectionDelayMode(source.getRejectionDelayMode());
+      entry.setProjectileSource(source.getProjectileSource());
       entry.setEffectAssetRef(source.getEffectAssetRef());
       entry.setKeepLoaded(source.isKeepLoaded());
       entry.setActivationDelay(source.getActivationDelay());
@@ -482,11 +493,13 @@ public class TriggerVolumeToolPacketHandler implements SubPacketHandler {
          GroupEntry group = manager.getGroup(packet.groupId);
          if (group != null) {
             List<SelectionSnapshot<?>> snapshots = new ArrayList<>();
+            snapshots.add(TriggerVolumeGroupSnapshot.ofDelete(group));
 
             for (String volumeId : new ArrayList<>(group.getMemberVolumeIds())) {
                VolumeEntry volume = manager.getVolume(volumeId);
                if (volume != null) {
                   snapshots.add(TriggerVolumeSnapshot.ofMutate(volume));
+                  volume.clearGroupActivationState(packet.groupId);
                   volume.setGroupId(null);
                   manager.notifyViewersAdd(volume);
                }
@@ -642,6 +655,14 @@ public class TriggerVolumeToolPacketHandler implements SubPacketHandler {
                types.add(EntityTargetType.NPC);
             }
 
+            if ((packet.targetTypes & 4) != 0) {
+               types.add(EntityTargetType.ITEM_DROP);
+            }
+
+            if ((packet.targetTypes & 8) != 0) {
+               types.add(EntityTargetType.PROJECTILE);
+            }
+
             if (types.isEmpty()) {
                types.add(EntityTargetType.PLAYER);
             }
@@ -756,6 +777,30 @@ public class TriggerVolumeToolPacketHandler implements SubPacketHandler {
       }
    }
 
+   private void handleSetConditionTiming(
+      @Nonnull TriggerVolumeToolSetConditionTiming packet,
+      @Nonnull PlayerRef playerRef,
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull World world,
+      @Nonnull Store<EntityStore> store
+   ) {
+      TriggerVolumesPlugin plugin = TriggerVolumesPlugin.get();
+      TriggerVolumeManager manager = store.getResource(plugin.getManagerResourceType());
+      if (manager != null) {
+         ensureViewing(playerRef, manager);
+         VolumeEntry entry = manager.getVolume(packet.volumeId);
+         if (entry != null) {
+            recordHistory(store, ref, playerRef, TriggerVolumeSnapshot.ofMutate(entry));
+            entry.setConditionTiming(
+               packet.conditionTiming == TriggerVolumeConditionTiming.BeforeVolumeDelay
+                  ? ConditionTiming.BEFORE_VOLUME_DELAY
+                  : ConditionTiming.AFTER_VOLUME_DELAY
+            );
+            manager.notifyViewersAdd(entry);
+         }
+      }
+   }
+
    @Nonnull
    private static String generateGroupId(@Nonnull TriggerVolumeManager manager) {
       ThreadLocalRandom rng = ThreadLocalRandom.current();
@@ -788,15 +833,15 @@ public class TriggerVolumeToolPacketHandler implements SubPacketHandler {
    }
 
    @Nonnull
-   private static Map<String, String[]> copyTags(@Nonnull Map<String, String[]> tags) {
+   private static Map<String, String> copyTags(@Nonnull Map<String, String> tags) {
       if (tags.isEmpty()) {
          return Map.of();
       }
 
-      HashMap<String, String[]> copy = new HashMap<>();
+      HashMap<String, String> copy = new HashMap<>();
 
-      for (Entry<String, String[]> entry : tags.entrySet()) {
-         copy.put(entry.getKey(), (String[])entry.getValue().clone());
+      for (Entry<String, String> entry : tags.entrySet()) {
+         copy.put(entry.getKey(), entry.getValue());
       }
 
       return copy;

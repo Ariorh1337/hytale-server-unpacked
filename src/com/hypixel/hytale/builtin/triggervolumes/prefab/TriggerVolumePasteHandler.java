@@ -11,15 +11,19 @@ import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.ResourceType;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.system.WorldEventSystem;
+import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.prefab.event.PrefabPlaceEntityEvent;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.Locale;
+import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import org.joml.Vector3d;
 
 public class TriggerVolumePasteHandler extends WorldEventSystem<EntityStore, PrefabPlaceEntityEvent> {
+   @Nonnull
+   private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
    private final ResourceType<EntityStore, TriggerVolumeManager> managerResourceType;
    private final ComponentType<EntityStore, TriggerVolume> triggerVolumeComponentType;
    private final ComponentType<EntityStore, TriggerVolumeGroup> triggerVolumeGroupComponentType;
@@ -40,40 +44,55 @@ public class TriggerVolumePasteHandler extends WorldEventSystem<EntityStore, Pre
       TriggerVolume tvComponent = holder.getComponent(this.triggerVolumeComponentType);
       TriggerVolumeGroup groupComponent = holder.getComponent(this.triggerVolumeGroupComponentType);
       if (tvComponent != null || groupComponent != null) {
-         TransformComponent transform = holder.getComponent(TransformComponent.getComponentType());
-         if (transform != null && transform.getPosition() != null) {
-            TriggerVolumeManager manager = store.getResource(this.managerResourceType);
-            if (manager != null) {
-               World world = manager.getWorld();
-               if (world != null) {
-                  String worldName = world.getName().toLowerCase(Locale.ROOT);
-                  Vector3d position = new Vector3d(transform.getPosition());
-                  if (groupComponent != null) {
-                     String linkId = groupComponent.getGroupLinkId();
-                     if (linkId != null && !linkId.isBlank()) {
-                        manager.upsertGroupForPrefabLink(linkId, groupComponent, worldName, position);
-                     }
+         event.setCancelled(true);
+         TriggerVolumeManager manager = null;
 
-                     event.setCancelled(true);
-                  } else {
-                     String id = manager.generateUniqueVolumeId();
-                     VolumeEntry entry = tvComponent.toVolumeEntry(id, worldName, position, transform.getRotation().yaw());
-                     String linkId = tvComponent.getGroupLinkId();
-                     if (linkId != null && !linkId.isBlank()) {
-                        String newGroupId = manager.ensureGroupForPrefabLink(linkId, entry, worldName);
-                        entry.setGroupId(newGroupId);
-                        GroupEntry group = manager.getGroup(newGroupId);
-                        if (group != null) {
-                           group.addMember(entry.getId());
-                        }
-                     }
+         try {
+            TransformComponent transform = holder.getComponent(TransformComponent.getComponentType());
+            if (transform == null || transform.getPosition() == null) {
+               return;
+            }
 
-                     manager.register(id, entry);
-                     manager.notifyViewersAdd(entry);
-                     manager.markSpatialDirty();
-                     event.setCancelled(true);
-                  }
+            manager = store.getResource(this.managerResourceType);
+            if (manager == null) {
+               return;
+            }
+
+            World world = manager.getWorld();
+            if (world == null) {
+               return;
+            }
+
+            String worldName = world.getName().toLowerCase(Locale.ROOT);
+            Vector3d position = new Vector3d(transform.getPosition());
+            if (groupComponent != null) {
+               String linkId = groupComponent.getGroupLinkId();
+               if (linkId != null && !linkId.isBlank()) {
+                  manager.upsertGroupForPrefabLink(linkId, groupComponent, worldName, position);
                }
+
+               return;
+            }
+
+            String id = manager.generateUniqueVolumeId();
+            VolumeEntry entry = tvComponent.toVolumeEntry(id, worldName, position, transform.getRotation().yaw());
+            String linkId = tvComponent.getGroupLinkId();
+            if (linkId != null && !linkId.isBlank()) {
+               String newGroupId = manager.ensureGroupForPrefabLink(linkId, entry, worldName);
+               entry.setGroupId(newGroupId);
+               GroupEntry group = manager.getGroup(newGroupId);
+               if (group != null) {
+                  group.addMember(entry.getId());
+               }
+            }
+
+            manager.register(id, entry);
+            manager.notifyViewersAdd(entry);
+            manager.markSpatialDirty();
+         } catch (Exception exception) {
+            LOGGER.at(Level.WARNING).withCause(exception).log("Skipping malformed trigger volume prefab entity");
+            if (manager != null) {
+               manager.notifyViewersLegacyVolumeSkipped();
             }
          }
       }

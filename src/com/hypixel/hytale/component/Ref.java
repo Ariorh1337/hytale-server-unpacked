@@ -11,6 +11,7 @@ public class Ref<ECS_TYPE> {
    @Nullable
    private ArchetypeChunk<ECS_TYPE> archetypeChunk;
    private int chunkEntityIndex;
+   private volatile int seq = 0;
    private volatile Throwable invalidatedBy;
 
    public Ref(@Nonnull Store<ECS_TYPE> store) {
@@ -20,7 +21,6 @@ public class Ref<ECS_TYPE> {
    public Ref(@Nonnull Store<ECS_TYPE> store, int index) {
       this.store = store;
       this.index = index;
-      this.chunkEntityIndex = Integer.MIN_VALUE;
    }
 
    @Nonnull
@@ -45,25 +45,44 @@ public class Ref<ECS_TYPE> {
       this.index = index;
    }
 
-   void setArchetypeChunk(@Nonnull ArchetypeChunk<ECS_TYPE> archetypeChunk) {
-      this.archetypeChunk = archetypeChunk;
+   void beginMutation() {
+      this.seq++;
    }
 
-   void setChunkEntityIndex(int chunkEntityIndex) {
-      this.chunkEntityIndex = chunkEntityIndex;
+   void setPosition(@Nonnull ArchetypeChunk<ECS_TYPE> archetypeChunk, int index) {
+      this.archetypeChunk = archetypeChunk;
+      this.chunkEntityIndex = index;
+   }
+
+   void endMutation() {
+      this.seq++;
+   }
+
+   int getSeq() {
+      return this.seq;
    }
 
    void invalidate() {
+      if ((this.seq & 1) == 0) {
+         this.seq++;
+      }
+
       this.index = Integer.MIN_VALUE;
       this.archetypeChunk = null;
       this.chunkEntityIndex = Integer.MIN_VALUE;
+      this.seq++;
       this.invalidatedBy = new Throwable();
    }
 
    void invalidate(@Nullable Throwable invalidatedBy) {
+      if ((this.seq & 1) == 0) {
+         this.seq++;
+      }
+
       this.index = Integer.MIN_VALUE;
       this.archetypeChunk = null;
       this.chunkEntityIndex = Integer.MIN_VALUE;
+      this.seq++;
       this.invalidatedBy = invalidatedBy != null ? invalidatedBy : new Throwable();
    }
 
@@ -86,6 +105,10 @@ public class Ref<ECS_TYPE> {
 
    public boolean isValid() {
       return this.index != Integer.MIN_VALUE;
+   }
+
+   boolean isValid(@Nonnull Store<ECS_TYPE> store) {
+      return this.index != Integer.MIN_VALUE && this.store == store;
    }
 
    @Nonnull

@@ -21,7 +21,7 @@ public class ItemRepairElement extends ChoiceElement {
       int durabilityPercentage = (int)Math.round(this.itemStack.getDurability() / this.itemStack.getMaxDurability() * 100.0);
       commandBuilder.append("#ElementList", "Pages/ItemRepairElement.ui");
       commandBuilder.set(selector + " #Icon.ItemId", this.itemStack.getItemId().toString());
-      commandBuilder.set(selector + " #Name.TextSpans", this.itemStack.getItem().getTranslationMessage());
+      commandBuilder.set(selector + " #Name.TextSpans", this.itemStack.getDisplayName());
       commandBuilder.set(selector + " #Durability.Text", durabilityPercentage + "%");
    }
 }

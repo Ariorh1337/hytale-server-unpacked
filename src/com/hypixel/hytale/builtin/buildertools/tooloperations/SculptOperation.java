@@ -123,7 +123,7 @@ public class SculptOperation extends ToolOperation {
          kernelPicked = switch (sampling) {
             case "Uniform" -> UNIFORM_HEIGHTMAP;
             case "Gaussian" -> GAUSS_HEIGHTMAP;
-            case "Neighbour" -> NEIGHBOUR_HEIGHTMAP;
+            case "Neighbor" -> NEIGHBOUR_HEIGHTMAP;
             case "Square" -> SQUARE_HEIGHTMAP;
             default -> NORMAL_HEIGHTMAP;
          };
@@ -131,7 +131,7 @@ public class SculptOperation extends ToolOperation {
          kernelPicked = switch (sampling) {
             case "Uniform" -> UNIFORM_FLAT;
             case "Gaussian" -> GAUSS_FLAT;
-            case "Neighbour" -> NEIGHBOUR_FLAT;
+            case "Neighbor" -> NEIGHBOUR_FLAT;
             case "Square" -> SQUARE_FLAT;
             default -> NORMAL_FLAT;
          };
@@ -139,7 +139,7 @@ public class SculptOperation extends ToolOperation {
          kernelPicked = switch (sampling) {
             case "Uniform" -> UNIFORM_KERNEL;
             case "Gaussian" -> GAUSS_KERNEL;
-            case "Neighbour" -> NEIGHBOUR_KERNEL;
+            case "Neighbor" -> NEIGHBOUR_KERNEL;
             case "Square" -> SQUARE_KERNEL;
             default -> NORMAL_KERNEL;
          };

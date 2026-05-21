@@ -57,8 +57,13 @@ public class TriggerVolumeAssignEffectCommand extends AbstractWorldCommand {
                   if (effectAsset == null) {
                      context.sendMessage(Message.translation("server.commands.triggervolume.assigneffect.effectNotFound").param("effectId", effectId));
                   } else {
+                     entry.getConditions().clear();
+                     entry.getConditions().addAll(Arrays.asList(effectAsset.getConditions()));
                      entry.getEffects().clear();
                      entry.getEffects().addAll(Arrays.asList(effectAsset.getEffects()));
+                     entry.getRejectionEffects().clear();
+                     entry.getRejectionEffects().addAll(Arrays.asList(effectAsset.getRejectionEffects()));
+                     entry.setConditionTiming(effectAsset.getConditionTiming());
                      entry.setEffectAssetRef(effectId);
                      manager.notifyViewersAdd(entry);
                      context.sendMessage(

@@ -276,7 +276,7 @@ public class NPCSpawnCommand extends AbstractPlayerCommand {
                npcPosition.set(x, y, z);
                npc.saveLeashInformation(npcPosition, npcTransformComponent.getRotation());
                if (!velocity.equals(Vector3dUtil.ZERO)) {
-                  npc.getRole().forceVelocity(velocity, null, false);
+                  npc.getRole().setVelocity(velocity, null, false);
                }
 
                if (frozen) {

@@ -39,7 +39,7 @@ public class GenericVelocityInstructionSystem extends EntityTickingSystem<Entity
                velocityComponent.set(instruction.getVelocity());
                break;
             case Add:
-               velocityComponent.addForce(instruction.getVelocity());
+               velocityComponent.addVelocity(instruction.getVelocity());
          }
       }
 

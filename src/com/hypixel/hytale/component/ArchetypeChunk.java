@@ -86,6 +86,16 @@ public class ArchetypeChunk<ECS_TYPE> {
       }
    }
 
+   @Nullable
+   protected <T extends Component<ECS_TYPE>> T __internal_getComponentConcurrent(int index, @Nonnull ComponentType<ECS_TYPE, T> componentType) {
+      if (index >= 0 && this.archetype.contains(componentType)) {
+         Component<ECS_TYPE>[] col = this.components[componentType.getIndex()];
+         return (T)(index >= col.length ? null : col[index]);
+      } else {
+         return null;
+      }
+   }
+
    public int addEntity(@Nonnull Ref<ECS_TYPE> ref, @Nonnull Holder<ECS_TYPE> holder) {
       if (!this.archetype.equals(holder.getArchetype())) {
          throw new IllegalArgumentException("EntityHolder is not for this archetype chunk!");
@@ -143,6 +153,12 @@ public class ArchetypeChunk<ECS_TYPE> {
    ) {
       int entityIndex = this.entitiesSize++;
       int sourceLastIndex = source.entitiesSize - 1;
+      ref.beginMutation();
+      Ref<ECS_TYPE> movedRef = sourceIndex != sourceLastIndex ? source.refs[sourceLastIndex] : null;
+      if (movedRef != null) {
+         movedRef.beginMutation();
+      }
+
       if (this.refs.length <= entityIndex) {
          int newLength = ArrayUtil.grow(entityIndex);
          this.refs = Arrays.copyOf(this.refs, newLength);
@@ -202,14 +218,12 @@ public class ArchetypeChunk<ECS_TYPE> {
       }
 
       this.refs[entityIndex] = ref;
-      ref.setArchetypeChunk(this);
-      ref.setChunkEntityIndex(entityIndex);
-      if (sourceIndex != sourceLastIndex) {
-         Ref<ECS_TYPE> movedRef = source.refs[sourceLastIndex];
-         if (movedRef.isValid()) {
-            movedRef.setChunkEntityIndex(sourceIndex);
-         }
-
+      ref.setPosition(this, entityIndex);
+      ref.endMutation();
+      if (movedRef != null) {
+         assert movedRef.isValid() : "movedRef in live chunk range must be valid";
+         movedRef.setPosition(source, sourceIndex);
+         movedRef.endMutation();
          source.refs[sourceIndex] = movedRef;
       }
 
@@ -271,7 +285,7 @@ public class ArchetypeChunk<ECS_TYPE> {
       if (entityIndex != lastIndex) {
          Ref<ECS_TYPE> ref = this.refs[lastIndex];
          if (ref.isValid()) {
-            ref.setChunkEntityIndex(entityIndex);
+            ref.beginMutation();
          }
 
          this.refs[entityIndex] = ref;
@@ -285,6 +299,11 @@ public class ArchetypeChunk<ECS_TYPE> {
                col[entityIndex] = col[lastIndex];
                col[lastIndex] = null;
             }
+         }
+
+         if (ref.isValid()) {
+            ref.setPosition(this, entityIndex);
+            ref.endMutation();
          }
       } else {
          for (int i = this.archetype.getMinIndex(); i < this.archetype.length(); i++) {
@@ -314,6 +333,7 @@ public class ArchetypeChunk<ECS_TYPE> {
 
       for (int entityIndex = 0; entityIndex < this.entitiesSize; entityIndex++) {
          Ref<ECS_TYPE> ref = this.refs[entityIndex];
+         ref.beginMutation();
          this.refs[entityIndex] = null;
          Arrays.fill(entityComponents, 0, this.archetype.getMinIndex(), null);
 
@@ -332,6 +352,7 @@ public class ArchetypeChunk<ECS_TYPE> {
          modification.accept(tempInternalEntityHolder);
          int newEntityIndex = chunk.addEntity(ref, tempInternalEntityHolder);
          referenceConsumer.accept(newEntityIndex, ref);
+         ref.endMutation();
       }
 
       this.entitiesSize = 0;
@@ -354,6 +375,7 @@ public class ArchetypeChunk<ECS_TYPE> {
             }
 
             Ref<ECS_TYPE> ref = this.refs[entityIndex];
+            ref.beginMutation();
             this.refs[entityIndex] = null;
             Arrays.fill(entityComponents, 0, this.archetype.getMinIndex(), null);
 
@@ -372,6 +394,7 @@ public class ArchetypeChunk<ECS_TYPE> {
             modification.accept(tempInternalEntityHolder);
             int newEntityIndex = chunk.addEntity(ref, tempInternalEntityHolder);
             referenceConsumer.accept(newEntityIndex, ref);
+            ref.endMutation();
          }
       }
 
@@ -407,7 +430,7 @@ public class ArchetypeChunk<ECS_TYPE> {
    protected void fillEmptyIndex(int entityIndex, int lastIndex) {
       Ref<ECS_TYPE> ref = this.refs[lastIndex];
       if (ref.isValid()) {
-         ref.setChunkEntityIndex(entityIndex);
+         ref.beginMutation();
       }
 
       for (int i = this.archetype.getMinIndex(); i < this.archetype.length(); i++) {
@@ -419,6 +442,10 @@ public class ArchetypeChunk<ECS_TYPE> {
       }
 
       this.refs[entityIndex] = ref;
+      if (ref.isValid()) {
+         ref.setPosition(this, entityIndex);
+         ref.endMutation();
+      }
    }
 
    BitSet getSystemIndexes() {

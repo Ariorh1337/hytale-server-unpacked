@@ -75,7 +75,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.bson.BsonDocument;
 import org.joml.Vector3d;
 
 public class CraftingManager implements Component<EntityStore> {
@@ -594,11 +593,7 @@ public class CraftingManager implements Component<EntityStore> {
       ObjectList<MaterialQuantity> materials = new ObjectArrayList<>();
 
       for (MaterialQuantity craftingMaterial : input) {
-         String itemId = craftingMaterial.getItemId();
-         String resourceTypeId = craftingMaterial.getResourceTypeId();
-         int materialQuantity = craftingMaterial.getQuantity();
-         BsonDocument metadata = craftingMaterial.getMetadata();
-         materials.add(new MaterialQuantity(itemId, resourceTypeId, null, materialQuantity * quantity, metadata));
+         materials.add(craftingMaterial.clone(craftingMaterial.getQuantity() * quantity));
       }
 
       return materials;
@@ -608,6 +603,10 @@ public class CraftingManager implements Component<EntityStore> {
       String itemId = craftingMaterial.getItemId();
       if (itemId != null) {
          return itemId.equals(itemStack.getItemId());
+      }
+
+      if (craftingMaterial.isItemExcluded(itemStack.getItemId())) {
+         return false;
       }
 
       String resourceTypeId = craftingMaterial.getResourceTypeId();
@@ -640,19 +639,8 @@ public class CraftingManager implements Component<EntityStore> {
    public static boolean matchesAnyRecipe(@Nonnull List<CraftingRecipe> recipes, int inputSlotIndex, @Nonnull ItemStack slotItemStack) {
       for (CraftingRecipe recipe : recipes) {
          MaterialQuantity[] input = recipe.getInput();
-         if (inputSlotIndex < input.length) {
-            MaterialQuantity slotCraftingMaterial = input[inputSlotIndex];
-            if (slotCraftingMaterial.getItemId() != null && slotCraftingMaterial.getItemId().equals(slotItemStack.getItemId())) {
-               return true;
-            }
-
-            if (slotCraftingMaterial.getResourceTypeId() != null && slotItemStack.getItem().getResourceTypes() != null) {
-               for (ItemResourceType itemResourceType : slotItemStack.getItem().getResourceTypes()) {
-                  if (slotCraftingMaterial.getResourceTypeId().equals(itemResourceType.id)) {
-                     return true;
-                  }
-               }
-            }
+         if (inputSlotIndex < input.length && matches(input[inputSlotIndex], slotItemStack)) {
+            return true;
          }
       }
 

@@ -28,7 +28,7 @@ public class GiveItemEffect extends TriggerEffect {
       .append(new KeyedCodec<>("Quantity", Codec.INTEGER, false), (e, v) -> e.quantity = v, e -> e.quantity)
       .add()
       .append(
-         new KeyedCodec<>("OverflowBehavior", new EnumCodec<>(GiveItemEffect.OverflowBehavior.class, EnumCodec.EnumStyle.LEGACY), false),
+         new KeyedCodec<>("OverflowBehavior", new EnumCodec<>(GiveItemEffect.OverflowBehavior.class), false),
          (e, v) -> e.overflowBehavior = v,
          e -> e.overflowBehavior
       )

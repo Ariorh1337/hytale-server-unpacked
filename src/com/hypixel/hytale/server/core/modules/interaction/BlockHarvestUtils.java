@@ -762,25 +762,32 @@ public class BlockHarvestUtils {
       centerPosition.add(targetBlock.x(), targetBlock.y(), targetBlock.z());
       int setBlockSettings = 0;
       setBlockSettings |= 256;
-      if (!BlockInteractionUtils.isNaturalAction(ref, entityStore)) {
-         setBlockSettings |= 2048;
-      }
+      BreakBlockEvent event = new BreakBlockEvent(null, affectedBlock, blockType);
+      entityStore.invoke(ref, event);
+      if (event.isCancelled()) {
+         section.invalidateBlock(targetBlock.x(), targetBlock.y(), targetBlock.z());
+      } else {
+         affectedBlock = event.getTargetBlock();
+         if (!BlockInteractionUtils.isNaturalAction(ref, entityStore)) {
+            setBlockSettings |= 2048;
+         }
 
-      removeBlock(affectedBlock, blockType, setBlockSettings, chunkReference, chunkStore);
-      HarvestingDropType harvest = blockType.getGathering().getHarvest();
-      String itemId = harvest.getItemId();
-      String dropListId = harvest.getDropListId();
+         removeBlock(affectedBlock, blockType, setBlockSettings, chunkReference, chunkStore);
+         HarvestingDropType harvest = blockType.getGathering().getHarvest();
+         String itemId = harvest.getItemId();
+         String dropListId = harvest.getDropListId();
 
-      for (ItemStack itemStack : getDrops(blockType, 1, itemId, dropListId)) {
-         ItemUtils.interactivelyPickupItem(ref, itemStack, centerPosition, entityStore);
-      }
+         for (ItemStack itemStack : getDrops(blockType, 1, itemId, dropListId)) {
+            ItemUtils.interactivelyPickupItem(ref, itemStack, centerPosition, entityStore);
+         }
 
-      if ((setBlockSettings & 1024) == 0) {
-         BlockSoundSet soundSet = BlockSoundSet.getAssetMap().getAsset(blockType.getBlockSoundSetIndex());
-         if (soundSet != null) {
-            int soundEventIndex = soundSet.getSoundEventIndices().getOrDefault(BlockSoundEvent.Harvest, 0);
-            if (soundEventIndex != 0) {
-               SoundUtil.playSoundEvent3d(soundEventIndex, SoundCategory.SFX, centerPosition, entityStore);
+         if ((setBlockSettings & 1024) == 0) {
+            BlockSoundSet soundSet = BlockSoundSet.getAssetMap().getAsset(blockType.getBlockSoundSetIndex());
+            if (soundSet != null) {
+               int soundEventIndex = soundSet.getSoundEventIndices().getOrDefault(BlockSoundEvent.Harvest, 0);
+               if (soundEventIndex != 0) {
+                  SoundUtil.playSoundEvent3d(soundEventIndex, SoundCategory.SFX, centerPosition, entityStore);
+               }
             }
          }
       }
@@ -815,7 +822,13 @@ public class BlockHarvestUtils {
       }
 
       ConnectedBlocksUtil.setConnectedBlockAndNotifyNeighbors(
-         BlockType.getAssetMap().getIndex("Empty"), RotationTuple.NONE, Vector3iUtil.ZERO, blockPosition, worldChunkComponent, blockChunkComponent
+         chunkStore.getExternalData(),
+         BlockType.getAssetMap().getIndex("Empty"),
+         RotationTuple.NONE,
+         Vector3iUtil.ZERO,
+         blockPosition,
+         worldChunkComponent,
+         blockChunkComponent
       );
    }
 

@@ -1,8 +1,13 @@
 package com.hypixel.hytale.builtin.triggervolumes.component;
 
 import com.hypixel.hytale.builtin.triggervolumes.EntityTargetType;
+import com.hypixel.hytale.builtin.triggervolumes.effect.TriggerCondition;
 import com.hypixel.hytale.builtin.triggervolumes.effect.TriggerEffect;
+import com.hypixel.hytale.builtin.triggervolumes.effect.TriggerVolumeCodecs;
+import com.hypixel.hytale.builtin.triggervolumes.manager.ConditionTiming;
 import com.hypixel.hytale.builtin.triggervolumes.manager.CooldownMode;
+import com.hypixel.hytale.builtin.triggervolumes.manager.ProjectileSource;
+import com.hypixel.hytale.builtin.triggervolumes.manager.RejectionDelayMode;
 import com.hypixel.hytale.builtin.triggervolumes.manager.VolumeEntry;
 import com.hypixel.hytale.builtin.triggervolumes.shape.BoxShape;
 import com.hypixel.hytale.builtin.triggervolumes.shape.TriggerVolumeShape;
@@ -11,7 +16,6 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.EnumCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
-import com.hypixel.hytale.codec.codecs.map.MapCodec;
 import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.math.vector.Vector3fUtil;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -34,9 +38,33 @@ public class TriggerVolume implements Component<EntityStore> {
       .append(new KeyedCodec<>("Shape", TriggerVolumeShape.CODEC), (c, v) -> c.shape = v, c -> c.shape)
       .add()
       .append(
-         new KeyedCodec<>("Effects", new ArrayCodec<>(TriggerEffect.CODEC, TriggerEffect[]::new), false),
+         new KeyedCodec<>("Effects", TriggerVolumeCodecs.TOLERANT_EFFECTS, false),
          (c, v) -> c.effects = v != null ? List.of(v) : null,
          c -> c.effects != null ? c.effects.toArray(TriggerEffect[]::new) : null
+      )
+      .add()
+      .append(
+         new KeyedCodec<>("Conditions", TriggerVolumeCodecs.TOLERANT_CONDITIONS, false),
+         (component, conditions) -> component.conditions = conditions != null ? List.of(conditions) : null,
+         component -> component.conditions != null ? component.conditions.toArray(TriggerCondition[]::new) : null
+      )
+      .add()
+      .append(
+         new KeyedCodec<>("RejectionEffects", TriggerVolumeCodecs.TOLERANT_EFFECTS, false),
+         (component, rejectionEffects) -> component.rejectionEffects = rejectionEffects != null ? List.of(rejectionEffects) : null,
+         component -> component.rejectionEffects != null ? component.rejectionEffects.toArray(TriggerEffect[]::new) : null
+      )
+      .add()
+      .append(
+         new KeyedCodec<>("ConditionTiming", new EnumCodec<>(ConditionTiming.class), false),
+         (component, conditionTiming) -> component.conditionTiming = conditionTiming,
+         component -> component.conditionTiming != ConditionTiming.AFTER_VOLUME_DELAY ? component.conditionTiming : null
+      )
+      .add()
+      .append(
+         new KeyedCodec<>("RejectionDelayMode", new EnumCodec<>(RejectionDelayMode.class, EnumCodec.EnumStyle.LEGACY), false),
+         (component, rejectionDelayMode) -> component.rejectionDelayMode = rejectionDelayMode,
+         component -> component.rejectionDelayMode != RejectionDelayMode.USE_VOLUME_DELAY ? component.rejectionDelayMode : null
       )
       .add()
       .append(new KeyedCodec<>("Enabled", Codec.BOOLEAN, false), (c, v) -> c.enabled = v, c -> c.enabled)
@@ -49,10 +77,12 @@ public class TriggerVolume implements Component<EntityStore> {
       .append(new KeyedCodec<>("EffectAsset", Codec.STRING, false), (c, v) -> c.effectAssetRef = v, c -> c.effectAssetRef)
       .add()
       .append(
-         new KeyedCodec<>("Tags", new MapCodec<>(Codec.STRING_ARRAY, HashMap::new, false), false),
-         (c, v) -> c.rawTags = v,
-         c -> c.rawTags.isEmpty() ? null : c.rawTags
+         new KeyedCodec<>("ProjectileSource", new EnumCodec<>(ProjectileSource.class), false),
+         (component, projectileSource) -> component.projectileSource = projectileSource != null ? projectileSource : ProjectileSource.SHOOTER,
+         component -> component.projectileSource != ProjectileSource.SHOOTER ? component.projectileSource : null
       )
+      .add()
+      .append(new KeyedCodec<>("Tags", TriggerVolumeCodecs.TAGS, false), (c, v) -> c.rawTags = v, c -> c.rawTags.isEmpty() ? null : c.rawTags)
       .add()
       .append(new KeyedCodec<>("KeepLoaded", Codec.BOOLEAN, false), (c, v) -> c.keepLoaded = v, c -> c.keepLoaded)
       .add()
@@ -65,7 +95,7 @@ public class TriggerVolume implements Component<EntityStore> {
       .append(
          new KeyedCodec<>("CancelDelayedOnExit", Codec.BOOLEAN, false),
          (c, v) -> c.cancelDelayedEffectsOnExit = v,
-         c -> c.cancelDelayedEffectsOnExit ? null : Boolean.FALSE
+         c -> c.cancelDelayedEffectsOnExit ? Boolean.TRUE : null
       )
       .add()
       .append(new KeyedCodec<>("Cooldown", Codec.FLOAT, false), (c, v) -> c.cooldown = v, c -> c.cooldown > 0.0F ? c.cooldown : null)
@@ -84,17 +114,27 @@ public class TriggerVolume implements Component<EntityStore> {
    private TriggerVolumeShape shape;
    @Nullable
    private List<TriggerEffect> effects;
+   @Nullable
+   private List<TriggerCondition> conditions;
+   @Nullable
+   private List<TriggerEffect> rejectionEffects;
+   @Nonnull
+   private ConditionTiming conditionTiming = ConditionTiming.AFTER_VOLUME_DELAY;
+   @Nonnull
+   private RejectionDelayMode rejectionDelayMode = RejectionDelayMode.USE_VOLUME_DELAY;
    private boolean enabled = true;
    @Nonnull
    private Set<EntityTargetType> targetTypes = EnumSet.of(EntityTargetType.PLAYER);
+   @Nonnull
+   private ProjectileSource projectileSource = ProjectileSource.SHOOTER;
    @Nullable
    private String effectAssetRef;
    @Nonnull
-   private Map<String, String[]> rawTags = Collections.emptyMap();
+   private Map<String, String> rawTags = Collections.emptyMap();
    private boolean keepLoaded;
    @Nullable
    private Vector3f color;
-   private boolean cancelDelayedEffectsOnExit = true;
+   private boolean cancelDelayedEffectsOnExit;
    private float activationDelay;
    private float cooldown;
    @Nonnull
@@ -107,8 +147,13 @@ public class TriggerVolume implements Component<EntityStore> {
       TriggerVolume tv = new TriggerVolume();
       tv.shape = entry.getShape().copy();
       tv.effects = entry.getEffects().isEmpty() ? null : TriggerEffect.deepCopyList(entry.getEffects());
+      tv.conditions = entry.getConditions().isEmpty() ? null : TriggerCondition.deepCopyList(entry.getConditions());
+      tv.rejectionEffects = entry.getRejectionEffects().isEmpty() ? null : TriggerEffect.deepCopyList(entry.getRejectionEffects());
+      tv.conditionTiming = entry.getConditionTiming();
+      tv.rejectionDelayMode = entry.getRejectionDelayMode();
       tv.enabled = entry.isEnabled();
       tv.targetTypes = EnumSet.copyOf(entry.getTargetTypes());
+      tv.projectileSource = entry.getProjectileSource();
       tv.effectAssetRef = entry.getEffectAssetRef();
       tv.rawTags = copyTags(entry.getRawTags());
       tv.keepLoaded = entry.isKeepLoaded();
@@ -139,12 +184,23 @@ public class TriggerVolume implements Component<EntityStore> {
          EnumSet.copyOf(this.targetTypes),
          this.enabled
       );
+      if (this.conditions != null) {
+         entry.getConditions().addAll(TriggerCondition.deepCopyList(this.conditions));
+      }
+
+      if (this.rejectionEffects != null) {
+         entry.getRejectionEffects().addAll(TriggerEffect.deepCopyList(this.rejectionEffects));
+      }
+
+      entry.setConditionTiming(this.conditionTiming);
+      entry.setRejectionDelayMode(this.rejectionDelayMode);
       entry.setEffectAssetRef(this.effectAssetRef);
       entry.setKeepLoaded(this.keepLoaded);
       if (this.color != null) {
          entry.setColor(new Vector3f(this.color));
       }
 
+      entry.setProjectileSource(this.projectileSource);
       entry.setActivationDelay(this.activationDelay);
       entry.setCancelDelayedEffectsOnExit(this.cancelDelayedEffectsOnExit);
       entry.setCooldown(this.cooldown);
@@ -157,15 +213,15 @@ public class TriggerVolume implements Component<EntityStore> {
    }
 
    @Nonnull
-   private static Map<String, String[]> copyTags(@Nonnull Map<String, String[]> tags) {
+   private static Map<String, String> copyTags(@Nonnull Map<String, String> tags) {
       if (tags.isEmpty()) {
          return Collections.emptyMap();
       }
 
-      HashMap<String, String[]> copy = new HashMap<>();
+      HashMap<String, String> copy = new HashMap<>();
 
-      for (Entry<String, String[]> entry : tags.entrySet()) {
-         copy.put(entry.getKey(), (String[])entry.getValue().clone());
+      for (Entry<String, String> entry : tags.entrySet()) {
+         copy.put(entry.getKey(), entry.getValue());
       }
 
       return copy;
@@ -186,8 +242,13 @@ public class TriggerVolume implements Component<EntityStore> {
       TriggerVolume clone = new TriggerVolume();
       clone.shape = this.shape != null ? this.shape.copy() : null;
       clone.effects = this.effects != null ? TriggerEffect.deepCopyList(this.effects) : null;
+      clone.conditions = this.conditions != null ? TriggerCondition.deepCopyList(this.conditions) : null;
+      clone.rejectionEffects = this.rejectionEffects != null ? TriggerEffect.deepCopyList(this.rejectionEffects) : null;
+      clone.conditionTiming = this.conditionTiming;
+      clone.rejectionDelayMode = this.rejectionDelayMode;
       clone.enabled = this.enabled;
       clone.targetTypes = EnumSet.copyOf(this.targetTypes);
+      clone.projectileSource = this.projectileSource;
       clone.effectAssetRef = this.effectAssetRef;
       clone.rawTags = copyTags(this.rawTags);
       clone.keepLoaded = this.keepLoaded;

@@ -681,7 +681,7 @@ public class SpawnBeaconSystems {
       protected SpawnJobSystem.Result trySpawn(
          @Nonnull BeaconSpawnController spawnController, @Nonnull NPCBeaconSpawnJob spawnJob, @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
-         return this.spawn(spawnJob.getSpawningContext().world, spawnController, spawnJob, commandBuffer);
+         return this.spawn(commandBuffer.getExternalData().getWorld(), spawnController, spawnJob, commandBuffer);
       }
 
       @Nonnull

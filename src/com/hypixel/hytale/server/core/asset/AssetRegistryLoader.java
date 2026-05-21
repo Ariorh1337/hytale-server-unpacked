@@ -814,7 +814,7 @@ public class AssetRegistryLoader {
                         .setKeyFunction(AudioCategory::getId))
                      .setReplaceOnRemove(AudioCategory::new))
                   .setPacketGenerator(new AudioCategoryPacketGenerator())
-                  .preLoadAssets(Collections.singletonList(AudioCategory.EMPTY_AUDIO_CATEGORY)))
+                  .preLoadAssets(AudioCategory.PRELOAD_ORDER))
                .loadsAfter(AudioState.class))
             .build()
       );

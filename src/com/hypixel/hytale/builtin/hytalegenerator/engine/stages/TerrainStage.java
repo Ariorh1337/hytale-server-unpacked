@@ -217,6 +217,7 @@ public class TerrainStage implements Stage {
       for (TerrainStage.BiomeWeights.Entry biomeWeight : biomeWeights.entries) {
          Biome biome = biomeRegistry.getObject(biomeWeight.biomeId);
          Density density = biome.getTerrainDensity();
+         densityContext.distanceToBiomeEdge = biomeDistances.distanceToClosestOtherBiome(biomeWeight.biomeId);
          float densityValue = (float)density.process(densityContext);
          float scaledDensityValue = densityValue * biomeWeight.weight;
          densityResult += scaledDensityValue;

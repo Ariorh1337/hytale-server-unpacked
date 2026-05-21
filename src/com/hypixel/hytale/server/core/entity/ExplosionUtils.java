@@ -141,7 +141,7 @@ public class ExplosionUtils {
          int posX = MathUtil.floor(position.x);
          int posY = MathUtil.floor(position.y);
          int posZ = MathUtil.floor(position.z);
-         BlockSphereUtil.forEachBlock(posX, posY, posZ, explosionBlockRadius, null, (x, y, z, aVoid) -> {
+         BlockSphereUtil.forEachBlock(posX, posY, posZ, explosionBlockRadius, null, (x, y, z, var4x) -> {
             targetBlocks.add(new Vector3i(x, y, z));
             return true;
          });
@@ -159,7 +159,7 @@ public class ExplosionUtils {
                Vector3d direction = new Vector3d(targetBlockPosition).sub(position);
                Vector3i targetBlockPos = TargetUtil.getTargetBlock(
                   world,
-                  (id, fluidId) -> isValidTargetBlock(id, config.damageBlocks),
+                  (id, var2x) -> isValidTargetBlock(id, config.damageBlocks),
                   position.x,
                   position.y,
                   position.z,
@@ -183,7 +183,7 @@ public class ExplosionUtils {
                   float damageScale = calculateBlockDamageScale(damageDistance, explosionBlockRadius, config.blockDamageFalloff);
                   long chunkIndex = ChunkUtil.indexChunkFromBlock(targetBlockPos.x, targetBlockPos.z);
                   Ref<ChunkStore> chunkReference = chunkStore.getExternalData().getChunkReference(chunkIndex);
-                  if (chunkReference != null) {
+                  if (chunkReference != null && chunkReference.isValid()) {
                      boolean canDamageBlock = distance <= config.blockDamageRadius;
                      if (!config.damageBlocks
                         || canDamageBlock

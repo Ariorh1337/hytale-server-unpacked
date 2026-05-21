@@ -2,7 +2,7 @@ package com.hypixel.hytale.builtin.triggervolumes.command;
 
 import com.hypixel.hytale.builtin.triggervolumes.TriggerVolumesPlugin;
 import com.hypixel.hytale.builtin.triggervolumes.manager.TriggerVolumeManager;
-import com.hypixel.hytale.builtin.triggervolumes.ui.TriggerVolumeBrowsePage;
+import com.hypixel.hytale.builtin.triggervolumes.ui.TriggerVolumeInspectorPage;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -40,7 +40,8 @@ public class TriggerVolumeBrowseCommand extends AbstractPlayerCommand {
             }
          }
 
-         playerComponent.getPageManager().openCustomPage(ref, store, new TriggerVolumeBrowsePage(playerRef, selectedWorld, volumeName));
+         playerComponent.getPageManager()
+            .openCustomPage(ref, store, new TriggerVolumeInspectorPage(playerRef, selectedWorld, volumeName, TriggerVolumeInspectorPage.InspectorTab.VOLUME));
       }
    }
 }

@@ -48,11 +48,11 @@ public class Velocity implements Component<EntityStore> {
       this.set(0.0, 0.0, 0.0);
    }
 
-   public void addForce(@Nonnull Vector3d force) {
-      this.velocity.add(force);
+   public void addVelocity(@Nonnull Vector3d velocityDelta) {
+      this.velocity.add(velocityDelta);
    }
 
-   public void addForce(double x, double y, double z) {
+   public void addVelocity(double x, double y, double z) {
       this.velocity.add(x, y, z);
    }
 

@@ -24,7 +24,7 @@ import javax.annotation.Nonnull;
 public abstract class BuilderMotionControllerBase extends BuilderBaseWithType<MotionController> {
    protected float epsilonAngle;
    protected double epsilonSpeed;
-   protected double forceVelocityDamping;
+   protected double externalVelocityDamping;
    protected final DoubleHolder maxHorizontalSpeed = new DoubleHolder();
    protected final DoubleHolder fastHorizontalThreshold = new DoubleHolder();
    protected double fastHorizontalThresholdRange;
@@ -67,12 +67,12 @@ public abstract class BuilderMotionControllerBase extends BuilderBaseWithType<Mo
       );
       this.getDouble(
          data,
-         "ForceVelocityDamping",
-         v -> this.forceVelocityDamping = v,
+         "ExternalVelocityDamping",
+         v -> this.externalVelocityDamping = v,
          0.5,
          DoubleSingleValidator.greater0(),
          BuilderDescriptorState.Experimental,
-         "Damping of external force/velocity over time",
+         "Damping of external velocity over time",
          null
       );
       this.getDouble(
@@ -128,8 +128,8 @@ public abstract class BuilderMotionControllerBase extends BuilderBaseWithType<Mo
       return this.epsilonSpeed;
    }
 
-   public double getForceVelocityDamping() {
-      return this.forceVelocityDamping;
+   public double getExternalVelocityDamping() {
+      return this.externalVelocityDamping;
    }
 
    public double getMaxHorizontalSpeed(@Nonnull BuilderSupport builderSupport) {

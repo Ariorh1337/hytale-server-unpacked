@@ -178,68 +178,70 @@ public class PropStage implements Stage {
       localPositionsBounds_voxelGrid.min.y = 0;
       localPositionsBounds_voxelGrid.max.y = 320;
       materialOutputSpace.copyFrom(materialInputSpace);
-      if (this.entityInputBufferType != null) {
-         BufferBundle.Access.View entityInputAccess = context.bufferAccess.get(this.entityInputBufferType);
-         EntityBufferView entityInputSpace = new EntityBufferView(entityInputAccess);
-         entityOutputSpace.copyFrom(entityInputSpace);
-      }
-
-      Registry<Biome> biomeRegistry = this.worldStructure_workerData.get(context.workerId).getBiomeRegistry();
-      HashSet<Integer> traversedBiomes = new HashSet<>();
-      List<Biome> biomesInBuffer = new ArrayList<>();
-
-      for (int x = localPositionsBounds_voxelGrid.min.x; x < localPositionsBounds_voxelGrid.max.x; x++) {
-         for (int z = localPositionsBounds_voxelGrid.min.z; z < localPositionsBounds_voxelGrid.max.z; z++) {
-            Integer biomeId = biomeInputSpace.get(x, 0, z);
-            if (!traversedBiomes.contains(biomeId)) {
-               traversedBiomes.add(biomeId);
-               Biome biome = biomeRegistry.getObject(biomeId);
-               biomesInBuffer.add(biome);
-            }
+      if (!this.positionsBounds_voxelGrid.isZeroVolume()) {
+         if (this.entityInputBufferType != null) {
+            BufferBundle.Access.View entityInputAccess = context.bufferAccess.get(this.entityInputBufferType);
+            EntityBufferView entityInputSpace = new EntityBufferView(entityInputAccess);
+            entityOutputSpace.copyFrom(entityInputSpace);
          }
-      }
 
-      List<Pair<PropRuntime, Biome>> propRuntimeBiomeMap = new ArrayList<>(10);
+         Registry<Biome> biomeRegistry = this.worldStructure_workerData.get(context.workerId).getBiomeRegistry();
+         HashSet<Integer> traversedBiomes = new HashSet<>();
+         List<Biome> biomesInBuffer = new ArrayList<>();
 
-      for (Biome biome : biomesInBuffer) {
-         biome.getRuntimesWithIndex(this.runtimeIndex, propRuntimex -> propRuntimeBiomeMap.add(Pair.of(propRuntimex, biome)));
-      }
-
-      Prop.Context propContext = new Prop.Context(new Vector3i(), materialInputSpace, materialOutputSpace, entityOutputSpace, Double.MAX_VALUE);
-      Bounds3i propReadBounds_voxelGrid = new Bounds3i();
-      Bounds3i propWriteBounds_voxelGrid = new Bounds3i();
-      Vector3i position2d_voxelGrid = new Vector3i();
-      PropDistribution.Context distributionContext = new PropDistribution.Context(new Bounds3d(), Pipe.getEmptyTwo(), Double.MAX_VALUE);
-
-      for (Pair<PropRuntime, Biome> entry : propRuntimeBiomeMap) {
-         PropRuntime propRuntime = entry.left();
-         Biome biome = entry.right();
-         PropDistribution propDistribution = propRuntime.getPropDistribution();
-         Pipe.Two<Vector3d, Prop> propDistributionPipe = (position_voxelGrid, prop, control) -> {
-            int positionX_voxelGrid = (int)Math.floor(position_voxelGrid.x);
-            int positionY_voxelGrid = (int)Math.floor(position_voxelGrid.y);
-            int positionZ_voxelGrid = (int)Math.floor(position_voxelGrid.z);
-            propWriteBounds_voxelGrid.assign(prop.getWriteBounds_voxelGrid());
-            propWriteBounds_voxelGrid.offset(positionX_voxelGrid, positionY_voxelGrid, positionZ_voxelGrid);
-            if (propWriteBounds_voxelGrid.intersects(localOutputBounds_voxelGrid)) {
-               propReadBounds_voxelGrid.assign(prop.getReadBounds_voxelGrid());
-               propReadBounds_voxelGrid.offset(positionX_voxelGrid, positionY_voxelGrid, positionZ_voxelGrid);
-               if (propReadBounds_voxelGrid.isZeroVolume() || localMaterialInputBounds_voxelGrid.intersects(propReadBounds_voxelGrid)) {
-                  Integer biomeIdAtPosition = biomeInputSpace.get(positionX_voxelGrid, 0, positionZ_voxelGrid);
-                  Biome biomeAtPosition = biomeRegistry.getObject(biomeIdAtPosition);
-                  if (biomeAtPosition == biome) {
-                     position2d_voxelGrid.set(positionX_voxelGrid, 0, positionZ_voxelGrid);
-                     double distanceToBiomeEdge = biomeDistanceSpace.get(position2d_voxelGrid).distanceToClosestOtherBiome(biomeIdAtPosition);
-                     propContext.distanceToBiomeEdge = distanceToBiomeEdge;
-                     propContext.position.set(positionX_voxelGrid, positionY_voxelGrid, positionZ_voxelGrid);
-                     prop.generate(propContext);
-                  }
+         for (int x = localPositionsBounds_voxelGrid.min.x; x < localPositionsBounds_voxelGrid.max.x; x++) {
+            for (int z = localPositionsBounds_voxelGrid.min.z; z < localPositionsBounds_voxelGrid.max.z; z++) {
+               Integer biomeId = biomeInputSpace.get(x, 0, z);
+               if (!traversedBiomes.contains(biomeId)) {
+                  traversedBiomes.add(biomeId);
+                  Biome biome = biomeRegistry.getObject(biomeId);
+                  biomesInBuffer.add(biome);
                }
             }
-         };
-         distributionContext.bounds.assign(localPositionsBounds_voxelGrid);
-         distributionContext.pipe = propDistributionPipe;
-         propDistribution.distribute(distributionContext);
+         }
+
+         List<Pair<PropRuntime, Biome>> propRuntimeBiomeMap = new ArrayList<>(10);
+
+         for (Biome biome : biomesInBuffer) {
+            biome.getRuntimesWithIndex(this.runtimeIndex, propRuntimex -> propRuntimeBiomeMap.add(Pair.of(propRuntimex, biome)));
+         }
+
+         Prop.Context propContext = new Prop.Context(new Vector3i(), materialInputSpace, materialOutputSpace, entityOutputSpace, Double.MAX_VALUE);
+         Bounds3i propReadBounds_voxelGrid = new Bounds3i();
+         Bounds3i propWriteBounds_voxelGrid = new Bounds3i();
+         Vector3i position2d_voxelGrid = new Vector3i();
+         PropDistribution.Context distributionContext = new PropDistribution.Context(new Bounds3d(), Pipe.getEmptyTwo(), Double.MAX_VALUE);
+
+         for (Pair<PropRuntime, Biome> entry : propRuntimeBiomeMap) {
+            PropRuntime propRuntime = entry.left();
+            Biome biome = entry.right();
+            PropDistribution propDistribution = propRuntime.getPropDistribution();
+            Pipe.Two<Vector3d, Prop> propDistributionPipe = (position_voxelGrid, prop, control) -> {
+               int positionX_voxelGrid = (int)Math.floor(position_voxelGrid.x);
+               int positionY_voxelGrid = (int)Math.floor(position_voxelGrid.y);
+               int positionZ_voxelGrid = (int)Math.floor(position_voxelGrid.z);
+               propWriteBounds_voxelGrid.assign(prop.getWriteBounds_voxelGrid());
+               propWriteBounds_voxelGrid.offset(positionX_voxelGrid, positionY_voxelGrid, positionZ_voxelGrid);
+               if (propWriteBounds_voxelGrid.intersects(localOutputBounds_voxelGrid)) {
+                  propReadBounds_voxelGrid.assign(prop.getReadBounds_voxelGrid());
+                  propReadBounds_voxelGrid.offset(positionX_voxelGrid, positionY_voxelGrid, positionZ_voxelGrid);
+                  if (propReadBounds_voxelGrid.isZeroVolume() || localMaterialInputBounds_voxelGrid.intersects(propReadBounds_voxelGrid)) {
+                     Integer biomeIdAtPosition = biomeInputSpace.get(positionX_voxelGrid, 0, positionZ_voxelGrid);
+                     Biome biomeAtPosition = biomeRegistry.getObject(biomeIdAtPosition);
+                     if (biomeAtPosition == biome) {
+                        position2d_voxelGrid.set(positionX_voxelGrid, 0, positionZ_voxelGrid);
+                        double distanceToBiomeEdge = biomeDistanceSpace.get(position2d_voxelGrid).distanceToClosestOtherBiome(biomeIdAtPosition);
+                        propContext.distanceToBiomeEdge = distanceToBiomeEdge;
+                        propContext.position.set(positionX_voxelGrid, positionY_voxelGrid, positionZ_voxelGrid);
+                        prop.generate(propContext);
+                     }
+                  }
+               }
+            };
+            distributionContext.bounds.assign(localPositionsBounds_voxelGrid);
+            distributionContext.pipe = propDistributionPipe;
+            propDistribution.distribute(distributionContext);
+         }
       }
    }
 

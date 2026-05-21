@@ -57,7 +57,7 @@ public class NPCVelocityInstructionSystem extends EntityTickingSystem<EntityStor
                      TransformComponent transformComponent = archetypeChunk.getComponent(index, TransformComponent.getComponentType());
                      if (transformComponent != null) {
                         World world = commandBuffer.getExternalData().getWorld();
-                        DebugUtils.addForce(world, transformComponent.getPosition(), velocityx, velocityConfigx);
+                        DebugUtils.addVelocity(world, transformComponent.getPosition(), velocityx, velocityConfigx);
                      }
                   }
                   break;
@@ -69,7 +69,7 @@ public class NPCVelocityInstructionSystem extends EntityTickingSystem<EntityStor
                      TransformComponent transformComponent = archetypeChunk.getComponent(index, TransformComponent.getComponentType());
                      if (transformComponent != null) {
                         World world = commandBuffer.getExternalData().getWorld();
-                        DebugUtils.addForce(world, transformComponent.getPosition(), velocity, velocityConfig);
+                        DebugUtils.addVelocity(world, transformComponent.getPosition(), velocity, velocityConfig);
                      }
                   }
             }

@@ -20,7 +20,7 @@ public class EntityEffectEffect extends TriggerEffect {
    public static final BuilderCodec<EntityEffectEffect> CODEC = BuilderCodec.builder(EntityEffectEffect.class, EntityEffectEffect::new, BASE_CODEC)
       .append(new KeyedCodec<>("Effect", Codec.STRING), (e, v) -> e.effectId = v, e -> e.effectId)
       .add()
-      .append(new KeyedCodec<>("Mode", new EnumCodec<>(EntityEffectEffect.Mode.class, EnumCodec.EnumStyle.LEGACY)), (e, v) -> e.mode = v, e -> e.mode)
+      .append(new KeyedCodec<>("Mode", new EnumCodec<>(EntityEffectEffect.Mode.class)), (e, v) -> e.mode = v, e -> e.mode)
       .add()
       .append(new KeyedCodec<>("Duration", Codec.FLOAT, false), (e, v) -> e.duration = v, e -> e.duration)
       .add()

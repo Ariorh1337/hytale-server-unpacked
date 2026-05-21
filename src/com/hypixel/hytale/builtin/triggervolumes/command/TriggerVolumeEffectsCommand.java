@@ -4,7 +4,7 @@ import com.hypixel.hytale.builtin.triggervolumes.TriggerVolumesPlugin;
 import com.hypixel.hytale.builtin.triggervolumes.manager.GroupEntry;
 import com.hypixel.hytale.builtin.triggervolumes.manager.TriggerVolumeManager;
 import com.hypixel.hytale.builtin.triggervolumes.manager.VolumeEntry;
-import com.hypixel.hytale.builtin.triggervolumes.ui.TriggerVolumeEffectEditorPage;
+import com.hypixel.hytale.builtin.triggervolumes.ui.TriggerVolumeInspectorPage;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.Message;
@@ -16,7 +16,6 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import java.util.ArrayList;
 import java.util.Locale;
 import javax.annotation.Nonnull;
 
@@ -56,30 +55,18 @@ public class TriggerVolumeEffectsCommand extends AbstractPlayerCommand {
                   if (this.groupFlag.get(context) && groupId != null) {
                      GroupEntry group = manager.getGroup(groupId);
                      if (group != null) {
-                        ArrayList<VolumeEntry> members = new ArrayList<>();
-
-                        for (String memberId : group.getMemberVolumeIds()) {
-                           VolumeEntry m = manager.getVolume(memberId);
-                           if (m != null) {
-                              members.add(m);
-                           }
-                        }
-
                         playerComponent.getPageManager()
-                           .openCustomPage(ref, store, new TriggerVolumeEffectEditorPage(playerRef, entry, manager, groupId, members));
+                           .openCustomPage(
+                              ref, store, new TriggerVolumeInspectorPage(playerRef, worldName, groupId, true, TriggerVolumeInspectorPage.InspectorTab.EFFECTS)
+                           );
                         return;
                      }
                   }
 
-                  if (groupId != null) {
-                     GroupEntry group = manager.getGroup(groupId);
-                     if (group != null) {
-                        playerComponent.getPageManager().openCustomPage(ref, store, new TriggerVolumeEffectEditorPage(playerRef, entry, manager, group));
-                        return;
-                     }
-                  }
-
-                  playerComponent.getPageManager().openCustomPage(ref, store, new TriggerVolumeEffectEditorPage(playerRef, entry, manager));
+                  playerComponent.getPageManager()
+                     .openCustomPage(
+                        ref, store, new TriggerVolumeInspectorPage(playerRef, worldName, volumeName, TriggerVolumeInspectorPage.InspectorTab.EFFECTS)
+                     );
                }
             }
          }

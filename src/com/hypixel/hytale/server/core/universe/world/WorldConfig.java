@@ -341,7 +341,9 @@ public class WorldConfig {
 
    @Nonnull
    public static String formatDisplayName(@Nonnull String name) {
-      return name.replaceAll("([a-z])([A-Z])", "$1 $2").replaceAll("([A-Za-z])([0-9])", "$1 $2").replaceAll("_", " ");
+      int slashLastIndex = name.lastIndexOf(47);
+      String substring = slashLastIndex >= 0 ? name.substring(slashLastIndex + 1) : name;
+      return substring.replaceAll("([a-z])([A-Z])", "$1 $2").replaceAll("([A-Za-z])([0-9])", "$1 $2").replaceAll("_", " ");
    }
 
    public long getSeed() {

@@ -27,6 +27,7 @@ import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.transaction.ItemStackTransaction;
 import com.hypixel.hytale.server.core.modules.entity.DespawnComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.Interactable;
+import com.hypixel.hytale.server.core.modules.entity.component.PropComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.damage.DeathComponent;
 import com.hypixel.hytale.server.core.modules.entity.item.ItemComponent;
@@ -72,7 +73,8 @@ public class PlayerItemEntityPickupSystem extends EntityTickingSystem<EntityStor
          TransformComponent.getComponentType(),
          Query.not(Interactable.getComponentType()),
          Query.not(PickupItemComponent.getComponentType()),
-         Query.not(PreventPickup.getComponentType())
+         Query.not(PreventPickup.getComponentType()),
+         Query.not(PropComponent.getComponentType())
       );
    }
 

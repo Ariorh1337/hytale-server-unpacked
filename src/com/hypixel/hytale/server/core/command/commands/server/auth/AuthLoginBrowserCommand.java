@@ -77,11 +77,14 @@ public class AuthLoginBrowserCommand extends CommandBase {
 
    private static class AuthFlow extends OAuthBrowserFlow {
       @Override
-      public void onFlowInfo(String authUrl) {
+      public void onFlowInfo(String authUrl, String verificationCode) {
          AbstractCommand.LOGGER.at(Level.INFO).log("Starting OAuth browser flow...");
          AbstractCommand.LOGGER.at(Level.INFO).log("===================================================================");
          AbstractCommand.LOGGER.at(Level.INFO).log("Please open this URL in your browser to authenticate:");
          AbstractCommand.LOGGER.at(Level.INFO).log("%s", authUrl);
+         AbstractCommand.LOGGER.at(Level.INFO).log("");
+         AbstractCommand.LOGGER.at(Level.INFO).log("Verification code (must match the code shown on the consent page):");
+         AbstractCommand.LOGGER.at(Level.INFO).log("    %s", verificationCode);
          AbstractCommand.LOGGER.at(Level.INFO).log("===================================================================");
          if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Action.BROWSE)) {
             try {

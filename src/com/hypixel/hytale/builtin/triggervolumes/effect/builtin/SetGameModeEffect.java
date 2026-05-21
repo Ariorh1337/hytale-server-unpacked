@@ -17,7 +17,7 @@ import javax.annotation.Nonnull;
 public class SetGameModeEffect extends TriggerEffect {
    @Nonnull
    public static final BuilderCodec<SetGameModeEffect> CODEC = BuilderCodec.builder(SetGameModeEffect.class, SetGameModeEffect::new, BASE_CODEC)
-      .append(new KeyedCodec<>("GameMode", new EnumCodec<>(GameMode.class, EnumCodec.EnumStyle.LEGACY), false), (e, v) -> e.gameMode = v, e -> e.gameMode)
+      .append(new KeyedCodec<>("GameMode", new EnumCodec<>(GameMode.class), false), (e, v) -> e.gameMode = v, e -> e.gameMode)
       .add()
       .build();
    @Nonnull
