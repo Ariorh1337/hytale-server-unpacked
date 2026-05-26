@@ -13,10 +13,11 @@ public class PositionsPinchDensity extends Density {
    @Nullable
    private Density input;
    @Nullable
-   private PositionProvider positions;
-   private Double2DoubleFunction pinchCurve;
-   private double maxDistance;
-   private boolean distanceNormalized;
+   private final PositionProvider positions;
+   @Nonnull
+   private final Double2DoubleFunction pinchCurve;
+   private final double maxDistance;
+   private final boolean distanceNormalized;
    @Nonnull
    private final Vector3d rMin;
    @Nonnull
@@ -28,7 +29,7 @@ public class PositionsPinchDensity extends Density {
    @Nonnull
    private final ReusableList<Vector3d> rWarpVectors;
    @Nonnull
-   private final ReusableList<Double> rWarpDistances;
+   private final ReusableList<Double> rNormalizedDistances;
    @Nonnull
    private final ReusableList<Double> rWeights;
    @Nonnull
@@ -39,10 +40,7 @@ public class PositionsPinchDensity extends Density {
    public PositionsPinchDensity(
       @Nullable Density input, @Nullable PositionProvider positions, @Nonnull Double2DoubleFunction pinchCurve, double maxDistance, boolean distanceNormalized
    ) {
-      if (maxDistance < 0.0) {
-         throw new IllegalArgumentException();
-      }
-
+      assert maxDistance >= 0.0;
       this.input = input;
       this.positions = positions;
       this.pinchCurve = pinchCurve;
@@ -53,7 +51,7 @@ public class PositionsPinchDensity extends Density {
       this.rSamplePoint = new Vector3d();
       this.rWarpVector = new Vector3d();
       this.rWarpVectors = new ReusableList<>();
-      this.rWarpDistances = new ReusableList<>();
+      this.rNormalizedDistances = new ReusableList<>();
       this.rWeights = new ReusableList<>();
       this.rChildContext = new Density.Context();
       this.rPositionsContext = new PositionProvider.Context();
@@ -74,15 +72,14 @@ public class PositionsPinchDensity extends Density {
 
          if (!(Math.abs(this.rWarpVector.length()) < 1.0E-9)) {
             this.rWarpVector.normalize(radialDistance);
-         }
+            if (this.rWarpVectors.isAtHardCapacity()) {
+               this.rWarpVectors.expandAndSet(new Vector3d(this.rWarpVector));
+            } else {
+               this.rWarpVectors.expandAndGet().set(this.rWarpVector);
+            }
 
-         if (this.rWarpVectors.isAtHardCapacity()) {
-            this.rWarpVectors.expandAndSet(new Vector3d(this.rWarpVector));
-         } else {
-            this.rWarpVectors.expandAndGet().set(this.rWarpVector);
+            this.rNormalizedDistances.expandAndSet(normalizedDistance);
          }
-
-         this.rWarpDistances.expandAndSet(normalizedDistance);
       }
    }
 
@@ -100,7 +97,7 @@ public class PositionsPinchDensity extends Density {
       this.rMax.set(context.position.x + this.maxDistance, context.position.y + this.maxDistance, context.position.z + this.maxDistance);
       this.rSamplePoint.set(context.position);
       this.rWarpVectors.clear();
-      this.rWarpDistances.clear();
+      this.rNormalizedDistances.clear();
       this.rPositionsContext.bounds.min.set(this.rMin);
       this.rPositionsContext.bounds.max.set(this.rMax);
       this.rPositionsContext.pipe = this::pipe;
@@ -109,11 +106,11 @@ public class PositionsPinchDensity extends Density {
          return this.input.process(context);
       }
 
+      this.rChildContext.assign(context);
+      this.rChildContext.position = this.rSamplePoint;
       if (this.rWarpVectors.getSoftSize() == 1) {
          Vector3d warpVector = this.rWarpVectors.get(0);
          this.rSamplePoint.add(warpVector);
-         this.rChildContext.assign(context);
-         this.rChildContext.position = this.rSamplePoint;
          return this.input.process(this.rChildContext);
       }
 
@@ -122,8 +119,8 @@ public class PositionsPinchDensity extends Density {
       double totalWeight = 0.0;
 
       for (int i = 0; i < possiblePointsSize; i++) {
-         double distance = this.rWarpDistances.get(i);
-         double weight = 1.0 - distance;
+         double normalizedDistance = this.rNormalizedDistances.get(i);
+         double weight = 1.0 - normalizedDistance;
          this.rWeights.expandAndSet(weight);
          totalWeight += weight;
       }
@@ -135,7 +132,7 @@ public class PositionsPinchDensity extends Density {
          this.rSamplePoint.add(warpVector);
       }
 
-      return this.input.process(context);
+      return this.input.process(this.rChildContext);
    }
 
    @Override

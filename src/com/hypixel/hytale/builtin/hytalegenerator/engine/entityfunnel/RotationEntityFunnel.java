@@ -9,10 +9,12 @@ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponen
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 import org.joml.Vector3d;
+import org.joml.Vector3dc;
 import org.joml.Vector3i;
 import org.joml.Vector3ic;
 
 public class RotationEntityFunnel implements EntityFunnel {
+   private static final Vector3dc BLOCK_CENTER = new Vector3d(0.5, 0.5, 0.5);
    @Nonnull
    private final RotationTuple rotation_fromViewToSource;
    @Nonnull
@@ -45,7 +47,9 @@ public class RotationEntityFunnel implements EntityFunnel {
       if (entityTransform != null) {
          Vector3d entityPosition = entityTransform.getPosition();
          Rotation3f entityRotation = entityTransform.getRotation();
+         entityPosition.sub(BLOCK_CENTER);
          this.rotation_fromViewToSource.applyRotationTo(entityPosition);
+         entityPosition.add(BLOCK_CENTER);
          this.rotation_fromViewToSource.applyRotationTo(entityRotation);
       }
 

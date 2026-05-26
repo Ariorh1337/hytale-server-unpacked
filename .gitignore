@@ -7,3 +7,4 @@
 dist/
 versions.json
 !vineflower-1.12.0.jar
+PROTOCOL-CHANGES-*.md

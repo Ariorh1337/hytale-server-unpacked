@@ -29,9 +29,13 @@ public class YSampledDensityAsset extends DensityAsset {
    @Nonnull
    @Override
    public Density build(@Nonnull DensityAsset.Argument argument) {
-      return this.sampleDistance <= 0.0
-         ? new ConstantValueDensity(0.0)
-         : new YSampledDensity(this.buildFirstInput(argument), this.sampleDistance, this.sampleOffset, this.interpolate);
+      if (this.isSkipped()) {
+         return new ConstantValueDensity(0.0);
+      } else {
+         return this.sampleDistance <= 0.0
+            ? new ConstantValueDensity(0.0)
+            : new YSampledDensity(this.buildFirstInput(argument), this.sampleDistance, this.sampleOffset, this.interpolate);
+      }
    }
 
    @Override

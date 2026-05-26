@@ -81,6 +81,8 @@ public interface IPrefabBuffer {
       @Nonnull T var5
    );
 
+   <T> void forEachEntity(@Nonnull IPrefabBuffer.EntityConsumer<T> var1, @Nullable T var2);
+
    <T> void forEachRaw(
       @Nonnull IPrefabBuffer.ColumnPredicate<T> var1,
       @Nonnull IPrefabBuffer.RawBlockConsumer<T> var2,

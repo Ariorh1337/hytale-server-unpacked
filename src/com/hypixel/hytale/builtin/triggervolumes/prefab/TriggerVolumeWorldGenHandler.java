@@ -60,39 +60,43 @@ public class TriggerVolumeWorldGenHandler extends RefSystem<EntityStore> {
    public void onEntityAdded(
       @Nonnull Ref<EntityStore> ref, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
    ) {
-      TriggerVolumeManager manager = store.getResource(this.managerResourceType);
-      if (manager != null) {
-         World world = manager.getWorld();
-         if (world != null) {
-            TriggerVolume tvComponent = store.getComponent(ref, this.triggerVolumeComponentType);
-            TransformComponent transform = store.getComponent(ref, TRANSFORM_COMPONENT_TYPE);
-            FromPrefabInstance fromPrefabInstance = store.getComponent(ref, FROM_PREFAB_INSTANCE_COMPONENT_TYPE);
-            if (tvComponent != null && transform != null && transform.getPosition() != null && fromPrefabInstance != null) {
-               String worldName = world.getName().toLowerCase(Locale.ROOT);
-               Vector3d position = new Vector3d(transform.getPosition());
-               long chunkIndex = ChunkUtil.indexChunkFromBlock(position.x(), position.z());
-               if (manager.consumeWorldGenRegenChunk(chunkIndex)) {
-                  manager.removeWorldGenVolumesInChunk(chunkIndex);
-               }
+      if (reason == AddReason.LOAD) {
+         commandBuffer.removeEntity(ref, RemoveReason.REMOVE);
+      } else {
+         TriggerVolumeManager manager = store.getResource(this.managerResourceType);
+         if (manager != null) {
+            World world = manager.getWorld();
+            if (world != null) {
+               TriggerVolume tvComponent = store.getComponent(ref, this.triggerVolumeComponentType);
+               TransformComponent transform = store.getComponent(ref, TRANSFORM_COMPONENT_TYPE);
+               FromPrefabInstance fromPrefabInstance = store.getComponent(ref, FROM_PREFAB_INSTANCE_COMPONENT_TYPE);
+               if (tvComponent != null && transform != null && transform.getPosition() != null && fromPrefabInstance != null) {
+                  String worldName = world.getName().toLowerCase(Locale.ROOT);
+                  Vector3d position = new Vector3d(transform.getPosition());
+                  long chunkIndex = ChunkUtil.indexChunkFromBlock(position.x(), position.z());
+                  if (manager.consumeWorldGenRegenChunk(chunkIndex)) {
+                     manager.removeWorldGenVolumesInChunk(chunkIndex);
+                  }
 
-               String id = manager.generateUniqueVolumeId();
-               VolumeEntry entry = tvComponent.toVolumeEntry(id, worldName, position, transform.getRotation().yaw());
-               entry.setFromWorldGen(true);
-               String linkId = tvComponent.getGroupLinkId();
-               if (linkId != null && !linkId.isBlank()) {
-                  String newGroupId = manager.ensureWorldGenGroup(fromPrefabInstance.getPrefabInstanceId(), linkId, entry, worldName);
-                  if (newGroupId != null) {
-                     entry.setGroupId(newGroupId);
-                     GroupEntry group = manager.getGroup(newGroupId);
-                     if (group != null) {
-                        group.addMember(entry.getId());
+                  String id = manager.generateUniqueVolumeId();
+                  VolumeEntry entry = tvComponent.toVolumeEntry(id, worldName, position, transform.getRotation().yaw());
+                  entry.setFromWorldGen(true);
+                  String linkId = tvComponent.getGroupLinkId();
+                  if (linkId != null && !linkId.isBlank()) {
+                     String newGroupId = manager.ensureWorldGenGroup(fromPrefabInstance.getPrefabInstanceId(), linkId, entry, worldName);
+                     if (newGroupId != null) {
+                        entry.setGroupId(newGroupId);
+                        GroupEntry group = manager.getGroup(newGroupId);
+                        if (group != null) {
+                           group.addMember(entry.getId());
+                        }
                      }
                   }
-               }
 
-               manager.register(id, entry);
-               manager.notifyViewersAdd(entry);
-               commandBuffer.removeEntity(ref, RemoveReason.REMOVE);
+                  manager.register(id, entry);
+                  manager.notifyViewersAdd(entry);
+                  commandBuffer.removeEntity(ref, RemoveReason.REMOVE);
+               }
             }
          }
       }

@@ -37,7 +37,7 @@ public class PositionsHorizontalPinchDensity extends Density {
    @Nonnull
    private final ReusableList<Vector3d> rWarpVectors;
    @Nonnull
-   private final ReusableList<Double> rWarpDistances;
+   private final ReusableList<Double> rNormalizedDistances;
    @Nonnull
    private final ReusableList<Double> rWeights;
    @Nonnull
@@ -54,10 +54,7 @@ public class PositionsHorizontalPinchDensity extends Density {
       double positionsMinY,
       double positionsMaxY
    ) {
-      if (maxDistance < 0.0) {
-         throw new IllegalArgumentException();
-      }
-
+      assert maxDistance >= 0.0;
       if (positionsMinY > positionsMaxY) {
          positionsMinY = positionsMaxY;
       }
@@ -77,7 +74,7 @@ public class PositionsHorizontalPinchDensity extends Density {
       this.rPosition = new Vector3d();
       this.rConsumerResult = new Vector3d();
       this.rWarpVectors = new ReusableList<>();
-      this.rWarpDistances = new ReusableList<>();
+      this.rNormalizedDistances = new ReusableList<>();
       this.rWeights = new ReusableList<>();
       this.rPositionsContext = new PositionProvider.Context();
       this.rChildContext = new Density.Context();
@@ -139,7 +136,7 @@ public class PositionsHorizontalPinchDensity extends Density {
             this.rWarpVectors.expandAndGet().set(this.rConsumerResult);
          }
 
-         this.rWarpDistances.expandAndSet(normalizedDistance);
+         this.rNormalizedDistances.expandAndSet(normalizedDistance);
       }
    }
 
@@ -148,32 +145,33 @@ public class PositionsHorizontalPinchDensity extends Density {
       this.rMax.set(context.position.x + this.maxDistance, this.positionsMaxY, context.position.z + this.maxDistance);
       this.rSamplePoint.set(context.position);
       this.rWarpVectors.clear();
-      this.rWarpDistances.clear();
+      this.rNormalizedDistances.clear();
       this.rPositionsContext.bounds.min.set(this.rMin);
       this.rPositionsContext.bounds.max.set(this.rMax);
       this.rPositionsContext.pipe = this::consumer;
       this.positions.generate(this.rPositionsContext);
-      if (this.rWarpVectors.getSoftSize() == 0) {
-         vector_out.set(0.0, 0.0, 0.0);
-      } else if (this.rWarpVectors.getSoftSize() == 1) {
-         vector_out.set(this.rWarpVectors.get(0));
-      } else {
-         int possiblePointsSize = this.rWarpVectors.getSoftSize();
-         this.rWeights.clear();
-         double totalWeight = 0.0;
+      vector_out.set(0.0, 0.0, 0.0);
+      if (this.rWarpVectors.getSoftSize() != 0) {
+         if (this.rWarpVectors.getSoftSize() == 1) {
+            vector_out.set(this.rWarpVectors.get(0));
+         } else {
+            int possiblePointsSize = this.rWarpVectors.getSoftSize();
+            this.rWeights.clear();
+            double totalWeight = 0.0;
 
-         for (int i = 0; i < possiblePointsSize; i++) {
-            double distance = this.rWarpDistances.get(i);
-            double weight = 1.0 - distance;
-            this.rWeights.expandAndSet(weight);
-            totalWeight += weight;
-         }
+            for (int i = 0; i < possiblePointsSize; i++) {
+               double normalizedDistance = this.rNormalizedDistances.get(i);
+               double weight = 1.0 - normalizedDistance;
+               this.rWeights.expandAndSet(weight);
+               totalWeight += weight;
+            }
 
-         for (int i = 0; i < possiblePointsSize; i++) {
-            double weight = this.rWeights.get(i) / totalWeight;
-            Vector3d warpVector = this.rWarpVectors.get(i);
-            warpVector.mul(weight);
-            vector_out.add(warpVector);
+            for (int i = 0; i < possiblePointsSize; i++) {
+               double weight = this.rWeights.get(i) / totalWeight;
+               Vector3d warpVector = this.rWarpVectors.get(i);
+               warpVector.mul(weight);
+               vector_out.add(warpVector);
+            }
          }
       }
    }

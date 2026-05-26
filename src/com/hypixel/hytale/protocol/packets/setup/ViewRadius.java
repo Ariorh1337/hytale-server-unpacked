@@ -47,11 +47,15 @@ public class ViewRadius implements Packet, ToServerPacket, ToClientPacket {
    public static ViewRadius deserialize(@Nonnull ByteBuf buf, int offset) {
       if (buf.readableBytes() - offset < 4) {
          throw ProtocolException.bufferTooSmall("ViewRadius", 4, buf.readableBytes() - offset);
+      } else {
+         ViewRadius obj = new ViewRadius();
+         obj.value = buf.getIntLE(offset + 0);
+         if (obj.value < 0) {
+            throw ProtocolException.valueBelowMinimum("Value", obj.value, 0.0);
+         } else {
+            return obj;
+         }
       }
-
-      ViewRadius obj = new ViewRadius();
-      obj.value = buf.getIntLE(offset + 0);
-      return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -84,6 +88,10 @@ public class ViewRadius implements Packet, ToServerPacket, ToClientPacket {
 
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
+      if (this.value < 0) {
+         throw ProtocolException.valueBelowMinimum("Value", this.value, 0.0);
+      }
+
       buf.writeIntLE(this.value);
    }
 
@@ -99,7 +107,12 @@ public class ViewRadius implements Packet, ToServerPacket, ToClientPacket {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 4 ? ValidationResult.error("Buffer too small: expected at least 4 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 4) {
+         return ValidationResult.error("Buffer too small: expected at least 4 bytes");
+      }
+
+      int valueVal = buffer.getIntLE(offset + 0);
+      return valueVal < 0 ? ValidationResult.error("Value value out of range") : ValidationResult.OK;
    }
 
    public ViewRadius clone() {

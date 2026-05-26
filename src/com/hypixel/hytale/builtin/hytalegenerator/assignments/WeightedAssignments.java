@@ -16,14 +16,14 @@ public class WeightedAssignments extends Assignments {
    private final WeightedMap<Assignments> weightedDistributions;
    @Nonnull
    private final RngField rngField;
-   private final double noneProbability;
+   private final double skipCHance;
    @Nonnull
    private final FastRandom rRandom;
 
-   public WeightedAssignments(@Nonnull WeightedMap<Assignments> props, int seed, double noneProbability) {
+   public WeightedAssignments(@Nonnull WeightedMap<Assignments> props, int seed, double skipCHance) {
       this.weightedDistributions = new WeightedMap<>(props);
       this.rngField = new RngField(seed);
-      this.noneProbability = noneProbability;
+      this.skipCHance = skipCHance;
       this.rRandom = new FastRandom();
    }
 
@@ -34,7 +34,7 @@ public class WeightedAssignments extends Assignments {
       }
 
       this.rRandom.setSeed(this.rngField.get(position.x, position.y, position.z));
-      return this.rRandom.nextDouble() < this.noneProbability
+      return this.rRandom.nextDouble() < this.skipCHance
          ? EmptyProp.INSTANCE
          : this.weightedDistributions.pick(this.rRandom).propAt(position, id, distanceTOBiomeEdge);
    }

@@ -750,6 +750,20 @@ public class PrefabBuffer {
       }
 
       @Override
+      public <T> void forEachEntity(@Nonnull IPrefabBuffer.EntityConsumer<T> entityConsumer, @Nullable T t) {
+         this.prefabBuffer.columns.int2ObjectEntrySet().forEach(entry -> {
+            int columnIndex = entry.getIntKey();
+            int x = MathUtil.unpackLeft(columnIndex);
+            int z = MathUtil.unpackRight(columnIndex);
+            PrefabBufferColumn column = entry.getValue();
+            Holder<EntityStore>[] entityHolders = column.getEntityHolders();
+            if (entityConsumer != null) {
+               entityConsumer.accept(x, z, entityHolders, t);
+            }
+         });
+      }
+
+      @Override
       public <T> void forEachRaw(
          @Nonnull IPrefabBuffer.ColumnPredicate<T> columnPredicate,
          @Nonnull IPrefabBuffer.RawBlockConsumer<T> blockConsumer,

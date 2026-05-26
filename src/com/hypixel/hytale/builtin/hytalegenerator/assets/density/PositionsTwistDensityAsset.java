@@ -36,8 +36,11 @@ public class PositionsTwistDensityAsset extends DensityAsset {
       .append(new KeyedCodec<>("ZeroPositionsY", Codec.BOOLEAN, true), (asset, v) -> asset.zeroPositionsY = v, asset -> asset.zeroPositionsY)
       .add()
       .build();
+   @Nonnull
    private PositionProviderAsset positionProviderAsset = new ListPositionProviderAsset();
+   @Nonnull
    private CurveAsset pinchCurveAsset = new ConstantCurveAsset();
+   @Nonnull
    private Vector3d twistAxis = new Vector3d();
    private double maxDistance;
    private boolean normalizeDistance;

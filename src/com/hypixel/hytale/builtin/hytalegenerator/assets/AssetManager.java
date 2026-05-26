@@ -303,7 +303,7 @@ public class AssetManager {
    }
 
    private void loadPropAssets(@Nonnull LoadedAssetsEvent<String, PropAsset, DefaultAssetMap<String, PropAsset>> event) {
-      this.blockMaskAssets.clear();
+      this.propAssets.clear();
 
       for (PropAsset value : event.getLoadedAssets().values()) {
          this.propAssets.put(value.getId(), value);
@@ -314,7 +314,7 @@ public class AssetManager {
    }
 
    private void loadPositionProviderAssets(@Nonnull LoadedAssetsEvent<String, PositionProviderAsset, DefaultAssetMap<String, PositionProviderAsset>> event) {
-      this.blockMaskAssets.clear();
+      this.positionProviderAssets.clear();
 
       for (PositionProviderAsset value : event.getLoadedAssets().values()) {
          this.positionProviderAssets.put(value.getId(), value);
@@ -325,7 +325,7 @@ public class AssetManager {
    }
 
    private void loadPropDistributionAssets(@Nonnull LoadedAssetsEvent<String, PropDistributionAsset, DefaultAssetMap<String, PropDistributionAsset>> event) {
-      this.blockMaskAssets.clear();
+      this.propDistributionAssets.clear();
 
       for (PropDistributionAsset value : event.getLoadedAssets().values()) {
          this.propDistributionAssets.put(value.getId(), value);
@@ -378,7 +378,7 @@ public class AssetManager {
    }
 
    private void loadWorldStructureAssets(@Nonnull LoadedAssetsEvent<String, WorldStructureAsset, DefaultAssetMap<String, WorldStructureAsset>> event) {
-      this.biomeAssets.clear();
+      this.worldStructureAssets.clear();
 
       for (WorldStructureAsset value : event.getLoadedAssets().values()) {
          this.worldStructureAssets.put(value.getId(), value);

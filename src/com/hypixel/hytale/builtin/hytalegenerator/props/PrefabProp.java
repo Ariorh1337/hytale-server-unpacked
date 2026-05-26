@@ -219,10 +219,9 @@ public class PrefabProp extends Prop {
 
    @Nonnull
    private static Bounds3i getWriteBounds(@Nonnull IPrefabBuffer prefab) {
-      Vector3i max = PrefabPropUtil.getMax(prefab, PrefabRotation.ROTATION_0);
-      max.add(1, 1, 1);
-      Vector3i min = PrefabPropUtil.getMin(prefab, PrefabRotation.ROTATION_0);
-      return new Bounds3i(min, max);
+      Bounds3i bounds = PrefabPropUtil.getTotalBounds(prefab);
+      bounds.max.add(1, 1, 1);
+      return bounds;
    }
 
    @NonNullDecl

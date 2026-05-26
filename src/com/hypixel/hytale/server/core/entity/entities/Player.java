@@ -654,7 +654,7 @@ public class Player extends LivingEntity implements MetricProvider {
    }
 
    public void setClientViewRadius(int clientViewRadius) {
-      this.clientViewRadius = clientViewRadius;
+      this.clientViewRadius = Math.max(0, clientViewRadius);
    }
 
    public int getClientViewRadius() {

@@ -57,23 +57,27 @@ public class TriggerVolumeGroupWorldGenHandler extends RefSystem<EntityStore> {
    public void onEntityAdded(
       @Nonnull Ref<EntityStore> ref, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
    ) {
-      TriggerVolumeManager manager = store.getResource(this.managerResourceType);
-      if (manager != null) {
-         World world = manager.getWorld();
-         if (world != null) {
-            TriggerVolumeGroup groupComponent = store.getComponent(ref, this.triggerVolumeGroupComponentType);
-            TransformComponent transform = store.getComponent(ref, TRANSFORM_COMPONENT_TYPE);
-            FromPrefabInstance fromPrefabInstance = store.getComponent(ref, FROM_PREFAB_INSTANCE_COMPONENT_TYPE);
-            if (groupComponent != null && transform != null && transform.getPosition() != null && fromPrefabInstance != null) {
-               String linkId = groupComponent.getGroupLinkId();
-               if (linkId != null && !linkId.isBlank()) {
-                  String worldName = world.getName().toLowerCase(Locale.ROOT);
-                  manager.upsertWorldGenGroup(
-                     fromPrefabInstance.getPrefabInstanceId(), linkId, groupComponent, worldName, new Vector3d(transform.getPosition())
-                  );
-               }
+      if (reason == AddReason.LOAD) {
+         commandBuffer.removeEntity(ref, RemoveReason.REMOVE);
+      } else {
+         TriggerVolumeManager manager = store.getResource(this.managerResourceType);
+         if (manager != null) {
+            World world = manager.getWorld();
+            if (world != null) {
+               TriggerVolumeGroup groupComponent = store.getComponent(ref, this.triggerVolumeGroupComponentType);
+               TransformComponent transform = store.getComponent(ref, TRANSFORM_COMPONENT_TYPE);
+               FromPrefabInstance fromPrefabInstance = store.getComponent(ref, FROM_PREFAB_INSTANCE_COMPONENT_TYPE);
+               if (groupComponent != null && transform != null && transform.getPosition() != null && fromPrefabInstance != null) {
+                  String linkId = groupComponent.getGroupLinkId();
+                  if (linkId != null && !linkId.isBlank()) {
+                     String worldName = world.getName().toLowerCase(Locale.ROOT);
+                     manager.upsertWorldGenGroup(
+                        fromPrefabInstance.getPrefabInstanceId(), linkId, groupComponent, worldName, new Vector3d(transform.getPosition())
+                     );
+                  }
 
-               commandBuffer.removeEntity(ref, RemoveReason.REMOVE);
+                  commandBuffer.removeEntity(ref, RemoveReason.REMOVE);
+               }
             }
          }
       }

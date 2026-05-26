@@ -14,12 +14,14 @@ public class PositionsTwistDensity extends Density {
    @Nullable
    private Density input;
    @Nullable
-   private PositionProvider positions;
-   private Double2DoubleFunction twistCurve;
-   private Vector3d twistAxis;
-   private double maxDistance;
-   private boolean distanceNormalized;
-   private boolean zeroPositionsY;
+   private final PositionProvider positions;
+   @Nonnull
+   private final Double2DoubleFunction twistCurve;
+   @Nonnull
+   private final Vector3d twistAxis;
+   private final double maxDistance;
+   private final boolean distanceNormalized;
+   private final boolean zeroPositionsY;
    @Nonnull
    private final Vector3d rMin;
    @Nonnull
@@ -50,10 +52,7 @@ public class PositionsTwistDensity extends Density {
       boolean distanceNormalized,
       boolean zeroPositionsY
    ) {
-      if (maxDistance < 0.0) {
-         throw new IllegalArgumentException();
-      }
-
+      assert maxDistance >= 0.0;
       if (twistAxis.length() < 1.0E-9) {
          twistAxis = new Vector3d(0.0, 1.0, 0.0);
       }
@@ -101,11 +100,7 @@ public class PositionsTwistDensity extends Density {
             this.rWarpVectors.expandAndGet().set(this.rWarpVector);
          }
 
-         if (this.distanceNormalized) {
-            this.rWarpDistances.expandAndSet(normalizedDistance);
-         } else {
-            this.rWarpDistances.expandAndSet(distance);
-         }
+         this.rWarpDistances.expandAndSet(normalizedDistance);
       }
    }
 

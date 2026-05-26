@@ -77,15 +77,27 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
    private final ResourceType<EntityStore, SpatialResource<Ref<EntityStore>, EntityStore>> entitySpatialResourceType;
    @Nonnull
    private final Set<Dependency<EntityStore>> dependencies;
+   @Nonnull
+   private final TriggerVolumeTickingSystem.EventDispatcher eventDispatcher;
 
    public TriggerVolumeTickingSystem(
       @Nonnull ResourceType<EntityStore, TriggerVolumeManager> managerResourceType,
       @Nonnull ResourceType<EntityStore, SpatialResource<Ref<EntityStore>, EntityStore>> playerSpatialResourceType,
       @Nonnull ResourceType<EntityStore, SpatialResource<Ref<EntityStore>, EntityStore>> entitySpatialResourceType
    ) {
+      this(managerResourceType, playerSpatialResourceType, entitySpatialResourceType, TriggerVolumeTickingSystem::dispatchToServerEventBus);
+   }
+
+   TriggerVolumeTickingSystem(
+      @Nonnull ResourceType<EntityStore, TriggerVolumeManager> managerResourceType,
+      @Nonnull ResourceType<EntityStore, SpatialResource<Ref<EntityStore>, EntityStore>> playerSpatialResourceType,
+      @Nonnull ResourceType<EntityStore, SpatialResource<Ref<EntityStore>, EntityStore>> entitySpatialResourceType,
+      @Nonnull TriggerVolumeTickingSystem.EventDispatcher eventDispatcher
+   ) {
       this.managerResourceType = managerResourceType;
       this.playerSpatialResourceType = playerSpatialResourceType;
       this.entitySpatialResourceType = entitySpatialResourceType;
+      this.eventDispatcher = eventDispatcher;
       this.dependencies = Set.of(new SystemDependency<>(Order.AFTER, PlayerSpatialSystem.class, OrderPriority.CLOSEST));
    }
 
@@ -371,12 +383,9 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
       for (UUID exitedUuid : previousUuids) {
          Ref<EntityStore> exitedRef = previousRefs.get(exitedUuid);
          if (exitedRef != null && exitedRef.isValid()) {
-            if (entry.isVolumeActivated(exitedUuid)) {
-               this.dispatchEvent(TriggerEventType.EXIT, entry, exitedRef, exitedUuid);
-               this.fireEffects(TriggerEventType.EXIT, exitedRef, entry, store, nowNanos, exitedUuid);
-            }
-
-            if (entry.getGroupId() != null && entry.isGroupActivated(entry.getGroupId(), exitedUuid)) {
+            this.dispatchEvent(TriggerEventType.EXIT, entry, exitedRef, exitedUuid);
+            this.fireEffects(TriggerEventType.EXIT, exitedRef, entry, store, nowNanos, exitedUuid);
+            if (entry.getGroupId() != null) {
                this.fireGroupEffects(TriggerEventType.EXIT, exitedRef, entry, manager, store, nowNanos, exitedUuid);
             }
          }
@@ -1087,11 +1096,18 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
    }
 
    private void dispatchEvent(@Nonnull TriggerEventType eventType, @Nonnull VolumeEntry entry, @Nonnull Ref<EntityStore> entityRef, @Nonnull UUID entityUuid) {
-      IEventDispatcher<TriggerVolumeEvent, TriggerVolumeEvent> dispatcher = HytaleServer.get()
-         .getEventBus()
-         .dispatchFor(TriggerVolumeEvent.class, entry.getWorldName());
-      if (dispatcher.hasListener()) {
-         dispatcher.dispatch(new TriggerVolumeEvent(entry.getWorldName(), eventType, entry, entityRef, entityUuid));
+      this.eventDispatcher.dispatch(eventType, entry, entityRef, entityUuid);
+   }
+
+   private static void dispatchToServerEventBus(
+      @Nonnull TriggerEventType eventType, @Nonnull VolumeEntry entry, @Nonnull Ref<EntityStore> entityRef, @Nonnull UUID entityUuid
+   ) {
+      HytaleServer server = HytaleServer.get();
+      if (server != null) {
+         IEventDispatcher<TriggerVolumeEvent, TriggerVolumeEvent> dispatcher = server.getEventBus().dispatchFor(TriggerVolumeEvent.class, entry.getWorldName());
+         if (dispatcher.hasListener()) {
+            dispatcher.dispatch(new TriggerVolumeEvent(entry.getWorldName(), eventType, entry, entityRef, entityUuid));
+         }
       }
    }
 
@@ -1106,12 +1122,9 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
          UUID uuid = tracked.getKey();
          Ref<EntityStore> entityRef = tracked.getValue();
          if (entityRef != null && entityRef.isValid()) {
-            if (entry.isVolumeActivated(uuid)) {
-               this.dispatchEvent(TriggerEventType.EXIT, entry, entityRef, uuid);
-               this.fireEffects(TriggerEventType.EXIT, entityRef, entry, store, nowNanos, uuid);
-            }
-
-            if (entry.getGroupId() != null && entry.isGroupActivated(entry.getGroupId(), uuid)) {
+            this.dispatchEvent(TriggerEventType.EXIT, entry, entityRef, uuid);
+            this.fireEffects(TriggerEventType.EXIT, entityRef, entry, store, nowNanos, uuid);
+            if (entry.getGroupId() != null) {
                this.fireGroupEffects(TriggerEventType.EXIT, entityRef, entry, manager, store, nowNanos, uuid);
             }
          }
@@ -1163,5 +1176,10 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
       ACCEPTED,
       REJECTED,
       PENDING;
+   }
+
+   @FunctionalInterface
+   interface EventDispatcher {
+      void dispatch(@Nonnull TriggerEventType var1, @Nonnull VolumeEntry var2, @Nonnull Ref<EntityStore> var3, @Nonnull UUID var4);
    }
 }
