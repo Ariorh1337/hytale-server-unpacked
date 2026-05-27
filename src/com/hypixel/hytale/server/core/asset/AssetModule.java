@@ -19,6 +19,7 @@ import com.hypixel.hytale.common.util.FormatUtil;
 import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.common.util.java.ManifestUtil;
 import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.logger.sentry.SkipSentryException;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.HytaleServerConfig;
 import com.hypixel.hytale.server.core.Message;
@@ -349,7 +350,7 @@ public class AssetModule extends JavaPlugin {
             return;
          }
       } catch (Exception e) {
-         this.getLogger().at(Level.WARNING).withCause(e).log("Failed to load manifest for pack at %s", packPath);
+         this.getLogger().at(Level.WARNING).withCause(new SkipSentryException(e)).log("Failed to load manifest for pack at %s", packPath);
          return;
       }
 

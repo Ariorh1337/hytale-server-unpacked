@@ -98,18 +98,23 @@ public class SemverRange implements SemverSatisfies {
             if (subRange.contains(" - ")) {
                String[] range = subRange.split(" - ");
                if (range.length != 2) {
-                  throw new IllegalArgumentException("Range has an invalid number of arguments!");
+                  throw new IllegalArgumentException("Hyphen range '" + subRange + "' must have exactly one ' - ' separator");
                }
 
                comparators[i] = new SemverRange(
                   new SemverSatisfies[]{
-                     new SemverComparator(SemverComparator.ComparisonType.GTE, Semver.fromString(range[0], strict)),
-                     new SemverComparator(SemverComparator.ComparisonType.LTE, Semver.fromString(range[1], strict))
+                     new SemverComparator(SemverComparator.ComparisonType.GTE, Semver.fromString(range[0].trim(), strict)),
+                     new SemverComparator(SemverComparator.ComparisonType.LTE, Semver.fromString(range[1].trim(), strict))
                   },
                   true
                );
             } else if (subRange.charAt(0) == '~') {
-               Semver semver = Semver.fromString(subRange.substring(1), strict);
+               String rest = subRange.substring(1).trim();
+               if (rest.isEmpty()) {
+                  throw new IllegalArgumentException("Tilde range '~' has no version (input: '" + subRange + "')");
+               }
+
+               Semver semver = Semver.fromString(rest, strict);
                if (semver.getMinor() > 0L) {
                   comparators[i] = new SemverRange(
                      new SemverSatisfies[]{
@@ -128,7 +133,12 @@ public class SemverRange implements SemverSatisfies {
                   );
                }
             } else if (subRange.charAt(0) == '^') {
-               Semver semver = Semver.fromString(subRange.substring(1), strict);
+               String rest = subRange.substring(1).trim();
+               if (rest.isEmpty()) {
+                  throw new IllegalArgumentException("Caret range '^' has no version (input: '" + subRange + "')");
+               }
+
+               Semver semver = Semver.fromString(rest, strict);
                if (semver.getMajor() > 0L) {
                   comparators[i] = new SemverRange(
                      new SemverSatisfies[]{
@@ -171,7 +181,17 @@ public class SemverRange implements SemverSatisfies {
                      );
                   } else {
                      if (semver.getPatch() != 0L) {
-                        throw new IllegalArgumentException("Invalid X-Range! " + subRange);
+                        throw new IllegalArgumentException(
+                           "Bare version '"
+                              + subRange
+                              + "' is not a valid range. Use '="
+                              + subRange
+                              + "' for an exact match, or '^"
+                              + subRange
+                              + "' / '~"
+                              + subRange
+                              + "' for a range. Bare ranges only work when the patch is zero (e.g. '1.2.0' or '1.x')."
+                        );
                      }
 
                      comparators[i] = new SemverRange(

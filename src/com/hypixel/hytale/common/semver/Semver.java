@@ -142,10 +142,11 @@ public class Semver implements Comparable<Semver> {
 
    @Nonnull
    public static Semver fromString(String str, boolean strict) {
-      Objects.requireNonNull(str, "String can't be null!");
+      Objects.requireNonNull(str, "Semver string can't be null!");
+      String original = str;
       str = str.trim();
       if (str.isEmpty()) {
-         throw new IllegalArgumentException("String is empty!");
+         throw new IllegalArgumentException("Semver string is empty (input: '" + original + "')");
       }
 
       if (str.charAt(0) == '=' || str.charAt(0) == 'v') {
@@ -158,7 +159,7 @@ public class Semver implements Comparable<Semver> {
 
       str = str.trim();
       if (str.isEmpty()) {
-         throw new IllegalArgumentException("String is empty!");
+         throw new IllegalArgumentException("Semver string is empty after stripping leading '='/'v' (input: '" + original + "')");
       }
 
       String build = null;
@@ -182,7 +183,7 @@ public class Semver implements Comparable<Semver> {
          if (split.length < 1) {
             throw new IllegalArgumentException("String doesn't match <major>.<minor>.<patch> (" + str + ")");
          } else {
-            long major = Long.parseLong(split[0]);
+            long major = parseComponent(split[0], "Major", original);
             if (major < 0L) {
                throw new IllegalArgumentException("Major must be a non-negative integers (" + str + ")");
             } else if (!strict && split.length == 1) {
@@ -190,7 +191,7 @@ public class Semver implements Comparable<Semver> {
             } else if (split.length < 2) {
                throw new IllegalArgumentException("String doesn't match <major>.<minor>.<patch> (" + str + ")");
             } else {
-               long minor = Long.parseLong(split[1]);
+               long minor = parseComponent(split[1], "Minor", original);
                if (minor < 0L) {
                   throw new IllegalArgumentException("Minor must be a non-negative integers (" + str + ")");
                } else if (!strict && split.length == 2) {
@@ -198,7 +199,7 @@ public class Semver implements Comparable<Semver> {
                } else if (split.length != 3) {
                   throw new IllegalArgumentException("String doesn't match <major>.<minor>.<patch> (" + str + ")");
                } else {
-                  long patch = Long.parseLong(split[2]);
+                  long patch = parseComponent(split[2], "Patch", original);
                   if (patch < 0L) {
                      throw new IllegalArgumentException("Patch must be a non-negative integers (" + str + ")");
                   } else {
@@ -209,6 +210,23 @@ public class Semver implements Comparable<Semver> {
          }
       } else {
          throw new IllegalArgumentException("Failed to parse digits (" + str + ")");
+      }
+   }
+
+   private static long parseComponent(@Nonnull String value, @Nonnull String component, @Nonnull String original) {
+      try {
+         return Long.parseLong(value);
+      } catch (NumberFormatException e) {
+         throw new IllegalArgumentException(
+            "Invalid version '"
+               + original
+               + "': "
+               + component.toLowerCase()
+               + " must be a non-negative integer, got '"
+               + value
+               + "'. Expected format: <major>.<minor>.<patch>.",
+            e
+         );
       }
    }
 

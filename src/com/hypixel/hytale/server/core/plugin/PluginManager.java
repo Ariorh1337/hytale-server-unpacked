@@ -5,6 +5,7 @@ import com.hypixel.hytale.assetstore.AssetRegistry;
 import com.hypixel.hytale.assetstore.AssetStore;
 import com.hypixel.hytale.codec.ExtraInfo;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
+import com.hypixel.hytale.codec.exception.CodecException;
 import com.hypixel.hytale.codec.util.RawJsonReader;
 import com.hypixel.hytale.common.plugin.Mod;
 import com.hypixel.hytale.common.plugin.ModLoadOrderException;
@@ -545,7 +546,14 @@ public class PluginManager {
             char[] buffer = RawJsonReader.READ_BUFFER.get();
             RawJsonReader rawJsonReader = new RawJsonReader(reader, buffer);
             ExtraInfo extraInfo = ExtraInfo.THREAD_LOCAL.get();
-            manifest = PluginManifest.CODEC.decodeJson(rawJsonReader, extraInfo);
+
+            try {
+               manifest = PluginManifest.CODEC.decodeJson(rawJsonReader, extraInfo);
+            } catch (CodecException e) {
+               LOGGER.at(Level.WARNING).withCause(new SkipSentryException(e)).log("Failed to load manifest for plugin at %s", file);
+               return null;
+            }
+
             if (manifest == null) {
                LOGGER.at(Level.SEVERE).log("Failed to load pending plugin from '%s'. Failed to decode manifest file!", file.toString());
                return null;
@@ -587,7 +595,15 @@ public class PluginManager {
                   char[] buffer = RawJsonReader.READ_BUFFER.get();
                   RawJsonReader rawJsonReader = new RawJsonReader(reader, buffer);
                   ExtraInfo extraInfo = ExtraInfo.THREAD_LOCAL.get();
-                  PluginManifest manifest = PluginManifest.CODEC.decodeJson(rawJsonReader, extraInfo);
+
+                  PluginManifest manifest;
+                  try {
+                     manifest = PluginManifest.CODEC.decodeJson(rawJsonReader, extraInfo);
+                  } catch (CodecException e) {
+                     LOGGER.at(Level.WARNING).withCause(new SkipSentryException(e)).log("Failed to load manifest for plugin at %s", manifestUrl);
+                     continue;
+                  }
+
                   extraInfo.getValidationResults().logOrThrowValidatorExceptions(LOGGER);
                   if (manifest != null) {
                      PendingLoadJavaPlugin plugin;
@@ -634,7 +650,15 @@ public class PluginManager {
                   char[] buffer = RawJsonReader.READ_BUFFER.get();
                   RawJsonReader rawJsonReader = new RawJsonReader(reader, buffer);
                   ExtraInfo extraInfo = ExtraInfo.THREAD_LOCAL.get();
-                  PluginManifest[] manifests = PluginManifest.ARRAY_CODEC.decodeJson(rawJsonReader, extraInfo);
+
+                  PluginManifest[] manifests;
+                  try {
+                     manifests = PluginManifest.ARRAY_CODEC.decodeJson(rawJsonReader, extraInfo);
+                  } catch (CodecException e) {
+                     LOGGER.at(Level.WARNING).withCause(new SkipSentryException(e)).log("Failed to load manifests bundle at %s", manifestsUrl);
+                     return;
+                  }
+
                   extraInfo.getValidationResults().logOrThrowValidatorExceptions(LOGGER);
                   URL url = uri.toURL();
                   Path path = Paths.get(uri);

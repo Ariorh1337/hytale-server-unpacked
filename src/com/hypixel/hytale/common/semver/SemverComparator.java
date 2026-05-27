@@ -31,15 +31,23 @@ public class SemverComparator implements SemverSatisfies {
 
    @Nonnull
    public static SemverComparator fromString(String str) {
-      Objects.requireNonNull(str, "String can't be null!");
+      Objects.requireNonNull(str, "Comparator string can't be null!");
+      String original = str;
       str = str.trim();
       if (str.isEmpty()) {
-         throw new IllegalArgumentException("String is empty!");
+         throw new IllegalArgumentException("Comparator string is empty (input: '" + original + "')");
       }
 
       for (SemverComparator.ComparisonType comparisonType : SemverComparator.ComparisonType.values()) {
          if (str.startsWith(comparisonType.getPrefix())) {
-            Semver semver = Semver.fromString(str.substring(comparisonType.getPrefix().length()));
+            String versionPart = str.substring(comparisonType.getPrefix().length()).trim();
+            if (versionPart.isEmpty()) {
+               throw new IllegalArgumentException(
+                  "Comparator '" + comparisonType.getPrefix() + "' has no version after the operator (input: '" + original + "')"
+               );
+            }
+
+            Semver semver = Semver.fromString(versionPart);
             return new SemverComparator(comparisonType, semver);
          }
       }
