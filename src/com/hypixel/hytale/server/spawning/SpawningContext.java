@@ -516,11 +516,15 @@ public class SpawningContext {
          groundLevel = top - span;
 
          for (int blockType = isSpawnSpanBlock(this.xBlock, groundLevel, this.zBlock, chunkComponentStore, blockChunkComponent, chunkColumnComponent);
-            groundLevel >= 0 && blockType != -1;
+            blockType != -1;
             blockType = isSpawnSpanBlock(this.xBlock, --groundLevel, this.zBlock, chunkComponentStore, blockChunkComponent, chunkColumnComponent)
          ) {
             if (waterLevel == -1 && blockType == 1) {
                waterLevel = groundLevel;
+            }
+
+            if (groundLevel <= 0) {
+               return;
             }
          }
       }
