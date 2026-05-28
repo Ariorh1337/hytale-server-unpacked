@@ -230,7 +230,11 @@ public class BlockFilter {
 
          int directFluidId = Fluid.getAssetMap().getIndex(blockArg);
          if (directFluidId >= 0) {
-            fluids.add(directFluidId);
+            if (directFluidId == 0) {
+               blocks.add(0);
+            } else {
+               fluids.add(directFluidId);
+            }
          } else {
             int blockId = BlockPattern.parseBlock(blockArg);
             if (blockId == 0 && !blockArg.equalsIgnoreCase("Empty")) {

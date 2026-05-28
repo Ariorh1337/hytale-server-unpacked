@@ -11,6 +11,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse.BodyHandlers;
+import java.util.Locale;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 
@@ -33,11 +34,14 @@ public class DiscoveryService {
             serverVersion = "dev";
          }
 
+         long protocolVersion = 1316766548L;
          String body = String.format(
-            "{\"discoveryToken\":\"%s\",\"serverPatchline\":\"%s\",\"serverVersion\":\"%s\"}",
+            Locale.ROOT,
+            "{\"discoveryToken\":\"%s\",\"serverPatchline\":\"%s\",\"serverVersion\":\"%s\",\"protocolVersion\":%d}",
             escapeJsonString(discoveryToken),
             escapeJsonString(serverPatchline),
-            escapeJsonString(serverVersion)
+            escapeJsonString(serverVersion),
+            protocolVersion
          );
          HttpRequest request = HttpRequest.newBuilder()
             .uri(URI.create(String.format("%s/servers/heartbeat", "https://server-discovery.hytale.com")))
