@@ -13,6 +13,7 @@ import com.hypixel.hytale.builtin.hytalegenerator.scanners.Scanner;
 import com.hypixel.hytale.builtin.hytalegenerator.voxelspace.VoxelSpace;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.Rotation;
 import com.hypixel.hytale.server.core.prefab.PrefabRotation;
+import it.unimi.dsi.fastutil.ints.IntList;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
@@ -43,7 +44,7 @@ public class ColumnProp extends Prop {
    private final Bounds3i writeBounds_voxelGrid;
 
    public ColumnProp(
-      @Nonnull List<Integer> propYPositions,
+      @Nonnull IntList propYPositions,
       @Nonnull List<Material> blocks,
       @Nonnull BlockMask blockMask,
       @Nonnull Scanner scanner,
@@ -64,7 +65,7 @@ public class ColumnProp extends Prop {
       int maxY = Integer.MIN_VALUE;
 
       for (int i = 0; i < this.yPositions.length; i++) {
-         this.yPositions[i] = propYPositions.get(i);
+         this.yPositions[i] = propYPositions.getInt(i);
          this.blocks0[i] = blocks.get(i);
          this.blocks90[i] = new Material(materialCache.getSolidMaterialRotatedY(blocks.get(i).solid(), Rotation.Ninety), blocks.get(i).fluid());
          this.blocks180[i] = new Material(materialCache.getSolidMaterialRotatedY(blocks.get(i).solid(), Rotation.OneEighty), blocks.get(i).fluid());

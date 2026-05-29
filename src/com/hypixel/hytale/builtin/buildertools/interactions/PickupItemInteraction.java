@@ -58,13 +58,14 @@ public class PickupItemInteraction extends SimpleInstantInteraction {
                   ItemStack itemStack = itemComponent.getItemStack();
                   if (!ItemStack.isEmpty(itemStack)) {
                      Vector3d itemEntityPosition = transformComponent.getPosition();
-                     ItemStackTransaction transaction = Player.giveItem(itemStack, ref, commandBuffer);
+                     ItemStack normalizedItemStack = itemStack.cleanCopy();
+                     ItemStackTransaction transaction = Player.giveItem(normalizedItemStack, ref, commandBuffer);
                      ItemStack remainder = transaction.getRemainder();
                      if (ItemStack.isEmpty(remainder)) {
                         itemComponent.setRemovedByPlayerPickup(true);
                         commandBuffer.removeEntity(targetRef, RemoveReason.REMOVE);
-                        Player.notifyPickupItem(ref, itemStack, itemEntityPosition, commandBuffer);
-                        Holder<EntityStore> pickupItemHolder = ItemComponent.generatePickedUpItem(targetRef, commandBuffer, ref, itemEntityPosition);
+                        Player.notifyPickupItem(ref, normalizedItemStack, itemEntityPosition, commandBuffer);
+                        Holder<EntityStore> pickupItemHolder = ItemComponent.generatePickedUpItem(normalizedItemStack, itemEntityPosition, commandBuffer, ref);
                         if (pickupItemHolder != null) {
                            commandBuffer.addEntity(pickupItemHolder, AddReason.SPAWN);
                         }

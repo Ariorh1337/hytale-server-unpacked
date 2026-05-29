@@ -151,6 +151,9 @@ public class WorldConfig {
       .<Boolean>append(new KeyedCodec<>("IsSpawningNPC", Codec.BOOLEAN), (o, i) -> o.isSpawningNPC = i, o -> o.isSpawningNPC)
       .documentation("Whether NPCs can spawn in this world or not.")
       .add()
+      .<Boolean>append(new KeyedCodec<>("IsBlockSpawnersEnabled", Codec.BOOLEAN), (o, i) -> o.isBlockSpawnersEnabled = i, o -> o.isBlockSpawnersEnabled)
+      .documentation("Whether block spawners resolve into their target blocks in this world.")
+      .add()
       .<Boolean>append(new KeyedCodec<>("IsSpawnMarkersEnabled", Codec.BOOLEAN), (o, i) -> o.isSpawnMarkersEnabled = i, o -> o.isSpawnMarkersEnabled)
       .documentation("Whether spawn markers are enabled for this world.")
       .add()
@@ -266,6 +269,7 @@ public class WorldConfig {
    @Nullable
    private String defaultPermissionGroup;
    private boolean isSpawningNPC = true;
+   private boolean isBlockSpawnersEnabled = true;
    private boolean isSpawnMarkersEnabled = true;
    private boolean isAllNPCFrozen = false;
    private String gameplayConfig = "Default";
@@ -506,6 +510,14 @@ public class WorldConfig {
 
    public void setSpawningNPC(boolean spawningNPC) {
       this.isSpawningNPC = spawningNPC;
+   }
+
+   public boolean isBlockSpawnersEnabled() {
+      return this.isBlockSpawnersEnabled;
+   }
+
+   public void setBlockSpawnersEnabled(boolean blockSpawnersEnabled) {
+      this.isBlockSpawnersEnabled = blockSpawnersEnabled;
    }
 
    public boolean isSpawnMarkersEnabled() {

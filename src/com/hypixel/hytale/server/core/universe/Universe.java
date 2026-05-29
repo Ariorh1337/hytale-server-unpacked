@@ -140,6 +140,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiPredicate;
+import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.stream.Stream;
 import javax.annotation.CheckReturnValue;
@@ -1198,6 +1199,18 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
    @Nonnull
    public CompletableFuture<PlayerRef> resetPlayer(@Nonnull PlayerRef oldPlayer, @Nonnull Holder<EntityStore> holder) {
       return this.resetPlayer(oldPlayer, holder, null, null);
+   }
+
+   @Nonnull
+   public static CompletableFuture<PlayerRef> transferPlayerAsync(
+      @Nonnull PlayerRef playerRef,
+      @Nonnull World originalWorld,
+      @Nonnull CompletableFuture<World> targetWorld,
+      @Nonnull Function<World, Transform> spawnResolver
+   ) {
+      return CompletableFuture.runAsync(playerRef::removeFromStore, originalWorld)
+         .thenCombine(targetWorld.orTimeout(30L, TimeUnit.SECONDS), (ignored, world) -> (World)world)
+         .thenCompose(world -> world.addPlayer(playerRef, spawnResolver.apply(world), Boolean.TRUE, Boolean.FALSE));
    }
 
    @Nonnull

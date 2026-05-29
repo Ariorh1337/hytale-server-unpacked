@@ -3,6 +3,8 @@ package com.hypixel.hytale.builtin.hytalegenerator.assets.pointgenerators;
 import com.hypixel.hytale.builtin.hytalegenerator.noise.pointprovider.PointProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.rng.SeedBox;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
+import it.unimi.dsi.fastutil.doubles.DoubleList;
+import it.unimi.dsi.fastutil.ints.IntList;
 import java.util.List;
 import java.util.function.Consumer;
 import javax.annotation.Nonnull;
@@ -36,8 +38,8 @@ public class NoPointGeneratorAsset extends PointGeneratorAsset {
 
          @Nonnull
          @Override
-         public List<Integer> points1i(int min, int max) {
-            return List.of();
+         public IntList points1i(int min, int max) {
+            return IntList.of();
          }
 
          @Override
@@ -66,8 +68,8 @@ public class NoPointGeneratorAsset extends PointGeneratorAsset {
 
          @Nonnull
          @Override
-         public List<Double> points1d(double min, double max) {
-            return List.of();
+         public DoubleList points1d(double min, double max) {
+            return DoubleList.of();
          }
 
          @Override

@@ -1,13 +1,13 @@
 package com.hypixel.hytale.builtin.hytalegenerator.positionproviders.cached;
 
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.Map;
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.longs.LongArrayList;
 import org.joml.Vector3d;
 
 public class CacheThreadMemory {
-   Map<Long, Vector3d[]> sections;
-   LinkedList<Long> expirationList;
+   Long2ObjectMap<Vector3d[]> sections;
+   LongArrayList expirationList;
    int size;
 
    public CacheThreadMemory(int size) {
@@ -15,8 +15,8 @@ public class CacheThreadMemory {
          throw new IllegalArgumentException();
       }
 
-      this.sections = new HashMap<>(size);
-      this.expirationList = new LinkedList<>();
+      this.sections = new Long2ObjectOpenHashMap<>(size);
+      this.expirationList = new LongArrayList();
       this.size = size;
    }
 }

@@ -34,6 +34,12 @@ import com.hypixel.hytale.server.core.universe.world.worldgen.GeneratedBlockChun
 import com.hypixel.hytale.server.core.universe.world.worldgen.GeneratedBlockStateChunk;
 import com.hypixel.hytale.server.core.universe.world.worldgen.GeneratedChunk;
 import com.hypixel.hytale.server.core.universe.world.worldgen.GeneratedEntityChunk;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -72,7 +78,7 @@ public class StagedChunkGenerator implements ChunkGenerator {
    private WorkerIndexer workerIndexer;
    private PositionProvider spawnPositions;
    private TimeInstrument timeInstrument;
-   private Set<Integer> statsCheckpoints;
+   private IntSet statsCheckpoints;
    private int generatedChunkCount;
    private long totalCacheBufferRequests;
    private long missedCacheBufferRequests;
@@ -607,7 +613,7 @@ public class StagedChunkGenerator implements ChunkGenerator {
       private MaterialCache materialCache;
       private WorkerIndexer workerIndexer;
       private String statsHeader;
-      private Set<Integer> statsCheckpoints;
+      private IntSet statsCheckpoints;
       private PositionProvider spawnPositions;
       private double bufferCapacityFactor;
       private double targetViewDistance;
@@ -629,7 +635,7 @@ public class StagedChunkGenerator implements ChunkGenerator {
          instance.stages = new Stage[this.stages.size()];
          this.stages.toArray(instance.stages);
          Set<BufferType> allUsedBufferTypes = this.createListOfAllBufferTypes();
-         Map<Integer, Set<Integer>> laterToEalierStageMap = this.createStageDependencyMap();
+         Int2ObjectMap<IntSet> laterToEalierStageMap = this.createStageDependencyMap();
          instance.stagesOutputBounds_bufferGrid = this.createTotalOutputBoundsArray(laterToEalierStageMap);
          instance.bufferBundle = new BufferBundle();
          instance.bufferBundle
@@ -653,16 +659,16 @@ public class StagedChunkGenerator implements ChunkGenerator {
          instance.materialCache = this.materialCache;
          instance.workerIndexer = this.workerIndexer;
          instance.timeInstrument = new TimeInstrument(this.statsHeader);
-         instance.statsCheckpoints = new HashSet<>(this.statsCheckpoints);
+         instance.statsCheckpoints = new IntOpenHashSet(this.statsCheckpoints);
          instance.generatedChunkCount = 0;
          instance.spawnPositions = this.spawnPositions;
          return instance;
       }
 
       @Nonnull
-      public StagedChunkGenerator.Builder withStats(@Nonnull String statsHeader, @Nonnull Set<Integer> statsCheckpoints) {
+      public StagedChunkGenerator.Builder withStats(@Nonnull String statsHeader, @Nonnull IntSet statsCheckpoints) {
          this.statsHeader = statsHeader;
-         this.statsCheckpoints = new HashSet<>(statsCheckpoints);
+         this.statsCheckpoints = new IntOpenHashSet(statsCheckpoints);
          return this;
       }
 
@@ -703,9 +709,9 @@ public class StagedChunkGenerator implements ChunkGenerator {
       }
 
       @Nonnull
-      private List<Integer> createStagesThatReadFrom(int stageIndex) {
+      private IntList createStagesThatReadFrom(int stageIndex) {
          Stage stage = this.stages.get(stageIndex);
-         List<Integer> stagesThatReadFromThis = new ArrayList<>();
+         IntList stagesThatReadFromThis = new IntArrayList();
          List<BufferType> outputTypes = stage.getOutputTypes();
 
          for (int i = 0; i < outputTypes.size(); i++) {
@@ -723,15 +729,15 @@ public class StagedChunkGenerator implements ChunkGenerator {
       }
 
       @Nonnull
-      private Map<Integer, Set<Integer>> createStageDependencyMap() {
-         Map<Integer, Set<Integer>> dependencyMap = new HashMap<>();
+      private Int2ObjectMap<IntSet> createStageDependencyMap() {
+         Int2ObjectMap<IntSet> dependencyMap = new Int2ObjectOpenHashMap<>();
 
          for (int stageIndex = 0; stageIndex < this.stages.size(); stageIndex++) {
-            dependencyMap.put(stageIndex, new HashSet<>(1));
+            dependencyMap.put(stageIndex, new IntOpenHashSet(1));
          }
 
          for (int stageIndex = 0; stageIndex < this.stages.size(); stageIndex++) {
-            for (Integer dependentStage : this.createStagesThatReadFrom(stageIndex)) {
+            for (int dependentStage : this.createStagesThatReadFrom(stageIndex)) {
                dependencyMap.get(dependentStage).add(stageIndex);
             }
          }
@@ -782,7 +788,7 @@ public class StagedChunkGenerator implements ChunkGenerator {
       }
 
       private void createTotalOutputBoundsForStage(
-         int stageIndex, @Nonnull Map<Integer, Set<Integer>> stageDependencyMap, @Nonnull Bounds3i[] totalOutputBoundsPerStage_bufferGrid
+         int stageIndex, @Nonnull Int2ObjectMap<IntSet> stageDependencyMap, @Nonnull Bounds3i[] totalOutputBoundsPerStage_bufferGrid
       ) {
          Bounds3i initialOutputBounds_bufferGrid = new Bounds3i(Vector3iUtil.ZERO, Vector3iUtil.ALL_ONES);
          Stage stage = this.stages.get(stageIndex);
@@ -821,7 +827,7 @@ public class StagedChunkGenerator implements ChunkGenerator {
       }
 
       @Nonnull
-      private Bounds3i[] createTotalOutputBoundsArray(@Nonnull Map<Integer, Set<Integer>> stageDependencyMap) {
+      private Bounds3i[] createTotalOutputBoundsArray(@Nonnull Int2ObjectMap<IntSet> stageDependencyMap) {
          Bounds3i[] totalOutputBounds_bufferGrid = new Bounds3i[this.stages.size()];
 
          for (int stageIndex = this.stages.size() - 1; stageIndex >= 0; stageIndex--) {

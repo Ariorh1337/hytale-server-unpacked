@@ -13,7 +13,7 @@ import com.hypixel.hytale.codec.schema.SchemaContext;
 import com.hypixel.hytale.codec.schema.config.Schema;
 import com.hypixel.hytale.codec.validation.ValidationResults;
 import com.hypixel.hytale.codec.validation.Validator;
-import java.util.HashSet;
+import it.unimi.dsi.fastutil.doubles.DoubleOpenHashSet;
 import javax.annotation.Nonnull;
 import org.joml.Vector2d;
 
@@ -31,7 +31,7 @@ public class NodeFunctionYOutAsset implements JsonAssetWithMap<String, DefaultAs
       .append(new KeyedCodec<>("Points", new ArrayCodec<>(PointYOutAsset.CODEC, PointYOutAsset[]::new), true), (t, k) -> t.nodes = k, t -> t.nodes)
       .addValidator(new Validator<PointYOutAsset[]>() {
          public void accept(PointYOutAsset[] v, ValidationResults r) {
-            HashSet<Double> ySet = new HashSet<>(v.length);
+            DoubleOpenHashSet ySet = new DoubleOpenHashSet(v.length);
 
             for (PointYOutAsset point : v) {
                if (ySet.contains(point.getY())) {

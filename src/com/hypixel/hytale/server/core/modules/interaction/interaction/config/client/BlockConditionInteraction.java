@@ -8,6 +8,7 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.protocol.BlockFace;
 import com.hypixel.hytale.protocol.GameMode;
@@ -26,6 +27,8 @@ import com.hypixel.hytale.server.core.modules.entity.player.PlayerSettings;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
+import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.IntSet;
@@ -74,99 +77,112 @@ public class BlockConditionInteraction extends SimpleBlockInteraction {
    }
 
    private void doInteraction(@Nonnull InteractionContext context, @Nonnull World world, @Nonnull Vector3i targetBlock, @Nonnull BlockFace face) {
-      WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z));
-      if (chunk != null) {
-         BlockType blockType = chunk.getBlockType(targetBlock);
-         RotationTuple blockRotation = chunk.getRotation(targetBlock.x, targetBlock.y, targetBlock.z);
-         Item itemType = blockType.getItem();
-         if (itemType == null) {
-            context.getState().state = InteractionState.Failed;
-         } else {
-            boolean ok = false;
-            BlockConditionInteraction.BlockMatcher[] commandBuffer = this.matchers;
-            int ref = commandBuffer.length;
-            int playerComponent = 0;
+      ChunkStore chunkStore = world.getChunkStore();
+      Store<ChunkStore> chunkComponentStore = chunkStore.getStore();
+      Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z));
+      if (chunkRef != null && chunkRef.isValid()) {
+         WorldChunk worldChunkComponent = chunkComponentStore.getComponent(chunkRef, WorldChunk.getComponentType());
+         if (worldChunkComponent != null) {
+            BlockType blockType = worldChunkComponent.getBlockType(targetBlock);
+            if (blockType != null) {
+               Ref<ChunkStore> sectionRef = chunkStore.getChunkSectionReferenceAtBlock(targetBlock.x, targetBlock.y, targetBlock.z);
+               if (sectionRef != null && sectionRef.isValid()) {
+                  BlockSection blockSectionComponent = chunkComponentStore.getComponent(sectionRef, BlockSection.getComponentType());
+                  if (blockSectionComponent != null) {
+                     RotationTuple blockRotation = blockSectionComponent.getRotation(targetBlock.x, targetBlock.y, targetBlock.z);
+                     Item itemType = blockType.getItem();
+                     if (itemType == null) {
+                        context.getState().state = InteractionState.Failed;
+                     } else {
+                        boolean ok = false;
+                        BlockConditionInteraction.BlockMatcher[] commandBuffer = this.matchers;
+                        int ref = commandBuffer.length;
+                        int playerComponent = 0;
 
-            while (playerComponent < ref) {
-               label85: {
-                  label93: {
-                     BlockConditionInteraction.BlockMatcher matcher = commandBuffer[playerComponent];
-                     if (matcher.face != BlockFace.None) {
-                        BlockFace transformedFace = matcher.face;
-                        if (!matcher.staticFace) {
-                           Rotation yaw = blockRotation.yaw();
-                           Rotation pitch = blockRotation.pitch();
-                           com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockFace newFace = com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockFace.rotate(
-                              com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockFace.fromProtocolFace(transformedFace), yaw, pitch
-                           );
-                           transformedFace = com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockFace.toProtocolFace(newFace);
-                        }
+                        while (playerComponent < ref) {
+                           label94: {
+                              label112: {
+                                 BlockConditionInteraction.BlockMatcher matcher = commandBuffer[playerComponent];
+                                 if (matcher.face != BlockFace.None) {
+                                    BlockFace transformedFace = matcher.face;
+                                    if (!matcher.staticFace) {
+                                       Rotation yaw = blockRotation.yaw();
+                                       Rotation pitch = blockRotation.pitch();
+                                       com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockFace newFace = com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockFace.rotate(
+                                          com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockFace.fromProtocolFace(transformedFace), yaw, pitch
+                                       );
+                                       transformedFace = com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockFace.toProtocolFace(newFace);
+                                    }
 
-                        if (!transformedFace.equals(face)) {
-                           break label93;
-                        }
-                     }
+                                    if (!transformedFace.equals(face)) {
+                                       break label112;
+                                    }
+                                 }
 
-                     if (matcher.block == null) {
-                        break label85;
-                     }
+                                 if (matcher.block == null) {
+                                    break label94;
+                                 }
 
-                     label77:
-                     if (matcher.block.id == null || matcher.block.id.equals(itemType.getId())) {
-                        if (matcher.block.state != null) {
-                           String state = blockType.getStateForBlock(blockType);
-                           if (state == null) {
-                              state = "default";
+                                 label86:
+                                 if (matcher.block.id == null || matcher.block.id.equals(itemType.getId())) {
+                                    if (matcher.block.state != null) {
+                                       String state = blockType.getStateForBlock(blockType);
+                                       if (state == null) {
+                                          state = "default";
+                                       }
+
+                                       if (!matcher.block.state.equals(state)) {
+                                          break label86;
+                                       }
+                                    }
+
+                                    if (matcher.block.tag == null) {
+                                       break label94;
+                                    }
+
+                                    AssetExtraInfo.Data data = blockType.getData();
+                                    if (data != null) {
+                                       Int2ObjectMap<IntSet> tags = data.getTags();
+                                       if (tags.containsKey(matcher.block.tagIndex)) {
+                                          break label94;
+                                       }
+                                    }
+                                 }
+                              }
+
+                              playerComponent++;
+                              continue;
                            }
 
-                           if (!matcher.block.state.equals(state)) {
-                              break label77;
+                           ok = true;
+                           break;
+                        }
+
+                        if (ok) {
+                           CommandBuffer<EntityStore> commandBufferx = context.getCommandBuffer();
+                           Ref<EntityStore> refx = context.getEntity();
+                           if (commandBufferx != null && refx != null) {
+                              Player playerComponentx = commandBufferx.getComponent(refx, Player.getComponentType());
+                              if (playerComponentx != null && playerComponentx.getGameMode() == GameMode.Creative) {
+                                 PlayerSettings settingsComponent = commandBufferx.getComponent(refx, PlayerSettings.getComponentType());
+                                 if (settingsComponent != null) {
+                                    String placeMode = settingsComponent.creativeSettings().placeMode();
+                                    if (!"default".equals(placeMode)) {
+                                       ok = false;
+                                    }
+                                 }
+                              }
                            }
                         }
 
-                        if (matcher.block.tag == null) {
-                           break label85;
-                        }
-
-                        AssetExtraInfo.Data data = blockType.getData();
-                        if (data != null) {
-                           Int2ObjectMap<IntSet> tags = data.getTags();
-                           if (tags != null && tags.containsKey(matcher.block.tagIndex)) {
-                              break label85;
-                           }
+                        if (ok) {
+                           context.getState().state = InteractionState.Finished;
+                        } else {
+                           context.getState().state = InteractionState.Failed;
                         }
                      }
                   }
-
-                  playerComponent++;
-                  continue;
                }
-
-               ok = true;
-               break;
-            }
-
-            if (ok) {
-               CommandBuffer<EntityStore> commandBufferx = context.getCommandBuffer();
-               Ref<EntityStore> refx = context.getEntity();
-               if (commandBufferx != null && refx != null) {
-                  Player playerComponentx = commandBufferx.getComponent(refx, Player.getComponentType());
-                  if (playerComponentx != null && playerComponentx.getGameMode() == GameMode.Creative) {
-                     PlayerSettings settingsComponent = commandBufferx.getComponent(refx, PlayerSettings.getComponentType());
-                     if (settingsComponent != null) {
-                        String placeMode = settingsComponent.creativeSettings().placeMode();
-                        if (!"default".equals(placeMode)) {
-                           ok = false;
-                        }
-                     }
-                  }
-               }
-            }
-
-            if (ok) {
-               context.getState().state = InteractionState.Finished;
-            } else {
-               context.getState().state = InteractionState.Failed;
             }
          }
       }

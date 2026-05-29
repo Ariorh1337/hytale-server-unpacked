@@ -331,7 +331,7 @@ public class ChunkStore implements WorldProvider {
       assert worldChunkComponent != null;
       long index = worldChunkComponent.getIndex();
       ChunkStore.ChunkLoadState chunkState = this.chunks.get(index);
-      long stamp = chunkState.lock.readLock();
+      long stamp = chunkState.lock.writeLock();
 
       try {
          worldChunkComponent.setFlag(ChunkFlag.TICKING, false);
@@ -363,7 +363,7 @@ public class ChunkStore implements WorldProvider {
             this.lock.unlockWrite(sectionStamp);
          }
       } finally {
-         chunkState.lock.unlockRead(stamp);
+         chunkState.lock.unlockWrite(stamp);
       }
    }
 

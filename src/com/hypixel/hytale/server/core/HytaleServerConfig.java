@@ -618,6 +618,7 @@ public class HytaleServerConfig {
    public static class TimeoutProfile {
       private static final HytaleServerConfig.TimeoutProfile SINGLEPLAYER_DEFAULTS = new HytaleServerConfig.TimeoutProfile(
          Duration.ofSeconds(30L),
+         Duration.ofSeconds(5L),
          Duration.ofSeconds(60L),
          Duration.ofSeconds(60L),
          Duration.ofSeconds(60L),
@@ -631,6 +632,7 @@ public class HytaleServerConfig {
       );
       private static final HytaleServerConfig.TimeoutProfile MULTIPLAYER_DEFAULTS = new HytaleServerConfig.TimeoutProfile(
          Duration.ofSeconds(15L),
+         Duration.ofSeconds(5L),
          Duration.ofSeconds(30L),
          Duration.ofSeconds(30L),
          Duration.ofSeconds(30L),
@@ -646,6 +648,7 @@ public class HytaleServerConfig {
             HytaleServerConfig.TimeoutProfile.class, HytaleServerConfig.TimeoutProfile::new
          )
          .addField(new KeyedCodec<>("InitialTimeout", Codec.DURATION), (o, d) -> o.initial = d, o -> o.initial)
+         .addField(new KeyedCodec<>("AuxStreamPendingTimeout", Codec.DURATION), (o, d) -> o.auxStreamPending = d, o -> o.auxStreamPending)
          .addField(new KeyedCodec<>("AuthTimeout", Codec.DURATION), (o, d) -> o.auth = d, o -> o.auth)
          .addField(new KeyedCodec<>("AuthGrantTimeout", Codec.DURATION), (o, d) -> o.authGrant = d, o -> o.authGrant)
          .addField(new KeyedCodec<>("AuthTokenTimeout", Codec.DURATION), (o, d) -> o.authToken = d, o -> o.authToken)
@@ -658,6 +661,7 @@ public class HytaleServerConfig {
          .addField(new KeyedCodec<>("SetupAddToUniverse", Codec.DURATION), (o, d) -> o.setupAddToUniverse = d, o -> o.setupAddToUniverse)
          .build();
       private Duration initial;
+      private Duration auxStreamPending;
       private Duration auth;
       private Duration authGrant;
       private Duration authToken;
@@ -683,6 +687,7 @@ public class HytaleServerConfig {
 
       private TimeoutProfile(
          Duration initial,
+         Duration auxStreamPending,
          Duration auth,
          Duration authGrant,
          Duration authToken,
@@ -695,6 +700,7 @@ public class HytaleServerConfig {
          Duration addToUniverse
       ) {
          this.initial = initial;
+         this.auxStreamPending = auxStreamPending;
          this.auth = auth;
          this.authGrant = authGrant;
          this.authToken = authToken;
@@ -713,6 +719,15 @@ public class HytaleServerConfig {
 
       public void setInitial(Duration d) {
          this.initial = d;
+         this.markChanged();
+      }
+
+      public Duration getAuxStreamPending() {
+         return this.auxStreamPending != null ? this.auxStreamPending : defaults().auxStreamPending;
+      }
+
+      public void setAuxStreamPending(Duration d) {
+         this.auxStreamPending = d;
          this.markChanged();
       }
 

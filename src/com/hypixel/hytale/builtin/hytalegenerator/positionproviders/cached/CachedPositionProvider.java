@@ -53,9 +53,9 @@ public class CachedPositionProvider extends PositionProvider {
                   section = new Vector3d[generatedPositions.size()];
                   generatedPositions.toArray(section);
                   this.cache.sections.put(key, section);
-                  this.cache.expirationList.addFirst(key);
+                  this.cache.expirationList.add(key);
                   if (this.cache.expirationList.size() > this.cache.size) {
-                     long removedKey = this.cache.expirationList.removeLast();
+                     long removedKey = this.cache.expirationList.removeLong(0);
                      this.cache.sections.remove(removedKey);
                   }
                }

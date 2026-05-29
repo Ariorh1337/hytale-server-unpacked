@@ -9,7 +9,8 @@ public enum QuicApplicationErrorCode {
    InvalidVersion(3),
    Timeout(4),
    ClientOutdated(5),
-   ServerOutdated(6);
+   ServerOutdated(6),
+   Crash(7);
 
    public static final QuicApplicationErrorCode[] VALUES = values();
    private final int value;

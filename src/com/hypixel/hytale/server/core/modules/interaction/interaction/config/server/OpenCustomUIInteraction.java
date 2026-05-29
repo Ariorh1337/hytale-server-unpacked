@@ -34,7 +34,9 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class OpenCustomUIInteraction extends SimpleInstantInteraction {
+   @Nonnull
    public static final CodecMapCodec<OpenCustomUIInteraction.CustomPageSupplier> PAGE_CODEC = new CodecMapCodec<>();
+   @Nonnull
    public static final BuilderCodec<OpenCustomUIInteraction> CODEC = BuilderCodec.builder(
          OpenCustomUIInteraction.class, OpenCustomUIInteraction::new, SimpleInstantInteraction.CODEC
       )
@@ -52,18 +54,20 @@ public class OpenCustomUIInteraction extends SimpleInstantInteraction {
 
    @Override
    protected void firstRun(@Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
-      Ref<EntityStore> ref = context.getEntity();
       CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
+      assert commandBuffer != null;
+      Ref<EntityStore> ref = context.getEntity();
       Player playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
       if (playerComponent != null) {
          PageManager pageManager = playerComponent.getPageManager();
          if (pageManager.getCustomPage() == null) {
-            PlayerRef playerRef = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
-            assert playerRef != null;
-            CustomUIPage page = this.customPageSupplier.tryCreate(ref, commandBuffer, playerRef, context);
-            if (page != null) {
-               Store<EntityStore> store = commandBuffer.getStore();
-               pageManager.openCustomPage(ref, store, page);
+            PlayerRef playerRefComponent = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
+            if (playerRefComponent != null) {
+               CustomUIPage page = this.customPageSupplier.tryCreate(ref, commandBuffer, playerRefComponent, context);
+               if (page != null) {
+                  Store<EntityStore> store = commandBuffer.getStore();
+                  pageManager.openCustomPage(ref, store, page);
+               }
             }
          }
       }
@@ -87,7 +91,7 @@ public class OpenCustomUIInteraction extends SimpleInstantInteraction {
    public static void registerBlockEntityCustomPage(
       @Nonnull PluginBase plugin, Class<?> tClass, String id, @Nonnull OpenCustomUIInteraction.BlockEntityCustomPageSupplier blockSupplier
    ) {
-      OpenCustomUIInteraction.CustomPageSupplier supplier = (ref, componentAccessor, playerRef, context) -> {
+      OpenCustomUIInteraction.CustomPageSupplier supplier = (ref, var2x, playerRef, context) -> {
          BlockPosition targetBlock = context.getTargetBlock();
          if (targetBlock == null) {
             return null;
@@ -95,14 +99,22 @@ public class OpenCustomUIInteraction extends SimpleInstantInteraction {
 
          Store<EntityStore> store = ref.getStore();
          World world = store.getExternalData().getWorld();
-         WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z));
-         if (chunk == null) {
+         ChunkStore chunkStore = world.getChunkStore();
+         Store<ChunkStore> chunkComponentStore = chunkStore.getStore();
+         long chunkIndex = ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z);
+         Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(chunkIndex);
+         if (chunkRef != null && chunkRef.isValid()) {
+            WorldChunk worldChunkComponent = chunkComponentStore.getComponent(chunkRef, WorldChunk.getComponentType());
+            if (worldChunkComponent == null) {
+               return null;
+            }
+
+            BlockPosition targetBaseBlock = world.getBaseBlock(targetBlock);
+            Ref<ChunkStore> blockEntityRef = worldChunkComponent.getBlockComponentEntity(targetBaseBlock.x, targetBaseBlock.y, targetBaseBlock.z);
+            return blockEntityRef != null && blockEntityRef.isValid() ? blockSupplier.tryCreate(playerRef, blockEntityRef) : null;
+         } else {
             return null;
          }
-
-         BlockPosition targetBaseBlock = world.getBaseBlock(targetBlock);
-         Ref<ChunkStore> blockEntityRef = chunk.getBlockComponentEntity(targetBaseBlock.x, targetBaseBlock.y, targetBaseBlock.z);
-         return blockEntityRef == null ? null : blockSupplier.tryCreate(playerRef, blockEntityRef);
       };
       registerCustomPageSupplier(plugin, tClass, id, supplier);
    }
@@ -114,7 +126,7 @@ public class OpenCustomUIInteraction extends SimpleInstantInteraction {
       @Nonnull OpenCustomUIInteraction.BlockEntityCustomPageSupplier blockSupplier,
       Supplier<Holder<ChunkStore>> creator
    ) {
-      OpenCustomUIInteraction.CustomPageSupplier supplier = (ref, componentAccessor, playerRef, context) -> {
+      OpenCustomUIInteraction.CustomPageSupplier supplier = (ref, var3x, playerRef, context) -> {
          BlockPosition targetBlock = context.getTargetBlock();
          if (targetBlock == null) {
             return null;
@@ -122,23 +134,30 @@ public class OpenCustomUIInteraction extends SimpleInstantInteraction {
 
          Store<EntityStore> store = ref.getStore();
          World world = store.getExternalData().getWorld();
+         ChunkStore chunkStore = world.getChunkStore();
+         Store<ChunkStore> chunkComponentStore = chunkStore.getStore();
          long chunkIndex = ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z);
-         WorldChunk worldChunkComponent = world.getChunkIfInMemory(chunkIndex);
-         if (worldChunkComponent == null) {
+         Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(chunkIndex);
+         if (chunkRef != null && chunkRef.isValid()) {
+            WorldChunk worldChunk = chunkComponentStore.getComponent(chunkRef, WorldChunk.getComponentType());
+            if (worldChunk == null) {
+               return null;
+            }
+
+            BlockPosition targetBaseBlock = world.getBaseBlock(targetBlock);
+            BlockComponentChunk blockComponentChunk = worldChunk.getBlockComponentChunk();
+            int index = ChunkUtil.indexBlockInColumn(targetBaseBlock.x, targetBaseBlock.y, targetBaseBlock.z);
+            Ref<ChunkStore> blockEntityRef = blockComponentChunk.getEntityReference(index);
+            if (blockEntityRef == null || !blockEntityRef.isValid()) {
+               Holder<ChunkStore> holder = creator.get();
+               holder.putComponent(BlockModule.BlockStateInfo.getComponentType(), new BlockModule.BlockStateInfo(index, chunkRef));
+               blockEntityRef = chunkComponentStore.addEntity(holder, AddReason.SPAWN);
+            }
+
+            return blockSupplier.tryCreate(playerRef, blockEntityRef);
+         } else {
             return null;
          }
-
-         BlockPosition targetBaseBlock = world.getBaseBlock(targetBlock);
-         BlockComponentChunk blockComponentChunk = worldChunkComponent.getBlockComponentChunk();
-         int index = ChunkUtil.indexBlockInColumn(targetBaseBlock.x, targetBaseBlock.y, targetBaseBlock.z);
-         Ref<ChunkStore> blockEntityRef = blockComponentChunk.getEntityReference(index);
-         if (blockEntityRef == null || !blockEntityRef.isValid()) {
-            Holder<ChunkStore> holder = creator.get();
-            holder.putComponent(BlockModule.BlockStateInfo.getComponentType(), new BlockModule.BlockStateInfo(index, worldChunkComponent.getReference()));
-            blockEntityRef = world.getChunkStore().getStore().addEntity(holder, AddReason.SPAWN);
-         }
-
-         return blockSupplier.tryCreate(playerRef, blockEntityRef);
       };
       registerCustomPageSupplier(plugin, tClass, id, supplier);
    }

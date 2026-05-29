@@ -53,11 +53,15 @@ class QuicheConnection {
    public String serverName;
    private final Long2ObjectOpenHashMap<QuicheChannel> streams = new Long2ObjectOpenHashMap<>();
    private final LongArrayList writableStreams = new LongArrayList();
+   @Nullable
+   final TokenBucket rateLimitBucket;
 
    public QuicheConnection(QuicheListener listener, byte[] dcid, MemorySegment connHandle) {
       this.listener = listener;
       this.dcid = dcid;
       this.connHandle = connHandle;
+      QuicheConfig.RateLimit rateLimit = listener.quicheConfig.rateLimit();
+      this.rateLimitBucket = rateLimit.isEnabled() ? new TokenBucket(rateLimit.burstCapacity(), rateLimit.packetsPerSecond(), System.nanoTime()) : null;
       this.processingThread = Thread.ofVirtual().name("quiche-conn-" + QuicheChannel.formatDcid(dcid)).start(this::process);
    }
 
@@ -95,6 +99,7 @@ class QuicheConnection {
             }
 
             long streamId;
+            label1048:
             while ((streamId = QuicheNative.connStreamReadableNext(this.connHandle)) != -1L) {
                QuicheChannel stream = this.streams.computeIfAbsent(streamId, newStream);
                if (stream.isNew) {
@@ -122,6 +127,16 @@ class QuicheConnection {
                         this.gracefulClose(stream);
                         break;
                      }
+
+                     long packetNowNs = System.nanoTime();
+
+                     for (QuicheChannel s : this.streams.values()) {
+                        s.checkTimersAndGetDeadline(packetNowNs);
+                     }
+
+                     if (QuicheNative.connIsClosed(this.connHandle)) {
+                        break label1048;
+                     }
                   }
                }
 
@@ -134,148 +149,163 @@ class QuicheConnection {
                }
             }
 
-            while ((streamId = QuicheNative.connStreamWritableNext(this.connHandle)) != -1L) {
-               this.writableStreams.add(streamId);
-            }
+            if (!QuicheNative.connIsClosed(this.connHandle)) {
+               while ((streamId = QuicheNative.connStreamWritableNext(this.connHandle)) != -1L) {
+                  this.writableStreams.add(streamId);
+               }
 
-            for (int i = this.writableStreams.size() - 1; i >= 0; i--) {
-               QuicheChannel stream = this.streams.get(this.writableStreams.getLong(i));
-               if (stream == null) {
-                  this.writableStreams.removeLong(i);
-               } else {
-                  handledAnything |= stream.tryWrite();
-                  if (!stream.isWritable()) {
+               for (int i = this.writableStreams.size() - 1; i >= 0; i--) {
+                  QuicheChannel stream = this.streams.get(this.writableStreams.getLong(i));
+                  if (stream == null) {
                      this.writableStreams.removeLong(i);
+                  } else {
+                     handledAnything |= stream.tryWrite();
+                     if (!stream.isWritable()) {
+                        this.writableStreams.removeLong(i);
+                     }
                   }
                }
-            }
 
-            QuicheListener.DatagramBuffer datagramBuffer;
-            while ((datagramBuffer = this.incomingBuffers.poll()) != null) {
-               handledAnything = true;
+               QuicheListener.DatagramBuffer datagramBuffer;
+               while ((datagramBuffer = this.incomingBuffers.poll()) != null) {
+                  handledAnything = true;
 
-               try {
-                  SocketAddress source = this.incomingSources.take();
-                  int peerAddrLen = QuicheUtil.toSocketAddrStorage(peerAddr, (InetSocketAddress)source);
-                  QuicheNative.setRecvInfoFrom(recvInfo, peerAddr);
-                  QuicheNative.setRecvInfoFromLen(recvInfo, peerAddrLen);
-                  long bytes = QuicheNative.connRecv(this.connHandle, datagramBuffer.memory(), datagramBuffer.buffer().limit(), recvInfo);
-                  if (bytes < 0L) {
-                     LOGGER.atWarning().log("Failed to recv: %s (%d)", QuicheNative.QuicheError.fromCode((int)bytes), bytes);
+                  try {
+                     SocketAddress source = this.incomingSources.take();
+                     int peerAddrLen = QuicheUtil.toSocketAddrStorage(peerAddr, (InetSocketAddress)source);
+                     QuicheNative.setRecvInfoFrom(recvInfo, peerAddr);
+                     QuicheNative.setRecvInfoFromLen(recvInfo, peerAddrLen);
+                     long bytes = QuicheNative.connRecv(this.connHandle, datagramBuffer.memory(), datagramBuffer.buffer().limit(), recvInfo);
+                     if (bytes < 0L) {
+                        LOGGER.atWarning().log("Failed to recv: %s (%d)", QuicheNative.QuicheError.fromCode((int)bytes), bytes);
+                     }
+                  } finally {
+                     this.listener.returnBuffer(datagramBuffer);
                   }
-               } finally {
-                  this.listener.returnBuffer(datagramBuffer);
                }
-            }
 
-            while (true) {
-               long written = QuicheNative.connSend(this.connHandle, sendBuffer, sendBuffer.byteSize(), sendInfo);
-               if (written < 0L) {
-                  if (written != -1L) {
-                     LOGGER.atWarning().log("Failed to send: %s (%d)", QuicheNative.QuicheError.fromCode((int)written), written);
+               while (true) {
+                  long written = QuicheNative.connSend(this.connHandle, sendBuffer, sendBuffer.byteSize(), sendInfo);
+                  if (written < 0L) {
+                     if (written != -1L) {
+                        LOGGER.atWarning().log("Failed to send: %s (%d)", QuicheNative.QuicheError.fromCode((int)written), written);
+                     }
+                     break;
                   }
-                  break;
+
+                  if (written == 0L) {
+                     break;
+                  }
+
+                  handledAnything = true;
+                  sendBufferBuf.position(0);
+                  sendBufferBuf.limit((int)written);
+                  MemorySegment sendInfoTo = QuicheNative.getSendInfoTo(sendInfo);
+                  int sendInfoToLen = QuicheNative.getSendInfoToLen(sendInfo);
+                  if (target == null
+                     || lastSocketAddressLen != sendInfoToLen
+                     || MemorySegment.mismatch(lastSocketAddress, 0L, lastSocketAddressLen, sendInfoTo, 0L, sendInfoToLen) != -1L) {
+                     lastSocketAddress.copyFrom(sendInfoTo);
+                     lastSocketAddressLen = sendInfoToLen;
+                     target = QuicheUtil.fromSocketAddr(sendInfoTo, sendInfoToLen);
+                  }
+
+                  int sent = this.listener.channel.send(sendBufferBuf, target);
+                  if (sent != written) {
+                     throw new IllegalStateException("Failed to send all bytes");
+                  }
                }
 
-               if (written == 0L) {
-                  break;
-               }
+               if (QuicheNative.connIsEstablished(this.connHandle) && !established) {
+                  established = true;
 
-               handledAnything = true;
-               sendBufferBuf.position(0);
-               sendBufferBuf.limit((int)written);
-               MemorySegment sendInfoTo = QuicheNative.getSendInfoTo(sendInfo);
-               int sendInfoToLen = QuicheNative.getSendInfoToLen(sendInfo);
-               if (target == null
-                  || lastSocketAddressLen != sendInfoToLen
-                  || MemorySegment.mismatch(lastSocketAddress, 0L, lastSocketAddressLen, sendInfoTo, 0L, sendInfoToLen) != -1L) {
-                  lastSocketAddress.copyFrom(sendInfoTo);
-                  lastSocketAddressLen = sendInfoToLen;
-                  target = QuicheUtil.fromSocketAddr(sendInfoTo, sendInfoToLen);
-               }
-
-               int sent = this.listener.channel.send(sendBufferBuf, target);
-               if (sent != written) {
-                  throw new IllegalStateException("Failed to send all bytes");
-               }
-            }
-
-            if (QuicheNative.connIsEstablished(this.connHandle) && !established) {
-               established = true;
-
-               try (Arena tempArena = Arena.ofConfined()) {
-                  label1057: {
-                     MemorySegment certMemLocation = tempArena.allocate(QuicheNative.C_POINTER);
-                     MemorySegment certMemSize = tempArena.allocate(QuicheNative.C_SIZE_T);
-                     QuicheNative.connPeerCert(this.connHandle, certMemLocation, certMemSize);
-                     MemorySegment cert = certMemLocation.get(QuicheNative.C_POINTER, 0L);
-                     long size = QuicheNative.getSizeT(certMemSize, 0L);
-                     if (size != 0L && !cert.equals(MemorySegment.NULL)) {
-                        CertificateFactory factory = CertificateFactory.getInstance("X.509");
-                        this.certificate = (X509Certificate)factory.generateCertificate(
-                           new ByteArrayInputStream(cert.reinterpret(size).toArray(ValueLayout.JAVA_BYTE))
-                        );
-                        if (this.certificate != null) {
-                           LOGGER.atInfo().log("Peer certificate retrieved: %s", this.certificate);
-                           MemorySegment sniOut = tempArena.allocate(QuicheNative.C_POINTER);
-                           MemorySegment sniLen = tempArena.allocate(QuicheNative.C_SIZE_T);
-                           QuicheNative.connServerName(this.connHandle, sniOut, sniLen);
-                           long sniSize = QuicheNative.getSizeT(sniLen, 0L);
-                           if (sniSize > 0L) {
-                              MemorySegment sniPtr = sniOut.get(QuicheNative.C_POINTER, 0L).reinterpret(sniSize);
-                              this.serverName = new String(sniPtr.toArray(ValueLayout.JAVA_BYTE), StandardCharsets.UTF_8);
-                              LOGGER.atInfo().log("SNI hostname: %s", this.serverName);
-                           }
-
-                           MemorySegment addr = arena.allocate(QuicheNative.SOCKADDR_STORAGE_LAYOUT);
-                           MemorySegment addrLenMem = arena.allocate(QuicheNative.C_SIZE_T);
-                           MemorySegment iter = QuicheNative.connPathsIter(this.connHandle, this.listener.localAddr, this.listener.localAddrLen);
-
-                           try {
-                              if (QuicheNative.socketAddrIterNext(iter, addr, addrLenMem)) {
-                                 this.address = QuicheUtil.fromSocketAddr(addr, (int)QuicheNative.getSizeT(addrLenMem, 0L));
+                  try (Arena tempArena = Arena.ofConfined()) {
+                     label1173: {
+                        MemorySegment certMemLocation = tempArena.allocate(QuicheNative.C_POINTER);
+                        MemorySegment certMemSize = tempArena.allocate(QuicheNative.C_SIZE_T);
+                        QuicheNative.connPeerCert(this.connHandle, certMemLocation, certMemSize);
+                        MemorySegment cert = certMemLocation.get(QuicheNative.C_POINTER, 0L);
+                        long size = QuicheNative.getSizeT(certMemSize, 0L);
+                        if (size != 0L && !cert.equals(MemorySegment.NULL)) {
+                           CertificateFactory factory = CertificateFactory.getInstance("X.509");
+                           this.certificate = (X509Certificate)factory.generateCertificate(
+                              new ByteArrayInputStream(cert.reinterpret(size).toArray(ValueLayout.JAVA_BYTE))
+                           );
+                           if (this.certificate != null) {
+                              LOGGER.atInfo().log("Peer certificate retrieved: %s", this.certificate);
+                              MemorySegment sniOut = tempArena.allocate(QuicheNative.C_POINTER);
+                              MemorySegment sniLen = tempArena.allocate(QuicheNative.C_SIZE_T);
+                              QuicheNative.connServerName(this.connHandle, sniOut, sniLen);
+                              long sniSize = QuicheNative.getSizeT(sniLen, 0L);
+                              if (sniSize > 0L) {
+                                 MemorySegment sniPtr = sniOut.get(QuicheNative.C_POINTER, 0L).reinterpret(sniSize);
+                                 this.serverName = new String(sniPtr.toArray(ValueLayout.JAVA_BYTE), StandardCharsets.UTF_8);
+                                 LOGGER.atInfo().log("SNI hostname: %s", this.serverName);
                               }
-                              break label1057;
-                           } finally {
-                              QuicheNative.socketAddrIterFree(iter);
+
+                              MemorySegment addr = arena.allocate(QuicheNative.SOCKADDR_STORAGE_LAYOUT);
+                              MemorySegment addrLenMem = arena.allocate(QuicheNative.C_SIZE_T);
+                              MemorySegment iter = QuicheNative.connPathsIter(this.connHandle, this.listener.localAddr, this.listener.localAddrLen);
+
+                              try {
+                                 if (QuicheNative.socketAddrIterNext(iter, addr, addrLenMem)) {
+                                    this.address = QuicheUtil.fromSocketAddr(addr, (int)QuicheNative.getSizeT(addrLenMem, 0L));
+                                 }
+                                 break label1173;
+                              } finally {
+                                 QuicheNative.socketAddrIterFree(iter);
+                              }
                            }
+
+                           LOGGER.atSevere().log("Missing client cert for %s", QuicheChannel.formatDcid(this.dcid));
+                           QuicheNative.connClose(this.connHandle, true, QuicApplicationErrorCode.AuthFailed.getValue(), MemorySegment.NULL, 0L);
+                           continue;
                         }
 
-                        LOGGER.atSevere().log("Missing client cert for %s", QuicheChannel.formatDcid(this.dcid));
+                        LOGGER.atSevere().log("Failed to retrieve peer certificate for %s", QuicheChannel.formatDcid(this.dcid));
                         QuicheNative.connClose(this.connHandle, true, QuicApplicationErrorCode.AuthFailed.getValue(), MemorySegment.NULL, 0L);
                         continue;
                      }
-
-                     LOGGER.atSevere().log("Failed to retrieve peer certificate for %s", QuicheChannel.formatDcid(this.dcid));
-                     QuicheNative.connClose(this.connHandle, true, QuicApplicationErrorCode.AuthFailed.getValue(), MemorySegment.NULL, 0L);
+                  } catch (CertificateException e) {
+                     LOGGER.at(Level.SEVERE).withCause(e).log("Certificate error for %s", QuicheChannel.formatDcid(this.dcid));
+                     if (!QuicheNative.connIsClosed(this.connHandle)) {
+                        QuicheNative.connClose(this.connHandle, true, QuicApplicationErrorCode.AuthFailed.getValue(), MemorySegment.NULL, 0L);
+                     }
                      continue;
                   }
-               } catch (CertificateException e) {
-                  LOGGER.at(Level.SEVERE).withCause(e).log("Certificate error for %s", QuicheChannel.formatDcid(this.dcid));
-                  if (!QuicheNative.connIsClosed(this.connHandle)) {
-                     QuicheNative.connClose(this.connHandle, true, QuicApplicationErrorCode.AuthFailed.getValue(), MemorySegment.NULL, 0L);
+
+                  if (this.address == null) {
+                     LOGGER.atSevere().log("Failed to find connection path for %s", QuicheChannel.formatDcid(this.dcid));
+                     QuicheNative.connClose(this.connHandle, true, QuicApplicationErrorCode.NoError.getValue(), MemorySegment.NULL, 0L);
+                     continue;
                   }
-                  continue;
+
+                  LOGGER.atInfo().log("Connection established");
                }
 
-               if (this.address == null) {
-                  LOGGER.atSevere().log("Failed to find connection path for %s", QuicheChannel.formatDcid(this.dcid));
-                  QuicheNative.connClose(this.connHandle, true, QuicApplicationErrorCode.NoError.getValue(), MemorySegment.NULL, 0L);
-                  continue;
+               this.active.set(!QuicheNative.connIsClosed(this.connHandle));
+               long nowNs = System.nanoTime();
+               long earliestAppDeadlineNs = Long.MAX_VALUE;
+
+               for (QuicheChannel stream : this.streams.values()) {
+                  long deadline = stream.checkTimersAndGetDeadline(nowNs);
+                  if (deadline < earliestAppDeadlineNs) {
+                     earliestAppDeadlineNs = deadline;
+                  }
                }
 
-               LOGGER.atInfo().log("Connection established");
-            }
-
-            this.active.set(!QuicheNative.connIsClosed(this.connHandle));
-            long timeout = QuicheNative.connTimeoutAsNanos(this.connHandle);
-            if (timeout > 0L && !handledAnything) {
-               LockSupport.parkNanos(timeout);
-               QuicheNative.connOnTimeout(this.connHandle);
-            } else if (timeout == 0L) {
-               QuicheNative.connOnTimeout(this.connHandle);
-            } else if (!handledAnything) {
-               LockSupport.park();
+               long quicheTimeoutRaw = QuicheNative.connTimeoutAsNanos(this.connHandle);
+               long quicheTimeoutNs = quicheTimeoutRaw < 0L ? Long.MAX_VALUE : quicheTimeoutRaw;
+               long appTimeoutNs = earliestAppDeadlineNs == Long.MAX_VALUE ? Long.MAX_VALUE : Math.max(0L, earliestAppDeadlineNs - nowNs);
+               long parkNs = Math.min(quicheTimeoutNs, appTimeoutNs);
+               if (parkNs == 0L) {
+                  QuicheNative.connOnTimeout(this.connHandle);
+               } else if (!handledAnything && parkNs == Long.MAX_VALUE) {
+                  LockSupport.park();
+               } else if (!handledAnything) {
+                  LockSupport.parkNanos(parkNs);
+                  QuicheNative.connOnTimeout(this.connHandle);
+               }
             }
          }
 
@@ -345,16 +375,17 @@ class QuicheConnection {
       if (streamId == 0L) {
          LOGGER.atInfo().log("Primary stream %d created", (long)streamId);
          int alpnVersion = this.getNegotiatedAlpnVersion();
-         if (alpnVersion < 2) {
-            LOGGER.atInfo().log("Rejecting connection %s: ALPN version %d < required %d", QuicheChannel.formatDcid(this.dcid), alpnVersion, 2);
+         if (alpnVersion < 3) {
+            LOGGER.atInfo().log("Rejecting connection %s: ALPN version %d < required %d", QuicheChannel.formatDcid(this.dcid), alpnVersion, 3);
             FormattedMessage msg = new FormattedMessage();
             msg.messageId = "server.general.disconnect.clientOutdated";
             stream.handler = this.listener.handler.apply(stream);
             stream.handler.registered(null);
             stream.writeForClose(new ServerDisconnect(msg, DisconnectType.Disconnect));
-            QuicheNative.connClose(this.connHandle, true, QuicApplicationErrorCode.ClientOutdated.getValue(), MemorySegment.NULL, 0L);
+            QuicheChannel.closeWithReason(this.connHandle, QuicApplicationErrorCode.ClientOutdated, msg);
          } else {
             QuicheNative.connStreamPriority(this.connHandle, streamId, (byte)0, false);
+            stream.setPacketTimeout(this.listener.quicheConfig.initialPacketTimeout());
             stream.handler = this.listener.handler.apply(stream);
             stream.handler.registered(null);
          }
@@ -373,6 +404,7 @@ class QuicheConnection {
                   QuicheNative.connStreamShutdown(this.connHandle, streamId, 0, 0L);
                   QuicheNative.connStreamShutdown(this.connHandle, streamId, 1, 0L);
                } else {
+                  stream.setPacketTimeout(this.listener.quicheConfig.auxStreamPendingTimeout());
                   stream.handler = handler;
                   handler.registered(null);
                }
@@ -417,7 +449,8 @@ class QuicheConnection {
 
    public void execute(Runnable task) {
       if (!this.eventTasks.offer(task)) {
-         LOGGER.atWarning().log("Event task queue full for %s, dropping task", QuicheChannel.formatDcid(this.dcid));
+         LOGGER.atSevere().log("Event task queue full for %s, terminating connection", QuicheChannel.formatDcid(this.dcid));
+         this.processingThread.interrupt();
       } else {
          LockSupport.unpark(this.processingThread);
       }
@@ -465,7 +498,7 @@ class QuicheConnection {
          FormattedMessage msg = new FormattedMessage();
          msg.messageId = "server.general.disconnect.internalServerError";
          gameStream.writeForClose(new ServerDisconnect(msg, DisconnectType.Crash));
-         QuicheNative.connClose(this.connHandle, true, QuicApplicationErrorCode.NoError.getValue(), MemorySegment.NULL, 0L);
+         QuicheChannel.closeWithReason(this.connHandle, QuicApplicationErrorCode.Crash, msg);
       }
    }
 

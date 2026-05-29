@@ -1,19 +1,25 @@
 package com.hypixel.hytale.builtin.hytalegenerator;
 
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.function.BiConsumer;
 import javax.annotation.Nonnull;
 
 public class Registry<T> {
-   private Map<T, Integer> objectToId = new HashMap<>();
-   private Map<Integer, T> idToObject = new HashMap<>();
+   private final Object2IntMap<T> objectToId = new Object2IntOpenHashMap<>();
+   private final Int2ObjectMap<T> idToObject = new Int2ObjectOpenHashMap<>();
+
+   public Registry() {
+      this.objectToId.defaultReturnValue(-1);
+   }
 
    public int getIdOrRegister(T object) {
-      Integer id = this.objectToId.get(object);
-      if (id != null) {
+      int id = this.objectToId.getInt(object);
+      if (id != -1) {
          return id;
       }
 

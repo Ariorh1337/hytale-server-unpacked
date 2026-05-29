@@ -212,6 +212,11 @@ public class ItemStack implements NetworkSerializable<ItemWithAllMetadata> {
    }
 
    @Nonnull
+   public ItemStack cleanCopy() {
+      return new ItemStack(this.itemId, this.quantity, this.durability, this.maxDurability, this.metadata);
+   }
+
+   @Nonnull
    public ItemStack withMetadata(@Nullable BsonDocument metadata) {
       return new ItemStack(this.itemId, this.quantity, this.durability, this.maxDurability, metadata);
    }

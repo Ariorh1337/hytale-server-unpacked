@@ -1,10 +1,12 @@
 package com.hypixel.hytale.builtin.hytalegenerator;
 
+import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
+import it.unimi.dsi.fastutil.doubles.DoubleList;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.function.BiConsumer;
@@ -16,9 +18,9 @@ public class WeightedMap<T> {
    @Nonnull
    private final List<T> elements;
    @Nonnull
-   private final List<Double> weights;
+   private final DoubleList weights;
    @Nonnull
-   private final Map<T, Integer> indices;
+   private final Object2IntMap<T> indices;
    private double totalWeight = 0.0;
    private boolean immutable = false;
 
@@ -26,8 +28,8 @@ public class WeightedMap<T> {
       this.totalWeight = other.totalWeight;
       this.elementSet = new HashSet<>(other.elementSet);
       this.elements = new ArrayList<>(other.elements);
-      this.weights = new ArrayList<>(other.weights);
-      this.indices = new HashMap<>(other.indices);
+      this.weights = new DoubleArrayList(other.weights);
+      this.indices = new Object2IntOpenHashMap<>(other.indices);
       this.immutable = other.immutable;
    }
 
@@ -38,8 +40,8 @@ public class WeightedMap<T> {
    public WeightedMap(int initialCapacity) {
       this.elementSet = new HashSet<>(initialCapacity);
       this.elements = new ArrayList<>(initialCapacity);
-      this.weights = new ArrayList<>(initialCapacity);
-      this.indices = new HashMap<>(initialCapacity);
+      this.weights = new DoubleArrayList(initialCapacity);
+      this.indices = new Object2IntOpenHashMap<>(initialCapacity);
    }
 
    @Nonnull
@@ -70,7 +72,7 @@ public class WeightedMap<T> {
       } else if (this.immutable) {
          throw new IllegalStateException("method can't be called when object is immutable");
       } else {
-         return !this.elementSet.contains(element) ? 0.0 : this.weights.get(this.indices.get(element));
+         return !this.elementSet.contains(element) ? 0.0 : this.weights.getDouble(this.indices.getInt(element));
       }
    }
 
@@ -86,7 +88,7 @@ public class WeightedMap<T> {
       double pointer = rand.nextDouble() * this.totalWeight;
 
       for (int i = 0; i < this.elements.size(); i++) {
-         pointer -= this.weights.get(i);
+         pointer -= this.weights.getDouble(i);
          if (pointer <= 0.0) {
             return this.elements.get(i);
          }
@@ -114,7 +116,7 @@ public class WeightedMap<T> {
 
    public void forEach(@Nonnull BiConsumer<T, Double> consumer) {
       for (int i = 0; i < this.elements.size(); i++) {
-         consumer.accept(this.elements.get(i), this.weights.get(i));
+         consumer.accept(this.elements.get(i), this.weights.getDouble(i));
       }
    }
 

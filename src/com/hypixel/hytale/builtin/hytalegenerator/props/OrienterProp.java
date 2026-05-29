@@ -10,6 +10,8 @@ import com.hypixel.hytale.builtin.hytalegenerator.rng.RngField;
 import com.hypixel.hytale.builtin.hytalegenerator.scanners.Scanner;
 import com.hypixel.hytale.math.util.FastRandom;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
@@ -40,7 +42,7 @@ public class OrienterProp extends Prop {
    @Nonnull
    private final boolean[] rHasGenerated;
    @Nonnull
-   private final List<Integer> rValidPatternIndices;
+   private final IntList rValidPatternIndices;
    @Nonnull
    private Prop.Context rContext;
    @Nonnull
@@ -79,7 +81,7 @@ public class OrienterProp extends Prop {
          if (!OrienterProp.this.rValidPatternIndices.isEmpty()) {
             OrienterProp.this.random.setSeed(OrienterProp.this.rngField.get(position.x, position.y, position.z));
             int pickedIndex = OrienterProp.this.random.nextInt(OrienterProp.this.rValidPatternIndices.size());
-            Prop prop = OrienterProp.this.props.get(OrienterProp.this.rValidPatternIndices.get(pickedIndex));
+            Prop prop = OrienterProp.this.props.get(OrienterProp.this.rValidPatternIndices.getInt(pickedIndex));
             OrienterProp.this.rChildContext.assign(OrienterProp.this.rContext);
             OrienterProp.this.rChildContext.position = position;
             OrienterProp.this.rHasGenerated[0] = prop.generate(OrienterProp.this.rChildContext);
@@ -129,7 +131,7 @@ public class OrienterProp extends Prop {
       this.rPatternContext = new Pattern.Context();
       this.rChildContext = new Prop.Context();
       this.rHasGenerated = new boolean[1];
-      this.rValidPatternIndices = new ArrayList<>(this.patterns.size());
+      this.rValidPatternIndices = new IntArrayList(this.patterns.size());
       this.rContext = new Prop.Context();
    }
 

@@ -1,36 +1,81 @@
 package com.hypixel.hytale.builtin.buildertools;
 
 import com.hypixel.hytale.assetstore.map.BlockTypeAssetMap;
+import com.hypixel.hytale.assetstore.map.IndexedLookupTableAssetMap;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.protocol.Color;
 import com.hypixel.hytale.protocol.DrawType;
 import com.hypixel.hytale.protocol.Opacity;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
+import com.hypixel.hytale.server.core.asset.type.item.config.Item;
+import com.hypixel.hytale.server.core.asset.type.item.config.ItemQuality;
+import com.hypixel.hytale.server.core.asset.util.ColorParseUtil;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public final class BlockColorIndex {
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+   private static final Set<String> EXCLUDED_QUALITIES = Set.of("Developer", "Technical", "Debug", "Template");
+   private IntSet hiddenQualityIndexes = new IntOpenHashSet();
    private final List<BlockColorIndex.BlockColorEntry> entries = new ArrayList<>();
    private boolean initialized = false;
 
    private void ensureInitialized() {
       if (!this.initialized) {
          BlockTypeAssetMap<String, BlockType> assetMap = BlockType.getAssetMap();
+         Set<String> keys = assetMap.getAssetMap().keySet();
+         IndexedLookupTableAssetMap<String, ItemQuality> qualityMap = ItemQuality.getAssetMap();
 
-         for (String key : assetMap.getAssetMap().keySet()) {
+         for (String id : EXCLUDED_QUALITIES) {
+            int index = qualityMap.getIndexOrDefault(id, -1);
+            if (index >= 0) {
+               this.hiddenQualityIndexes.add(index);
+            }
+         }
+
+         for (String key : keys) {
             BlockType blockType = assetMap.getAsset(key);
             if (blockType != null && this.isSolidCube(blockType)) {
-               Color particleColor = blockType.getParticleColor();
-               if (particleColor != null) {
+               Item item = blockType.getItem();
+               if (item != null && !this.hiddenQualityIndexes.contains(item.getQualityIndex())) {
                   int blockId = assetMap.getIndex(key);
-                  int r = particleColor.red & 255;
-                  int g = particleColor.green & 255;
-                  int b = particleColor.blue & 255;
+                  boolean hasTint = hasTintColor(blockType);
+                  boolean hasTexture = blockType.getTextureComputedColor() != null;
+                  byte[] tint = getTintColor(blockType);
+                  Color textureColor = blockType.getTextureComputedColor();
+                  Color particleColor = blockType.getParticleColor();
+                  int r;
+                  int g;
+                  int b;
+                  if (hasTint && hasTexture) {
+                     r = (textureColor.red & 255) * (tint[0] & 255) / 255;
+                     g = (textureColor.green & 255) * (tint[1] & 255) / 255;
+                     b = (textureColor.blue & 255) * (tint[2] & 255) / 255;
+                  } else if (hasTint) {
+                     r = tint[0] & 255;
+                     g = tint[1] & 255;
+                     b = tint[2] & 255;
+                  } else if (hasTexture) {
+                     r = textureColor.red & 255;
+                     g = textureColor.green & 255;
+                     b = textureColor.blue & 255;
+                  } else {
+                     if (blockType.getParticleColor() == null) {
+                        continue;
+                     }
+
+                     r = particleColor.red & 255;
+                     g = particleColor.green & 255;
+                     b = particleColor.blue & 255;
+                  }
+
                   double[] lab = rgbToLab(r, g, b);
                   this.entries.add(new BlockColorIndex.BlockColorEntry(blockId, key, r, g, b, lab[0], lab[1], lab[2]));
                }
@@ -39,7 +84,27 @@ public final class BlockColorIndex {
 
          this.entries.sort(Comparator.comparingDouble(e -> e.labL));
          this.initialized = true;
-         LOGGER.at(Level.INFO).log("BlockColorIndex initialized with %d solid cube blocks", (int)this.entries.size());
+         LOGGER.at(Level.INFO).log("BlockColorIndex initialized with %d blocks", (int)this.entries.size());
+      }
+   }
+
+   private static boolean hasTintColor(@Nonnull BlockType blockType) {
+      Color[] tintUp = blockType.getTintUp();
+      if (tintUp != null && tintUp.length != 0) {
+         int packed = ColorParseUtil.colorToARGBInt(tintUp[0]) & 16777215;
+         return packed != 0 && packed != 16777215;
+      } else {
+         return false;
+      }
+   }
+
+   private static byte[] getTintColor(@Nonnull BlockType blockType) {
+      Color[] tintUp = blockType.getTintUp();
+      if (tintUp != null && tintUp.length != 0) {
+         Color color = tintUp[0];
+         return new byte[]{color.red, color.green, color.blue};
+      } else {
+         return null;
       }
    }
 

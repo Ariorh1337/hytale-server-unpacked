@@ -1,6 +1,7 @@
 package com.hypixel.hytale.builtin.hytalegenerator.density.nodes;
 
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
+import it.unimi.dsi.fastutil.ints.IntList;
 import java.util.List;
 import javax.annotation.Nonnull;
 
@@ -9,7 +10,7 @@ public class SwitchDensity extends Density {
    @Nonnull
    private final int[] switchStates;
 
-   public SwitchDensity(@Nonnull List<Density> inputs, @Nonnull List<Integer> switchStates) {
+   public SwitchDensity(@Nonnull List<Density> inputs, @Nonnull IntList switchStates) {
       if (inputs.size() != switchStates.size()) {
          throw new IllegalArgumentException("inputs and switch states have different sizes");
       }
@@ -19,7 +20,7 @@ public class SwitchDensity extends Density {
       inputs.toArray(this.inputs);
 
       for (int i = 0; i < switchStates.size(); i++) {
-         this.switchStates[i] = switchStates.get(i);
+         this.switchStates[i] = switchStates.getInt(i);
       }
    }
 

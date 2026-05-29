@@ -11,7 +11,6 @@ import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.HashUtil;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.SimpleItemContainer;
@@ -122,7 +121,7 @@ public class StashPlugin extends JavaPlugin {
          @Nonnull Ref<ChunkStore> ref, @Nonnull AddReason reason, @Nonnull Store<ChunkStore> store, @Nonnull CommandBuffer<ChunkStore> commandBuffer
       ) {
          World world = store.getExternalData().getWorld();
-         if (world.getWorldConfig().getGameMode() != GameMode.Creative) {
+         if (world.getWorldConfig().isBlockSpawnersEnabled()) {
             ItemContainerBlock itemContainerStateComponent = store.getComponent(ref, this.itemContainerStateComponentType);
             assert itemContainerStateComponent != null;
             BlockModule.BlockStateInfo blockStateInfo = store.getComponent(ref, this.blockStateInfoComponentType);

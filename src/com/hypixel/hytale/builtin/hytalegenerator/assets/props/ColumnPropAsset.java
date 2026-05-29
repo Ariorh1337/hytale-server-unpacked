@@ -21,6 +21,7 @@ import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import java.util.ArrayList;
 import javax.annotation.Nonnull;
 
@@ -58,7 +59,7 @@ public class ColumnPropAsset extends PropAsset {
          return EmptyProp.INSTANCE;
       }
 
-      ArrayList<Integer> blockPositions = new ArrayList<>();
+      IntArrayList blockPositions = new IntArrayList();
       ArrayList<Material> blockTypes = new ArrayList<>();
 
       for (int i = 0; i < this.columnBlocks.length; i++) {

@@ -1,5 +1,9 @@
 package com.hypixel.hytale.builtin.hytalegenerator.noise.pointprovider;
 
+import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
+import it.unimi.dsi.fastutil.doubles.DoubleList;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
@@ -32,8 +36,8 @@ public abstract class PointField implements PointProvider {
 
    @Nonnull
    @Override
-   public List<Integer> points1i(int min, int max) {
-      ArrayList<Integer> list = new ArrayList<>();
+   public IntList points1i(int min, int max) {
+      IntArrayList list = new IntArrayList();
       this.points1i(min, max, list::add);
       return list;
    }
@@ -56,8 +60,8 @@ public abstract class PointField implements PointProvider {
 
    @Nonnull
    @Override
-   public List<Double> points1d(double min, double max) {
-      ArrayList<Double> list = new ArrayList<>();
+   public DoubleList points1d(double min, double max) {
+      DoubleArrayList list = new DoubleArrayList();
       this.points1d(min, max, list::add);
       return list;
    }

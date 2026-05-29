@@ -6,6 +6,7 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.map.MapCodec;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.protocol.Interaction;
 import com.hypixel.hytale.protocol.InteractionState;
@@ -16,7 +17,9 @@ import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.HashMap;
 import java.util.Map;
@@ -48,7 +51,7 @@ public class ChangeStateInteraction extends SimpleBlockInteraction {
       .build();
    private static final int SET_SETTINGS = 260;
    protected Map<String, String> stateKeys;
-   protected boolean updateBlockState = false;
+   protected boolean updateBlockState;
 
    @Override
    protected void interactWithBlock(
@@ -60,49 +63,61 @@ public class ChangeStateInteraction extends SimpleBlockInteraction {
       @Nonnull Vector3i targetBlock,
       @Nonnull CooldownHandler cooldownHandler
    ) {
-      WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z));
-      if (chunk != null) {
-         BlockType current = chunk.getBlockType(targetBlock);
-         String currentState = current.getStateForBlock(current);
-         if (currentState == null) {
-            currentState = "default";
-         }
-
-         String newState = this.stateKeys.get(currentState);
-         if (newState != null) {
-            String newBlock = current.getBlockKeyForState(newState);
-            if (newBlock != null) {
-               int newBlockId = BlockType.getAssetMap().getIndex(newBlock);
-               if (newBlockId == Integer.MIN_VALUE) {
-                  context.getState().state = InteractionState.Failed;
-                  return;
-               }
-
-               BlockType newBlockType = BlockType.getAssetMap().getAsset(newBlockId);
-               int rotation = chunk.getRotationIndex(targetBlock.x, targetBlock.y, targetBlock.z);
-               int settings = 260;
-               if (!this.updateBlockState) {
-                  settings |= 2;
-               }
-
-               chunk.setBlock(targetBlock.x(), targetBlock.y(), targetBlock.z(), newBlockId, newBlockType, rotation, 0, settings);
-               BlockType interactionStateBlock = current.getBlockForState(newState);
-               if (interactionStateBlock == null) {
-                  return;
-               }
-
-               int soundEventIndex = interactionStateBlock.getInteractionSoundEventIndex();
-               if (soundEventIndex == 0) {
-                  return;
-               }
-
-               Ref<EntityStore> ref = context.getEntity();
-               SoundUtil.playSoundEvent3d(ref, soundEventIndex, targetBlock.x + 0.5, targetBlock.y + 0.5, targetBlock.z + 0.5, commandBuffer);
-               return;
+      ChunkStore chunkStore = world.getChunkStore();
+      Store<ChunkStore> chunkComponentStore = chunkStore.getStore();
+      Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z));
+      if (chunkRef != null && chunkRef.isValid()) {
+         WorldChunk worldChunkComponent = chunkComponentStore.getComponent(chunkRef, WorldChunk.getComponentType());
+         if (worldChunkComponent != null) {
+            BlockType currentBlockType = worldChunkComponent.getBlockType(targetBlock);
+            String currentState = currentBlockType.getStateForBlock(currentBlockType);
+            if (currentState == null) {
+               currentState = "default";
             }
-         }
 
-         context.getState().state = InteractionState.Failed;
+            String newState = this.stateKeys.get(currentState);
+            if (newState != null) {
+               String newBlock = currentBlockType.getBlockKeyForState(newState);
+               if (newBlock != null) {
+                  int newBlockId = BlockType.getAssetMap().getIndex(newBlock);
+                  if (newBlockId == Integer.MIN_VALUE) {
+                     context.getState().state = InteractionState.Failed;
+                     return;
+                  }
+
+                  BlockType newBlockType = BlockType.getAssetMap().getAsset(newBlockId);
+                  if (newBlockType == null) {
+                     context.getState().state = InteractionState.Failed;
+                     return;
+                  }
+
+                  BlockChunk blockChunkComponent = chunkComponentStore.getComponent(chunkRef, BlockChunk.getComponentType());
+                  assert blockChunkComponent != null;
+                  int rotation = blockChunkComponent.getSectionAtBlockY(targetBlock.y).getRotationIndex(targetBlock.x, targetBlock.y, targetBlock.z);
+                  int settings = 260;
+                  if (!this.updateBlockState) {
+                     settings |= 2;
+                  }
+
+                  worldChunkComponent.setBlock(targetBlock.x(), targetBlock.y(), targetBlock.z(), newBlockId, newBlockType, rotation, 0, settings);
+                  BlockType interactionStateBlock = currentBlockType.getBlockForState(newState);
+                  if (interactionStateBlock == null) {
+                     return;
+                  }
+
+                  int soundEventIndex = interactionStateBlock.getInteractionSoundEventIndex();
+                  if (soundEventIndex == 0) {
+                     return;
+                  }
+
+                  Ref<EntityStore> ref = context.getEntity();
+                  SoundUtil.playSoundEvent3d(ref, soundEventIndex, targetBlock.x + 0.5, targetBlock.y + 0.5, targetBlock.z + 0.5, commandBuffer);
+                  return;
+               }
+            }
+
+            context.getState().state = InteractionState.Failed;
+         }
       }
    }
 

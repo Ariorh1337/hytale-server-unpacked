@@ -46,13 +46,15 @@ import com.hypixel.hytale.server.core.universe.world.events.RemoveWorldEvent;
 import com.hypixel.hytale.server.core.universe.world.worldgen.GeneratedChunk;
 import com.hypixel.hytale.server.core.universe.world.worldgen.provider.IWorldGenProvider;
 import com.hypixel.hytale.server.core.util.Config;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntComparator;
+import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -223,8 +225,8 @@ public class HytaleGenerator extends JavaPlugin {
       StagedChunkGenerator.Builder generatorBuilder = new StagedChunkGenerator.Builder();
       WorldStructure worldStructure_worker0 = worldStructure_workerData.get(workerIndexer.createSession().next());
       List<Biome> allBiomes = worldStructure_worker0.getBiomeRegistry().getAllValues();
-      List<Integer> allRuntimes = new ArrayList<>(getAllPossibleRuntimeIndices(allBiomes));
-      allRuntimes.sort(Comparator.naturalOrder());
+      IntList allRuntimes = new IntArrayList(getAllPossibleRuntimeIndices(allBiomes));
+      allRuntimes.sort((IntComparator)null);
       int bufferTypeIndexCounter = 0;
       ParametrizedBufferType biome_bufferType = new ParametrizedBufferType(
          "Biome", bufferTypeIndexCounter++, BiomeStage.bufferClass, BiomeStage.biomeClass, () -> new CountedPixelBuffer<>(BiomeStage.biomeClass)
@@ -272,7 +274,7 @@ public class HytaleGenerator extends JavaPlugin {
       BufferType entityInput_bufferType = null;
 
       for (int i = 0; i < allRuntimes.size() - 1; i++) {
-         int runtime = allRuntimes.get(i);
+         int runtime = allRuntimes.getInt(i);
          String runtimeString = Integer.toString(runtime);
          ParametrizedBufferType materialOutput_bufferType = new ParametrizedBufferType(
             "Material" + materialBufferIndexCounter,
@@ -303,7 +305,7 @@ public class HytaleGenerator extends JavaPlugin {
       }
 
       if (!allRuntimes.isEmpty()) {
-         int runtime = allRuntimes.getLast();
+         int runtime = allRuntimes.getInt(allRuntimes.size() - 1);
          String runtimeString = Integer.toString(runtime);
          Stage propStage = new PropStage(
             "PropStage" + runtimeString,
@@ -329,7 +331,7 @@ public class HytaleGenerator extends JavaPlugin {
       double bufferCapacityFactor = Math.max(0.0, settingsAsset.getBufferCapacityFactor());
       double targetViewDistance = Math.max(0.0, settingsAsset.getTargetViewDistance());
       double targetPlayerCount = Math.max(0.0, settingsAsset.getTargetPlayerCount());
-      Set<Integer> statsCheckpoints = new HashSet<>(settingsAsset.getStatsCheckpoints());
+      IntSet statsCheckpoints = new IntOpenHashSet(settingsAsset.getStatsCheckpoints());
       return generatorBuilder.withStats("WorldStructure Name: " + generatorProfile.worldStructureName(), statsCheckpoints)
          .withMaterialCache(materialCache)
          .withConcurrentExecutor(this.concurrentExecutor, workerIndexer)
@@ -339,8 +341,8 @@ public class HytaleGenerator extends JavaPlugin {
    }
 
    @Nonnull
-   private static Set<Integer> getAllPossibleRuntimeIndices(@Nonnull List<Biome> biomes) {
-      Set<Integer> allRuntimes = new HashSet<>();
+   private static IntSet getAllPossibleRuntimeIndices(@Nonnull List<Biome> biomes) {
+      IntSet allRuntimes = new IntOpenHashSet();
 
       for (Biome biome : biomes) {
          for (PropRuntime propRuntime : biome.getPropRuntimes()) {

@@ -7,7 +7,7 @@ import com.hypixel.hytale.builtin.portals.ui.PortalDeviceActivePage;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.util.ChunkUtil;
+import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionType;
@@ -24,7 +24,7 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHa
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.SimpleBlockInteraction;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
-import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
+import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.time.Duration;
@@ -78,72 +78,78 @@ public class EnterPortalInteraction extends SimpleBlockInteraction {
          if (portalDevice == null) {
             context.getState().state = InteractionState.Failed;
          } else {
-            long chunkIndex = ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z);
-            WorldChunk chunk = world.getChunkIfInMemory(chunkIndex);
-            if (chunk == null) {
-               context.getState().state = InteractionState.Failed;
-            } else {
-               BlockType blockType = chunk.getBlockType(targetBlock);
-               if (blockType == null) {
+            ChunkStore chunkStore = world.getChunkStore();
+            Ref<ChunkStore> sectionRef = chunkStore.getChunkSectionReferenceAtBlock(targetBlock.x, targetBlock.y, targetBlock.z);
+            if (sectionRef != null && sectionRef.isValid()) {
+               Store<ChunkStore> chunkComponentStore = chunkStore.getStore();
+               BlockSection blockSectionComponent = chunkComponentStore.getComponent(sectionRef, BlockSection.getComponentType());
+               if (blockSectionComponent == null) {
                   context.getState().state = InteractionState.Failed;
                } else {
-                  RotationTuple rotation = chunk.getRotation(targetBlock.x, targetBlock.y, targetBlock.z);
-                  double yaw = rotation.yaw().getRadians() + Math.PI;
-                  Transform returnTransform = new Transform(targetBlock.x + 0.5, targetBlock.y + 0.5, targetBlock.z + 0.5, 0.0F, (float)yaw, 0.0F);
-                  PlayerRef playerRefComponent = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
-                  if (playerRefComponent == null) {
+                  BlockType blockType = BlockType.getAssetMap().getAsset(blockSectionComponent.get(targetBlock.x, targetBlock.y, targetBlock.z));
+                  if (blockType == null) {
                      context.getState().state = InteractionState.Failed;
                   } else {
-                     World targetWorld = portalDevice.getDestinationWorld();
-                     if (targetWorld == null) {
-                        playerRefComponent.sendMessage(MESSAGE_PORTALS_DEVICE_WORLD_IS_DEAD);
+                     RotationTuple rotation = blockSectionComponent.getRotation(targetBlock.x, targetBlock.y, targetBlock.z);
+                     double yaw = rotation.yaw().getRadians() + Math.PI;
+                     Transform returnTransform = new Transform(targetBlock.x + 0.5, targetBlock.y + 0.5, targetBlock.z + 0.5, 0.0F, (float)yaw, 0.0F);
+                     PlayerRef playerRefComponent = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
+                     if (playerRefComponent == null) {
                         context.getState().state = InteractionState.Failed;
                      } else {
-                        UUIDComponent uuidComponent = commandBuffer.getComponent(ref, UUIDComponent.getComponentType());
-                        if (uuidComponent == null) {
+                        World targetWorld = portalDevice.getDestinationWorld();
+                        if (targetWorld == null) {
+                           playerRefComponent.sendMessage(MESSAGE_PORTALS_DEVICE_WORLD_IS_DEAD);
                            context.getState().state = InteractionState.Failed;
                         } else {
-                           UUID playerUuid = uuidComponent.getUuid();
-                           fetchTargetWorldState(targetWorld, playerUuid)
-                              .thenAcceptAsync(
-                                 state -> {
-                                    if (!ref.isValid()) {
-                                       playerRefComponent.sendMessage(MESSAGE_PORTALS_DEVICE_REF_INVALID);
-                                       context.getState().state = InteractionState.Failed;
-                                    } else {
-                                       switch (state) {
-                                          case OKAY:
-                                             InstancesPlugin.teleportPlayerToInstance(ref, commandBuffer, targetWorld, returnTransform);
-                                             break;
-                                          case WORLD_DEAD:
-                                             playerRefComponent.sendMessage(MESSAGE_PORTALS_DEVICE_WORLD_IS_DEAD);
-                                             context.getState().state = InteractionState.Failed;
-                                             break;
-                                          case DIED_IN_WORLD:
-                                             Ref<ChunkStore> blockEntityRef = BlockModule.getBlockEntity(world, targetBlock.x, targetBlock.y, targetBlock.z);
-                                             if (blockEntityRef == null || !blockEntityRef.isValid()) {
-                                                playerRefComponent.sendMessage(MESSAGE_PORTALS_DEVICE_BLOCK_ENTITY_REF_INVALID);
+                           UUIDComponent uuidComponent = commandBuffer.getComponent(ref, UUIDComponent.getComponentType());
+                           if (uuidComponent == null) {
+                              context.getState().state = InteractionState.Failed;
+                           } else {
+                              UUID playerUuid = uuidComponent.getUuid();
+                              fetchTargetWorldState(targetWorld, playerUuid)
+                                 .thenAcceptAsync(
+                                    state -> {
+                                       if (!ref.isValid()) {
+                                          playerRefComponent.sendMessage(MESSAGE_PORTALS_DEVICE_REF_INVALID);
+                                          context.getState().state = InteractionState.Failed;
+                                       } else {
+                                          switch (state) {
+                                             case OKAY:
+                                                InstancesPlugin.teleportPlayerToInstance(ref, commandBuffer, targetWorld, returnTransform);
+                                                break;
+                                             case WORLD_DEAD:
+                                                playerRefComponent.sendMessage(MESSAGE_PORTALS_DEVICE_WORLD_IS_DEAD);
                                                 context.getState().state = InteractionState.Failed;
-                                                return;
-                                             }
+                                                break;
+                                             case DIED_IN_WORLD:
+                                                Ref<ChunkStore> blockEntityRef = BlockModule.getBlockEntity(world, targetBlock.x, targetBlock.y, targetBlock.z);
+                                                if (blockEntityRef == null || !blockEntityRef.isValid()) {
+                                                   playerRefComponent.sendMessage(MESSAGE_PORTALS_DEVICE_BLOCK_ENTITY_REF_INVALID);
+                                                   context.getState().state = InteractionState.Failed;
+                                                   return;
+                                                }
 
-                                             PortalDeviceActivePage activePage = new PortalDeviceActivePage(
-                                                playerRefComponent, portalDevice.getConfig(), blockEntityRef
-                                             );
-                                             playerComponent.getPageManager().openCustomPage(ref, world.getEntityStore().getStore(), activePage);
-                                             break;
-                                          case NO_SPAWN_AVAILABLE:
-                                             playerRefComponent.sendMessage(MESSAGE_PORTALS_DEVICE_NO_SPAWN);
-                                             context.getState().state = InteractionState.Failed;
+                                                PortalDeviceActivePage activePage = new PortalDeviceActivePage(
+                                                   playerRefComponent, portalDevice.getConfig(), blockEntityRef
+                                                );
+                                                playerComponent.getPageManager().openCustomPage(ref, world.getEntityStore().getStore(), activePage);
+                                                break;
+                                             case NO_SPAWN_AVAILABLE:
+                                                playerRefComponent.sendMessage(MESSAGE_PORTALS_DEVICE_NO_SPAWN);
+                                                context.getState().state = InteractionState.Failed;
+                                          }
                                        }
-                                    }
-                                 },
-                                 world
-                              );
+                                    },
+                                    world
+                                 );
+                           }
                         }
                      }
                   }
                }
+            } else {
+               context.getState().state = InteractionState.Failed;
             }
          }
       }

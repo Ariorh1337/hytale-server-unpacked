@@ -15,10 +15,13 @@ import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.protocol.DrawType;
 import com.hypixel.hytale.server.core.asset.type.blocktick.config.RandomTickProcedure;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
+import com.hypixel.hytale.server.core.asset.type.fluid.Fluid;
 import com.hypixel.hytale.server.core.modules.time.WorldTimeResource;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
+import com.hypixel.hytale.server.core.universe.world.chunk.section.FluidSection;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import javax.annotation.Nullable;
 import org.joml.Vector3i;
 
 public class SpreadToProcedure implements RandomTickProcedure {
@@ -60,6 +63,15 @@ public class SpreadToProcedure implements RandomTickProcedure {
       )
       .documentation("Whether the block requires an empty block above the target block to spread.")
       .add()
+      .<String[]>appendInherited(
+         new KeyedCodec<>("AllowedAboveFluids", Codec.STRING_ARRAY),
+         (o, i) -> o.allowedAboveFluidIds = i,
+         o -> o.allowedAboveFluidIds,
+         (o, p) -> o.allowedAboveFluidIds = p.allowedAboveFluidIds
+      )
+      .documentation("List of fluids that spreading is allowed to occur under. Null will allow spreading under any fluid.")
+      .addValidator(Fluid.VALIDATOR_CACHE.getArrayValidator().late())
+      .add()
       .<Integer>appendInherited(
          new KeyedCodec<>("RequiredLightLevel", Codec.INTEGER),
          (o, i) -> o.requiredLightLevel = i,
@@ -82,6 +94,9 @@ public class SpreadToProcedure implements RandomTickProcedure {
    private String allowedTag;
    private int allowedTagIndex = Integer.MIN_VALUE;
    private boolean requireEmptyAboveTarget = true;
+   private String[] allowedAboveFluidIds;
+   @Nullable
+   private transient int[] allowedAboveFluidIndexes = new int[]{Integer.MIN_VALUE};
    private int requiredLightLevel = 6;
    private String revertBlock;
 
@@ -103,87 +118,142 @@ public class SpreadToProcedure implements RandomTickProcedure {
          .getStore()
          .getResource(WorldTimeResource.getResourceType());
       double sunlightFactor = worldTimeResource.getSunlightFactor();
-      BlockSection aboveSection = blockSection;
-      if (!ChunkUtil.isSameChunkSection(worldX, worldY, worldZ, worldX, worldY + 1, worldZ)) {
-         Ref<ChunkStore> aboveChunk = store.getExternalData().getChunkSectionReferenceAtBlock(worldX, worldY + 1, worldZ);
-         if (aboveChunk == null) {
-            return;
-         }
+      int[] allowedAboveFluidIndexes = this.getAllowedAboveFluidIndexes();
+      Ref<ChunkStore> aboveSourceChunk = store.getExternalData().getChunkSectionReferenceAtBlock(worldX, worldY + 1, worldZ);
+      if (aboveSourceChunk != null) {
+         BlockSection aboveSection = commandBuffer.getComponent(aboveSourceChunk, BlockSection.getComponentType());
+         if (aboveSection != null) {
+            int aboveIndex = ChunkUtil.indexBlock(worldX, worldY + 1, worldZ);
+            FluidSection aboveSourceFluidSection = commandBuffer.getComponent(aboveSourceChunk, FluidSection.getComponentType());
+            if (aboveSourceFluidSection != null) {
+               if (this.revertBlock != null) {
+                  int blockAtAboveId = aboveSection.get(aboveIndex);
+                  BlockType blockAtAbove = BlockType.getAssetMap().getAsset(blockAtAboveId);
+                  if (blockAtAbove != null && (blockAtAbove.getDrawType() == DrawType.Cube || blockAtAbove.getDrawType() == DrawType.CubeWithModel)) {
+                     int revert = BlockType.getAssetMap().getIndex(this.revertBlock);
+                     if (revert != Integer.MIN_VALUE) {
+                        blockSection.set(worldX, worldY, worldZ, revert, 0, 0);
+                        return;
+                     }
+                  }
 
-         BlockSection aboveBlockSection = commandBuffer.getComponent(aboveChunk, BlockSection.getComponentType());
-         if (aboveBlockSection == null) {
-            return;
-         }
+                  if (allowedAboveFluidIndexes != null) {
+                     Fluid fluidAbove = aboveSourceFluidSection.getFluid(aboveIndex);
+                     int revert = BlockType.getAssetMap().getIndex(this.revertBlock);
+                     if (revert != Integer.MIN_VALUE
+                        && fluidAbove != null
+                        && !this.fluidAllowedAbove(allowedAboveFluidIndexes, Fluid.getAssetMap().getIndex(fluidAbove.getId()))) {
+                        blockSection.set(worldX, worldY, worldZ, revert, 0, 0);
+                        return;
+                     }
+                  }
+               }
 
-         aboveSection = aboveBlockSection;
+               int skyLight = (int)(aboveSection.getLocalLight().getSkyLight(aboveIndex) * sunlightFactor);
+               int blockLevel = aboveSection.getLocalLight().getBlockLightIntensity(aboveIndex);
+               int lightLevel = Math.max(skyLight, blockLevel);
+               if (lightLevel >= this.requiredLightLevel) {
+                  for (int y = this.minY; y <= this.maxY; y++) {
+                     for (Vector3i direction : this.spreadDirections) {
+                        int targetX = worldX + direction.x;
+                        int targetY = worldY + direction.y + y;
+                        int targetZ = worldZ + direction.z;
+                        BlockSection targetBlockSection = blockSection;
+                        if (!ChunkUtil.isSameChunkSection(worldX, worldY, worldZ, targetX, targetY, targetZ)) {
+                           Ref<ChunkStore> otherChunk = store.getExternalData().getChunkSectionReferenceAtBlock(targetX, targetY, targetZ);
+                           if (otherChunk == null) {
+                              continue;
+                           }
+
+                           targetBlockSection = commandBuffer.getComponent(otherChunk, BlockSection.getComponentType());
+                           if (targetBlockSection == null) {
+                              continue;
+                           }
+                        }
+
+                        int targetIndex = ChunkUtil.indexBlock(targetX, targetY, targetZ);
+                        int targetBlockId = targetBlockSection.get(targetIndex);
+                        if (validSpreadTargets.contains(targetBlockId)) {
+                           if (this.requireEmptyAboveTarget) {
+                              int aboveTargetBlockId;
+                              if (ChunkUtil.isSameChunkSection(targetX, targetY, targetZ, targetX, targetY + 1, targetZ)) {
+                                 aboveTargetBlockId = targetBlockSection.get(ChunkUtil.indexBlock(targetX, targetY + 1, targetZ));
+                              } else {
+                                 Ref<ChunkStore> aboveChunk = store.getExternalData().getChunkSectionReferenceAtBlock(targetX, targetY + 1, targetZ);
+                                 if (aboveChunk == null) {
+                                    continue;
+                                 }
+
+                                 BlockSection aboveBlockSection = commandBuffer.getComponent(aboveChunk, BlockSection.getComponentType());
+                                 if (aboveBlockSection == null) {
+                                    continue;
+                                 }
+
+                                 aboveTargetBlockId = aboveBlockSection.get(ChunkUtil.indexBlock(targetX, targetY + 1, targetZ));
+                              }
+
+                              BlockType aboveBlockType = BlockType.getAssetMap().getAsset(aboveTargetBlockId);
+                              if (aboveBlockType == null || aboveBlockType.getMaterial() != BlockMaterial.Empty) {
+                                 continue;
+                              }
+                           }
+
+                           if (allowedAboveFluidIndexes != null) {
+                              Ref<ChunkStore> aboveChunkSectionRef = store.getExternalData().getChunkSectionReferenceAtBlock(targetX, targetY + 1, targetZ);
+                              if (aboveChunkSectionRef == null) {
+                                 continue;
+                              }
+
+                              FluidSection aboveFluidSection = commandBuffer.getComponent(aboveChunkSectionRef, FluidSection.getComponentType());
+                              if (aboveFluidSection == null) {
+                                 continue;
+                              }
+
+                              int aboveBlockIndex = ChunkUtil.indexBlock(targetX, targetY + 1, targetZ);
+                              Fluid fluidAbove = aboveSourceFluidSection.getFluid(aboveBlockIndex);
+                              if (fluidAbove != null && !this.fluidAllowedAbove(allowedAboveFluidIndexes, Fluid.getAssetMap().getIndex(fluidAbove.getId()))) {
+                                 continue;
+                              }
+                           }
+
+                           targetBlockSection.set(targetIndex, blockId, 0, 0);
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      }
+   }
+
+   private boolean fluidAllowedAbove(int[] allowedAboveFluidIndexes, int fluidIndex) {
+      if (allowedAboveFluidIndexes == null) {
+         return true;
       }
 
-      int aboveIndex = ChunkUtil.indexBlock(worldX, worldY + 1, worldZ);
-      if (this.revertBlock != null) {
-         int blockAtAboveId = aboveSection.get(aboveIndex);
-         BlockType blockAtAbove = BlockType.getAssetMap().getAsset(blockAtAboveId);
-         if (blockAtAbove != null && (blockAtAbove.getDrawType() == DrawType.Cube || blockAtAbove.getDrawType() == DrawType.CubeWithModel)) {
-            int revert = BlockType.getAssetMap().getIndex(this.revertBlock);
-            if (revert != Integer.MIN_VALUE) {
-               blockSection.set(worldX, worldY, worldZ, revert, 0, 0);
-               return;
+      for (int fluid : allowedAboveFluidIndexes) {
+         if (fluid == fluidIndex) {
+            return true;
+         }
+      }
+
+      return false;
+   }
+
+   @Nullable
+   private int[] getAllowedAboveFluidIndexes() {
+      if (this.allowedAboveFluidIndexes != null && this.allowedAboveFluidIndexes[0] == Integer.MIN_VALUE) {
+         if (this.allowedAboveFluidIds == null) {
+            this.allowedAboveFluidIndexes = null;
+         } else {
+            this.allowedAboveFluidIndexes = new int[this.allowedAboveFluidIds.length];
+
+            for (int i = 0; i < this.allowedAboveFluidIds.length; i++) {
+               this.allowedAboveFluidIndexes[i] = Fluid.getAssetMap().getIndex(this.allowedAboveFluidIds[i]);
             }
          }
       }
 
-      int skyLight = (int)(aboveSection.getLocalLight().getSkyLight(aboveIndex) * sunlightFactor);
-      int blockLevel = aboveSection.getLocalLight().getBlockLightIntensity(aboveIndex);
-      int lightLevel = Math.max(skyLight, blockLevel);
-      if (lightLevel >= this.requiredLightLevel) {
-         for (int y = this.minY; y <= this.maxY; y++) {
-            for (Vector3i direction : this.spreadDirections) {
-               int targetX = worldX + direction.x;
-               int targetY = worldY + direction.y + y;
-               int targetZ = worldZ + direction.z;
-               BlockSection targetBlockSection = blockSection;
-               if (!ChunkUtil.isSameChunkSection(worldX, worldY, worldZ, targetX, targetY, targetZ)) {
-                  Ref<ChunkStore> otherChunk = store.getExternalData().getChunkSectionReferenceAtBlock(targetX, targetY, targetZ);
-                  if (otherChunk == null) {
-                     continue;
-                  }
-
-                  targetBlockSection = commandBuffer.getComponent(otherChunk, BlockSection.getComponentType());
-                  if (targetBlockSection == null) {
-                     continue;
-                  }
-               }
-
-               int targetIndex = ChunkUtil.indexBlock(targetX, targetY, targetZ);
-               int targetBlockId = targetBlockSection.get(targetIndex);
-               if (validSpreadTargets.contains(targetBlockId)) {
-                  if (this.requireEmptyAboveTarget) {
-                     int aboveTargetBlockId;
-                     if (ChunkUtil.isSameChunkSection(targetX, targetY, targetZ, targetX, targetY + 1, targetZ)) {
-                        aboveTargetBlockId = targetBlockSection.get(ChunkUtil.indexBlock(targetX, targetY + 1, targetZ));
-                     } else {
-                        Ref<ChunkStore> aboveChunk = store.getExternalData().getChunkSectionReferenceAtBlock(targetX, targetY + 1, targetZ);
-                        if (aboveChunk == null) {
-                           continue;
-                        }
-
-                        BlockSection aboveBlockSection = commandBuffer.getComponent(aboveChunk, BlockSection.getComponentType());
-                        if (aboveBlockSection == null) {
-                           continue;
-                        }
-
-                        aboveTargetBlockId = aboveBlockSection.get(ChunkUtil.indexBlock(targetX, targetY + 1, targetZ));
-                     }
-
-                     BlockType aboveBlockType = BlockType.getAssetMap().getAsset(aboveTargetBlockId);
-                     if (aboveBlockType == null || aboveBlockType.getMaterial() != BlockMaterial.Empty) {
-                        continue;
-                     }
-                  }
-
-                  targetBlockSection.set(targetIndex, blockId, 0, 0);
-               }
-            }
-         }
-      }
+      return this.allowedAboveFluidIndexes;
    }
 }

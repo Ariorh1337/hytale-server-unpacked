@@ -98,7 +98,7 @@ public class ColumnRandomScanner extends Scanner {
 
          if (!this.rPositions.isEmpty()) {
             if (this.rPositions.size() > this.resultsCap) {
-               ArrayList<Integer> usedIndices = new ArrayList<>(this.resultsCap);
+               IntArrayList usedIndices = new IntArrayList(this.resultsCap);
                FastRandom random = new FastRandom(this.rngField.get(context.position.x, context.position.y, context.position.z));
 
                for (int i = 0; i < this.resultsCap; i++) {

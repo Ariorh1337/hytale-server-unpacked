@@ -6,7 +6,7 @@ import com.hypixel.hytale.builtin.hytalegenerator.math.NodeFunction;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
-import java.util.HashSet;
+import it.unimi.dsi.fastutil.doubles.DoubleOpenHashSet;
 import javax.annotation.Nonnull;
 import org.joml.Vector2d;
 
@@ -15,7 +15,7 @@ public class ManualCurveAsset extends CurveAsset {
    public static final BuilderCodec<ManualCurveAsset> CODEC = BuilderCodec.builder(ManualCurveAsset.class, ManualCurveAsset::new, CurveAsset.ABSTRACT_CODEC)
       .append(new KeyedCodec<>("Points", new ArrayCodec<>(PointInOutAsset.CODEC, PointInOutAsset[]::new), true), (t, k) -> t.nodes = k, t -> t.nodes)
       .addValidator((v, r) -> {
-         HashSet<Double> ySet = new HashSet<>(v.length);
+         DoubleOpenHashSet ySet = new DoubleOpenHashSet(v.length);
 
          for (PointInOutAsset point : v) {
             if (ySet.contains(point.getY())) {

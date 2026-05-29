@@ -73,7 +73,7 @@ public class QUICTransport implements Transport {
       ServerAuthManager.getInstance().setServerCertificate(ssc.cert());
       LOGGER.at(Level.INFO).log("Server certificate registered for mutual auth, fingerprint: %s", CertificateUtil.computeCertificateFingerprint(ssc.cert()));
       QuicSslContext baseSslContext = QuicSslContextBuilder.forServer(ssc.key(), null, ssc.cert())
-         .applicationProtocols("hytale/2", "hytale/1")
+         .applicationProtocols("hytale/3", "hytale/2")
          .earlyData(false)
          .clientAuth(ClientAuth.REQUIRE)
          .trustManager(InsecureTrustManagerFactory.INSTANCE)
@@ -197,7 +197,7 @@ public class QUICTransport implements Transport {
                         .log("Received connection from %s to %s (SNI: %s)", NettyUtil.formatRemoteAddress(channel), NettyUtil.formatLocalAddress(channel), sni);
                      String negotiatedAlpn = channel.sslEngine().getApplicationProtocol();
                      int negotiatedVersion = this.parseProtocolVersion(negotiatedAlpn);
-                     if (negotiatedVersion < 2) {
+                     if (negotiatedVersion < 3) {
                         QUICTransport.LOGGER
                            .at(Level.INFO)
                            .log(
@@ -205,7 +205,7 @@ public class QUICTransport implements Transport {
                               NettyUtil.formatRemoteAddress(channel),
                               sni,
                               negotiatedAlpn,
-                              2
+                              3
                            );
                         channel.attr(QUICTransport.ALPN_REJECT_ERROR_CODE_ATTR).set(QuicApplicationErrorCode.ClientOutdated);
                      }
@@ -249,7 +249,8 @@ public class QUICTransport implements Transport {
                      Channel channel = ctx.channel();
                      if (channel.isWritable()) {
                         FormattedMessage disconnectReason = Message.translation("server.general.disconnect.internalServerError").getFormattedMessage();
-                        channel.writeAndFlush(new ServerDisconnect(disconnectReason, DisconnectType.Crash)).addListener(NettyUtil.CLOSE_ON_COMPLETE);
+                        channel.writeAndFlush(new ServerDisconnect(disconnectReason, DisconnectType.Crash))
+                           .addListener(future -> NettyUtil.closeApplicationConnection(channel, QuicApplicationErrorCode.Crash, disconnectReason));
                      } else {
                         NettyUtil.closeApplicationConnection(channel);
                      }

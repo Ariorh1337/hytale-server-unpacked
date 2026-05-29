@@ -19,6 +19,7 @@ import com.hypixel.hytale.server.core.permissions.HytalePermissions;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -59,7 +60,12 @@ public class WhereAmICommand extends AbstractPlayerCommand {
       int chunkY = MathUtil.floor(position.y()) >> 5;
       int chunkZ = MathUtil.floor(position.z()) >> 5;
       long chunkIndex = ChunkUtil.indexChunk(chunkX, chunkZ);
-      WorldChunk playerChunk = world.getChunkIfInMemory(chunkIndex);
+      ChunkStore chunkStore = world.getChunkStore();
+      Store<ChunkStore> chunkComponentStore = chunkStore.getStore();
+      Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(chunkIndex);
+      WorldChunk worldChunkComponent = chunkRef != null && chunkRef.isValid()
+         ? chunkComponentStore.getComponent(chunkRef, WorldChunk.getComponentType())
+         : null;
       String headerKey = targetUsername != null ? "server.commands.whereami.header.other" : "server.commands.whereami.header";
       Message message = Message.translation(headerKey)
          .param("username", targetUsername)
@@ -76,10 +82,12 @@ public class WhereAmICommand extends AbstractPlayerCommand {
          .param("direction", direction.toString())
          .param("axisDirection", axisDirection.toString())
          .param("axis", axis.toString());
-      if (playerChunk == null) {
+      if (worldChunkComponent == null) {
          message.insert(MESSAGE_COMMANDS_WHERE_AM_I_CHUNK_NOT_LOADED);
       } else {
-         message.insert(Message.translation("server.commands.whereami.needsSaving").param("needsSaving", Boolean.toString(playerChunk.getNeedsSaving())));
+         message.insert(
+            Message.translation("server.commands.whereami.needsSaving").param("needsSaving", Boolean.toString(worldChunkComponent.getNeedsSaving()))
+         );
       }
 
       context.sendMessage(message);

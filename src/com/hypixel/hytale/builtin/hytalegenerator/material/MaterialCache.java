@@ -1,5 +1,6 @@
 package com.hypixel.hytale.builtin.hytalegenerator.material;
 
+import com.hypixel.fastutil.ints.Int2ObjectConcurrentHashMap;
 import com.hypixel.hytale.builtin.hytalegenerator.LoggerUtil;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
@@ -9,17 +10,16 @@ import com.hypixel.hytale.server.core.asset.type.fluid.Fluid;
 import com.hypixel.hytale.server.core.prefab.PrefabRotation;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockRotationUtil;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
-import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class MaterialCache {
    @Nonnull
-   private final ConcurrentHashMap<Integer, SolidMaterial> hashToSolidMap = new ConcurrentHashMap<>();
+   private final Int2ObjectConcurrentHashMap<SolidMaterial> hashToSolidMap = new Int2ObjectConcurrentHashMap<>();
    @Nonnull
-   private final ConcurrentHashMap<Integer, FluidMaterial> hashToFluidMap = new ConcurrentHashMap<>();
+   private final Int2ObjectConcurrentHashMap<FluidMaterial> hashToFluidMap = new Int2ObjectConcurrentHashMap<>();
    @Nonnull
-   private final ConcurrentHashMap<Integer, Material> hashToMaterialMap = new ConcurrentHashMap<>();
+   private final Int2ObjectConcurrentHashMap<Material> hashToMaterialMap = new Int2ObjectConcurrentHashMap<>();
    @Nullable
    public final SolidMaterial EMPTY_AIR = this.getSolidMaterial("Empty_Air");
    @Nullable

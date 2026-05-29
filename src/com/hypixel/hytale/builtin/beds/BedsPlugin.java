@@ -29,7 +29,7 @@ public class BedsPlugin extends JavaPlugin {
    private ComponentType<EntityStore, SleepTracker> sleepTrackerComponentType;
    private ResourceType<EntityStore, WorldSomnolence> worldSomnolenceResourceType;
 
-   public static BedsPlugin getInstance() {
+   public static BedsPlugin get() {
       return instance;
    }
 

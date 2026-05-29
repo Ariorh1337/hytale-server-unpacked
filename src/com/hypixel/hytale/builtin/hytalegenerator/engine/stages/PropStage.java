@@ -25,9 +25,9 @@ import com.hypixel.hytale.builtin.hytalegenerator.workerindexer.WorkerIndexer;
 import com.hypixel.hytale.builtin.hytalegenerator.worldstructure.WorldStructure;
 import com.hypixel.hytale.math.vector.Vector3iUtil;
 import it.unimi.dsi.fastutil.Pair;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import javax.annotation.Nonnull;
@@ -186,14 +186,13 @@ public class PropStage implements Stage {
          }
 
          Registry<Biome> biomeRegistry = this.worldStructure_workerData.get(context.workerId).getBiomeRegistry();
-         HashSet<Integer> traversedBiomes = new HashSet<>();
+         IntOpenHashSet traversedBiomes = new IntOpenHashSet();
          List<Biome> biomesInBuffer = new ArrayList<>();
 
          for (int x = localPositionsBounds_voxelGrid.min.x; x < localPositionsBounds_voxelGrid.max.x; x++) {
             for (int z = localPositionsBounds_voxelGrid.min.z; z < localPositionsBounds_voxelGrid.max.z; z++) {
                Integer biomeId = biomeInputSpace.get(x, 0, z);
-               if (!traversedBiomes.contains(biomeId)) {
-                  traversedBiomes.add(biomeId);
+               if (biomeId != null && traversedBiomes.add(biomeId)) {
                   Biome biome = biomeRegistry.getObject(biomeId);
                   biomesInBuffer.add(biome);
                }

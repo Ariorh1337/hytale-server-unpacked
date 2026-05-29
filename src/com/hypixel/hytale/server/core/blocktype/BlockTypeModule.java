@@ -5,6 +5,7 @@ import com.hypixel.hytale.assetstore.map.IndexedLookupTableAssetMap;
 import com.hypixel.hytale.common.plugin.PluginManifest;
 import com.hypixel.hytale.component.AddReason;
 import com.hypixel.hytale.component.CommandBuffer;
+import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.DisableProcessingAssert;
 import com.hypixel.hytale.component.Holder;
@@ -29,9 +30,6 @@ import com.hypixel.hytale.server.core.modules.item.ItemModule;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.universe.world.World;
-import com.hypixel.hytale.server.core.universe.world.accessor.BlockAccessor;
-import com.hypixel.hytale.server.core.universe.world.accessor.ChunkAccessor;
-import com.hypixel.hytale.server.core.universe.world.accessor.LocalCachedChunkAccessor;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.ChunkColumn;
 import com.hypixel.hytale.server.core.universe.world.chunk.ChunkFlag;
@@ -46,6 +44,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class BlockTypeModule extends JavaPlugin {
+   @Nonnull
    public static final PluginManifest MANIFEST = PluginManifest.corePlugin(BlockTypeModule.class).depends(ItemModule.class).depends(LegacyModule.class).build();
    public static final int SET_BLOCK_SETTINGS = 157;
    public static final String DEBUG_CUBE_TEXTURE_UP = "BlockTextures/_Debug/Up.png";
@@ -87,9 +86,9 @@ public class BlockTypeModule extends JavaPlugin {
       if (event.isNewlyGenerated()) {
          WorldChunk chunk = event.getChunk();
          Holder<ChunkStore> holder = event.getHolder();
-         ChunkColumn column = holder.getComponent(ChunkColumn.getComponentType());
-         if (column != null) {
-            Holder<ChunkStore>[] sections = column.getSectionHolders();
+         ChunkColumn chunkColumnComponent = holder.getComponent(ChunkColumn.getComponentType());
+         if (chunkColumnComponent != null) {
+            Holder<ChunkStore>[] sections = chunkColumnComponent.getSectionHolders();
             if (sections != null) {
                BlockType[] tempBlocks = TEMP_BLOCKS.get();
                Arrays.fill(tempBlocks, null);
@@ -97,7 +96,7 @@ public class BlockTypeModule extends JavaPlugin {
                for (int sectionIndex = 0; sectionIndex < 10; sectionIndex++) {
                   BlockSection section = sections[sectionIndex].ensureAndGetComponent(BlockSection.getComponentType());
                   if (!section.isSolidAir() && !(section.getMaximumHitboxExtent() <= 0.0)) {
-                     onChunksectionPreLoadProcess(chunk, section, sectionIndex, tempBlocks);
+                     onChunkSectionPreLoadProcess(chunk, section, sectionIndex, tempBlocks);
                   }
                }
             }
@@ -105,7 +104,7 @@ public class BlockTypeModule extends JavaPlugin {
       }
    }
 
-   private static void onChunksectionPreLoadProcess(@Nonnull WorldChunk chunk, @Nonnull BlockSection section, int sectionIndex, @Nonnull BlockType[] blocks) {
+   private static void onChunkSectionPreLoadProcess(@Nonnull WorldChunk chunk, @Nonnull BlockSection section, int sectionIndex, @Nonnull BlockType[] blocks) {
       int sectionYBlock = sectionIndex << 5;
       BlockTypeAssetMap<String, BlockType> blockTypeAssetMap = BlockType.getAssetMap();
       IndexedLookupTableAssetMap<String, BlockBoundingBoxes> hitboxAssetMap = BlockBoundingBoxes.getAssetMap();
@@ -141,24 +140,27 @@ public class BlockTypeModule extends JavaPlugin {
                      }
                   } else {
                      int blockId = blockTypeAssetMap.getIndex(blockType.getId());
-                     FillerBlockUtil.forEachFillerBlock(hitboxAssetMap.getAsset(blockType.getHitboxTypeIndex()).get(rotation), (x1, y1, z1) -> {
-                        if (x1 != 0 || y1 != 0 || z1 != 0) {
-                           int blockX = finalX + x1;
-                           if (blockX >= 0 && blockX < 32) {
-                              int blockYx = finalY + y1;
-                              if (blockYx >= 0 && blockYx < 320) {
-                                 int blockZx = finalZ + z1;
-                                 if (blockZx >= 0 && blockZx < 32) {
-                                    BlockType neighbourBlockType = getBlockType(blockTypeAssetMap, blocks, section, blockX, blockYx, blockZx, false);
-                                    if (neighbourBlockType != null && neighbourBlockType.getMaterial() != BlockMaterial.Solid) {
-                                       int newFiller = FillerBlockUtil.pack(x1, y1, z1);
-                                       chunk.setBlock(blockX, blockYx, blockZx, blockId, blockType, rotation, newFiller, 157);
+                     BlockBoundingBoxes hitboxAsset = hitboxAssetMap.getAsset(blockType.getHitboxTypeIndex());
+                     if (hitboxAsset != null) {
+                        FillerBlockUtil.forEachFillerBlock(hitboxAsset.get(rotation), (x1, y1, z1) -> {
+                           if (x1 != 0 || y1 != 0 || z1 != 0) {
+                              int blockX = finalX + x1;
+                              if (blockX >= 0 && blockX < 32) {
+                                 int blockY = finalY + y1;
+                                 if (blockY >= 0 && blockY < 320) {
+                                    int blockZx = finalZ + z1;
+                                    if (blockZx >= 0 && blockZx < 32) {
+                                       BlockType neighbourBlockType = getBlockType(blockTypeAssetMap, blocks, section, blockX, blockY, blockZx, false);
+                                       if (neighbourBlockType != null && neighbourBlockType.getMaterial() != BlockMaterial.Solid) {
+                                          int newFiller = FillerBlockUtil.pack(x1, y1, z1);
+                                          chunk.setBlock(blockX, blockY, blockZx, blockId, blockType, rotation, newFiller, 157);
+                                       }
                                     }
                                  }
                               }
                            }
-                        }
-                     });
+                        });
+                     }
                   }
                }
             }
@@ -194,65 +196,66 @@ public class BlockTypeModule extends JavaPlugin {
    public static void breakOrSetFillerBlocks(
       @Nonnull BlockTypeAssetMap<String, BlockType> blockTypeAssetMap,
       @Nonnull IndexedLookupTableAssetMap<String, BlockBoundingBoxes> hitboxAssetMap,
-      @Nonnull ChunkAccessor<?> accessor,
-      @Nonnull BlockAccessor chunk,
+      @Nonnull ComponentAccessor<ChunkStore> chunkStore,
+      @Nonnull WorldChunk chunk,
+      @Nonnull BlockChunk blockChunkComponent,
       int finalX,
       int finalY,
       int finalZ,
       @Nonnull BlockType blockType,
       int rotation
    ) {
-      int filler = chunk.getFiller(finalX, finalY, finalZ);
+      int filler = blockChunkComponent.getSectionAtBlockY(finalY).getFiller(finalX, finalY, finalZ);
       if (filler != 0) {
-         if (!isFillerValid(blockTypeAssetMap, accessor, chunk, blockType, filler, finalX, finalY, finalZ)) {
+         if (!isFillerValid(blockTypeAssetMap, chunkStore, chunk, blockType, filler, finalX, finalY, finalZ)) {
             chunk.breakBlock(finalX, finalY, finalZ, 157);
          } else {
             int originX = finalX - FillerBlockUtil.unpackX(filler);
             int originY = finalY - FillerBlockUtil.unpackY(filler);
             int originZ = finalZ - FillerBlockUtil.unpackZ(filler);
-            setFillerBlocks(blockTypeAssetMap, hitboxAssetMap, accessor, chunk, originX, originY, originZ, blockType, rotation);
+            setFillerBlocks(blockTypeAssetMap, hitboxAssetMap, chunkStore, chunk, blockChunkComponent, originX, originY, originZ, blockType, rotation);
          }
       } else {
-         setFillerBlocks(blockTypeAssetMap, hitboxAssetMap, accessor, chunk, finalX, finalY, finalZ, blockType, rotation);
+         setFillerBlocks(blockTypeAssetMap, hitboxAssetMap, chunkStore, chunk, blockChunkComponent, finalX, finalY, finalZ, blockType, rotation);
       }
    }
 
    @Nullable
    private static BlockType getOriginBlockType(
       @Nonnull BlockTypeAssetMap<String, BlockType> blockTypeAssetMap,
-      @Nonnull ChunkAccessor<?> accessor,
-      @Nonnull BlockAccessor section,
+      @Nonnull ComponentAccessor<ChunkStore> chunkStore,
+      @Nonnull WorldChunk chunk,
       int originX,
       int originY,
       int originZ
    ) {
       if (originX >= 0 && originX < 32 && originY >= 0 && originY < 320 && originZ >= 0 && originZ < 32) {
-         int originBlockId = section.getBlock(originX, originY, originZ);
+         int originBlockId = chunk.getBlock(originX, originY, originZ);
          return blockTypeAssetMap.getAsset(originBlockId);
-      } else {
-         int worldX = (section.getX() << 5) + originX;
-         int worldZ = (section.getZ() << 5) + originZ;
-         BlockAccessor fillerOriginChunk = accessor.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(worldX, worldZ));
-         if (fillerOriginChunk != null) {
-            int originBlockId = fillerOriginChunk.getBlock(originX, originY, originZ);
-            return blockTypeAssetMap.getAsset(originBlockId);
-         } else {
-            get()
-               .getLogger()
-               .at(Level.WARNING)
-               .log("Blocking chunk load when trying to get origin block for filler! Origin: %s, %s, %s", originX, originY, originZ);
-            fillerOriginChunk = accessor.getNonTickingChunk(ChunkUtil.indexChunkFromBlock(worldX, worldZ));
-            int originBlockId = fillerOriginChunk.getBlock(originX, originY, originZ);
+      }
+
+      int worldX = (chunk.getX() << 5) + originX;
+      int worldZ = (chunk.getZ() << 5) + originZ;
+      long chunkIndex = ChunkUtil.indexChunkFromBlock(worldX, worldZ);
+      Ref<ChunkStore> fillerOriginRef = chunkStore.getExternalData().getChunkReference(chunkIndex);
+      if (fillerOriginRef != null && fillerOriginRef.isValid()) {
+         BlockChunk fillerOriginBlockChunkComponent = chunkStore.getComponent(fillerOriginRef, BlockChunk.getComponentType());
+         if (fillerOriginBlockChunkComponent != null) {
+            int originBlockId = fillerOriginBlockChunkComponent.getBlock(originX, originY, originZ);
             return blockTypeAssetMap.getAsset(originBlockId);
          }
       }
+
+      get().getLogger().at(Level.WARNING).log("Origin chunk not in memory when resolving filler origin block! Origin: %s, %s, %s", originX, originY, originZ);
+      return null;
    }
 
    private static void setFillerBlocks(
       @Nonnull BlockTypeAssetMap<String, BlockType> blockTypeAssetMap,
       @Nonnull IndexedLookupTableAssetMap<String, BlockBoundingBoxes> hitboxAssetMap,
-      @Nonnull ChunkAccessor<?> accessor,
-      @Nonnull BlockAccessor chunk,
+      @Nonnull ComponentAccessor<ChunkStore> chunkStore,
+      @Nonnull WorldChunk chunk,
+      @Nonnull BlockChunk blockChunkComponent,
       int finalX,
       int finalY,
       int finalZ,
@@ -260,48 +263,63 @@ public class BlockTypeModule extends JavaPlugin {
       int rotation
    ) {
       int originBlockId = blockTypeAssetMap.getIndex(originBlockType.getId());
-      FillerBlockUtil.forEachFillerBlock(
-         hitboxAssetMap.getAsset(originBlockType.getHitboxTypeIndex()).get(rotation),
-         (x1, y1, z1) -> {
-            if (x1 != 0 || y1 != 0 || z1 != 0) {
-               int blockX = finalX + x1;
-               int blockY = finalY + y1;
-               int blockZ = finalZ + z1;
-               if (blockX >= 0 && blockX < 32 && blockY >= 0 && blockY < 320 && blockZ >= 0 && blockZ < 32) {
-                  int blockId = chunk.getBlock(blockX, blockY, blockZ);
-                  int currentRotation = chunk.getRotationIndex(blockX, blockY, blockZ);
-                  int currentFiller = chunk.getFiller(blockX, blockY, blockZ);
-                  BlockType blockType = blockTypeAssetMap.getAsset(blockId);
-                  if ((currentFiller == 0 || !isFillerValid(blockTypeAssetMap, accessor, chunk, blockType, currentFiller, blockX, blockY, blockZ))
-                     && blockType.getMaterial() != BlockMaterial.Solid) {
-                     int filler = FillerBlockUtil.pack(x1, y1, z1);
-                     chunk.setBlock(blockX, blockY, blockZ, originBlockId, originBlockType, currentRotation, filler, 157);
-                  }
-               } else {
-                  int worldX = (chunk.getX() << 5) + blockX;
-                  int worldZ = (chunk.getZ() << 5) + blockZ;
-                  BlockAccessor neighbourChunk = accessor.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(worldX, worldZ));
-                  if (neighbourChunk != null) {
-                     int blockId = neighbourChunk.getBlock(blockX, blockY, blockZ);
-                     int currentRotation = neighbourChunk.getRotationIndex(blockX, blockY, blockZ);
-                     int currentFiller = neighbourChunk.getFiller(blockX, blockY, blockZ);
+      BlockBoundingBoxes hitboxAsset = hitboxAssetMap.getAsset(originBlockType.getHitboxTypeIndex());
+      if (hitboxAsset != null) {
+         FillerBlockUtil.forEachFillerBlock(
+            hitboxAsset.get(rotation),
+            (x1, y1, z1) -> {
+               if (x1 != 0 || y1 != 0 || z1 != 0) {
+                  int blockX = finalX + x1;
+                  int blockY = finalY + y1;
+                  int blockZ = finalZ + z1;
+                  if (blockX >= 0 && blockX < 32 && blockY >= 0 && blockY < 320 && blockZ >= 0 && blockZ < 32) {
+                     int blockId = blockChunkComponent.getBlock(blockX, blockY, blockZ);
                      BlockType blockType = blockTypeAssetMap.getAsset(blockId);
-                     if ((currentFiller == 0 || !isFillerValid(blockTypeAssetMap, accessor, chunk, blockType, currentFiller, blockX, blockY, blockZ))
-                        && blockType.getMaterial() != BlockMaterial.Solid) {
-                        int filler = FillerBlockUtil.pack(x1, y1, z1);
-                        neighbourChunk.setBlock(blockX, blockY, blockZ, originBlockId, originBlockType, currentRotation, filler, 157);
+                     if (blockType != null) {
+                        BlockSection section = blockChunkComponent.getSectionAtBlockY(blockY);
+                        int currentRotation = section.getRotationIndex(blockX, blockY, blockZ);
+                        int currentFiller = section.getFiller(blockX, blockY, blockZ);
+                        if ((currentFiller == 0 || !isFillerValid(blockTypeAssetMap, chunkStore, chunk, blockType, currentFiller, blockX, blockY, blockZ))
+                           && blockType.getMaterial() != BlockMaterial.Solid) {
+                           int filler = FillerBlockUtil.pack(x1, y1, z1);
+                           chunk.setBlock(blockX, blockY, blockZ, originBlockId, originBlockType, currentRotation, filler, 157);
+                        }
+                     }
+                  } else {
+                     int worldX = (chunk.getX() << 5) + blockX;
+                     int worldZ = (chunk.getZ() << 5) + blockZ;
+                     long chunkIndex = ChunkUtil.indexChunkFromBlock(worldX, worldZ);
+                     Ref<ChunkStore> neighbourRef = chunkStore.getExternalData().getChunkReference(chunkIndex);
+                     if (neighbourRef != null && neighbourRef.isValid()) {
+                        WorldChunk neighbourChunkComponent = chunkStore.getComponent(neighbourRef, WorldChunk.getComponentType());
+                        if (neighbourChunkComponent != null) {
+                           BlockChunk neighbourBlockChunkComponent = chunkStore.getComponent(neighbourRef, BlockChunk.getComponentType());
+                           assert neighbourBlockChunkComponent != null;
+                           BlockSection neighbourSection = neighbourBlockChunkComponent.getSectionAtBlockY(blockY);
+                           int blockId = neighbourChunkComponent.getBlock(blockX, blockY, blockZ);
+                           int currentRotation = neighbourSection.getRotationIndex(blockX, blockY, blockZ);
+                           int currentFiller = neighbourSection.getFiller(blockX, blockY, blockZ);
+                           BlockType blockType = blockTypeAssetMap.getAsset(blockId);
+                           if (blockType != null) {
+                              if ((currentFiller == 0 || !isFillerValid(blockTypeAssetMap, chunkStore, chunk, blockType, currentFiller, blockX, blockY, blockZ))
+                                 && blockType.getMaterial() != BlockMaterial.Solid) {
+                                 int filler = FillerBlockUtil.pack(x1, y1, z1);
+                                 neighbourChunkComponent.setBlock(blockX, blockY, blockZ, originBlockId, originBlockType, currentRotation, filler, 157);
+                              }
+                           }
+                        }
                      }
                   }
                }
             }
-         }
-      );
+         );
+      }
    }
 
    private static boolean isFillerValid(
       @Nonnull BlockTypeAssetMap<String, BlockType> blockTypeAssetMap,
-      @Nonnull ChunkAccessor<?> accessor,
-      @Nonnull BlockAccessor chunk,
+      @Nonnull ComponentAccessor<ChunkStore> chunkStore,
+      @Nonnull WorldChunk chunk,
       @Nonnull BlockType blockType,
       int filler,
       int x,
@@ -311,7 +329,11 @@ public class BlockTypeModule extends JavaPlugin {
       int originX = x - FillerBlockUtil.unpackX(filler);
       int originY = y - FillerBlockUtil.unpackY(filler);
       int originZ = z - FillerBlockUtil.unpackZ(filler);
-      BlockType originBlockType = getOriginBlockType(blockTypeAssetMap, accessor, chunk, originX, originY, originZ);
+      BlockType originBlockType = getOriginBlockType(blockTypeAssetMap, chunkStore, chunk, originX, originY, originZ);
+      if (originBlockType == null) {
+         return false;
+      }
+
       if (blockType.isUnknown()) {
          return false;
       }
@@ -333,62 +355,62 @@ public class BlockTypeModule extends JavaPlugin {
       public void onEntityAdded(
          @Nonnull Ref<ChunkStore> ref, @Nonnull AddReason reason, @Nonnull Store<ChunkStore> store, @Nonnull CommandBuffer<ChunkStore> commandBuffer
       ) {
-         WorldChunk chunk = store.getComponent(ref, COMPONENT_TYPE);
-         if (chunk.is(ChunkFlag.NEWLY_GENERATED)) {
+         WorldChunk worldChunkComponent = store.getComponent(ref, COMPONENT_TYPE);
+         assert worldChunkComponent != null;
+         if (worldChunkComponent.is(ChunkFlag.NEWLY_GENERATED)) {
             World world = store.getExternalData().getWorld();
-            world.execute(() -> fixFillerFor(world, chunk));
+            world.execute(() -> fixFillerFor(world, ref, worldChunkComponent));
          }
       }
 
-      public static void fixFillerFor(@Nonnull World world, @Nonnull WorldChunk chunk) {
-         BlockChunk blockChunk = chunk.getBlockChunk();
-         BlockTypeAssetMap<String, BlockType> blockTypeAssetMap = BlockType.getAssetMap();
-         IndexedLookupTableAssetMap<String, BlockBoundingBoxes> hitboxAssetMap = BlockBoundingBoxes.getAssetMap();
-         LocalCachedChunkAccessor accessor = LocalCachedChunkAccessor.atChunk(world, chunk, 1);
+      public static void fixFillerFor(@Nonnull World world, @Nonnull Ref<ChunkStore> ref, @Nonnull WorldChunk chunk) {
+         if (ref.isValid()) {
+            Store<ChunkStore> chunkStore = world.getChunkStore().getStore();
+            BlockChunk blockChunkComponent = chunkStore.getComponent(ref, BlockChunk.getComponentType());
+            assert blockChunkComponent != null;
+            BlockTypeAssetMap<String, BlockType> blockTypeAssetMap = BlockType.getAssetMap();
+            IndexedLookupTableAssetMap<String, BlockBoundingBoxes> hitboxAssetMap = BlockBoundingBoxes.getAssetMap();
 
-         for (int x = -1; x < 2; x++) {
-            for (int z = -1; z < 2; z++) {
-               if (x != 0 || z != 0) {
-                  WorldChunk chunkIfInMemory = world.getChunkIfInMemory(ChunkUtil.indexChunk(x + chunk.getX(), z + chunk.getZ()));
-                  if (chunkIfInMemory != null) {
-                     accessor.overwrite(chunkIfInMemory);
-                  }
-               }
-            }
-         }
+            for (int sectionIndex = 0; sectionIndex < 10; sectionIndex++) {
+               BlockSection section = blockChunkComponent.getSectionAtIndex(sectionIndex);
+               boolean skipInsideSection = section.getMaximumHitboxExtent() <= 0.0;
+               int sectionYBlock = sectionIndex << 5;
 
-         for (int sectionIndex = 0; sectionIndex < 10; sectionIndex++) {
-            BlockSection section = blockChunk.getSectionAtIndex(sectionIndex);
-            boolean skipInsideSection = section.getMaximumHitboxExtent() <= 0.0;
-            int sectionYBlock = sectionIndex << 5;
+               for (int yInSection = 0; yInSection < 32; yInSection++) {
+                  int y = sectionYBlock | yInSection;
 
-            for (int yInSection = 0; yInSection < 32; yInSection++) {
-               int y = sectionYBlock | yInSection;
-
-               for (int x = -1; x < 33; x++) {
-                  for (int z = -1; z < 33; z++) {
-                     if (x < 1 || x >= 31 || y < 1 || y >= 319 || z < 1 || z >= 31) {
-                        if (x < 0 || x >= 32 || y < 0 || y >= 320 || z < 0 || z >= 32) {
-                           int worldX = (chunk.getX() << 5) + x;
-                           int worldZ = (chunk.getZ() << 5) + z;
-                           WorldChunk neighbourChunk = accessor.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(worldX, worldZ));
-                           if (neighbourChunk != null) {
-                              BlockSection neighbourSection = neighbourChunk.getBlockChunk().getSectionAtBlockY(y);
-                              if (!(neighbourSection.getMaximumHitboxExtent() <= 0.0)) {
-                                 int blockId = neighbourSection.get(x, y, z);
-                                 if (blockId != 0) {
-                                    BlockType blockType = blockTypeAssetMap.getAsset(blockId);
-                                    int rotation = neighbourSection.getRotationIndex(x, y, z);
-                                    BlockTypeModule.breakOrSetFillerBlocks(blockTypeAssetMap, hitboxAssetMap, accessor, chunk, x, y, z, blockType, rotation);
+                  for (int x = -1; x < 33; x++) {
+                     for (int z = -1; z < 33; z++) {
+                        if (x < 1 || x >= 31 || y < 1 || y >= 319 || z < 1 || z >= 31) {
+                           if (x < 0 || x >= 32 || y < 0 || y >= 320 || z < 0 || z >= 32) {
+                              int worldX = (chunk.getX() << 5) + x;
+                              int worldZ = (chunk.getZ() << 5) + z;
+                              Ref<ChunkStore> neighbourRef = chunkStore.getExternalData().getChunkReference(ChunkUtil.indexChunkFromBlock(worldX, worldZ));
+                              if (neighbourRef != null && neighbourRef.isValid()) {
+                                 BlockChunk neighbourBlockChunkComponent = chunkStore.getComponent(neighbourRef, BlockChunk.getComponentType());
+                                 if (neighbourBlockChunkComponent != null) {
+                                    BlockSection neighbourSection = neighbourBlockChunkComponent.getSectionAtBlockY(y);
+                                    if (!(neighbourSection.getMaximumHitboxExtent() <= 0.0)) {
+                                       int blockId = neighbourSection.get(x, y, z);
+                                       if (blockId != 0) {
+                                          BlockType blockType = blockTypeAssetMap.getAsset(blockId);
+                                          int rotation = neighbourSection.getRotationIndex(x, y, z);
+                                          BlockTypeModule.breakOrSetFillerBlocks(
+                                             blockTypeAssetMap, hitboxAssetMap, chunkStore, chunk, blockChunkComponent, x, y, z, blockType, rotation
+                                          );
+                                       }
+                                    }
                                  }
                               }
-                           }
-                        } else if (!skipInsideSection) {
-                           int blockId = section.get(x, y, z);
-                           if (blockId != 0) {
-                              BlockType blockType = blockTypeAssetMap.getAsset(blockId);
-                              int rotation = section.getRotationIndex(x, y, z);
-                              BlockTypeModule.breakOrSetFillerBlocks(blockTypeAssetMap, hitboxAssetMap, accessor, chunk, x, y, z, blockType, rotation);
+                           } else if (!skipInsideSection) {
+                              int blockId = section.get(x, y, z);
+                              if (blockId != 0) {
+                                 BlockType blockType = blockTypeAssetMap.getAsset(blockId);
+                                 int rotation = section.getRotationIndex(x, y, z);
+                                 BlockTypeModule.breakOrSetFillerBlocks(
+                                    blockTypeAssetMap, hitboxAssetMap, chunkStore, chunk, blockChunkComponent, x, y, z, blockType, rotation
+                                 );
+                              }
                            }
                         }
                      }

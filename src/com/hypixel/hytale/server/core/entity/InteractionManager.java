@@ -6,6 +6,7 @@ import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.function.function.TriFunction;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
@@ -39,6 +40,7 @@ import com.hypixel.hytale.server.core.modules.time.TimeResource;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.UUIDUtil;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
@@ -915,10 +917,23 @@ public class InteractionManager implements Component<EntityStore> {
                      context.getMetaStore().putMetaObject(Interaction.TARGET_BLOCK, targetBlock);
                      context.getMetaStore().putMetaObject(Interaction.TARGET_BLOCK_RAW, packet.data.blockPosition);
                      if (!packet.data.blockPosition.equals(targetBlock)) {
-                        WorldChunk otherChunk = world.getChunkIfInMemory(
+                        ChunkStore chunkStore = world.getChunkStore();
+                        Store<ChunkStore> chunkComponentStore = chunkStore.getStore();
+                        Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(
                            ChunkUtil.indexChunkFromBlock(packet.data.blockPosition.x, packet.data.blockPosition.z)
                         );
-                        if (otherChunk == null) {
+                        if (chunkRef == null || !chunkRef.isValid()) {
+                           HytaleLogger.Api ctx = LOGGER.at(Level.FINE);
+                           if (ctx.isEnabled()) {
+                              ctx.log("Unloaded chunk interacted with: %d, %s", index, type);
+                           }
+
+                           this.sendCancelPacket(index, packet.forkedId);
+                           return true;
+                        }
+
+                        WorldChunk worldChunkComponent = chunkComponentStore.getComponent(chunkRef, WorldChunk.getComponentType());
+                        if (worldChunkComponent == null) {
                            HytaleLogger.Api ctx = LOGGER.at(Level.FINE);
                            if (ctx.isEnabled()) {
                               ctx.log("Unloaded chunk interacted with: %d, %s", index, type);
@@ -936,7 +951,7 @@ public class InteractionManager implements Component<EntityStore> {
                               settings |= 16;
                            }
 
-                           otherChunk.setBlock(
+                           worldChunkComponent.setBlock(
                               packet.data.blockPosition.x, packet.data.blockPosition.y, packet.data.blockPosition.z, 0, BlockType.EMPTY, 0, 0, settings
                            );
                         }

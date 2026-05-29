@@ -5,11 +5,18 @@ import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.protocol.Color;
 import com.hypixel.hytale.protocol.ColorAlpha;
 import com.hypixel.hytale.protocol.ColorLight;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
+import java.util.Random;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.imageio.ImageIO;
 
 public class ColorParseUtil {
    public static final Pattern HEX_COLOR_PATTERN = Pattern.compile("^\\s*#([0-9a-fA-F]{3}){1,2}\\s*$");
@@ -377,5 +384,208 @@ public class ColorParseUtil {
    public static String toHexAlphaString(int rgba) {
       String hexString = Integer.toHexString(rgba);
       return "#" + "0".repeat(8 - hexString.length()) + hexString;
+   }
+
+   @Nullable
+   public static String computeDominantColor(@Nonnull Path pngPath) throws Exception {
+      BufferedImage img = ImageIO.read(pngPath.toFile());
+      if (img == null) {
+         return null;
+      }
+
+      ArrayList<int[]> pixels = new ArrayList<>();
+
+      for (int y = 0; y < img.getHeight(); y++) {
+         for (int x = 0; x < img.getWidth(); x++) {
+            int argb = img.getRGB(x, y);
+            int alpha = argb >> 24 & 0xFF;
+            if (alpha >= 128) {
+               pixels.add(new int[]{argb >> 16 & 0xFF, argb >> 8 & 0xFF, argb & 0xFF});
+            }
+         }
+      }
+
+      if (pixels.isEmpty()) {
+         return null;
+      }
+
+      if (pixels.size() < 8) {
+         double r = 0.0;
+         double g = 0.0;
+         double b = 0.0;
+
+         for (int[] p : pixels) {
+            r += p[0];
+            g += p[1];
+            b += p[2];
+         }
+
+         r /= pixels.size();
+         g /= pixels.size();
+         b /= pixels.size();
+         return String.format("#%02X%02X%02X", (int)r, (int)g, (int)b);
+      } else {
+         Random rng = new Random(42L);
+         if (pixels.size() > 512) {
+            Collections.shuffle(pixels, rng);
+            pixels = new ArrayList<>(pixels.subList(0, 512));
+         }
+
+         List<ColorParseUtil.KMeansCluster> result = kmeans(pixels, 4, rng);
+         if (result.isEmpty()) {
+            return null;
+         }
+
+         int total = 0;
+
+         for (ColorParseUtil.KMeansCluster cluster : result) {
+            total += cluster.count;
+         }
+
+         double exponent = 2.0;
+         double[] weights = new double[result.size()];
+         double weightSum = 0.0;
+
+         for (int i = 0; i < result.size(); i++) {
+            weights[i] = Math.pow((double)result.get(i).count / total, exponent);
+            weightSum += weights[i];
+         }
+
+         double finalR = 0.0;
+         double finalG = 0.0;
+         double finalB = 0.0;
+
+         for (int i = 0; i < result.size(); i++) {
+            double w = weights[i] / weightSum;
+            finalR += result.get(i).centroid[0] * w;
+            finalG += result.get(i).centroid[1] * w;
+            finalB += result.get(i).centroid[2] * w;
+         }
+
+         int r = Math.clamp((int)finalR, 0, 255);
+         int g = Math.clamp((int)finalG, 0, 255);
+         int b = Math.clamp((int)finalB, 0, 255);
+         return String.format("#%02X%02X%02X", r, g, b);
+      }
+   }
+
+   private static List<ColorParseUtil.KMeansCluster> kmeans(List<int[]> pixels, int numClusters, Random rng) {
+      int numPixels = pixels.size();
+      ArrayList<double[]> centroids = new ArrayList<>();
+      int[] first = pixels.get(rng.nextInt(numPixels));
+      centroids.add(new double[]{first[0], first[1], first[2]});
+
+      for (int i = 1; i < numClusters; i++) {
+         double[] distances = new double[numPixels];
+         double totalDistance = 0.0;
+
+         for (int j = 0; j < numPixels; j++) {
+            double minDistanceSq = Double.MAX_VALUE;
+
+            for (double[] c : centroids) {
+               double distanceSq = distSq(pixels.get(j), c);
+               if (distanceSq < minDistanceSq) {
+                  minDistanceSq = distanceSq;
+               }
+            }
+
+            distances[j] = minDistanceSq;
+            totalDistance += minDistanceSq;
+         }
+
+         if (totalDistance == 0.0) {
+            break;
+         }
+
+         double pick = rng.nextDouble() * totalDistance;
+         double cumulative = 0.0;
+
+         for (int j = 0; j < numPixels; j++) {
+            cumulative += distances[j];
+            if (cumulative >= pick) {
+               int[] p = pixels.get(j);
+               centroids.add(new double[]{p[0], p[1], p[2]});
+               break;
+            }
+         }
+      }
+
+      int actualClusters = centroids.size();
+      int[] labels = new int[numPixels];
+      int numRefineIterations = 10;
+
+      for (int iter = 0; iter < numRefineIterations; iter++) {
+         for (int j = 0; j < numPixels; j++) {
+            double minDistance = Double.MAX_VALUE;
+
+            for (int c = 0; c < actualClusters; c++) {
+               double distance = distSq(pixels.get(j), centroids.get(c));
+               if (distance < minDistance) {
+                  minDistance = distance;
+                  labels[j] = c;
+               }
+            }
+         }
+
+         boolean converged = true;
+
+         for (int c = 0; c < actualClusters; c++) {
+            double sr = 0.0;
+            double sg = 0.0;
+            double sb = 0.0;
+            int count = 0;
+
+            for (int j = 0; j < numPixels; j++) {
+               if (labels[j] == c) {
+                  sr += ((int[])pixels.get(j))[0];
+                  sg += ((int[])pixels.get(j))[1];
+                  sb += ((int[])pixels.get(j))[2];
+                  count++;
+               }
+            }
+
+            if (count != 0) {
+               double nr = sr / count;
+               double ng = sg / count;
+               double nb = sb / count;
+               double[] old = centroids.get(c);
+               if (Math.abs(nr - old[0]) > 1.0 || Math.abs(ng - old[1]) > 1.0 || Math.abs(nb - old[2]) > 1.0) {
+                  converged = false;
+               }
+
+               centroids.set(c, new double[]{nr, ng, nb});
+            }
+         }
+
+         if (converged) {
+            break;
+         }
+      }
+
+      ArrayList<ColorParseUtil.KMeansCluster> results = new ArrayList<>();
+
+      for (int c = 0; c < actualClusters; c++) {
+         int count = 0;
+
+         for (int j = 0; j < numPixels; j++) {
+            if (labels[j] == c) {
+               count++;
+            }
+         }
+
+         results.add(new ColorParseUtil.KMeansCluster(centroids.get(c), count));
+      }
+
+      return results;
+   }
+
+   private static double distSq(int[] pixel, double[] centroid) {
+      double dr = pixel[0] - centroid[0];
+      double dg = pixel[1] - centroid[1];
+      double db = pixel[2] - centroid[2];
+      return dr * dr + dg * dg + db * db;
+   }
+
+   private record KMeansCluster(double[] centroid, int count) {
    }
 }

@@ -13,7 +13,7 @@ public class WorldSomnolence implements Resource<EntityStore> {
    private long lastSleepNotification;
 
    public static ResourceType<EntityStore, WorldSomnolence> getResourceType() {
-      return BedsPlugin.getInstance().getWorldSomnolenceResourceType();
+      return BedsPlugin.get().getWorldSomnolenceResourceType();
    }
 
    @Nonnull

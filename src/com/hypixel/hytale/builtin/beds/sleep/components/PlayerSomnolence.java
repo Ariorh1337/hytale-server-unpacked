@@ -14,7 +14,7 @@ public class PlayerSomnolence implements Component<EntityStore> {
    private PlayerSleep state = PlayerSleep.FullyAwake.INSTANCE;
 
    public static ComponentType<EntityStore, PlayerSomnolence> getComponentType() {
-      return BedsPlugin.getInstance().getPlayerSomnolenceComponentType();
+      return BedsPlugin.get().getPlayerSomnolenceComponentType();
    }
 
    public PlayerSomnolence() {

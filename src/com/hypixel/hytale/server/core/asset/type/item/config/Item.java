@@ -89,7 +89,12 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
             UIRebuildCaches.ClientCache.ITEM_ICONS
          )
       )
-      .metadata(new UISidebarButtons(new UIButton("server.assetEditor.buttons.equipItem", "EquipItem")))
+      .metadata(
+         new UISidebarButtons(
+            new UIButton("server.assetEditor.buttons.equipItem", "EquipItem"),
+            new UIButton("server.assetEditor.buttons.recomputeTextureColor", "RecomputeTextureColor")
+         )
+      )
       .metadata(new UICreateButtons(new UIButton("server.assetEditor.buttons.createAndEquipItem", "EquipItem")))
       .<String>appendInherited(new KeyedCodec<>("Icon", Codec.STRING), (item, s) -> item.icon = s, item -> item.icon, (item, parent) -> item.icon = parent.icon)
       .addValidator(CommonAssetValidator.ICON_ITEM)

@@ -23,13 +23,13 @@ import java.lang.foreign.ValueLayout;
 import java.lang.foreign.ValueLayout.OfInt;
 import java.net.SocketAddress;
 import java.nio.ByteOrder;
-import java.nio.charset.StandardCharsets;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.HexFormat;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.function.BooleanSupplier;
@@ -40,6 +40,7 @@ import javax.annotation.Nullable;
 public class QuicheChannel implements ChannelConnection {
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
    private static final OfInt PACKET_SIZE_LAYOUT = ValueLayout.JAVA_INT_UNALIGNED.withOrder(ByteOrder.LITTLE_ENDIAN);
+   static final int MAX_CLOSE_REASON_BYTES = 1000;
    private final QuicheConnection connection;
    private final long streamId;
    private final NetworkChannel networkChannel;
@@ -66,11 +67,25 @@ public class QuicheChannel implements ChannelConnection {
    private MemorySegment tempSendBuffer = null;
    private final AtomicBoolean writable = new AtomicBoolean(true);
    private final AtomicBoolean closed = new AtomicBoolean();
+   private long packetTimeoutNs;
+   private long lastPacketReceivedNs;
+   private long stageDeadlineNs;
+   @Nullable
+   private BooleanSupplier stageCondition;
+   @Nullable
+   private Runnable stageOnTimeout;
+   @Nullable
+   private String currentStage;
+   private long connectionStartNs;
+   @Nullable
+   private String playerIdentifier;
+   private long loginTimingLastNs;
 
    QuicheChannel(QuicheConnection connection, long streamId, NetworkChannel networkChannel) {
       this.connection = connection;
       this.streamId = streamId;
       this.networkChannel = networkChannel;
+      this.lastPacketReceivedNs = System.nanoTime();
    }
 
    public long getStreamId() {
@@ -204,16 +219,32 @@ public class QuicheChannel implements ChannelConnection {
             return;
          }
 
-         Packet packet = PacketIO.readFramedPacket(this.connection.decompressionContext, buffer, this.currentPacketSize - 4, this.packetStatsRecorder);
-         this.handler.handle((ToServerPacket)packet);
-         this.processingPacket = false;
-         this.currentPacketSize = 0;
-         this.currentPacketOffset = 0;
-         if (this.tempPacketArena != null) {
-            this.tempPacketArena.close();
-            this.tempPacketArena = null;
-            this.tempPacketBuffer = null;
+         try {
+            long nowNs = System.nanoTime();
+            TokenBucket rateLimitBucket = this.connection.rateLimitBucket;
+            if (rateLimitBucket == null || rateLimitBucket.tryConsume(nowNs)) {
+               this.lastPacketReceivedNs = nowNs;
+               Packet packet = PacketIO.readFramedPacket(this.connection.decompressionContext, buffer, this.currentPacketSize - 4, this.packetStatsRecorder);
+               this.handler.handle((ToServerPacket)packet);
+               continue;
+            }
+
+            LOGGER.at(Level.WARNING).log("Rate limit exceeded for %s, disconnecting", this.formatRemoteAddress());
+            if (!QuicheNative.connIsClosed(this.connection.connHandle)) {
+               QuicheNative.connClose(this.connection.connHandle, true, QuicApplicationErrorCode.RateLimited.getValue(), MemorySegment.NULL, 0L);
+            }
+         } finally {
+            this.processingPacket = false;
+            this.currentPacketSize = 0;
+            this.currentPacketOffset = 0;
+            if (this.tempPacketArena != null) {
+               this.tempPacketArena.close();
+               this.tempPacketArena = null;
+               this.tempPacketBuffer = null;
+            }
          }
+
+         return;
       }
    }
 
@@ -300,15 +331,38 @@ public class QuicheChannel implements ChannelConnection {
       return HexFormat.of().formatHex(dcid);
    }
 
+   @Nullable
+   static MemorySegment encodeCloseReason(@Nonnull FormattedMessage message, @Nonnull Arena arena) {
+      int size = message.computeSize();
+      if (size > 1000) {
+         return null;
+      }
+
+      MemorySegment seg = arena.allocate(size);
+      message.serialize(seg, 0);
+      return seg;
+   }
+
    @Override
    public void disconnect(@Nonnull FormattedMessage message) {
       this.connection.execute(() -> {
          if (!QuicheNative.connIsClosed(this.connection.connHandle)) {
             this.packetQueue.add(new ServerDisconnect(message, DisconnectType.Disconnect));
             this.tryWrite();
-            QuicheNative.connClose(this.connection.connHandle, true, QuicApplicationErrorCode.NoError.getValue(), MemorySegment.NULL, 0L);
+            closeWithReason(this.connection.connHandle, QuicApplicationErrorCode.NoError, message);
          }
       });
+   }
+
+   static void closeWithReason(@Nonnull MemorySegment connHandle, @Nonnull QuicApplicationErrorCode errorCode, @Nonnull FormattedMessage message) {
+      try (Arena reasonArena = Arena.ofConfined()) {
+         MemorySegment reason = encodeCloseReason(message, reasonArena);
+         if (reason != null) {
+            QuicheNative.connClose(connHandle, true, errorCode.getValue(), reason, reason.byteSize());
+         } else {
+            QuicheNative.connClose(connHandle, true, errorCode.getValue(), MemorySegment.NULL, 0L);
+         }
+      }
    }
 
    @Nullable
@@ -340,30 +394,145 @@ public class QuicheChannel implements ChannelConnection {
 
    @Override
    public void initTimeoutContext(@Nonnull String stage, @Nonnull String identifier) {
+      this.runOnProcessingThread(() -> {
+         this.currentStage = stage;
+         this.playerIdentifier = identifier;
+         this.connectionStartNs = System.nanoTime();
+         this.loginTimingLastNs = 0L;
+      });
    }
 
    @Override
    public void updateTimeoutContext(@Nonnull String stage, @Nonnull String identifier) {
+      this.runOnProcessingThread(() -> {
+         this.currentStage = stage;
+         this.playerIdentifier = identifier;
+      });
    }
 
    @Override
    public void updateTimeoutContext(@Nonnull String stage) {
+      this.runOnProcessingThread(() -> this.currentStage = stage);
    }
 
    @Override
    public void setPacketTimeout(@Nonnull Duration timeout) {
+      long nanos = timeout.toNanos();
+      this.runOnProcessingThread(() -> {
+         this.packetTimeoutNs = nanos;
+         this.lastPacketReceivedNs = System.nanoTime();
+      });
+   }
+
+   @Override
+   public void clearPacketTimeout() {
+      this.runOnProcessingThread(() -> this.packetTimeoutNs = 0L);
    }
 
    @Override
    public void setStageTimeout(@Nonnull String stage, @Nonnull Duration timeout, @Nonnull BooleanSupplier condition, @Nonnull Runnable onTimeout) {
+      this.runOnProcessingThread(() -> {
+         this.currentStage = stage;
+         this.stageDeadlineNs = System.nanoTime() + timeout.toNanos();
+         this.stageCondition = condition;
+         this.stageOnTimeout = onTimeout;
+         this.logConnectionTimingNow("Entering stage '" + stage + "'", Level.FINEST);
+      });
    }
 
    @Override
    public void clearStageTimeout() {
+      this.runOnProcessingThread(() -> {
+         this.stageDeadlineNs = 0L;
+         this.stageCondition = null;
+         this.stageOnTimeout = null;
+      });
    }
 
    @Override
    public void logConnectionTimings(@Nonnull String message, @Nonnull Level level) {
+      this.runOnProcessingThread(() -> this.logConnectionTimingNow(message, level));
+   }
+
+   private void logConnectionTimingNow(@Nonnull String message, @Nonnull Level level) {
+      long now = System.nanoTime();
+      String identifier = this.playerIdentifier != null ? this.playerIdentifier : this.formatRemoteAddress();
+      if (this.loginTimingLastNs == 0L) {
+         LOGGER.at(level).log("[%s] %s", identifier, message);
+      } else {
+         long deltaNs = now - this.loginTimingLastNs;
+         LOGGER.at(level).log("[%s] %s took %d ms", identifier, message, TimeUnit.NANOSECONDS.toMillis(deltaNs));
+      }
+
+      this.loginTimingLastNs = now;
+   }
+
+   private void runOnProcessingThread(Runnable task) {
+      if (Thread.currentThread() == this.connection.processingThread) {
+         task.run();
+      } else {
+         this.connection.execute(task);
+      }
+   }
+
+   long checkTimersAndGetDeadline(long nowNs) {
+      if (this.closed.get()) {
+         return Long.MAX_VALUE;
+      }
+
+      if (this.stageDeadlineNs != 0L && nowNs >= this.stageDeadlineNs) {
+         String stage = this.currentStage;
+         BooleanSupplier condition = this.stageCondition;
+         Runnable onTimeout = this.stageOnTimeout;
+         this.stageDeadlineNs = 0L;
+         this.stageCondition = null;
+         this.stageOnTimeout = null;
+         if (!condition.getAsBoolean()) {
+            long duration = this.connectionStartNs > 0L ? TimeUnit.NANOSECONDS.toMillis(nowNs - this.connectionStartNs) : -1L;
+            String id = this.playerIdentifier != null ? this.playerIdentifier : this.formatRemoteAddress();
+            LOGGER.at(Level.WARNING).log("Stage timeout for %s at stage '%s' after %d ms connected", id, stage, duration);
+            onTimeout.run();
+            return Long.MAX_VALUE;
+         }
+      }
+
+      if (this.packetTimeoutNs != 0L && nowNs - this.lastPacketReceivedNs >= this.packetTimeoutNs) {
+         long timeout = this.packetTimeoutNs;
+         this.packetTimeoutNs = 0L;
+         this.firePacketTimeout(timeout, nowNs);
+         return Long.MAX_VALUE;
+      }
+
+      long earliest = Long.MAX_VALUE;
+      if (this.packetTimeoutNs != 0L) {
+         earliest = this.lastPacketReceivedNs + this.packetTimeoutNs;
+      }
+
+      if (this.stageDeadlineNs != 0L && this.stageDeadlineNs < earliest) {
+         earliest = this.stageDeadlineNs;
+      }
+
+      return earliest;
+   }
+
+   private void firePacketTimeout(long configuredTimeoutNs, long nowNs) {
+      String id = this.playerIdentifier != null ? this.playerIdentifier : this.formatRemoteAddress();
+      String stage = this.currentStage != null ? this.currentStage : "unknown";
+      long connectedMs = this.connectionStartNs > 0L ? TimeUnit.NANOSECONDS.toMillis(nowNs - this.connectionStartNs) : -1L;
+      LOGGER.at(Level.INFO)
+         .log(
+            "Read timeout for %s at stage '%s' after %d ms connected (timeout=%d ms)",
+            id,
+            stage,
+            connectedMs,
+            TimeUnit.NANOSECONDS.toMillis(configuredTimeoutNs)
+         );
+      if (!QuicheNative.connIsClosed(this.connection.connHandle)) {
+         FormattedMessage msg = new FormattedMessage();
+         msg.messageId = "server.general.disconnect.timeout.read";
+         this.writeForClose(new ServerDisconnect(msg, DisconnectType.Disconnect));
+         closeWithReason(this.connection.connHandle, QuicApplicationErrorCode.Timeout, msg);
+      }
    }
 
    @Nonnull
@@ -428,13 +597,10 @@ public class QuicheChannel implements ChannelConnection {
    }
 
    @Override
-   public void closeApplicationConnection(@Nonnull QuicApplicationErrorCode errorCode, @Nonnull String reason) {
+   public void closeApplicationConnection(@Nonnull QuicApplicationErrorCode errorCode, @Nonnull FormattedMessage reason) {
       this.connection.execute(() -> {
          if (!QuicheNative.connIsClosed(this.connection.connHandle)) {
-            try (Arena tempArena = Arena.ofConfined()) {
-               MemorySegment reasonMem = tempArena.allocateFrom(reason, StandardCharsets.UTF_8);
-               QuicheNative.connClose(this.connection.connHandle, true, errorCode.getValue(), reasonMem, reasonMem.byteSize() - 1L);
-            }
+            closeWithReason(this.connection.connHandle, errorCode, reason);
          }
       });
    }

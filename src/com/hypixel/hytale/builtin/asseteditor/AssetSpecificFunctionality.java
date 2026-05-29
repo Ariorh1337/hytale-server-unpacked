@@ -1,5 +1,6 @@
 package com.hypixel.hytale.builtin.asseteditor;
 
+import com.hypixel.hytale.assetstore.AssetPack;
 import com.hypixel.hytale.assetstore.AssetStore;
 import com.hypixel.hytale.assetstore.AssetUpdateQuery;
 import com.hypixel.hytale.assetstore.event.LoadedAssetsEvent;
@@ -20,21 +21,28 @@ import com.hypixel.hytale.event.EventRegistry;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.protocol.InstantData;
 import com.hypixel.hytale.protocol.Model;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorJsonAssetUpdated;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorPopupNotificationType;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorPreviewCameraSettings;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorUpdateModelPreview;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorUpdateSecondsPerGameDay;
+import com.hypixel.hytale.protocol.packets.asseteditor.JsonUpdateCommand;
+import com.hypixel.hytale.protocol.packets.asseteditor.JsonUpdateType;
 import com.hypixel.hytale.protocol.packets.world.ClearEditorTimeOverride;
 import com.hypixel.hytale.protocol.packets.world.UpdateEditorTimeOverride;
 import com.hypixel.hytale.protocol.packets.world.UpdateEditorWeatherOverride;
 import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockTypeTextures;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.CustomModelTexture;
 import com.hypixel.hytale.server.core.asset.type.environment.config.Environment;
 import com.hypixel.hytale.server.core.asset.type.item.config.AssetIconProperties;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemArmor;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
 import com.hypixel.hytale.server.core.asset.type.weather.config.Weather;
+import com.hypixel.hytale.server.core.asset.util.ColorParseUtil;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
@@ -50,6 +58,7 @@ import com.hypixel.hytale.server.core.universe.world.PlayerUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Map;
@@ -81,6 +90,7 @@ public class AssetSpecificFunctionality {
       getEventRegistry().register(LoadedAssetsEvent.class, ModelAsset.class, AssetSpecificFunctionality::onModelAssetLoaded);
       getEventRegistry().register(LoadedAssetsEvent.class, Item.class, AssetSpecificFunctionality::onItemAssetLoaded);
       getEventRegistry().register(AssetEditorActivateButtonEvent.class, "EquipItem", AssetSpecificFunctionality::onEquipItem);
+      getEventRegistry().register(AssetEditorActivateButtonEvent.class, "RecomputeTextureColor", AssetSpecificFunctionality::onRecomputeTextureColor);
       getEventRegistry().register(AssetEditorActivateButtonEvent.class, "UseModel", AssetSpecificFunctionality::onUseModel);
       getEventRegistry().register(AssetEditorActivateButtonEvent.class, "ResetModel", AssetSpecificFunctionality::onResetModel);
       getEventRegistry().register(AssetEditorUpdateWeatherPreviewLockEvent.class, AssetSpecificFunctionality::onUpdateWeatherPreviewLockEvent);
@@ -180,6 +190,13 @@ public class AssetSpecificFunctionality {
       }
    }
 
+   private static void onRecomputeTextureColor(@Nonnull AssetEditorActivateButtonEvent event) {
+      AssetPath currentAssetPath = AssetEditorPlugin.get().getOpenAssetPath(event.getEditorClient());
+      if (currentAssetPath != null && !currentAssetPath.path().toString().isEmpty()) {
+         recomputeTextureColor(currentAssetPath.path(), event.getEditorClient());
+      }
+   }
+
    private static void onUseModel(@Nonnull AssetEditorActivateButtonEvent event) {
       AssetPath currentAssetPath = AssetEditorPlugin.get().getOpenAssetPath(event.getEditorClient());
       if (currentAssetPath != null && !currentAssetPath.path().toString().isEmpty()) {
@@ -247,6 +264,82 @@ public class AssetSpecificFunctionality {
             );
          }
       }
+   }
+
+   private static void recomputeTextureColor(@Nonnull Path assetPath, @Nonnull EditorClient editorClient) {
+      AssetPath currentAssetPath = AssetEditorPlugin.get().getOpenAssetPath(editorClient);
+      String itemKey = Item.getAssetStore().decodeFilePathKey(assetPath);
+      Item item = Item.getAssetMap().getAsset(itemKey);
+      if (item != null && item.getBlockId() != null) {
+         BlockTypeAssetMap<String, BlockType> blockTypeMap = BlockType.getAssetMap();
+         BlockType blockType = blockTypeMap.getAsset(item.getBlockId());
+         if (blockType == null) {
+            editorClient.sendPopupNotification(
+               AssetEditorPopupNotificationType.Error, Message.translation("server.assetEditor.messages.recomputeTextureColor.notBlockType")
+            );
+         } else {
+            String texturePath = extractTexturePath(blockType);
+            if (texturePath != null) {
+               AssetPack assetPack = AssetModule.get().getAssetPacks().get(0);
+               Path pngPath = assetPack.getRoot().resolve("Common").resolve(texturePath);
+               if (Files.isRegularFile(pngPath)) {
+                  try {
+                     String color = ColorParseUtil.computeDominantColor(pngPath);
+                     if (color == null) {
+                        return;
+                     }
+
+                     JsonUpdateCommand command = new JsonUpdateCommand();
+                     command.type = JsonUpdateType.SetProperty;
+                     command.path = new String[]{"BlockType", "TextureComputedColor"};
+                     command.value = "{\"value\": \"" + color + "\"}";
+                     JsonUpdateCommand[] commands = new JsonUpdateCommand[]{command};
+                     AssetEditorPlugin.get().handleJsonAssetUpdate(editorClient, currentAssetPath, "Item", -1, commands, 0);
+                     editorClient.getPacketHandler().write(new AssetEditorJsonAssetUpdated(currentAssetPath.toPacket(), commands));
+                     editorClient.sendPopupNotification(
+                        AssetEditorPopupNotificationType.Success,
+                        Message.translation("server.assetEditor.messages.recomputeTextureColor.success").param("color", color)
+                     );
+                  } catch (Exception e) {
+                     HytaleLogger.getLogger().at(Level.WARNING).withCause(e).log("Failed to compute texture color");
+                  }
+               }
+            }
+         }
+      } else {
+         editorClient.sendPopupNotification(
+            AssetEditorPopupNotificationType.Error, Message.translation("server.assetEditor.messages.recomputeTextureColor.notBlockType")
+         );
+      }
+   }
+
+   @Nullable
+   private static String extractTexturePath(@Nonnull BlockType blockType) {
+      CustomModelTexture[] cmt = blockType.getCustomModelTexture();
+      if (cmt != null && cmt.length > 0) {
+         String tex = cmt[0].getTexture();
+         if (tex != null && !tex.isEmpty()) {
+            return tex;
+         }
+      }
+
+      BlockTypeTextures[] textures = blockType.getTextures();
+      if (textures != null && textures.length > 0) {
+         BlockTypeTextures entry = textures[0];
+         if (entry.getUp() != null) {
+            return entry.getUp();
+         }
+
+         if (entry.getNorth() != null) {
+            return entry.getNorth();
+         }
+
+         if (entry.getDown() != null) {
+            return entry.getDown();
+         }
+      }
+
+      return null;
    }
 
    private static void useModel(@Nonnull Path assetPath, @Nonnull EditorClient editorClient) {

@@ -55,6 +55,8 @@ public interface ChannelConnection {
 
    void setPacketTimeout(@Nonnull Duration var1);
 
+   void clearPacketTimeout();
+
    void setStageTimeout(@Nonnull String var1, @Nonnull Duration var2, @Nonnull BooleanSupplier var3, @Nonnull Runnable var4);
 
    void clearStageTimeout();
@@ -72,7 +74,7 @@ public interface ChannelConnection {
 
    void closeApplicationConnection(@Nonnull QuicApplicationErrorCode var1);
 
-   void closeApplicationConnection(@Nonnull QuicApplicationErrorCode var1, @Nonnull String var2);
+   void closeApplicationConnection(@Nonnull QuicApplicationErrorCode var1, @Nonnull FormattedMessage var2);
 
    void updateStreamPriority(int var1, boolean var2);
 }

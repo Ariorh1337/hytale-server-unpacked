@@ -3,6 +3,7 @@ package com.hypixel.hytale.server.core.modules.interaction.interaction.config.se
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.spatial.SpatialResource;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.vector.Vector3iUtil;
@@ -30,6 +31,7 @@ import org.joml.Vector3d;
 import org.joml.Vector3i;
 
 public class LaunchPadInteraction extends SimpleBlockInteraction {
+   @Nonnull
    public static final BuilderCodec<LaunchPadInteraction> CODEC = BuilderCodec.builder(
          LaunchPadInteraction.class, LaunchPadInteraction::new, SimpleBlockInteraction.CODEC
       )
@@ -52,28 +54,35 @@ public class LaunchPadInteraction extends SimpleBlockInteraction {
       @Nonnull Vector3i targetBlock,
       @Nonnull CooldownHandler cooldownHandler
    ) {
-      WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z));
-      if (chunk != null) {
-         BlockPosition baseTargetBlock = world.getBaseBlock(new BlockPosition(targetBlock.x, targetBlock.y, targetBlock.z));
-         Ref<ChunkStore> blockEntityRef = chunk.getBlockComponentEntity(baseTargetBlock.x, baseTargetBlock.y, baseTargetBlock.z);
-         if (blockEntityRef != null) {
-            LaunchPad launchPadState = blockEntityRef.getStore().getComponent(blockEntityRef, LaunchPad.getComponentType());
-            if (launchPadState != null) {
-               Ref<EntityStore> ref = context.getEntity();
-               Player playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
-               if (!launchPadState.isPlayersOnly() || playerComponent != null) {
-                  Velocity velocityComponent = commandBuffer.getComponent(ref, Velocity.getComponentType());
-                  assert velocityComponent != null;
-                  velocityComponent.addInstruction(
-                     new Vector3d(launchPadState.getVelocityX(), launchPadState.getVelocityY(), launchPadState.getVelocityZ()), null, ChangeVelocityType.Set
-                  );
-                  Vector3d particlePos = Vector3iUtil.toVector3d(targetBlock).add(0.5, 0.5, 0.5);
-                  SpatialResource<Ref<EntityStore>, EntityStore> playerSpatialResource = commandBuffer.getResource(
-                     EntityModule.get().getPlayerSpatialResourceType()
-                  );
-                  List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
-                  playerSpatialResource.getSpatialStructure().collect(particlePos, 75.0, results);
-                  ParticleUtil.spawnParticleEffect("Splash", particlePos, results, commandBuffer);
+      long chunkIndex = ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z);
+      Store<ChunkStore> chunkStore = world.getChunkStore().getStore();
+      Ref<ChunkStore> chunkRef = chunkStore.getExternalData().getChunkReference(chunkIndex);
+      if (chunkRef != null && chunkRef.isValid()) {
+         WorldChunk worldChunk = chunkStore.getComponent(chunkRef, WorldChunk.getComponentType());
+         if (worldChunk != null) {
+            BlockPosition baseTargetBlock = world.getBaseBlock(new BlockPosition(targetBlock.x, targetBlock.y, targetBlock.z));
+            Ref<ChunkStore> blockEntityRef = worldChunk.getBlockComponentEntity(baseTargetBlock.x, baseTargetBlock.y, baseTargetBlock.z);
+            if (blockEntityRef != null && blockEntityRef.isValid()) {
+               LaunchPad launchPadComponent = blockEntityRef.getStore().getComponent(blockEntityRef, LaunchPad.getComponentType());
+               if (launchPadComponent != null) {
+                  Ref<EntityStore> ref = context.getEntity();
+                  Player playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
+                  if (!launchPadComponent.isPlayersOnly() || playerComponent != null) {
+                     Velocity velocityComponent = commandBuffer.getComponent(ref, Velocity.getComponentType());
+                     assert velocityComponent != null;
+                     velocityComponent.addInstruction(
+                        new Vector3d(launchPadComponent.getVelocityX(), launchPadComponent.getVelocityY(), launchPadComponent.getVelocityZ()),
+                        null,
+                        ChangeVelocityType.Set
+                     );
+                     Vector3d particlePos = Vector3iUtil.toVector3d(targetBlock).add(0.5, 0.5, 0.5);
+                     SpatialResource<Ref<EntityStore>, EntityStore> playerSpatialResource = commandBuffer.getResource(
+                        EntityModule.get().getPlayerSpatialResourceType()
+                     );
+                     List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+                     playerSpatialResource.getSpatialStructure().collect(particlePos, 75.0, results);
+                     ParticleUtil.spawnParticleEffect("Splash", particlePos, results, commandBuffer);
+                  }
                }
             }
          }

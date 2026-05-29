@@ -13,7 +13,7 @@ public class SleepTracker implements Component<EntityStore> {
    private UpdateSleepState lastSentPacket = new UpdateSleepState(false, false, null, null);
 
    public static ComponentType<EntityStore, SleepTracker> getComponentType() {
-      return BedsPlugin.getInstance().getSleepTrackerComponentType();
+      return BedsPlugin.get().getSleepTrackerComponentType();
    }
 
    @Nullable

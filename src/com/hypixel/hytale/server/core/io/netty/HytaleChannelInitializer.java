@@ -57,11 +57,11 @@ public class HytaleChannelInitializer extends ChannelInitializer<Channel> {
             HytaleLogger.getLogger().at(Level.INFO).log("Rejecting stream from %s: client outdated (ALPN mismatch)", NettyUtil.formatRemoteAddress(channel));
             channel.config().setAutoRead(false);
             channel.pipeline().addLast("packetEncoder", new PacketEncoder());
-            channel.writeAndFlush(
-                  new ServerDisconnect(Message.translation("server.general.disconnect.clientOutdated").getFormattedMessage(), DisconnectType.Disconnect)
-               )
+            FormattedMessage disconnectMsg = Message.translation("server.general.disconnect.clientOutdated").getFormattedMessage();
+            channel.writeAndFlush(new ServerDisconnect(disconnectMsg, DisconnectType.Disconnect))
                .addListener(
-                  future -> channel.eventLoop().schedule(() -> NettyUtil.closeApplicationConnection(channel, rejectErrorCode), 100L, TimeUnit.MILLISECONDS)
+                  future -> channel.eventLoop()
+                     .schedule(() -> NettyUtil.closeApplicationConnection(channel, rejectErrorCode, disconnectMsg), 100L, TimeUnit.MILLISECONDS)
                );
             return;
          }
@@ -134,14 +134,13 @@ public class HytaleChannelInitializer extends ChannelInitializer<Channel> {
    @Override
    public void exceptionCaught(@Nonnull ChannelHandlerContext ctx, Throwable cause) {
       HytaleLogger.getLogger().at(Level.WARNING).withCause(cause).log("Got exception from netty pipeline in HytaleChannelInitializer!");
-      if (ctx.channel().isWritable()) {
-         ctx.channel()
-            .writeAndFlush(
-               new ServerDisconnect(Message.translation("server.general.disconnect.internalServerError").getFormattedMessage(), DisconnectType.Crash)
-            )
-            .addListener(NettyUtil.CLOSE_ON_COMPLETE);
+      Channel channel = ctx.channel();
+      if (channel.isWritable()) {
+         FormattedMessage msg = Message.translation("server.general.disconnect.internalServerError").getFormattedMessage();
+         channel.writeAndFlush(new ServerDisconnect(msg, DisconnectType.Crash))
+            .addListener(future -> NettyUtil.closeApplicationConnection(channel, QuicApplicationErrorCode.Crash, msg));
       } else {
-         NettyUtil.closeApplicationConnection(ctx.channel());
+         NettyUtil.closeApplicationConnection(channel);
       }
    }
 

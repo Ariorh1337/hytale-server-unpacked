@@ -34,7 +34,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -106,6 +105,7 @@ public class HubPortalInteraction extends SimpleInstantInteraction {
                            WorldConfig srcConfig = parentWorld.getWorldConfig();
                            parentConfig.setSpawningNPC(srcConfig.isSpawningNPC());
                            parentConfig.setGameTimePaused(srcConfig.isGameTimePaused());
+                           parentConfig.setBlockSpawnersEnabled(srcConfig.isBlockSpawnersEnabled());
                         }
                      }
                   });
@@ -138,6 +138,7 @@ public class HubPortalInteraction extends SimpleInstantInteraction {
             WorldConfig childConfig = newWorld.getWorldConfig();
             childConfig.setSpawningNPC(parentConfig.isSpawningNPC());
             childConfig.setGameTimePaused(parentConfig.isGameTimePaused());
+            childConfig.setBlockSpawnersEnabled(parentConfig.isBlockSpawnersEnabled());
          }
       }
    }
@@ -187,49 +188,45 @@ public class HubPortalInteraction extends SimpleInstantInteraction {
             } else {
                UUID playerUUID = uuidComponent.getUuid();
                CreativeHubEntityConfig hubEntityConfig = componentAccessor.getComponent(playerRef, CreativeHubEntityConfig.getComponentType());
-               CompletableFuture.runAsync(playerRefComponent::removeFromStore, originalWorld)
-                  .thenCombine(worldFuture.orTimeout(1L, TimeUnit.MINUTES), (v, world) -> (World)world)
-                  .thenCompose(world -> {
-                     PlayerWorldData worldData = perWorldData.get(world.getName());
-                     if (worldData != null && worldData.getLastPosition() != null) {
-                        return world.addPlayer(playerRefComponent, worldData.getLastPosition(), Boolean.TRUE, Boolean.FALSE);
-                     }
+               Universe.transferPlayerAsync(playerRefComponent, originalWorld, worldFuture, world -> {
+                  PlayerWorldData worldData = perWorldData.get(world.getName());
+                  if (worldData != null && worldData.getLastPosition() != null) {
+                     return worldData.getLastPosition();
+                  }
 
-                     ISpawnProvider spawnProvider = world.getWorldConfig().getSpawnProvider();
-                     Transform spawnPoint = spawnProvider != null ? spawnProvider.getSpawnPoint(world, playerUUID) : null;
-                     return world.addPlayer(playerRefComponent, spawnPoint, Boolean.TRUE, Boolean.FALSE);
-                  })
-                  .whenComplete((ret, ex) -> {
-                     if (ex != null) {
-                        LOGGER.at(Level.SEVERE).withCause(ex).log("Failed to teleport %s to permanent world", playerRefComponent.getUsername());
-                     }
+                  ISpawnProvider spawnProvider = world.getWorldConfig().getSpawnProvider();
+                  return spawnProvider != null ? spawnProvider.getSpawnPoint(world, playerUUID) : null;
+               }).whenComplete((ret, ex) -> {
+                  if (ex != null) {
+                     LOGGER.at(Level.SEVERE).withCause(ex).log("Failed to teleport %s to permanent world", playerRefComponent.getUsername());
+                  }
 
-                     if (ret == null) {
-                        if (originalWorld.isAlive()) {
-                           originalWorld.addPlayer(playerRefComponent, originalPosition, Boolean.TRUE, Boolean.FALSE);
-                        } else {
-                           if (hubEntityConfig != null && hubEntityConfig.getParentHubWorldUuid() != null) {
-                              World parentWorld = Universe.get().getWorld(hubEntityConfig.getParentHubWorldUuid());
-                              if (parentWorld != null) {
-                                 CreativeHubWorldConfig parentHubConfig = CreativeHubWorldConfig.get(parentWorld.getWorldConfig());
-                                 if (parentHubConfig != null && parentHubConfig.getStartupInstance() != null) {
-                                    World hubInstance = CreativeHubPlugin.get().getOrSpawnHubInstance(parentWorld, parentHubConfig, new Transform());
-                                    hubInstance.addPlayer(playerRefComponent, null, Boolean.TRUE, Boolean.FALSE);
-                                    return;
-                                 }
+                  if (ret == null) {
+                     if (originalWorld.isAlive()) {
+                        originalWorld.addPlayer(playerRefComponent, originalPosition, Boolean.TRUE, Boolean.FALSE);
+                     } else {
+                        if (hubEntityConfig != null && hubEntityConfig.getParentHubWorldUuid() != null) {
+                           World parentWorld = Universe.get().getWorld(hubEntityConfig.getParentHubWorldUuid());
+                           if (parentWorld != null) {
+                              CreativeHubWorldConfig parentHubConfig = CreativeHubWorldConfig.get(parentWorld.getWorldConfig());
+                              if (parentHubConfig != null && parentHubConfig.getStartupInstance() != null) {
+                                 World hubInstance = CreativeHubPlugin.get().getOrSpawnHubInstance(parentWorld, parentHubConfig, new Transform());
+                                 hubInstance.addPlayer(playerRefComponent, null, Boolean.TRUE, Boolean.FALSE);
+                                 return;
                               }
                            }
+                        }
 
-                           World defaultWorld = Universe.get().getDefaultWorld();
-                           if (defaultWorld != null) {
-                              defaultWorld.addPlayer(playerRefComponent, null, Boolean.TRUE, Boolean.FALSE);
-                           } else {
-                              LOGGER.at(Level.SEVERE).log("No fallback world available for %s, disconnecting", playerRefComponent.getUsername());
-                              playerRefComponent.getPacketHandler().disconnect(Message.translation("server.general.disconnect.teleportNoWorld"));
-                           }
+                        World defaultWorld = Universe.get().getDefaultWorld();
+                        if (defaultWorld != null) {
+                           defaultWorld.addPlayer(playerRefComponent, null, Boolean.TRUE, Boolean.FALSE);
+                        } else {
+                           LOGGER.at(Level.SEVERE).log("No fallback world available for %s, disconnecting", playerRefComponent.getUsername());
+                           playerRefComponent.getPacketHandler().disconnect(Message.translation("server.general.disconnect.teleportNoWorld"));
                         }
                      }
-                  });
+                  }
+               });
             }
          }
       }

@@ -323,7 +323,7 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
    }
 
    private void deleteWorldFromDisk() throws IOException {
-      Path originDir = this.getSavePath();
+      Path originDir = this.savePath;
       Path filename = originDir.getFileName();
       String noCollisionsName = filename + "_del" + UUID.randomUUID().toString().substring(0, 8);
       Path deletionDir = Universe.get().getWorldsDeletedPath().resolve(noCollisionsName);
@@ -564,6 +564,7 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
    }
 
    @Nullable
+   @Deprecated
    public WorldChunk getChunkIfInMemory(long index) {
       Ref<ChunkStore> reference = this.chunkStore.getChunkReference(index);
       if (reference == null) {
@@ -576,6 +577,7 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
    }
 
    @Nullable
+   @Deprecated
    public WorldChunk getChunkIfLoaded(long index) {
       if (!this.isInThread()) {
          return CompletableFuture.<WorldChunk>supplyAsync(() -> this.getChunkIfLoaded(index), this).join();
@@ -592,6 +594,7 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
    }
 
    @Nullable
+   @Deprecated
    public WorldChunk getChunkIfNonTicking(long index) {
       if (!this.isInThread()) {
          return CompletableFuture.<WorldChunk>supplyAsync(() -> this.getChunkIfNonTicking(index), this).join();
@@ -608,6 +611,7 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
    }
 
    @Nonnull
+   @Deprecated
    @Override
    public CompletableFuture<WorldChunk> getChunkAsync(long index) {
       return this.chunkStore
@@ -618,6 +622,7 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
    }
 
    @Nonnull
+   @Deprecated
    @Override
    public CompletableFuture<WorldChunk> getNonTickingChunkAsync(long index) {
       return this.chunkStore
@@ -701,7 +706,7 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
       }
 
       if (!this.equals(entity.getWorld())) {
-         throw new IllegalStateException("Expected entity to already have its world set to " + this.getName() + " but it has " + entity.getWorld());
+         throw new IllegalStateException("Expected entity to already have its world set to " + this.name + " but it has " + entity.getWorld());
       }
 
       if (entity.getReference() != null && entity.getReference().isValid()) {
@@ -1275,7 +1280,7 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
                }
             }
          } catch (CompletionException e) {
-            this.getLogger().at(Level.SEVERE).withCause(e).log("Failed to validate chunk: %d, %d", (int)chunkX, (int)chunkZ);
+            this.logger.at(Level.SEVERE).withCause(e).log("Failed to validate chunk: %d, %d", (int)chunkX, (int)chunkZ);
             errors.append('\t')
                .append("Exception validating chunk: ")
                .append(chunkX)

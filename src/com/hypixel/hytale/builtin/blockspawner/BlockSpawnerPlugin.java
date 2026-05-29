@@ -18,7 +18,6 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.Axis;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.HashUtil;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.asset.HytaleAssetStore;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.Rotation;
@@ -135,7 +134,7 @@ public class BlockSpawnerPlugin extends JavaPlugin {
          @Nonnull Ref<ChunkStore> ref, @Nonnull AddReason reason, @Nonnull Store<ChunkStore> store, @Nonnull CommandBuffer<ChunkStore> commandBuffer
       ) {
          WorldConfig worldConfig = store.getExternalData().getWorld().getWorldConfig();
-         if (worldConfig.getGameMode() != GameMode.Creative) {
+         if (worldConfig.isBlockSpawnersEnabled()) {
             BlockSpawner blockSpawnerComponent = commandBuffer.getComponent(ref, COMPONENT_TYPE);
             assert blockSpawnerComponent != null;
             BlockModule.BlockStateInfo blockStateInfoComponent = commandBuffer.getComponent(ref, BLOCK_INFO_COMPONENT_TYPE);

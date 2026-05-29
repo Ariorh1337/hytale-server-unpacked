@@ -34,7 +34,7 @@ public class DiscoveryService {
             serverVersion = "dev";
          }
 
-         long protocolVersion = 1316766548L;
+         long protocolVersion = 2169688596L;
          String body = String.format(
             Locale.ROOT,
             "{\"discoveryToken\":\"%s\",\"serverPatchline\":\"%s\",\"serverVersion\":\"%s\",\"protocolVersion\":%d}",

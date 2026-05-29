@@ -91,7 +91,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
@@ -261,33 +260,29 @@ public class InstancesPlugin extends JavaPlugin {
       }
 
       InstanceEntityConfig finalPlayerConfig = instanceEntityConfigComponent;
-      CompletableFuture.runAsync(playerRefComponent::removeFromStore, originalWorld)
-         .thenCombine(worldFuture.orTimeout(1L, TimeUnit.MINUTES), (ignored, world) -> (World)world)
-         .thenCompose(world -> {
-            ISpawnProvider spawnProvider = world.getWorldConfig().getSpawnProvider();
-            Transform spawnPoint = spawnProvider != null ? spawnProvider.getSpawnPoint(world, playerUUID) : null;
-            return world.addPlayer(playerRefComponent, spawnPoint, Boolean.TRUE, Boolean.FALSE);
-         })
-         .whenComplete((ret, ex) -> {
-            if (ex != null) {
-               get().getLogger().at(Level.SEVERE).withCause(ex).log("Failed to send %s to instance world", playerRefComponent.getUsername());
-               finalPlayerConfig.setReturnPointOverride(null);
-            }
+      Universe.transferPlayerAsync(playerRefComponent, originalWorld, worldFuture, world -> {
+         ISpawnProvider spawnProvider = world.getWorldConfig().getSpawnProvider();
+         return spawnProvider != null ? spawnProvider.getSpawnPoint(world, playerUUID) : null;
+      }).whenComplete((ret, ex) -> {
+         if (ex != null) {
+            get().getLogger().at(Level.SEVERE).withCause(ex).log("Failed to send %s to instance world", playerRefComponent.getUsername());
+            finalPlayerConfig.setReturnPointOverride(null);
+         }
 
-            if (ret == null) {
-               if (originalWorld.isAlive()) {
-                  originalWorld.addPlayer(playerRefComponent, originalPosition, Boolean.TRUE, Boolean.FALSE);
+         if (ret == null) {
+            if (originalWorld.isAlive()) {
+               originalWorld.addPlayer(playerRefComponent, originalPosition, Boolean.TRUE, Boolean.FALSE);
+            } else {
+               World defaultWorld = Universe.get().getDefaultWorld();
+               if (defaultWorld != null) {
+                  defaultWorld.addPlayer(playerRefComponent, null, Boolean.TRUE, Boolean.FALSE);
                } else {
-                  World defaultWorld = Universe.get().getDefaultWorld();
-                  if (defaultWorld != null) {
-                     defaultWorld.addPlayer(playerRefComponent, null, Boolean.TRUE, Boolean.FALSE);
-                  } else {
-                     get().getLogger().at(Level.SEVERE).log("No fallback world for %s, disconnecting", playerRefComponent.getUsername());
-                     playerRefComponent.getPacketHandler().disconnect(Message.translation("server.general.disconnect.teleportNoWorld"));
-                  }
+                  get().getLogger().at(Level.SEVERE).log("No fallback world for %s, disconnecting", playerRefComponent.getUsername());
+                  playerRefComponent.getPacketHandler().disconnect(Message.translation("server.general.disconnect.teleportNoWorld"));
                }
             }
-         });
+         }
+      });
    }
 
    public static void teleportPlayerToInstance(

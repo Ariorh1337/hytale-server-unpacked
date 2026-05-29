@@ -60,7 +60,6 @@ import io.netty.util.internal.SystemPropertyUtil;
 import java.lang.reflect.Constructor;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.nio.charset.StandardCharsets;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.Objects;
@@ -87,6 +86,7 @@ public class NettyUtil {
    public static final LoggingHandler LOGGER = new LoggingHandler("PacketLogging", LogLevel.INFO);
    public static final String HANDLER = "handler";
    public static final String RATE_LIMIT = "rateLimit";
+   private static final int MAX_CLOSE_REASON_BYTES = 1000;
    public static final ChannelFutureListener CLOSE_ON_COMPLETE = future -> closeApplicationConnection(future.channel());
 
    public static void init() {
@@ -114,6 +114,32 @@ public class NettyUtil {
          quicChannel.close(true, errorCode.ordinal(), Unpooled.EMPTY_BUFFER);
       } else {
          channel.close();
+      }
+   }
+
+   public static void closeApplicationConnection(@Nonnull Channel channel, @Nonnull QuicApplicationErrorCode errorCode, @Nonnull FormattedMessage reason) {
+      int size = reason.computeSize();
+      if (size > 1000) {
+         closeApplicationConnection(channel, errorCode);
+      } else {
+         ByteBuf reasonBuf = Unpooled.buffer(size, size);
+
+         try {
+            reason.serialize(reasonBuf);
+         } catch (Throwable t) {
+            reasonBuf.release();
+            closeApplicationConnection(channel, errorCode);
+            throw t;
+         }
+
+         if (channel instanceof QuicChannel quicChannel) {
+            quicChannel.close(true, errorCode.ordinal(), reasonBuf);
+         } else if (channel.parent() instanceof QuicChannel quicChannel) {
+            quicChannel.close(true, errorCode.ordinal(), reasonBuf);
+         } else {
+            reasonBuf.release();
+            channel.close();
+         }
       }
    }
 
@@ -380,7 +406,9 @@ public class NettyUtil {
 
       @Override
       public void disconnect(@Nonnull FormattedMessage message) {
-         this.channel.writeAndFlush(new ServerDisconnect(message, DisconnectType.Disconnect)).addListener(future -> this.closeApplicationConnection());
+         this.channel
+            .writeAndFlush(new ServerDisconnect(message, DisconnectType.Disconnect))
+            .addListener(future -> NettyUtil.closeApplicationConnection(this.channel, QuicApplicationErrorCode.NoError, message));
       }
 
       @Nullable
@@ -477,6 +505,11 @@ public class NettyUtil {
       }
 
       @Override
+      public void clearPacketTimeout() {
+         this.channel.attr(ProtocolUtil.PACKET_TIMEOUT_KEY).set(null);
+      }
+
+      @Override
       public void setStageTimeout(@Nonnull String stage, @Nonnull Duration timeout, @Nonnull BooleanSupplier condition, @Nonnull Runnable onTimeout) {
          ScheduledFuture<?> existing = this.channel.attr(STAGE_TIMEOUT_KEY).get();
          if (existing != null) {
@@ -549,16 +582,8 @@ public class NettyUtil {
       }
 
       @Override
-      public void closeApplicationConnection(@Nonnull QuicApplicationErrorCode errorCode, @Nonnull String reason) {
-         ByteBuf reasonBuf = Unpooled.copiedBuffer(reason, StandardCharsets.UTF_8);
-         if (this.channel instanceof QuicChannel quicChannel) {
-            quicChannel.close(true, errorCode.ordinal(), reasonBuf);
-         } else if (this.channel.parent() instanceof QuicChannel quicChannel) {
-            quicChannel.close(true, errorCode.ordinal(), reasonBuf);
-         } else {
-            reasonBuf.release();
-            this.channel.close();
-         }
+      public void closeApplicationConnection(@Nonnull QuicApplicationErrorCode errorCode, @Nonnull FormattedMessage reason) {
+         NettyUtil.closeApplicationConnection(this.channel, errorCode, reason);
       }
 
       private void close(boolean applicationClose, int errorCode) {

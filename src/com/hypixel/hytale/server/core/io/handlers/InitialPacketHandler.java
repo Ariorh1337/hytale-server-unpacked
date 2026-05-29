@@ -93,12 +93,16 @@ public class InitialPacketHandler extends PacketHandler {
          this.receivedConnect = true;
          this.clearTimeout();
          this.getChannel().logConnectionTimings("Connect", Level.FINE);
-         if (packet.protocolCrc != 1316766548) {
+         if (packet.protocolCrc != -2125278700) {
             int clientBuild = packet.protocolBuildNumber;
-            int serverBuild = 100;
+            int serverBuild = 101;
             QuicApplicationErrorCode errorCode = clientBuild < serverBuild ? QuicApplicationErrorCode.ClientOutdated : QuicApplicationErrorCode.ServerOutdated;
+            String messageKey = errorCode == QuicApplicationErrorCode.ClientOutdated
+               ? "server.general.disconnect.clientOutdated"
+               : "server.general.disconnect.serverOutdated";
             String serverVersion = ManifestUtil.getImplementationVersion();
-            this.getChannel().closeApplicationConnection(errorCode, serverVersion != null ? serverVersion : "unknown");
+            Message reason = Message.translation(messageKey).param("version", serverVersion != null ? serverVersion : "unknown");
+            this.getChannel().closeApplicationConnection(errorCode, reason.getFormattedMessage());
          } else if (HytaleServer.get().isShuttingDown()) {
             this.disconnect(Message.translation("client.general.disconnect.serverShuttingDown"));
          } else if (!HytaleServer.get().isBooted()) {

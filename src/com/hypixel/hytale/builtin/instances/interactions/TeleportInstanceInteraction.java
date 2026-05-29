@@ -14,6 +14,7 @@ import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.Axis;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.ChunkUtil;
@@ -37,6 +38,7 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Ori
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInstantInteraction;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockComponentChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
@@ -124,7 +126,7 @@ public class TeleportInstanceInteraction extends SimpleInstantInteraction {
    private Rotation3f rotation;
    @Nonnull
    private OriginSource originSource = OriginSource.ENTITY;
-   private boolean personalReturnPoint = false;
+   private boolean personalReturnPoint;
    private boolean closeOnBlockRemove = true;
    private double removeBlockAfter = -1.0;
 
@@ -137,6 +139,7 @@ public class TeleportInstanceInteraction extends SimpleInstantInteraction {
    @Override
    protected void firstRun(@Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
       CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
+      assert commandBuffer != null;
       Ref<EntityStore> ref = context.getEntity();
       Player playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
       if (playerComponent != null && !playerComponent.isWaitingForClientReady()) {
@@ -161,7 +164,8 @@ public class TeleportInstanceInteraction extends SimpleInstantInteraction {
                }
 
                ChunkStore chunkStore = world.getChunkStore();
-               Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z));
+               long chunkIndex = ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z);
+               Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(chunkIndex);
                if (chunkRef == null || !chunkRef.isValid()) {
                   return;
                }
@@ -221,20 +225,28 @@ public class TeleportInstanceInteraction extends SimpleInstantInteraction {
                BlockPosition targetBlock = context.getTargetBlock();
                if (targetBlock != null) {
                   if (this.removeBlockAfter == 0.0) {
-                     world.getChunk(ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z)).setBlock(targetBlock.x, targetBlock.y, targetBlock.z, 0, 256);
+                     ChunkStore chunkStore = world.getChunkStore();
+                     Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z));
+                     if (chunkRef != null && chunkRef.isValid()) {
+                        WorldChunk worldChunkComponent = chunkStore.getStore().getComponent(chunkRef, WorldChunk.getComponentType());
+                        if (worldChunkComponent != null) {
+                           worldChunkComponent.setBlock(targetBlock.x, targetBlock.y, targetBlock.z, 0, 256);
+                        }
+                     }
                   } else {
                      int block = world.getBlock(targetBlock.x, targetBlock.y, targetBlock.z);
-                     new CompletableFuture()
-                        .completeOnTimeout(null, (long)(this.removeBlockAfter * 1.0E9), TimeUnit.NANOSECONDS)
-                        .thenRunAsync(
-                           () -> {
-                              if (world.getBlock(targetBlock.x, targetBlock.y, targetBlock.z) == block) {
-                                 world.getChunk(ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z))
-                                    .setBlock(targetBlock.x, targetBlock.y, targetBlock.z, 0, 256);
+                     new CompletableFuture().completeOnTimeout(null, (long)(this.removeBlockAfter * 1.0E9), TimeUnit.NANOSECONDS).thenRunAsync(() -> {
+                        if (world.getBlock(targetBlock.x, targetBlock.y, targetBlock.z) == block) {
+                           ChunkStore chunkStore = world.getChunkStore();
+                           Ref<ChunkStore> chunkRefx = chunkStore.getChunkReference(ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z));
+                           if (chunkRefx != null && chunkRefx.isValid()) {
+                              WorldChunk worldChunkComponentx = chunkStore.getStore().getComponent(chunkRefx, WorldChunk.getComponentType());
+                              if (worldChunkComponentx != null) {
+                                 worldChunkComponentx.setBlock(targetBlock.x, targetBlock.y, targetBlock.z, 0, 256);
                               }
-                           },
-                           world
-                        );
+                           }
+                        }
+                     }, world);
                   }
                }
             }
@@ -276,13 +288,22 @@ public class TeleportInstanceInteraction extends SimpleInstantInteraction {
             }
 
             World world = componentAccessor.getExternalData().getWorld();
-            WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z));
-            if (chunk == null) {
+            ChunkStore chunkStore = world.getChunkStore();
+            Store<ChunkStore> chunkComponentStore = chunkStore.getStore();
+            Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z));
+            if (chunkRef == null || !chunkRef.isValid()) {
                throw new IllegalArgumentException("Missing chunk");
             }
 
-            BlockType blockType = chunk.getBlockType(targetBlock.x, targetBlock.y, targetBlock.z);
-            int rotationIndex = chunk.getRotationIndex(targetBlock.x, targetBlock.y, targetBlock.z);
+            WorldChunk worldChunkComponent = chunkComponentStore.getComponent(chunkRef, WorldChunk.getComponentType());
+            if (worldChunkComponent == null) {
+               throw new IllegalArgumentException("Missing chunk");
+            }
+
+            BlockType blockType = worldChunkComponent.getBlockType(targetBlock.x, targetBlock.y, targetBlock.z);
+            BlockChunk blockChunkComponent = chunkComponentStore.getComponent(chunkRef, BlockChunk.getComponentType());
+            assert blockChunkComponent != null;
+            int rotationIndex = blockChunkComponent.getSectionAtBlockY(targetBlock.y).getRotationIndex(targetBlock.x, targetBlock.y, targetBlock.z);
             RotationTuple rotationTuple = RotationTuple.get(rotationIndex);
             IndexedLookupTableAssetMap<String, BlockBoundingBoxes> hitboxAssetMap = BlockBoundingBoxes.getAssetMap();
             Box hitbox = hitboxAssetMap.getAsset(blockType.getHitboxTypeIndex()).get(rotationIndex).getBoundingBox();

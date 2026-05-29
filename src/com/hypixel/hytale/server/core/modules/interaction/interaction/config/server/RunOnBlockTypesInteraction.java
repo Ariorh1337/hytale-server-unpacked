@@ -7,6 +7,7 @@ import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.protocol.BlockPosition;
@@ -30,6 +31,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
@@ -89,8 +91,11 @@ public class RunOnBlockTypesInteraction extends SimpleInteraction {
       .addValidatorLate(() -> RootInteraction.VALIDATOR_CACHE.getValidator().late())
       .add()
       .build();
-   private static final MetaKey<List<InteractionChain>> FORKED_CHAINS = Interaction.META_REGISTRY.registerMetaObject(i -> null);
-   private static final MetaKey<Boolean> ANY_SUCCEEDED = Interaction.META_REGISTRY.registerMetaObject(i -> Boolean.FALSE);
+   @Nonnull
+   private static final MetaKey<List<InteractionChain>> FORKED_CHAINS = Interaction.META_REGISTRY.registerMetaObject(var0 -> null);
+   @Nonnull
+   private static final MetaKey<Boolean> ANY_SUCCEEDED = Interaction.META_REGISTRY.registerMetaObject(var0 -> Boolean.FALSE);
+   @Nonnull
    public static final String[] EMPTY_BLOCKSETS = new String[0];
    protected int range;
    @Nonnull
@@ -238,20 +243,25 @@ public class RunOnBlockTypesInteraction extends SimpleInteraction {
       );
       int minY = Math.max(0, originY - this.range);
       int maxY = Math.min(319, originY + this.range);
+      ChunkStore chunkStore = world.getChunkStore();
+      Store<ChunkStore> chunkComponentStore = chunkStore.getStore();
 
       for (int x = originX - this.range & -32; x < originX + this.range; x += 32) {
          for (int z = originZ - this.range & -32; z < originZ + this.range; z += 32) {
-            WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(x, z));
-            if (chunk != null) {
-               BlockChunk blockChunk = chunk.getBlockChunk();
+            Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(ChunkUtil.indexChunkFromBlock(x, z));
+            if (chunkRef != null && chunkRef.isValid()) {
+               WorldChunk worldChunkComponent = chunkComponentStore.getComponent(chunkRef, WorldChunk.getComponentType());
+               if (worldChunkComponent != null) {
+                  BlockChunk blockChunk = worldChunkComponent.getBlockChunk();
 
-               for (int y = minY; y < maxY; y += 32) {
-                  int sectionIndex = ChunkUtil.indexSection(y);
-                  if (sectionIndex >= 0 && sectionIndex < 10) {
-                     BlockSection section = blockChunk.getSectionAtIndex(sectionIndex);
-                     if (!section.isSolidAir() && section.containsAny(blockIds)) {
-                        consumer.setSection(x, z, sectionIndex);
-                        section.find(blockIds, consumer);
+                  for (int y = minY; y < maxY; y += 32) {
+                     int sectionIndex = ChunkUtil.indexSection(y);
+                     if (sectionIndex >= 0 && sectionIndex < 10) {
+                        BlockSection section = blockChunk.getSectionAtIndex(sectionIndex);
+                        if (!section.isSolidAir() && section.containsAny(blockIds)) {
+                           consumer.setSection(x, z, sectionIndex);
+                           section.find(blockIds, consumer);
+                        }
                      }
                   }
                }
@@ -320,7 +330,7 @@ public class RunOnBlockTypesInteraction extends SimpleInteraction {
       private final int radiusSquared;
       private final int maxCount;
       private final List<Vector3i> picked;
-      private int seen = 0;
+      private int seen;
       private int chunkWorldX;
       private int chunkWorldZ;
       private int sectionBaseY;

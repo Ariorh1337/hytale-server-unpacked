@@ -73,6 +73,7 @@ public class PendingStreamConnectionHandler implements ConnectionHandler {
                   LOGGER.at(Level.INFO).log("Opening %s stream for %s", type.name(), this.packetHandler.getIdentifier());
                   QuicStreamPriority priority = this.streamManager.getStreamPriority(type);
                   this.channel.updateStreamPriority(priority.urgency(), priority.isIncremental());
+                  this.channel.clearPacketTimeout();
                   this.channel.setChannelHandler(handler);
                   this.channel.writeAndFlush(new StreamOpenResponse(type, true, null));
                }

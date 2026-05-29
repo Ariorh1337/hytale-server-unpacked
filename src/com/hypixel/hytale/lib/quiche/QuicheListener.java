@@ -44,6 +44,7 @@ public class QuicheListener implements ServerListener {
    private final InetSocketAddress address;
    final DatagramChannel channel;
    private final MemorySegment config;
+   final QuicheConfig quicheConfig;
    final Function<ChannelConnection, ConnectionHandler> handler;
    @Nullable
    final BiFunction<ConnectionHandler, ChannelConnection, ConnectionHandler> auxStreamHandler;
@@ -52,19 +53,25 @@ public class QuicheListener implements ServerListener {
    final int localAddrLen;
 
    public QuicheListener(
-      ProtocolFamily family, InetSocketAddress address, @Nonnull QuicheServerCredentials credentials, Function<ChannelConnection, ConnectionHandler> handler
+      ProtocolFamily family,
+      InetSocketAddress address,
+      @Nonnull QuicheServerCredentials credentials,
+      @Nonnull QuicheConfig quicheConfig,
+      Function<ChannelConnection, ConnectionHandler> handler
    ) throws IOException {
-      this(family, address, credentials, handler, null);
+      this(family, address, credentials, quicheConfig, handler, null);
    }
 
    public QuicheListener(
       ProtocolFamily family,
       InetSocketAddress address,
       @Nonnull QuicheServerCredentials credentials,
+      @Nonnull QuicheConfig quicheConfig,
       Function<ChannelConnection, ConnectionHandler> handler,
       @Nullable BiFunction<ConnectionHandler, ChannelConnection, ConnectionHandler> auxStreamHandler
    ) throws IOException {
       this.address = address;
+      this.quicheConfig = quicheConfig;
       this.handler = handler;
       this.auxStreamHandler = auxStreamHandler;
       this.serverCertificate = credentials.certificate();
@@ -82,7 +89,7 @@ public class QuicheListener implements ServerListener {
       this.config = QuicheNative.configNew(1);
 
       try {
-         initConfig(this.config, credentials);
+         initConfig(this.config, credentials, quicheConfig);
       } catch (Exception e) {
          QuicheNative.configFree(this.config);
          throw e;
@@ -95,10 +102,10 @@ public class QuicheListener implements ServerListener {
       return this.serverCertificate;
    }
 
-   private static void initConfig(MemorySegment config, QuicheServerCredentials credentials) {
+   private static void initConfig(MemorySegment config, QuicheServerCredentials credentials, QuicheConfig quicheConfig) {
       try (Arena arena = Arena.ofConfined()) {
-         String currentAlpn = "hytale/2";
-         String prevAlpn = "hytale/1";
+         String currentAlpn = "hytale/3";
+         String prevAlpn = "hytale/2";
          MemorySegment alpnBytes = buildAlpnWireFormat(arena, currentAlpn, prevAlpn);
          int result = QuicheNative.configSetApplicationProtos(config, alpnBytes, alpnBytes.byteSize());
          if (result < 0) {
@@ -118,7 +125,7 @@ public class QuicheListener implements ServerListener {
          }
 
          QuicheNative.configVerifyPeerOptional(config);
-         QuicheNative.configSetMaxIdleTimeout(config, 30000L);
+         QuicheNative.configSetMaxIdleTimeout(config, quicheConfig.idleTimeout().toMillis());
          QuicheNative.configSetMaxRecvUdpPayloadSize(config, 64000L);
          QuicheNative.configSetMaxSendUdpPayloadSize(config, 64000L);
          QuicheNative.configSetInitialMaxData(config, 524288L);
@@ -126,7 +133,12 @@ public class QuicheListener implements ServerListener {
          QuicheNative.configSetInitialMaxStreamDataBidiRemote(config, 131072L);
          QuicheNative.configSetInitialMaxStreamDataUni(config, 131072L);
          QuicheNative.configSetInitialMaxStreamsBidi(config, 8L);
-         QuicheNative.configSetCcAlgorithm(config, 1);
+         MemorySegment ccName = arena.allocateFrom("bbr2_gcongestion", StandardCharsets.US_ASCII);
+         int ccResult = QuicheNative.configSetCcAlgorithmName(config, ccName);
+         if (ccResult < 0) {
+            throw new RuntimeException("Failed to select congestion control: " + QuicheNative.QuicheError.fromCode(ccResult));
+         }
+
          QuicheNative.configDiscoverPmtu(config, true);
       }
    }

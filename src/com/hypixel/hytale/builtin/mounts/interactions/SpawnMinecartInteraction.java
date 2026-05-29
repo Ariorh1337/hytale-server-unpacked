@@ -9,6 +9,7 @@ import com.hypixel.hytale.component.AddReason;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.TrigMathUtil;
 import com.hypixel.hytale.math.vector.Rotation3f;
@@ -34,7 +35,9 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHa
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.RootInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.SimpleBlockInteraction;
 import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.Collections;
 import java.util.Map;
@@ -79,40 +82,48 @@ public class SpawnMinecartInteraction extends SimpleBlockInteraction {
       Vector3d targetPosition = Vector3iUtil.toVector3d(targetBlock);
       targetPosition.add(0.5, 0.5, 0.5);
       Rotation3f rotation = new Rotation3f();
-      HeadRotation headRotation = commandBuffer.getComponent(ref, HeadRotation.getComponentType());
-      if (headRotation != null) {
-         rotation.setYaw(headRotation.getRotation().yaw());
+      HeadRotation headRotationComponent = commandBuffer.getComponent(ref, HeadRotation.getComponentType());
+      if (headRotationComponent != null) {
+         rotation.setYaw(headRotationComponent.getRotation().yaw());
       }
 
-      WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z));
-      if (chunk != null) {
-         BlockType block = chunk.getBlockType(targetBlock);
-         int blockRotation = chunk.getRotationIndex(targetBlock.x, targetBlock.y, targetBlock.z);
-         RailConfig railConfig = block.getRailConfig(blockRotation);
-         if (railConfig != null) {
-            alignToRail(targetBlock, targetPosition, rotation, rotation.yaw(), railConfig);
-         } else {
-            BlockBoundingBoxes.RotatedVariantBoxes bounding = BlockBoundingBoxes.getAssetMap().getAsset(block.getHitboxTypeIndex()).get(blockRotation);
-            targetPosition.add(0.0, bounding.getBoundingBox().max.y - 0.5, 0.0);
-         }
+      ChunkStore chunkStore = world.getChunkStore();
+      Store<ChunkStore> chunkComponentStore = chunkStore.getStore();
+      long chunkIndex = ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z);
+      Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(chunkIndex);
+      if (chunkRef != null && chunkRef.isValid()) {
+         WorldChunk worldChunkComponent = chunkComponentStore.getComponent(chunkRef, WorldChunk.getComponentType());
+         if (worldChunkComponent != null) {
+            BlockType blockType = worldChunkComponent.getBlockType(targetBlock);
+            BlockChunk blockChunkComponent = chunkComponentStore.getComponent(chunkRef, BlockChunk.getComponentType());
+            assert blockChunkComponent != null;
+            int blockRotation = blockChunkComponent.getSectionAtBlockY(targetBlock.y).getRotationIndex(targetBlock.x, targetBlock.y, targetBlock.z);
+            RailConfig railConfig = blockType.getRailConfig(blockRotation);
+            if (railConfig != null) {
+               alignToRail(targetBlock, targetPosition, rotation, rotation.yaw(), railConfig);
+            } else {
+               BlockBoundingBoxes.RotatedVariantBoxes bounding = BlockBoundingBoxes.getAssetMap().getAsset(blockType.getHitboxTypeIndex()).get(blockRotation);
+               targetPosition.add(0.0, bounding.getBoundingBox().max.y - 0.5, 0.0);
+            }
 
-         holder.addComponent(TransformComponent.getComponentType(), new TransformComponent(targetPosition, rotation));
-         holder.ensureComponent(UUIDComponent.getComponentType());
-         ModelAsset modelAsset = ModelAsset.getAssetMap().getAsset(this.modelId);
-         if (modelAsset == null) {
-            modelAsset = ModelAsset.DEBUG;
-         }
+            holder.addComponent(TransformComponent.getComponentType(), new TransformComponent(targetPosition, rotation));
+            holder.ensureComponent(UUIDComponent.getComponentType());
+            ModelAsset modelAsset = ModelAsset.getAssetMap().getAsset(this.modelId);
+            if (modelAsset == null) {
+               modelAsset = ModelAsset.DEBUG;
+            }
 
-         Model model = Model.createRandomScaleModel(modelAsset);
-         holder.addComponent(PersistentModel.getComponentType(), new PersistentModel(model.toReference()));
-         holder.addComponent(ModelComponent.getComponentType(), new ModelComponent(model));
-         holder.addComponent(BoundingBox.getComponentType(), new BoundingBox(model.getBoundingBox()));
-         holder.ensureComponent(Interactable.getComponentType());
-         holder.addComponent(Interactions.getComponentType(), new Interactions(this.cartInteractions));
-         holder.putComponent(
-            MinecartComponent.getComponentType(), new MinecartComponent(context.getHeldItem() != null ? context.getHeldItem().getItemId() : null)
-         );
-         commandBuffer.addEntity(holder, AddReason.SPAWN);
+            Model model = Model.createRandomScaleModel(modelAsset);
+            holder.addComponent(PersistentModel.getComponentType(), new PersistentModel(model.toReference()));
+            holder.addComponent(ModelComponent.getComponentType(), new ModelComponent(model));
+            holder.addComponent(BoundingBox.getComponentType(), new BoundingBox(model.getBoundingBox()));
+            holder.ensureComponent(Interactable.getComponentType());
+            holder.addComponent(Interactions.getComponentType(), new Interactions(this.cartInteractions));
+            holder.putComponent(
+               MinecartComponent.getComponentType(), new MinecartComponent(context.getHeldItem() != null ? context.getHeldItem().getItemId() : null)
+            );
+            commandBuffer.addEntity(holder, AddReason.SPAWN);
+         }
       }
    }
 
