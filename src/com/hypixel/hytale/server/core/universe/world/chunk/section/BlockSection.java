@@ -757,6 +757,8 @@ public class BlockSection implements Component<ChunkStore> {
             tickingData = null;
          }
 
+         ChunkLightData localLight = this.localLight;
+         ChunkLightData globalLight = this.globalLight;
          byte[] result = new byte[5
             + this.chunkSection.serializedByteSize(BlockType.KEY_MEMORY_SERIALIZER)
             + (paletteType != PaletteType.Empty ? 4 + tickingData.length * 8 : 0)
@@ -764,8 +766,8 @@ public class BlockSection implements Component<ChunkStore> {
             + this.fillerSection.serializedByteSize(FILLER_SERIALIZER)
             + 1
             + this.rotationSection.serializedByteSize(ROTATION_SERIALIZER)
-            + this.localLight.serializedByteSize()
-            + this.globalLight.serializedByteSize()
+            + localLight.serializedByteSize()
+            + globalLight.serializedByteSize()
             + 2
             + 2];
          MemorySegment data = MemorySegment.ofArray(result);
@@ -783,8 +785,8 @@ public class BlockSection implements Component<ChunkStore> {
          offset += 1 + this.fillerSection.serialize(FILLER_SERIALIZER, data, offset + 1);
          data.set(ValueLayout.JAVA_BYTE, offset, (byte)this.rotationSection.getPaletteType().ordinal());
          offset += 1 + this.rotationSection.serialize(ROTATION_SERIALIZER, data, offset + 1);
-         offset += this.localLight.serialize(data, offset);
-         offset += this.globalLight.serialize(data, offset);
+         offset += localLight.serialize(data, offset);
+         offset += globalLight.serialize(data, offset);
          data.set(MemorySegmentUtil.SHORT_BE, offset, this.localChangeCounter);
          data.set(MemorySegmentUtil.SHORT_BE, offset + 2, this.globalChangeCounter);
          return result;

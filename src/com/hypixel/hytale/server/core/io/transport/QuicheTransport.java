@@ -12,7 +12,6 @@ import java.net.Inet6Address;
 import java.net.InetSocketAddress;
 import java.net.StandardProtocolFamily;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Future;
 
 public class QuicheTransport implements Transport {
    private final QuicheServerCredentials credentials = QuicheServerCredentials.generateSelfSigned();
@@ -27,7 +26,7 @@ public class QuicheTransport implements Transport {
    }
 
    @Override
-   public Future<ServerListener> bind(InetSocketAddress address) throws InterruptedException {
+   public CompletableFuture<ServerListener> bind(InetSocketAddress address) {
       return CompletableFuture.supplyAsync(
          SneakyThrow.sneakySupplier(
             () -> {

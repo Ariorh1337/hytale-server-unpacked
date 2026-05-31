@@ -24,6 +24,7 @@ import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.sneakythrow.SneakyThrow;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
@@ -96,47 +97,46 @@ public class ServerManager extends JavaPlugin {
 
    @Override
    protected void start() {
-      this.bootFuture = CompletableFuture.runAsync(() -> {
+      this.bootFuture = CompletableFuture.<CompletableFuture[]>supplyAsync(() -> {
          CompletableFuture<Void> registerFuture = this.registerFuture;
          if (registerFuture != null) {
             registerFuture.getNow(null);
          }
 
-         if (!HytaleServer.get().isShuttingDown()) {
-            label40:
-            if (Options.getOptionSet().has(Options.MIGRATIONS) || Options.isBare()) {
-               this.bootFuture = null;
-            } else if (Constants.SINGLEPLAYER) {
-               try {
-                  InetAddress[] localhosts = InetAddress.getAllByName("localhost");
-                  InetAddress[] arr$ = localhosts;
-                  int len$ = arr$.length;
-                  int i$ = 0;
-
-                  while (true) {
-                     if (i$ >= len$) {
-                        break label40;
-                     }
-
-                     InetAddress localhost = arr$[i$];
-                     this.bind(new InetSocketAddress(localhost, Options.getOptionSet().valueOf(Options.BIND).getPort()));
-                     i$++;
-                  }
-               } catch (UnknownHostException e) {
-                  throw SneakyThrow.sneakyThrow(e);
-               }
-            } else {
-               for (InetSocketAddress address : Options.getOptionSet().valuesOf(Options.BIND)) {
-                  this.bind(address);
-               }
-
-               if (!this.listeners.isEmpty()) {
-                  break label40;
-               }
-
-               throw new IllegalArgumentException("Listeners is empty after starting ServerManager!!");
-            }
+         if (HytaleServer.get().isShuttingDown()) {
+            return null;
          }
+
+         ReferenceArrayList<CompletableFuture<?>> futures = new ReferenceArrayList<>();
+         if (Options.getOptionSet().has(Options.MIGRATIONS) || Options.isBare()) {
+            return futures.toArray(CompletableFuture[]::new);
+         }
+
+         if (Constants.SINGLEPLAYER) {
+            try {
+               InetAddress[] localhosts = InetAddress.getAllByName("localhost");
+
+               for (InetAddress localhost : localhosts) {
+                  futures.add(this.bind(new InetSocketAddress(localhost, Options.getOptionSet().valueOf(Options.BIND).getPort())));
+               }
+
+               return futures.toArray(CompletableFuture[]::new);
+            } catch (UnknownHostException e) {
+               throw SneakyThrow.sneakyThrow(e);
+            }
+         } else {
+            for (InetSocketAddress address : Options.getOptionSet().valuesOf(Options.BIND)) {
+               futures.add(this.bind(address));
+            }
+
+            return futures.toArray(CompletableFuture[]::new);
+         }
+      }).thenCompose(v -> v == null ? CompletableFuture.completedFuture(null) : CompletableFuture.allOf(v)).thenRun(() -> {
+         if (this.listeners.isEmpty()) {
+            throw new IllegalArgumentException("Listeners is empty after starting ServerManager!!");
+         }
+
+         this.bootFuture = null;
       });
    }
 
@@ -162,31 +162,39 @@ public class ServerManager extends JavaPlugin {
       return Collections.unmodifiableList(this.listeners);
    }
 
-   public boolean bind(@Nonnull InetSocketAddress address) {
+   public CompletableFuture<Boolean> bind(@Nonnull InetSocketAddress address) {
       if (address.getAddress().isAnyLocalAddress()) {
-         ServerListener channelIpv6 = this.bind0(new InetSocketAddress(NetworkUtil.ANY_IPV6_ADDRESS, address.getPort()));
-         if (channelIpv6 != null) {
-            this.listeners.add(channelIpv6);
-         }
+         CompletableFuture<Boolean> channelIpv6 = this.bind0(new InetSocketAddress(NetworkUtil.ANY_IPV6_ADDRESS, address.getPort())).thenApply(c -> {
+            if (c != null) {
+               this.listeners.add(c);
+            }
 
-         ServerListener channelIpv4 = this.bind0(new InetSocketAddress(NetworkUtil.ANY_IPV4_ADDRESS, address.getPort()));
-         if (channelIpv4 != null) {
-            this.listeners.add(channelIpv4);
-         }
+            return c != null;
+         });
+         CompletableFuture<Boolean> channelIpv4 = this.bind0(new InetSocketAddress(NetworkUtil.ANY_IPV4_ADDRESS, address.getPort())).thenApply(c -> {
+            if (c != null) {
+               this.listeners.add(c);
+            }
 
-         ServerListener channelIpv6Localhost = this.bind0(new InetSocketAddress(NetworkUtil.LOOPBACK_IPV6_ADDRESS, address.getPort()));
-         if (channelIpv6Localhost != null) {
-            this.listeners.add(channelIpv6Localhost);
-         }
+            return c != null;
+         });
+         CompletableFuture<Boolean> channelIpv6Localhost = this.bind0(new InetSocketAddress(NetworkUtil.LOOPBACK_IPV6_ADDRESS, address.getPort()))
+            .thenApply(c -> {
+               if (c != null) {
+                  this.listeners.add(c);
+               }
 
-         return channelIpv4 != null || channelIpv6 != null;
+               return c != null;
+            });
+         return CompletableFuture.allOf(channelIpv6Localhost, channelIpv4, channelIpv6).thenApply(var2x -> channelIpv4.join() || channelIpv6.join());
       } else {
-         ServerListener channel = this.bind0(address);
-         if (channel != null) {
-            this.listeners.add(channel);
-         }
+         return this.bind0(address).thenApply(c -> {
+            if (c != null) {
+               this.listeners.add(c);
+            }
 
-         return channel != null;
+            return c != null;
+         });
       }
    }
 
@@ -287,22 +295,16 @@ public class ServerManager extends JavaPlugin {
       }
    }
 
-   @Nullable
-   private ServerListener bind0(@Nonnull InetSocketAddress address) {
+   private CompletableFuture<ServerListener> bind0(@Nonnull InetSocketAddress address) {
       long start = System.nanoTime();
       this.getLogger().at(Level.FINE).log("Binding to %s (%s)", address, this.transport.getType());
-
-      try {
-         ServerListener channel = this.transport.bind(address).get();
+      return this.transport.bind(address).thenApply(channel -> {
          this.getLogger().at(Level.INFO).log("Listening on %s and took %s", channel.localAddress(), FormatUtil.nanosToString(System.nanoTime() - start));
-         return channel;
-      } catch (InterruptedException e) {
-         Thread.currentThread().interrupt();
-         throw new RuntimeException("Interrupted when attempting to bind to host " + address, e);
-      } catch (Throwable t) {
+         return (ServerListener)channel;
+      }).exceptionally(t -> {
          this.getLogger().at(Level.SEVERE).withCause(new SkipSentryException(t)).log("Failed to bind to %s", address);
          return null;
-      }
+      });
    }
 
    private boolean unbind0(@Nonnull ServerListener channel) {

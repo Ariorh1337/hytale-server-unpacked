@@ -1,6 +1,7 @@
 package com.hypixel.hytale.server.core.modules.singleplayer;
 
 import com.hypixel.hytale.common.plugin.PluginManifest;
+import com.hypixel.hytale.common.util.CompletableFutureUtil;
 import com.hypixel.hytale.event.IEventDispatcher;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.io.ServerListener;
@@ -27,6 +28,7 @@ import com.hypixel.hytale.server.core.util.ProcessUtil;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
@@ -39,7 +41,7 @@ public class SingleplayerModule extends JavaPlugin {
       .build();
    private static SingleplayerModule instance;
    private Access access;
-   private Access requestedAccess;
+   private volatile Access requestedAccess;
    private List<InetSocketAddress> publicAddresses = new CopyOnWriteArrayList<>();
 
    public static SingleplayerModule get() {
@@ -93,38 +95,57 @@ public class SingleplayerModule extends JavaPlugin {
       }
 
       ServerManager serverManager = ServerManager.get();
-      short externalPort = 0;
       if (access != Access.Private) {
-         if (!serverManager.bind(new InetSocketAddress(0))) {
-            this.requestServerAccess(Access.Private);
-            return;
-         }
+         CompletableFuture<Boolean> bind = serverManager.bind(new InetSocketAddress(0));
+         CompletableFutureUtil._catch(
+            bind.thenAccept(
+               result -> {
+                  if (!result) {
+                     this.requestServerAccess(Access.Private);
+                  } else {
+                     short externalPortx = 0;
 
-         try {
-            InetSocketAddress boundAddress = serverManager.getNonLoopbackAddress();
-            if (boundAddress != null) {
-               externalPort = (short)boundAddress.getPort();
-            }
-         } catch (Exception e) {
-            this.getLogger().at(Level.WARNING).withCause(e).log("Failed to get bound port");
-         }
+                     try {
+                        InetSocketAddress boundAddress = serverManager.getNonLoopbackAddress();
+                        if (boundAddress != null) {
+                           externalPortx = (short)boundAddress.getPort();
+                        }
+                     } catch (Exception e) {
+                        this.getLogger().at(Level.WARNING).withCause(e).log("Failed to get bound port");
+                     }
+
+                     IEventDispatcher<SingleplayerRequestAccessEvent, SingleplayerRequestAccessEvent> dispatchFor = HytaleServer.get()
+                        .getEventBus()
+                        .dispatchFor(SingleplayerRequestAccessEvent.class);
+                     if (dispatchFor.hasListener()) {
+                        dispatchFor.dispatch(new SingleplayerRequestAccessEvent(access));
+                     }
+
+                     Universe.get().getPlayer(getUuid()).getPacketHandler().writeNoCache(new RequestServerAccess(access, externalPortx));
+                     this.requestedAccess = access;
+                  }
+               }
+            )
+         );
       } else {
+         short externalPort = 0;
+
          for (ServerListener channel : serverManager.getListeners()) {
             if (channel.localAddress() instanceof InetSocketAddress inetSocketAddress && inetSocketAddress.getAddress().isAnyLocalAddress()) {
                serverManager.unbind(channel);
             }
          }
-      }
 
-      IEventDispatcher<SingleplayerRequestAccessEvent, SingleplayerRequestAccessEvent> dispatchFor = HytaleServer.get()
-         .getEventBus()
-         .dispatchFor(SingleplayerRequestAccessEvent.class);
-      if (dispatchFor.hasListener()) {
-         dispatchFor.dispatch(new SingleplayerRequestAccessEvent(access));
-      }
+         IEventDispatcher<SingleplayerRequestAccessEvent, SingleplayerRequestAccessEvent> dispatchFor = HytaleServer.get()
+            .getEventBus()
+            .dispatchFor(SingleplayerRequestAccessEvent.class);
+         if (dispatchFor.hasListener()) {
+            dispatchFor.dispatch(new SingleplayerRequestAccessEvent(access));
+         }
 
-      Universe.get().getPlayer(getUuid()).getPacketHandler().writeNoCache(new RequestServerAccess(access, externalPort));
-      this.requestedAccess = access;
+         Universe.get().getPlayer(getUuid()).getPacketHandler().writeNoCache(new RequestServerAccess(access, externalPort));
+         this.requestedAccess = access;
+      }
    }
 
    public void setPublicAddresses(List<InetSocketAddress> publicAddresses) {

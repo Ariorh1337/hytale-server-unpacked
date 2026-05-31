@@ -43,7 +43,7 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
-import java.util.concurrent.Future;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
@@ -120,7 +120,7 @@ public class QUICTransport implements Transport {
    }
 
    @Override
-   public Future<ServerListener> bind(@Nonnull InetSocketAddress address) throws InterruptedException {
+   public CompletableFuture<ServerListener> bind(@Nonnull InetSocketAddress address) {
       if (address.getAddress() instanceof Inet4Address) {
          return NettyUtil.wrapChannelFuture(this.bootstrapIpv4.bind(address), v -> new NettyUtil.NettyChannelServerListener(v.channel()));
       } else if (address.getAddress() instanceof Inet6Address) {

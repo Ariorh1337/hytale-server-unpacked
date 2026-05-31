@@ -2,6 +2,7 @@ package com.hypixel.hytale.builtin.hytalegenerator.assets;
 
 import com.hypixel.hytale.assetstore.AssetRegistry;
 import com.hypixel.hytale.assetstore.event.LoadedAssetsEvent;
+import com.hypixel.hytale.assetstore.event.RemovedAssetsEvent;
 import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
 import com.hypixel.hytale.builtin.hytalegenerator.LoggerUtil;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.assignments.AssignmentsAsset;
@@ -291,20 +292,26 @@ public class AssetManager {
       this.propDistributionAssets = new HashMap<>(1);
       this.positionProviderAssets = new HashMap<>(1);
       this.propAssets = new HashMap<>(1);
-      eventRegistry.register(LoadedAssetsEvent.class, DensityAsset.class, this::loadDensityAssets);
-      eventRegistry.register(LoadedAssetsEvent.class, AssignmentsAsset.class, this::loadAssignmentsAssets);
-      eventRegistry.register(LoadedAssetsEvent.class, BiomeAsset.class, this::loadBiomeAssets);
-      eventRegistry.register(LoadedAssetsEvent.class, WorldStructureAsset.class, this::loadWorldStructureAssets);
+      eventRegistry.register(LoadedAssetsEvent.class, DensityAsset.class, this::onDensityLoadEvent);
+      eventRegistry.register(RemovedAssetsEvent.class, DensityAsset.class, this::onDensityRemoveEvent);
+      eventRegistry.register(LoadedAssetsEvent.class, AssignmentsAsset.class, this::onAssignmentsLoadEvent);
+      eventRegistry.register(RemovedAssetsEvent.class, AssignmentsAsset.class, this::onAssignmentsRemoveEvent);
+      eventRegistry.register(LoadedAssetsEvent.class, BiomeAsset.class, this::onBiomeLoadEvent);
+      eventRegistry.register(RemovedAssetsEvent.class, BiomeAsset.class, this::onBiomeRemoveEvent);
       eventRegistry.register(LoadedAssetsEvent.class, SettingsAsset.class, this::loadSettingsAssets);
-      eventRegistry.register(LoadedAssetsEvent.class, BlockMaskAsset.class, this::loadBlockMaskAssets);
-      eventRegistry.register(LoadedAssetsEvent.class, PropDistributionAsset.class, this::loadPropDistributionAssets);
-      eventRegistry.register(LoadedAssetsEvent.class, PositionProviderAsset.class, this::loadPositionProviderAssets);
-      eventRegistry.register(LoadedAssetsEvent.class, PropAsset.class, this::loadPropAssets);
+      eventRegistry.register(LoadedAssetsEvent.class, BlockMaskAsset.class, this::onBlockMaskLoadEvent);
+      eventRegistry.register(RemovedAssetsEvent.class, BlockMaskAsset.class, this::onBlockMaskRemoveEvent);
+      eventRegistry.register(LoadedAssetsEvent.class, PropDistributionAsset.class, this::onPropDistributionLoadEvent);
+      eventRegistry.register(RemovedAssetsEvent.class, PropDistributionAsset.class, this::onPropDistributionRemoveEvent);
+      eventRegistry.register(LoadedAssetsEvent.class, PositionProviderAsset.class, this::onPositionProviderLoadEvent);
+      eventRegistry.register(RemovedAssetsEvent.class, PositionProviderAsset.class, this::onPositionProviderRemoveEvent);
+      eventRegistry.register(LoadedAssetsEvent.class, PropAsset.class, this::onPropLoadEvent);
+      eventRegistry.register(RemovedAssetsEvent.class, PropAsset.class, this::onPropRemoveEvent);
+      eventRegistry.register(LoadedAssetsEvent.class, WorldStructureAsset.class, this::onWorldStructureLoadEvent);
+      eventRegistry.register(RemovedAssetsEvent.class, WorldStructureAsset.class, this::onWorldStructureRemoveEvent);
    }
 
-   private void loadPropAssets(@Nonnull LoadedAssetsEvent<String, PropAsset, DefaultAssetMap<String, PropAsset>> event) {
-      this.propAssets.clear();
-
+   private void onPropLoadEvent(@Nonnull LoadedAssetsEvent<String, PropAsset, DefaultAssetMap<String, PropAsset>> event) {
       for (PropAsset value : event.getLoadedAssets().values()) {
          this.propAssets.put(value.getId(), value);
          this.logger.at(Level.FINE).log("Loaded Prop asset " + value);
@@ -313,9 +320,15 @@ public class AssetManager {
       this.triggerReloadListeners();
    }
 
-   private void loadPositionProviderAssets(@Nonnull LoadedAssetsEvent<String, PositionProviderAsset, DefaultAssetMap<String, PositionProviderAsset>> event) {
-      this.positionProviderAssets.clear();
+   private void onPropRemoveEvent(@Nonnull RemovedAssetsEvent<String, PropAsset, DefaultAssetMap<String, PropAsset>> event) {
+      for (String key : event.getRemovedAssets()) {
+         this.propAssets.remove(key);
+      }
 
+      this.triggerReloadListeners();
+   }
+
+   private void onPositionProviderLoadEvent(@Nonnull LoadedAssetsEvent<String, PositionProviderAsset, DefaultAssetMap<String, PositionProviderAsset>> event) {
       for (PositionProviderAsset value : event.getLoadedAssets().values()) {
          this.positionProviderAssets.put(value.getId(), value);
          this.logger.at(Level.FINE).log("Loaded PositionProvider asset " + value);
@@ -324,9 +337,15 @@ public class AssetManager {
       this.triggerReloadListeners();
    }
 
-   private void loadPropDistributionAssets(@Nonnull LoadedAssetsEvent<String, PropDistributionAsset, DefaultAssetMap<String, PropDistributionAsset>> event) {
-      this.propDistributionAssets.clear();
+   private void onPositionProviderRemoveEvent(@Nonnull RemovedAssetsEvent<String, PositionProviderAsset, DefaultAssetMap<String, PositionProviderAsset>> event) {
+      for (String key : event.getRemovedAssets()) {
+         this.positionProviderAssets.remove(key);
+      }
 
+      this.triggerReloadListeners();
+   }
+
+   private void onPropDistributionLoadEvent(@Nonnull LoadedAssetsEvent<String, PropDistributionAsset, DefaultAssetMap<String, PropDistributionAsset>> event) {
       for (PropDistributionAsset value : event.getLoadedAssets().values()) {
          this.propDistributionAssets.put(value.getId(), value);
          this.logger.at(Level.FINE).log("Loaded PropDistribution asset " + value);
@@ -335,9 +354,15 @@ public class AssetManager {
       this.triggerReloadListeners();
    }
 
-   private void loadBlockMaskAssets(@Nonnull LoadedAssetsEvent<String, BlockMaskAsset, DefaultAssetMap<String, BlockMaskAsset>> event) {
-      this.blockMaskAssets.clear();
+   private void onPropDistributionRemoveEvent(@Nonnull RemovedAssetsEvent<String, PropDistributionAsset, DefaultAssetMap<String, PropDistributionAsset>> event) {
+      for (String key : event.getRemovedAssets()) {
+         this.propDistributionAssets.remove(key);
+      }
 
+      this.triggerReloadListeners();
+   }
+
+   private void onBlockMaskLoadEvent(@Nonnull LoadedAssetsEvent<String, BlockMaskAsset, DefaultAssetMap<String, BlockMaskAsset>> event) {
       for (BlockMaskAsset value : event.getLoadedAssets().values()) {
          this.blockMaskAssets.put(value.getId(), value);
          this.logger.at(Level.FINE).log("Loaded BlockMask asset " + value);
@@ -346,9 +371,15 @@ public class AssetManager {
       this.triggerReloadListeners();
    }
 
-   private void loadDensityAssets(@Nonnull LoadedAssetsEvent<String, DensityAsset, DefaultAssetMap<String, DensityAsset>> event) {
-      this.densityAssets.clear();
+   private void onBlockMaskRemoveEvent(@Nonnull RemovedAssetsEvent<String, BlockMaskAsset, DefaultAssetMap<String, BlockMaskAsset>> event) {
+      for (String key : event.getRemovedAssets()) {
+         this.blockMaskAssets.remove(key);
+      }
 
+      this.triggerReloadListeners();
+   }
+
+   private void onDensityLoadEvent(@Nonnull LoadedAssetsEvent<String, DensityAsset, DefaultAssetMap<String, DensityAsset>> event) {
       for (DensityAsset value : event.getLoadedAssets().values()) {
          this.densityAssets.put(value.getId(), value);
          this.logger.at(Level.FINE).log("Loaded Density asset " + value);
@@ -357,9 +388,15 @@ public class AssetManager {
       this.triggerReloadListeners();
    }
 
-   private void loadAssignmentsAssets(@Nonnull LoadedAssetsEvent<String, AssignmentsAsset, DefaultAssetMap<String, AssignmentsAsset>> event) {
-      this.assigmentAssets.clear();
+   private void onDensityRemoveEvent(@Nonnull RemovedAssetsEvent<String, DensityAsset, DefaultAssetMap<String, DensityAsset>> event) {
+      for (String key : event.getRemovedAssets()) {
+         this.densityAssets.remove(key);
+      }
 
+      this.triggerReloadListeners();
+   }
+
+   private void onAssignmentsLoadEvent(@Nonnull LoadedAssetsEvent<String, AssignmentsAsset, DefaultAssetMap<String, AssignmentsAsset>> event) {
       for (AssignmentsAsset value : event.getLoadedAssets().values()) {
          this.assigmentAssets.put(value.getId(), value);
       }
@@ -367,9 +404,15 @@ public class AssetManager {
       this.triggerReloadListeners();
    }
 
-   private void loadBiomeAssets(@Nonnull LoadedAssetsEvent<String, BiomeAsset, DefaultAssetMap<String, BiomeAsset>> event) {
-      this.biomeAssets.clear();
+   private void onAssignmentsRemoveEvent(@Nonnull RemovedAssetsEvent<String, AssignmentsAsset, DefaultAssetMap<String, AssignmentsAsset>> event) {
+      for (String key : event.getRemovedAssets()) {
+         this.assigmentAssets.remove(key);
+      }
 
+      this.triggerReloadListeners();
+   }
+
+   private void onBiomeLoadEvent(@Nonnull LoadedAssetsEvent<String, BiomeAsset, DefaultAssetMap<String, BiomeAsset>> event) {
       for (BiomeAsset value : event.getLoadedAssets().values()) {
          this.biomeAssets.put(value.getId(), value);
       }
@@ -377,11 +420,25 @@ public class AssetManager {
       this.triggerReloadListeners();
    }
 
-   private void loadWorldStructureAssets(@Nonnull LoadedAssetsEvent<String, WorldStructureAsset, DefaultAssetMap<String, WorldStructureAsset>> event) {
-      this.worldStructureAssets.clear();
+   private void onBiomeRemoveEvent(@Nonnull RemovedAssetsEvent<String, BiomeAsset, DefaultAssetMap<String, BiomeAsset>> event) {
+      for (String key : event.getRemovedAssets()) {
+         this.biomeAssets.remove(key);
+      }
 
+      this.triggerReloadListeners();
+   }
+
+   private void onWorldStructureLoadEvent(@Nonnull LoadedAssetsEvent<String, WorldStructureAsset, DefaultAssetMap<String, WorldStructureAsset>> event) {
       for (WorldStructureAsset value : event.getLoadedAssets().values()) {
          this.worldStructureAssets.put(value.getId(), value);
+      }
+
+      this.triggerReloadListeners();
+   }
+
+   private void onWorldStructureRemoveEvent(@Nonnull RemovedAssetsEvent<String, WorldStructureAsset, DefaultAssetMap<String, WorldStructureAsset>> event) {
+      for (String value : event.getRemovedAssets()) {
+         this.worldStructureAssets.remove(value);
       }
 
       this.triggerReloadListeners();
