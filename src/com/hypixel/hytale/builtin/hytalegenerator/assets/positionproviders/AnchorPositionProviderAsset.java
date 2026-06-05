@@ -13,13 +13,17 @@ public class AnchorPositionProviderAsset extends PositionProviderAsset {
    public static final BuilderCodec<AnchorPositionProviderAsset> CODEC = BuilderCodec.builder(
          AnchorPositionProviderAsset.class, AnchorPositionProviderAsset::new, PositionProviderAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Reversed", Codec.BOOLEAN, false), (t, k) -> t.isReversed = k, k -> k.isReversed)
+      .append(new KeyedCodec<>("Reversed", Codec.BOOLEAN, true), (asset, value) -> asset.isReversed = value, asset -> asset.isReversed)
       .add()
-      .append(new KeyedCodec<>("Positions", PositionProviderAsset.CODEC, true), (t, k) -> t.positionProviderAsset = k, k -> k.positionProviderAsset)
+      .append(
+         new KeyedCodec<>("Positions", PositionProviderAsset.CODEC, true),
+         (asset, value) -> asset.positionProviderAsset = value,
+         asset -> asset.positionProviderAsset
+      )
       .add()
       .build();
    private boolean isReversed = false;
-   private PositionProviderAsset positionProviderAsset = new ListPositionProviderAsset();
+   private PositionProviderAsset positionProviderAsset = ListPositionProviderAsset.INSTANCE;
 
    @Nonnull
    @Override

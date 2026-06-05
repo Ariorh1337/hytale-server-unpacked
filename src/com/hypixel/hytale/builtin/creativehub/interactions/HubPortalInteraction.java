@@ -105,7 +105,7 @@ public class HubPortalInteraction extends SimpleInstantInteraction {
                            WorldConfig srcConfig = parentWorld.getWorldConfig();
                            parentConfig.setSpawningNPC(srcConfig.isSpawningNPC());
                            parentConfig.setGameTimePaused(srcConfig.isGameTimePaused());
-                           parentConfig.setBlockSpawnersEnabled(srcConfig.isBlockSpawnersEnabled());
+                           parentConfig.setBlockSpawnersResolved(srcConfig.isBlockSpawnersResolved());
                         }
                      }
                   });
@@ -138,7 +138,7 @@ public class HubPortalInteraction extends SimpleInstantInteraction {
             WorldConfig childConfig = newWorld.getWorldConfig();
             childConfig.setSpawningNPC(parentConfig.isSpawningNPC());
             childConfig.setGameTimePaused(parentConfig.isGameTimePaused());
-            childConfig.setBlockSpawnersEnabled(parentConfig.isBlockSpawnersEnabled());
+            childConfig.setBlockSpawnersResolved(parentConfig.isBlockSpawnersResolved());
          }
       }
    }

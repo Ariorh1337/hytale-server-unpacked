@@ -13,12 +13,12 @@ public class SmoothFloorCurveAsset extends CurveAsset {
    public static final BuilderCodec<SmoothFloorCurveAsset> CODEC = BuilderCodec.builder(
          SmoothFloorCurveAsset.class, SmoothFloorCurveAsset::new, CurveAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Curve", CurveAsset.CODEC, true), (t, k) -> t.curveAsset = k, k -> k.curveAsset)
+      .append(new KeyedCodec<>("Curve", CurveAsset.CODEC, true), (asset, value) -> asset.curveAsset = value, asset -> asset.curveAsset)
       .add()
-      .<Double>append(new KeyedCodec<>("Range", Codec.DOUBLE, true), (t, k) -> t.range = k, k -> k.range)
+      .<Double>append(new KeyedCodec<>("Range", Codec.DOUBLE, true), (asset, value) -> asset.range = value, asset -> asset.range)
       .addValidator(Validators.greaterThanOrEqual(0.0))
       .add()
-      .append(new KeyedCodec<>("Floor", Codec.DOUBLE, true), (t, k) -> t.limit = k, k -> k.limit)
+      .append(new KeyedCodec<>("Floor", Codec.DOUBLE, true), (asset, value) -> asset.limit = value, asset -> asset.limit)
       .add()
       .build();
    private CurveAsset curveAsset = new ConstantCurveAsset();

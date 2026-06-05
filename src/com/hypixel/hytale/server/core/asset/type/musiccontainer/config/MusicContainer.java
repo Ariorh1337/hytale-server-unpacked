@@ -6,10 +6,7 @@ import com.hypixel.hytale.assetstore.AssetRegistry;
 import com.hypixel.hytale.assetstore.AssetStore;
 import com.hypixel.hytale.assetstore.codec.AssetCodecMapCodec;
 import com.hypixel.hytale.assetstore.codec.ContainedAssetCodec;
-import com.hypixel.hytale.assetstore.event.LoadedAssetsEvent;
-import com.hypixel.hytale.assetstore.event.RemovedAssetsEvent;
 import com.hypixel.hytale.assetstore.map.IndexedAssetMap;
-import com.hypixel.hytale.assetstore.map.IndexedLookupTableAssetMap;
 import com.hypixel.hytale.assetstore.map.JsonAssetWithMap;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
@@ -24,7 +21,6 @@ import com.hypixel.hytale.protocol.MusicTransitionType;
 import com.hypixel.hytale.protocol.Rangef;
 import com.hypixel.hytale.protocol.TempoSettings;
 import com.hypixel.hytale.server.core.asset.type.audiocategory.config.AudioCategory;
-import com.hypixel.hytale.server.core.asset.type.audiostate.config.AudioState;
 import com.hypixel.hytale.server.core.asset.type.audiostate.config.AudioStateResolver;
 import com.hypixel.hytale.server.core.asset.type.audiostate.config.StateBindingConfig;
 import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
@@ -248,28 +244,6 @@ public abstract class MusicContainer
    @Nonnull
    public String[] getChildIds() {
       return new String[0];
-   }
-
-   public void refreshAudioStateResolution() {
-      AudioStateResolver.resolveBindings(this.stateBindings);
-   }
-
-   public static void onAudioStateLoaded(@Nonnull LoadedAssetsEvent<String, AudioState, IndexedLookupTableAssetMap<String, AudioState>> event) {
-      if (!event.isInitial()) {
-         refreshAllAudioStateResolutions();
-      }
-   }
-
-   public static void onAudioStateRemoved(@Nonnull RemovedAssetsEvent<String, AudioState, IndexedLookupTableAssetMap<String, AudioState>> event) {
-      refreshAllAudioStateResolutions();
-   }
-
-   private static void refreshAllAudioStateResolutions() {
-      for (MusicContainer mc : getAssetMap().getAssetMap().values()) {
-         if (mc != null) {
-            mc.refreshAudioStateResolution();
-         }
-      }
    }
 
    protected void fillBasePacketFields(@Nonnull com.hypixel.hytale.protocol.MusicContainer packet) {

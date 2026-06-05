@@ -46,43 +46,41 @@ public class BiomeAsset implements JsonAssetWithMap<String, DefaultAssetMap<Stri
          BiomeAsset.class,
          BiomeAsset::new,
          Codec.STRING,
-         (asset, id) -> asset.id = id,
-         config -> config.id,
-         (config, data) -> config.data = data,
-         config -> config.data
+         (asset, value) -> asset.id = value,
+         asset -> asset.id,
+         (asset, value) -> asset.data = value,
+         asset -> asset.data
       )
-      .append(new KeyedCodec<>("Terrain", TerrainAsset.CODEC, true), (asset, t) -> asset.terrainAsset = t, asset -> asset.terrainAsset)
+      .append(new KeyedCodec<>("Terrain", TerrainAsset.CODEC, true), (asset, value) -> asset.terrainAsset = value, asset -> asset.terrainAsset)
       .add()
       .append(
          new KeyedCodec<>("FloatingFunctionNodes", new ArrayCodec<>(DensityAsset.CODEC, DensityAsset[]::new), true),
-         (asset, t) -> asset.floatingFunctionNodeAssets = t,
+         (asset, value) -> asset.floatingFunctionNodeAssets = value,
          asset -> asset.floatingFunctionNodeAssets
       )
       .add()
-      .append(new KeyedCodec<>("Name", Codec.STRING, true), (asset, t) -> asset.biomeName = t, asset -> asset.biomeName)
+      .append(new KeyedCodec<>("Name", Codec.STRING, true), (asset, value) -> asset.biomeName = value, asset -> asset.biomeName)
       .add()
       .append(
          new KeyedCodec<>("MaterialProvider", MaterialProviderAsset.CODEC, true),
-         (asset, materialProvider) -> asset.materialProviderAsset = materialProvider,
+         (asset, value) -> asset.materialProviderAsset = value,
          asset -> asset.materialProviderAsset
       )
       .add()
       .append(
          new KeyedCodec<>("Props", new ArrayCodec<>(PropRuntimeAsset.CODEC, PropRuntimeAsset[]::new), true),
-         (asset, materialProvider) -> asset.propRuntimeAssets = materialProvider,
+         (asset, value) -> asset.propRuntimeAssets = value,
          asset -> asset.propRuntimeAssets
       )
       .add()
       .append(
          new KeyedCodec<>("EnvironmentProvider", EnvironmentProviderAsset.CODEC, true),
-         (asset, environmentProvider) -> asset.environmentProviderAsset = environmentProvider,
+         (asset, value) -> asset.environmentProviderAsset = value,
          asset -> asset.environmentProviderAsset
       )
       .add()
       .append(
-         new KeyedCodec<>("TintProvider", TintProviderAsset.CODEC, true),
-         (asset, tintProvider) -> asset.tintProviderAsset = tintProvider,
-         asset -> asset.tintProviderAsset
+         new KeyedCodec<>("TintProvider", TintProviderAsset.CODEC, true), (asset, value) -> asset.tintProviderAsset = value, asset -> asset.tintProviderAsset
       )
       .add()
       .build();

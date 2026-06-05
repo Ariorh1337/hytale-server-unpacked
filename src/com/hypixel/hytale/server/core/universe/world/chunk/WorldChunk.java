@@ -249,11 +249,13 @@ public class WorldChunk implements BlockAccessor, Component<ChunkStore> {
    }
 
    @Nullable
+   @Deprecated
    public BlockChunk getBlockChunk() {
       return this.blockChunk;
    }
 
    @Nullable
+   @Deprecated
    public BlockComponentChunk getBlockComponentChunk() {
       return this.blockComponentChunk;
    }
@@ -296,6 +298,7 @@ public class WorldChunk implements BlockAccessor, Component<ChunkStore> {
       return this.world;
    }
 
+   @Deprecated
    @Override
    public int getBlock(int x, int y, int z) {
       return y >= 0 && y < 320 ? this.blockChunk.getBlock(x, y, z) : 0;

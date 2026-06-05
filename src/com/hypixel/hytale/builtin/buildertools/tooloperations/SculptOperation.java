@@ -440,13 +440,14 @@ public class SculptOperation extends ToolOperation {
             }
 
             if (carriedFluid != 0) {
-               int wx = this.hit.x - this.halfBufferWidth + bx;
-               int wz = this.hit.z - this.halfBufferWidth + bz;
                Fluid fluid = Fluid.getAssetMap().getAsset(carriedFluid);
-               byte maxLevel = (byte)(fluid != null ? fluid.getMaxFluidLevel() : 8);
-               this.edit.setMaterial(wx, worldY, wz, Material.fluid(carriedFluid, maxLevel));
-               this.fluidBuffer[bx][bufY][bz] = carriedFluid;
-               resolvedFluidId[bx][bz] = carriedFluid;
+               if (fluid != null) {
+                  int wx = this.hit.x - this.halfBufferWidth + bx;
+                  int wz = this.hit.z - this.halfBufferWidth + bz;
+                  this.edit.setMaterial(wx, worldY, wz, Material.fluid(carriedFluid, (byte)fluid.getMaxFluidLevel()));
+                  this.fluidBuffer[bx][bufY][bz] = carriedFluid;
+                  resolvedFluidId[bx][bz] = carriedFluid;
+               }
             }
 
             if (bx > 0 && !visited[bx - 1][bz] && this.mutatedBuffer[bx - 1][bufY][bz] <= 0) {

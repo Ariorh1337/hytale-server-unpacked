@@ -83,7 +83,7 @@ public class BasicWorldStructureAsset extends WorldStructureAsset {
    private DensityAsset densityAsset = new ConstantDensityAsset();
    private String defaultBiomeId = "";
    private FrameworkAsset[] frameworkAssets = new FrameworkAsset[0];
-   private PositionProviderAsset spawnPositionsAsset = new ListPositionProviderAsset();
+   private PositionProviderAsset spawnPositionsAsset = ListPositionProviderAsset.INSTANCE;
 
    @Nullable
    @Override
@@ -157,5 +157,7 @@ public class BasicWorldStructureAsset extends WorldStructureAsset {
             biomeAsset.cleanUp();
          }
       }
+
+      this.spawnPositionsAsset.cleanUp();
    }
 }

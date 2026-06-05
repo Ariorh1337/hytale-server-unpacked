@@ -23,7 +23,7 @@ public class FieldFunctionMaterialProviderAsset extends MaterialProviderAsset {
    public static final BuilderCodec<FieldFunctionMaterialProviderAsset> CODEC = BuilderCodec.builder(
          FieldFunctionMaterialProviderAsset.class, FieldFunctionMaterialProviderAsset::new, MaterialProviderAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("FieldFunction", DensityAsset.CODEC, true), (t, k) -> t.densityAsset = k, t -> t.densityAsset)
+      .append(new KeyedCodec<>("FieldFunction", DensityAsset.CODEC, true), (asset, value) -> asset.densityAsset = value, asset -> asset.densityAsset)
       .add()
       .append(
          new KeyedCodec<>(
@@ -31,8 +31,8 @@ public class FieldFunctionMaterialProviderAsset extends MaterialProviderAsset {
             new ArrayCodec<>(FieldFunctionMaterialProviderAsset.DelimiterAsset.CODEC, FieldFunctionMaterialProviderAsset.DelimiterAsset[]::new),
             true
          ),
-         (t, k) -> t.delimiterAssets = k,
-         k -> k.delimiterAssets
+         (asset, value) -> asset.delimiterAssets = value,
+         asset -> asset.delimiterAssets
       )
       .add()
       .build();
@@ -77,16 +77,20 @@ public class FieldFunctionMaterialProviderAsset extends MaterialProviderAsset {
             FieldFunctionMaterialProviderAsset.DelimiterAsset.class,
             FieldFunctionMaterialProviderAsset.DelimiterAsset::new,
             Codec.STRING,
-            (asset, id) -> asset.id = id,
-            config -> config.id,
-            (config, data) -> config.data = data,
-            config -> config.data
+            (asset, value) -> asset.id = value,
+            asset -> asset.id,
+            (asset, value) -> asset.data = value,
+            asset -> asset.data
          )
-         .append(new KeyedCodec<>("From", Codec.DOUBLE, true), (t, y) -> t.from = y, t -> t.from)
+         .append(new KeyedCodec<>("From", Codec.DOUBLE, true), (asset, value) -> asset.from = value, asset -> asset.from)
          .add()
-         .append(new KeyedCodec<>("To", Codec.DOUBLE, true), (t, out) -> t.to = out, t -> t.to)
+         .append(new KeyedCodec<>("To", Codec.DOUBLE, true), (asset, value) -> asset.to = value, asset -> asset.to)
          .add()
-         .append(new KeyedCodec<>("Material", MaterialProviderAsset.CODEC, true), (t, out) -> t.materialProviderAsset = out, t -> t.materialProviderAsset)
+         .append(
+            new KeyedCodec<>("Material", MaterialProviderAsset.CODEC, true),
+            (asset, value) -> asset.materialProviderAsset = value,
+            asset -> asset.materialProviderAsset
+         )
          .add()
          .build();
       private String id;

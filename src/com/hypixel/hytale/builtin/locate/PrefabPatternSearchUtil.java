@@ -13,11 +13,11 @@ import com.hypixel.hytale.server.worldgen.container.PrefabContainer;
 import com.hypixel.hytale.server.worldgen.container.UniquePrefabContainer;
 import com.hypixel.hytale.server.worldgen.loader.WorldGenPrefabSupplier;
 import com.hypixel.hytale.server.worldgen.prefab.PrefabPatternGenerator;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -59,7 +59,7 @@ public final class PrefabPatternSearchUtil {
       long[] effectiveRadiusSq = new long[]{(long)maxRadius * maxRadius};
       UniquePrefabContainer.UniquePrefabEntry[] uniquePrefabs = generator.getUniquePrefabs(seed);
       ArrayList<Entry<String, Vector3i>> results = new ArrayList<>();
-      HashSet<Long> seen = new HashSet<>();
+      LongOpenHashSet seen = new LongOpenHashSet();
       FastRandom random = new FastRandom(0L);
       Comparator<Entry<String, Vector3i>> byDistanceSq = Comparator.comparingLong(e -> {
          long ex = e.getValue().x - startX;

@@ -29,20 +29,22 @@ public class FieldFunctionPositionProviderAsset extends PositionProviderAsset {
             new ArrayCodec<>(FieldFunctionPositionProviderAsset.DelimiterAsset.CODEC, FieldFunctionPositionProviderAsset.DelimiterAsset[]::new),
             true
          ),
-         (asset, v) -> asset.delimiterAssets = v,
+         (asset, value) -> asset.delimiterAssets = value,
          asset -> asset.delimiterAssets
       )
       .add()
-      .append(new KeyedCodec<>("FieldFunction", DensityAsset.CODEC, true), (asset, v) -> asset.densityAsset = v, asset -> asset.densityAsset)
+      .append(new KeyedCodec<>("FieldFunction", DensityAsset.CODEC, true), (asset, value) -> asset.densityAsset = value, asset -> asset.densityAsset)
       .add()
       .append(
-         new KeyedCodec<>("Positions", PositionProviderAsset.CODEC, true), (asset, v) -> asset.positionProviderAsset = v, asset -> asset.positionProviderAsset
+         new KeyedCodec<>("Positions", PositionProviderAsset.CODEC, true),
+         (asset, value) -> asset.positionProviderAsset = value,
+         asset -> asset.positionProviderAsset
       )
       .add()
       .build();
    private FieldFunctionPositionProviderAsset.DelimiterAsset[] delimiterAssets = EMPTY_DELIMITER_ASSETS;
    private DensityAsset densityAsset = new ConstantDensityAsset();
-   private PositionProviderAsset positionProviderAsset = new ListPositionProviderAsset();
+   private PositionProviderAsset positionProviderAsset = ListPositionProviderAsset.INSTANCE;
 
    @Nonnull
    @Override
@@ -74,14 +76,14 @@ public class FieldFunctionPositionProviderAsset extends PositionProviderAsset {
             FieldFunctionPositionProviderAsset.DelimiterAsset.class,
             FieldFunctionPositionProviderAsset.DelimiterAsset::new,
             Codec.STRING,
-            (asset, id) -> asset.id = id,
-            config -> config.id,
-            (config, data) -> config.data = data,
-            config -> config.data
+            (asset, value) -> asset.id = value,
+            asset -> asset.id,
+            (asset, value) -> asset.data = value,
+            asset -> asset.data
          )
-         .append(new KeyedCodec<>("Min", Codec.DOUBLE, true), (t, v) -> t.min = v, t -> t.min)
+         .append(new KeyedCodec<>("Min", Codec.DOUBLE, true), (asset, value) -> asset.min = value, asset -> asset.min)
          .add()
-         .append(new KeyedCodec<>("Max", Codec.DOUBLE, true), (t, v) -> t.max = v, t -> t.max)
+         .append(new KeyedCodec<>("Max", Codec.DOUBLE, true), (asset, value) -> asset.max = value, asset -> asset.max)
          .add()
          .build();
       private String id;

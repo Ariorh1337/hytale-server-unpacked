@@ -72,10 +72,10 @@ public class DecimalConstantsFrameworkAsset extends FrameworkAsset {
             DecimalConstantsFrameworkAsset.EntryAsset.class,
             DecimalConstantsFrameworkAsset.EntryAsset::new,
             Codec.STRING,
-            (asset, id) -> asset.id = id,
-            config -> config.id,
-            (config, data) -> config.data = data,
-            config -> config.data
+            (asset, value) -> asset.id = value,
+            asset -> asset.id,
+            (asset, value) -> asset.data = value,
+            asset -> asset.data
          )
          .append(new KeyedCodec<>("Name", Codec.STRING, true), (asset, value) -> asset.name = value, asset -> asset.name)
          .add()

@@ -13,9 +13,9 @@ public class SmallerThanConditionAsset extends ConditionAsset {
    public static final BuilderCodec<SmallerThanConditionAsset> CODEC = BuilderCodec.builder(
          SmallerThanConditionAsset.class, SmallerThanConditionAsset::new, ConditionAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("ContextToCheck", ConditionParameter.CODEC, true), (t, k) -> t.parameter = k, k -> k.parameter)
+      .append(new KeyedCodec<>("ContextToCheck", ConditionParameter.CODEC, true), (asset, value) -> asset.parameter = value, asset -> asset.parameter)
       .add()
-      .append(new KeyedCodec<>("Threshold", Codec.INTEGER, true), (t, k) -> t.threshold = k, k -> k.threshold)
+      .append(new KeyedCodec<>("Threshold", Codec.INTEGER, true), (asset, value) -> asset.threshold = value, asset -> asset.threshold)
       .add()
       .build();
    private ConditionParameter parameter = ConditionParameter.SPACE_ABOVE_FLOOR;

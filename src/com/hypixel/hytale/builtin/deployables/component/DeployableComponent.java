@@ -11,8 +11,6 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.time.Instant;
-import java.util.EnumMap;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nonnull;
@@ -21,7 +19,7 @@ import org.joml.Vector3f;
 
 public class DeployableComponent implements Component<EntityStore> {
    @Nonnull
-   private final Map<DeployableComponent.DeployableFlag, Integer> flags = new EnumMap<>(DeployableComponent.DeployableFlag.class);
+   private final int[] flags = new int[DeployableComponent.DeployableFlag.values().length];
    private DeployableConfig config;
    private Ref<EntityStore> owner;
    private UUID ownerUUID;
@@ -106,11 +104,11 @@ public class DeployableComponent implements Component<EntityStore> {
    }
 
    public int getFlag(@Nonnull DeployableComponent.DeployableFlag key) {
-      return this.flags.computeIfAbsent(key, k -> 0);
+      return this.flags[key.ordinal()];
    }
 
    public void setFlag(@Nonnull DeployableComponent.DeployableFlag key, int value) {
-      this.flags.put(key, value);
+      this.flags[key.ordinal()] = value;
    }
 
    @Nonnull

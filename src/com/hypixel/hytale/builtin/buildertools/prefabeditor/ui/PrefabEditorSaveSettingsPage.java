@@ -8,6 +8,7 @@ import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabEditSessionMan
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabEditingMetadata;
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.saving.PrefabSaver;
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.saving.PrefabSaverSettings;
+import com.hypixel.hytale.builtin.buildertools.prefabeditor.saving.SupportMode;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
@@ -38,6 +39,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -50,6 +52,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class PrefabEditorSaveSettingsPage extends InteractiveCustomUIPage<PrefabEditorSaveSettingsPage.PageData> {
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
@@ -62,6 +65,10 @@ public class PrefabEditorSaveSettingsPage extends InteractiveCustomUIPage<Prefab
    private volatile boolean isSaving = false;
    private volatile long lastProgressUpdateTime = 0L;
    private static final long PROGRESS_UPDATE_INTERVAL_MS = 100L;
+   @Nullable
+   private PrefabSaverSettings pendingSaveSettings;
+   @Nullable
+   private List<PrefabEditingMetadata> pendingSavePrefabs;
    @Nonnull
    private String browserSearchQuery = "";
    private final Set<UUID> selectedPrefabUuids = new HashSet<>();
@@ -117,8 +124,8 @@ public class PrefabEditorSaveSettingsPage extends InteractiveCustomUIPage<Prefab
 
       commandBuilder.set("#MainPage #Entities #CheckBox.Value", true);
       commandBuilder.set("#MainPage #Empty #CheckBox.Value", false);
-      commandBuilder.set("#MainPage #Overwrite #CheckBox.Value", true);
-      commandBuilder.set("#MainPage #ClearSupport #CheckBox.Value", false);
+      commandBuilder.set("#MainPage #RemoveSupport #CheckBox.Value", false);
+      commandBuilder.set("#MainPage #SetupSupport #CheckBox.Value", false);
       if (this.packBrowser.hasSelectedPack()) {
          commandBuilder.set("#MainPage #SelectedPackLabel.Text", this.packBrowser.getSelectedPackDisplayName());
       }
@@ -129,6 +136,7 @@ public class PrefabEditorSaveSettingsPage extends InteractiveCustomUIPage<Prefab
       commandBuilder.set("#SavingPage #ProgressBar.Value", 0.0F);
       commandBuilder.set("#SavingPage #StatusText.TextSpans", Message.translation("server.commands.editprefab.save.saving"));
       commandBuilder.set("#SavingPage #ErrorText.Visible", false);
+      commandBuilder.set("#OverwriteConfirmPage.Visible", false);
       eventBuilder.addEventBinding(
          CustomUIEventBindingType.Activating,
          "#MainPage #SaveButton",
@@ -137,8 +145,8 @@ public class PrefabEditorSaveSettingsPage extends InteractiveCustomUIPage<Prefab
             .append("@PrefabsToSave", "#MainPage #PrefabsToSave #Input.Value")
             .append("@Entities", "#MainPage #Entities #CheckBox.Value")
             .append("@Empty", "#MainPage #Empty #CheckBox.Value")
-            .append("@Overwrite", "#MainPage #Overwrite #CheckBox.Value")
-            .append("@ClearSupport", "#MainPage #ClearSupport #CheckBox.Value"),
+            .append("@RemoveSupport", "#MainPage #RemoveSupport #CheckBox.Value")
+            .append("@SetupSupport", "#MainPage #SetupSupport #CheckBox.Value"),
          false
       );
       eventBuilder.addEventBinding(
@@ -184,6 +192,34 @@ public class PrefabEditorSaveSettingsPage extends InteractiveCustomUIPage<Prefab
          CustomUIEventBindingType.Activating,
          "#SavingPage #BackButton",
          new EventData().append("Action", PrefabEditorSaveSettingsPage.Action.BackFromSaving.name())
+      );
+      eventBuilder.addEventBinding(
+         CustomUIEventBindingType.ValueChanged,
+         "#MainPage #RemoveSupport #CheckBox",
+         new EventData()
+            .append("Action", PrefabEditorSaveSettingsPage.Action.RemoveSupportChanged.name())
+            .append("@RemoveSupport", "#MainPage #RemoveSupport #CheckBox.Value"),
+         false
+      );
+      eventBuilder.addEventBinding(
+         CustomUIEventBindingType.ValueChanged,
+         "#MainPage #SetupSupport #CheckBox",
+         new EventData()
+            .append("Action", PrefabEditorSaveSettingsPage.Action.SetupSupportChanged.name())
+            .append("@SetupSupport", "#MainPage #SetupSupport #CheckBox.Value"),
+         false
+      );
+      eventBuilder.addEventBinding(
+         CustomUIEventBindingType.Activating,
+         "#OverwriteConfirmPage #ConfirmOverwriteButton",
+         new EventData().append("Action", PrefabEditorSaveSettingsPage.Action.ConfirmOverwrite.name()),
+         false
+      );
+      eventBuilder.addEventBinding(
+         CustomUIEventBindingType.Activating,
+         "#OverwriteConfirmPage #CancelOverwriteButton",
+         new EventData().append("Action", PrefabEditorSaveSettingsPage.Action.CancelOverwrite.name()),
+         false
       );
       this.packBrowser.buildEventBindings(eventBuilder, "#MainPage #BrowsePackButton");
       this.packBrowser.buildUI(commandBuilder, eventBuilder);
@@ -234,22 +270,17 @@ public class PrefabEditorSaveSettingsPage extends InteractiveCustomUIPage<Prefab
                   return;
                }
 
-               this.isSaving = true;
-               UICommandBuilder showSavingBuilder = new UICommandBuilder();
-               showSavingBuilder.set("#MainPage.Visible", false);
-               showSavingBuilder.set("#BrowserPage.Visible", false);
-               showSavingBuilder.set("#SavingPage.Visible", true);
-               showSavingBuilder.set("#SavingPage #ProgressBar.Value", 0.0F);
-               showSavingBuilder.set("#SavingPage #StatusText.TextSpans", Message.translation("server.commands.editprefab.save.saving"));
-               showSavingBuilder.set("#SavingPage #ErrorText.Visible", false);
-               showSavingBuilder.set("#SavingPage #BackButton.Visible", false);
-               this.sendUpdate(showSavingBuilder);
                PrefabSaverSettings prefabSaverSettings = new PrefabSaverSettings();
                prefabSaverSettings.setBlocks(true);
                prefabSaverSettings.setEntities(data.entities);
                prefabSaverSettings.setEmpty(data.empty);
-               prefabSaverSettings.setOverwriteExisting(data.overwrite);
-               prefabSaverSettings.setClearSupportValues(data.clearSupport);
+               prefabSaverSettings.setOverwriteExisting(false);
+               if (data.setupSupport) {
+                  prefabSaverSettings.setSupportMode(SupportMode.CALCULATE);
+               } else if (data.removeSupport) {
+                  prefabSaverSettings.setSupportMode(SupportMode.REMOVE);
+               }
+
                String[] prefabPaths = prefabsToSaveStr.split("[,\\n]");
                List<PrefabEditingMetadata> prefabsToSave = new ObjectArrayList<>();
 
@@ -271,100 +302,38 @@ public class PrefabEditorSaveSettingsPage extends InteractiveCustomUIPage<Prefab
                   return;
                }
 
-               int readOnlyCount = 0;
+               ObjectArrayList<String> existingFiles = new ObjectArrayList<>();
 
                for (PrefabEditingMetadata metadata : prefabsToSave) {
-                  if (metadata.isReadOnly()) {
-                     readOnlyCount++;
+                  Path savePath = this.getWritableSavePath(metadata);
+                  if (Files.exists(savePath)) {
+                     existingFiles.add(savePath.getFileName().toString());
                   }
                }
 
-               if (readOnlyCount > 0) {
-                  this.playerRef.sendMessage(Message.translation("server.commands.editprefab.save.readOnlyRedirect").param("count", readOnlyCount));
-               }
-
-               World world = store.getExternalData().getWorld();
-               PrefabEditSessionManager editSessionManager = BuilderToolsPlugin.get().getPrefabEditSessionManager();
-               World editSessionWorld = Universe.get().getWorld(editSessionManager.getPrefabEditSession(this.playerRef.getUuid()).getWorldName());
-               int totalPrefabs = prefabsToSave.size();
-               CompletableFuture<Boolean>[] saveFutures = new CompletableFuture[totalPrefabs];
-               AtomicInteger completedCount = new AtomicInteger(0);
-               this.lastProgressUpdateTime = 0L;
-
-               for (int i = 0; i < totalPrefabs; i++) {
-                  PrefabEditingMetadata metadata = prefabsToSave.get(i);
-                  Path savePath = this.getWritableSavePath(metadata);
-                  saveFutures[i] = PrefabSaver.savePrefab(
-                        playerRefComponent,
-                        editSessionWorld,
-                        savePath,
-                        metadata.getAnchorPoint(),
-                        metadata.getMinPoint(),
-                        metadata.getMaxPoint(),
-                        metadata.getPastePosition(),
-                        metadata.getOriginalFileAnchor(),
-                        prefabSaverSettings
-                     )
-                     .thenApply(
-                        success -> {
-                           int completed = completedCount.incrementAndGet();
-                           long now = System.currentTimeMillis();
-                           if (now - this.lastProgressUpdateTime >= 100L || completed == totalPrefabs) {
-                              this.lastProgressUpdateTime = now;
-                              float progress = (float)completed / totalPrefabs;
-                              UICommandBuilder progressBuilder = new UICommandBuilder();
-                              progressBuilder.set("#SavingPage #ProgressBar.Value", progress);
-                              progressBuilder.set(
-                                 "#SavingPage #StatusText.TextSpans",
-                                 Message.translation("server.commands.editprefab.save.progress").param("current", completed).param("total", totalPrefabs)
-                              );
-                              this.sendUpdate(progressBuilder);
-                           }
-
-                           return (Boolean)success;
-                        }
+               if (!existingFiles.isEmpty()) {
+                  this.pendingSaveSettings = prefabSaverSettings;
+                  this.pendingSavePrefabs = prefabsToSave;
+                  UICommandBuilder confirmBuilder = new UICommandBuilder();
+                  confirmBuilder.set("#MainPage.Visible", false);
+                  confirmBuilder.set("#OverwriteConfirmPage.Visible", true);
+                  if (existingFiles.size() == 1) {
+                     confirmBuilder.set(
+                        "#OverwriteConfirmPage #MessageText.TextSpans",
+                        Message.translation("server.customUI.prefabEditorSaveSettings.overwriteConfirm.messageSingle").param("name", existingFiles.getFirst())
                      );
+                  } else {
+                     confirmBuilder.set(
+                        "#OverwriteConfirmPage #MessageText.TextSpans",
+                        Message.translation("server.customUI.prefabEditorSaveSettings.overwriteConfirm.messageMultiple")
+                     );
+                  }
+
+                  this.sendUpdate(confirmBuilder);
+                  return;
                }
 
-               CompletableFuture.allOf(saveFutures)
-                  .thenAccept(
-                     unused -> {
-                        int successes = 0;
-                        int failures = 0;
-
-                        for (CompletableFuture<Boolean> future : saveFutures) {
-                           if (future.join()) {
-                              successes++;
-                           } else {
-                              failures++;
-                           }
-                        }
-
-                        this.isSaving = false;
-                        if (failures == 0) {
-                           this.playerRef
-                              .sendMessage(
-                                 Message.translation("server.commands.editprefab.save.saveAll.success")
-                                    .param("successes", successes)
-                                    .param("failures", failures)
-                              );
-                           playerComponent.getPageManager().setPage(ref, store, Page.None);
-                           if (this.exitOnSave) {
-                              editSessionManager.exitEditSession(ref, world, this.playerRef, store);
-                           }
-                        } else {
-                           this.onSavingFailed(
-                              Message.translation("server.commands.editprefab.save.saveAll.success").param("successes", successes).param("failures", failures)
-                           );
-                        }
-                     }
-                  )
-                  .exceptionally(throwable -> {
-                     this.isSaving = false;
-                     LOGGER.atWarning().withCause(throwable).log("Error saving prefabs");
-                     this.onSavingFailed(Message.raw(throwable.getMessage() != null ? throwable.getMessage() : "Unknown error"));
-                     return null;
-                  });
+               this.executeSave(ref, store, playerComponent, playerRefComponent, prefabSaverSettings, prefabsToSave);
                break;
             case Cancel:
                playerComponent.getPageManager().setPage(ref, store, Page.None);
@@ -426,7 +395,7 @@ public class PrefabEditorSaveSettingsPage extends InteractiveCustomUIPage<Prefab
                      UIEventBuilder eventBuilderx = new UIEventBuilder();
                      this.buildPrefabList(commandBuilderx, eventBuilderx);
                      this.sendUpdate(commandBuilderx, eventBuilderx, false);
-                  } catch (IllegalArgumentException var22) {
+                  } catch (IllegalArgumentException var18) {
                   }
                }
                break;
@@ -472,7 +441,40 @@ public class PrefabEditorSaveSettingsPage extends InteractiveCustomUIPage<Prefab
                commandBuilder.set("#SavingPage.Visible", false);
                commandBuilder.set("#MainPage.Visible", true);
                this.sendUpdate(commandBuilder);
+               break;
             }
+            case ConfirmOverwrite:
+               if (this.isSaving || this.pendingSaveSettings == null || this.pendingSavePrefabs == null) {
+                  return;
+               }
+
+               this.pendingSaveSettings.setOverwriteExisting(true);
+               this.executeSave(ref, store, playerComponent, playerRefComponent, this.pendingSaveSettings, this.pendingSavePrefabs);
+               this.pendingSaveSettings = null;
+               this.pendingSavePrefabs = null;
+               break;
+            case CancelOverwrite: {
+               this.pendingSaveSettings = null;
+               this.pendingSavePrefabs = null;
+               UICommandBuilder commandBuilder = new UICommandBuilder();
+               commandBuilder.set("#OverwriteConfirmPage.Visible", false);
+               commandBuilder.set("#MainPage.Visible", true);
+               this.sendUpdate(commandBuilder);
+               break;
+            }
+            case RemoveSupportChanged:
+               if (data.removeSupport) {
+                  UICommandBuilder commandBuilderx = new UICommandBuilder();
+                  commandBuilderx.set("#MainPage #SetupSupport #CheckBox.Value", false);
+                  this.sendUpdate(commandBuilderx, null, false);
+               }
+               break;
+            case SetupSupportChanged:
+               if (data.setupSupport) {
+                  UICommandBuilder commandBuilderx = new UICommandBuilder();
+                  commandBuilderx.set("#MainPage #RemoveSupport #CheckBox.Value", false);
+                  this.sendUpdate(commandBuilderx, null, false);
+               }
             case OpenPackBrowser:
             case ConfirmPackBrowser:
             case CancelPackBrowser:
@@ -559,7 +561,120 @@ public class PrefabEditorSaveSettingsPage extends InteractiveCustomUIPage<Prefab
       assert selectedPack != null;
       PrefabStore prefabStore = PrefabStore.get();
       Path packPrefabsPath = prefabStore.getAssetPrefabsPathForPack(selectedPack);
-      return packPrefabsPath.resolve(prefabStore.getRelativePrefabPath(metadata.getPrefabPath()));
+      return packPrefabsPath.resolve(prefabStore.getRelativePrefabPath(metadata.getPrefabPath())).toAbsolutePath().normalize();
+   }
+
+   private void executeSave(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull Store<EntityStore> store,
+      @Nonnull Player playerComponent,
+      @Nonnull PlayerRef playerRefComponent,
+      @Nonnull PrefabSaverSettings prefabSaverSettings,
+      @Nonnull List<PrefabEditingMetadata> prefabsToSave
+   ) {
+      this.isSaving = true;
+      UICommandBuilder showSavingBuilder = new UICommandBuilder();
+      showSavingBuilder.set("#MainPage.Visible", false);
+      showSavingBuilder.set("#BrowserPage.Visible", false);
+      showSavingBuilder.set("#OverwriteConfirmPage.Visible", false);
+      showSavingBuilder.set("#SavingPage.Visible", true);
+      showSavingBuilder.set("#SavingPage #ProgressBar.Value", 0.0F);
+      showSavingBuilder.set("#SavingPage #StatusText.TextSpans", Message.translation("server.commands.editprefab.save.saving"));
+      showSavingBuilder.set("#SavingPage #ErrorText.Visible", false);
+      showSavingBuilder.set("#SavingPage #BackButton.Visible", false);
+      this.sendUpdate(showSavingBuilder);
+      int readOnlyCount = 0;
+
+      for (PrefabEditingMetadata metadata : prefabsToSave) {
+         if (metadata.isReadOnly()) {
+            readOnlyCount++;
+         }
+      }
+
+      if (readOnlyCount > 0) {
+         this.playerRef.sendMessage(Message.translation("server.commands.editprefab.save.readOnlyRedirect").param("count", readOnlyCount));
+      }
+
+      PrefabEditSessionManager editSessionManager = BuilderToolsPlugin.get().getPrefabEditSessionManager();
+      World world = store.getExternalData().getWorld();
+      World editSessionWorld = Universe.get().getWorld(editSessionManager.getPrefabEditSession(this.playerRef.getUuid()).getWorldName());
+      int totalPrefabs = prefabsToSave.size();
+      CompletableFuture<Boolean>[] saveFutures = new CompletableFuture[totalPrefabs];
+      AtomicInteger completedCount = new AtomicInteger(0);
+      this.lastProgressUpdateTime = 0L;
+
+      for (int i = 0; i < totalPrefabs; i++) {
+         PrefabEditingMetadata metadata = prefabsToSave.get(i);
+         Path savePath = this.getWritableSavePath(metadata);
+         saveFutures[i] = PrefabSaver.savePrefab(
+               playerRefComponent,
+               editSessionWorld,
+               savePath,
+               metadata.getAnchorPoint(),
+               metadata.getMinPoint(),
+               metadata.getMaxPoint(),
+               metadata.getPastePosition(),
+               metadata.getOriginalFileAnchor(),
+               prefabSaverSettings
+            )
+            .thenApply(
+               success -> {
+                  int completed = completedCount.incrementAndGet();
+                  long now = System.currentTimeMillis();
+                  if (now - this.lastProgressUpdateTime >= 100L || completed == totalPrefabs) {
+                     this.lastProgressUpdateTime = now;
+                     float progress = (float)completed / totalPrefabs;
+                     UICommandBuilder progressBuilder = new UICommandBuilder();
+                     progressBuilder.set("#SavingPage #ProgressBar.Value", progress);
+                     progressBuilder.set(
+                        "#SavingPage #StatusText.TextSpans",
+                        Message.translation("server.commands.editprefab.save.progress").param("current", completed).param("total", totalPrefabs)
+                     );
+                     this.sendUpdate(progressBuilder);
+                  }
+
+                  return (Boolean)success;
+               }
+            );
+      }
+
+      CompletableFuture.allOf(saveFutures)
+         .thenAccept(
+            unused -> {
+               int successes = 0;
+               int failures = 0;
+
+               for (CompletableFuture<Boolean> future : saveFutures) {
+                  if (future.join()) {
+                     successes++;
+                  } else {
+                     failures++;
+                  }
+               }
+
+               this.isSaving = false;
+               if (failures == 0) {
+                  this.playerRef
+                     .sendMessage(
+                        Message.translation("server.commands.editprefab.save.saveAll.success").param("successes", successes).param("failures", failures)
+                     );
+                  playerComponent.getPageManager().setPage(ref, store, Page.None);
+                  if (this.exitOnSave) {
+                     editSessionManager.exitEditSession(ref, world, this.playerRef, store);
+                  }
+               } else {
+                  this.onSavingFailed(
+                     Message.translation("server.commands.editprefab.save.saveAll.success").param("successes", successes).param("failures", failures)
+                  );
+               }
+            }
+         )
+         .exceptionally(throwable -> {
+            this.isSaving = false;
+            LOGGER.atWarning().withCause(throwable).log("Error saving prefabs");
+            this.onSavingFailed(Message.raw(throwable.getMessage() != null ? throwable.getMessage() : "Unknown error"));
+            return null;
+         });
    }
 
    private void onSavingFailed(@Nonnull Message errorMessage) {
@@ -585,6 +700,10 @@ public class PrefabEditorSaveSettingsPage extends InteractiveCustomUIPage<Prefab
       ConfirmBrowser,
       CancelBrowser,
       BackFromSaving,
+      ConfirmOverwrite,
+      CancelOverwrite,
+      RemoveSupportChanged,
+      SetupSupportChanged,
       OpenPackBrowser,
       ConfirmPackBrowser,
       CancelPackBrowser,
@@ -599,8 +718,8 @@ public class PrefabEditorSaveSettingsPage extends InteractiveCustomUIPage<Prefab
       public static final String PREFABS_TO_SAVE = "@PrefabsToSave";
       public static final String ENTITIES = "@Entities";
       public static final String EMPTY = "@Empty";
-      public static final String OVERWRITE = "@Overwrite";
-      public static final String CLEAR_SUPPORT = "@ClearSupport";
+      public static final String REMOVE_SUPPORT = "@RemoveSupport";
+      public static final String SETUP_SUPPORT = "@SetupSupport";
       public static final String BROWSER_SEARCH = "@BrowserSearch";
       public static final String PREFAB_UUID = "PrefabUuid";
       public static final BuilderCodec<PrefabEditorSaveSettingsPage.PageData> CODEC = BuilderCodec.builder(
@@ -618,9 +737,9 @@ public class PrefabEditorSaveSettingsPage extends InteractiveCustomUIPage<Prefab
          .add()
          .append(new KeyedCodec<>("@Empty", Codec.BOOLEAN), (o, empty) -> o.empty = empty, o -> o.empty)
          .add()
-         .append(new KeyedCodec<>("@Overwrite", Codec.BOOLEAN), (o, overwrite) -> o.overwrite = overwrite, o -> o.overwrite)
+         .append(new KeyedCodec<>("@RemoveSupport", Codec.BOOLEAN), (o, removeSupport) -> o.removeSupport = removeSupport, o -> o.removeSupport)
          .add()
-         .append(new KeyedCodec<>("@ClearSupport", Codec.BOOLEAN), (o, clearSupport) -> o.clearSupport = clearSupport, o -> o.clearSupport)
+         .append(new KeyedCodec<>("@SetupSupport", Codec.BOOLEAN), (o, setupSupport) -> o.setupSupport = setupSupport, o -> o.setupSupport)
          .add()
          .append(new KeyedCodec<>("@BrowserSearch", Codec.STRING), (o, browserSearchStr) -> o.browserSearchStr = browserSearchStr, o -> o.browserSearchStr)
          .add()
@@ -651,8 +770,8 @@ public class PrefabEditorSaveSettingsPage extends InteractiveCustomUIPage<Prefab
       public String prefabsToSave;
       public boolean entities = true;
       public boolean empty = false;
-      public boolean overwrite = true;
-      public boolean clearSupport = false;
+      public boolean removeSupport;
+      public boolean setupSupport;
       public String browserSearchStr;
       public String prefabUuid;
       public final AssetPackSaveBrowserEventData packBrowserData = new AssetPackSaveBrowserEventData();

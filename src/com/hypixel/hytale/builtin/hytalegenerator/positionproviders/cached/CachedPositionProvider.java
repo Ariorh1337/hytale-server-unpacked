@@ -48,7 +48,7 @@ public class CachedPositionProvider extends PositionProvider {
                   Bounds3d sectionBounds = new Bounds3d(sectionMin, new Vector3d(sectionMin).add(this.sectionSize, this.sectionSize, this.sectionSize));
                   ArrayList<Vector3d> generatedPositions = new ArrayList<>();
                   Pipe.One<Vector3d> pipe = (positionx, controlx) -> generatedPositions.add(positionx);
-                  PositionProvider.Context childContext = new PositionProvider.Context(sectionBounds, pipe, null);
+                  PositionProvider.Context childContext = new PositionProvider.Context(sectionBounds, pipe, null, null);
                   this.positionProvider.generate(childContext);
                   section = new Vector3d[generatedPositions.size()];
                   generatedPositions.toArray(section);

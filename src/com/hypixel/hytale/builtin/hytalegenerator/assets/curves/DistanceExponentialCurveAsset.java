@@ -12,10 +12,10 @@ public class DistanceExponentialCurveAsset extends CurveAsset {
    public static final BuilderCodec<DistanceExponentialCurveAsset> CODEC = BuilderCodec.builder(
          DistanceExponentialCurveAsset.class, DistanceExponentialCurveAsset::new, CurveAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Exponent", Codec.DOUBLE, true), (t, k) -> t.exponent = k, k -> k.exponent)
+      .append(new KeyedCodec<>("Exponent", Codec.DOUBLE, true), (asset, value) -> asset.exponent = value, asset -> asset.exponent)
       .addValidator(Validators.greaterThanOrEqual(0.0))
       .add()
-      .<Double>append(new KeyedCodec<>("Range", Codec.DOUBLE, true), (t, k) -> t.range = k, k -> k.range)
+      .<Double>append(new KeyedCodec<>("Range", Codec.DOUBLE, true), (asset, value) -> asset.range = value, asset -> asset.range)
       .addValidator(Validators.greaterThanOrEqual(0.0))
       .add()
       .build();

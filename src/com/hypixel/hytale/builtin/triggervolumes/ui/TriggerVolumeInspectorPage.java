@@ -67,6 +67,8 @@ import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.BsonUtil;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -1625,7 +1627,7 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
       @Nonnull TriggerEventType eventType,
       @Nonnull TriggerVolumeInspectorPage.EffectListKind kind
    ) {
-      List<Integer> indices = this.getEventItemIndices(scope, groupDraft, eventType, kind);
+      IntList indices = this.getEventItemIndices(scope, groupDraft, eventType, kind);
       if (indices.isEmpty()) {
          return childIndex;
       }
@@ -1637,7 +1639,7 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
       childIndex++;
 
       for (int i = 0; i < indices.size(); i++) {
-         Integer itemIndex = indices.get(i);
+         int itemIndex = indices.getInt(i);
          String selector = "#EffectListContainer[" + childIndex + "]";
          String typeId = scope == TriggerVolumeInspectorPage.EventCategoryScope.GROUP
             ? getGroupItemTypeId(kind, itemIndex, groupDraft)
@@ -1696,13 +1698,13 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
    }
 
    @Nonnull
-   private List<Integer> getEventItemIndices(
+   private IntList getEventItemIndices(
       @Nonnull TriggerVolumeInspectorPage.EventCategoryScope scope,
       @Nullable TriggerVolumeInspectorDrafts.GroupDraft groupDraft,
       @Nonnull TriggerEventType eventType,
       @Nonnull TriggerVolumeInspectorPage.EffectListKind kind
    ) {
-      ArrayList<Integer> indices = new ArrayList<>();
+      IntArrayList indices = new IntArrayList();
       if (scope == TriggerVolumeInspectorPage.EventCategoryScope.GROUP && groupDraft == null) {
          return indices;
       }

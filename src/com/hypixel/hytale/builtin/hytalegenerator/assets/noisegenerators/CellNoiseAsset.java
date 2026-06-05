@@ -22,7 +22,7 @@ public class CellNoiseAsset extends NoiseAsset {
    public static final BuilderCodec<CellNoiseAsset> CODEC;
    private double warpScale = 1.0;
    private double warpAmount = 1.0;
-   private double scale = 1.0;
+   private double scale = 50.0;
    private double jitter = 0.5;
    private int octaves = 1;
    private String seedKey = "A";
@@ -52,23 +52,23 @@ public class CellNoiseAsset extends NoiseAsset {
       }
 
       CODEC = BuilderCodec.builder(CellNoiseAsset.class, CellNoiseAsset::new, NoiseAsset.ABSTRACT_CODEC)
-         .append(new KeyedCodec<>("WarpAmount", Codec.DOUBLE, true), (asset, warpAmount) -> asset.warpAmount = warpAmount, asset -> asset.warpAmount)
+         .append(new KeyedCodec<>("WarpAmount", Codec.DOUBLE, true), (asset, value) -> asset.warpAmount = value, asset -> asset.warpAmount)
          .addValidator(Validators.greaterThan(0.0))
          .add()
-         .<Double>append(new KeyedCodec<>("WarpScale", Codec.DOUBLE, true), (asset, warpScale) -> asset.warpScale = warpScale, asset -> asset.warpScale)
+         .<Double>append(new KeyedCodec<>("WarpScale", Codec.DOUBLE, true), (asset, value) -> asset.warpScale = value, asset -> asset.warpScale)
          .addValidator(Validators.greaterThan(0.0))
          .add()
-         .<Double>append(new KeyedCodec<>("Scale", Codec.DOUBLE, true), (asset, scale) -> asset.scale = scale, asset -> asset.scale)
+         .<Double>append(new KeyedCodec<>("Scale", Codec.DOUBLE, true), (asset, value) -> asset.scale = value, asset -> asset.scale)
          .addValidator(Validators.greaterThan(0.0))
          .add()
-         .<Integer>append(new KeyedCodec<>("Octaves", Codec.INTEGER, true), (asset, octaves) -> asset.octaves = octaves, asset -> asset.octaves)
+         .<Integer>append(new KeyedCodec<>("Octaves", Codec.INTEGER, true), (asset, value) -> asset.octaves = value, asset -> asset.octaves)
          .addValidator(Validators.greaterThan(0))
          .add()
-         .append(new KeyedCodec<>("Seed", Codec.STRING, true), (asset, seed) -> asset.seedKey = seed, asset -> asset.seedKey)
+         .append(new KeyedCodec<>("Seed", Codec.STRING, true), (asset, value) -> asset.seedKey = value, asset -> asset.seedKey)
          .add()
          .<String>append(
             new KeyedCodec<>("CellType", Codec.STRING, true),
-            (asset, cellType) -> asset.cellType = FastNoiseLite.CellularReturnType.valueOf(cellType),
+            (asset, value) -> asset.cellType = FastNoiseLite.CellularReturnType.valueOf(value),
             asset -> asset.cellType.name()
          )
          .addValidator(new Validator<String>() {

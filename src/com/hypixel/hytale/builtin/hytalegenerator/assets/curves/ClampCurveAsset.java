@@ -10,11 +10,11 @@ import javax.annotation.Nonnull;
 public class ClampCurveAsset extends CurveAsset {
    @Nonnull
    public static final BuilderCodec<ClampCurveAsset> CODEC = BuilderCodec.builder(ClampCurveAsset.class, ClampCurveAsset::new, CurveAsset.ABSTRACT_CODEC)
-      .append(new KeyedCodec<>("Curve", CurveAsset.CODEC, false), (t, k) -> t.curveAsset = k, k -> k.curveAsset)
+      .append(new KeyedCodec<>("Curve", CurveAsset.CODEC, false), (asset, value) -> asset.curveAsset = value, asset -> asset.curveAsset)
       .add()
-      .append(new KeyedCodec<>("WallA", Codec.DOUBLE, false), (t, k) -> t.wallA = k, k -> k.wallA)
+      .append(new KeyedCodec<>("WallA", Codec.DOUBLE, false), (asset, value) -> asset.wallA = value, asset -> asset.wallA)
       .add()
-      .append(new KeyedCodec<>("WallB", Codec.DOUBLE, false), (t, k) -> t.wallB = k, k -> k.wallB)
+      .append(new KeyedCodec<>("WallB", Codec.DOUBLE, false), (asset, value) -> asset.wallB = value, asset -> asset.wallB)
       .add()
       .build();
    private CurveAsset curveAsset = new ConstantCurveAsset();

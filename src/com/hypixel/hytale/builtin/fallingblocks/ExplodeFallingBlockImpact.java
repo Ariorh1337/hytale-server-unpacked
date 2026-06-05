@@ -2,6 +2,7 @@ package com.hypixel.hytale.builtin.fallingblocks;
 
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.fallingblocks.FallingBlockImpact;
@@ -38,7 +39,13 @@ public class ExplodeFallingBlockImpact extends FallingBlockImpact {
       if (explosionConfig != null) {
          world.execute(
             () -> ExplosionUtils.performExplosion(
-               ExplodeInteraction.DAMAGE_SOURCE_EXPLOSION, position, explosionConfig, null, store, world.getChunkStore().getStore()
+               ExplodeInteraction.DAMAGE_SOURCE_EXPLOSION,
+               position,
+               new Rotation3f(0.0F, 0.0F, 0.0F),
+               explosionConfig,
+               null,
+               store,
+               world.getChunkStore().getStore()
             )
          );
       }

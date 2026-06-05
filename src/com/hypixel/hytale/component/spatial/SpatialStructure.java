@@ -3,7 +3,7 @@ package com.hypixel.hytale.component.spatial;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.joml.Vector3d;
+import org.joml.Vector3dc;
 
 public interface SpatialStructure<T> {
    int size();
@@ -11,17 +11,17 @@ public interface SpatialStructure<T> {
    void rebuild(@Nonnull SpatialData<T> var1);
 
    @Nullable
-   T closest(@Nonnull Vector3d var1);
+   T closest(@Nonnull Vector3dc var1);
 
-   void collect(@Nonnull Vector3d var1, double var2, @Nonnull List<T> var4);
+   void collect(@Nonnull Vector3dc var1, double var2, @Nonnull List<T> var4);
 
-   void collectCylinder(@Nonnull Vector3d var1, double var2, double var4, @Nonnull List<T> var6);
+   void collectCylinder(@Nonnull Vector3dc var1, double var2, double var4, @Nonnull List<T> var6);
 
-   void collectBox(@Nonnull Vector3d var1, @Nonnull Vector3d var2, @Nonnull List<T> var3);
+   void collectBox(@Nonnull Vector3dc var1, @Nonnull Vector3dc var2, @Nonnull List<T> var3);
 
-   void ordered(@Nonnull Vector3d var1, double var2, @Nonnull List<T> var4);
+   void ordered(@Nonnull Vector3dc var1, double var2, @Nonnull List<T> var4);
 
-   void ordered3DAxis(@Nonnull Vector3d var1, double var2, double var4, double var6, @Nonnull List<T> var8);
+   void ordered3DAxis(@Nonnull Vector3dc var1, double var2, double var4, double var6, @Nonnull List<T> var8);
 
    @Nonnull
    String dump();

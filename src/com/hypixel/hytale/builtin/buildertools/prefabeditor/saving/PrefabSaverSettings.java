@@ -1,5 +1,7 @@
 package com.hypixel.hytale.builtin.buildertools.prefabeditor.saving;
 
+import javax.annotation.Nonnull;
+
 public class PrefabSaverSettings {
    private boolean relativize;
    private boolean overwriteExisting;
@@ -7,7 +9,8 @@ public class PrefabSaverSettings {
    private boolean blocks;
    private boolean entities;
    private boolean keepAnchors;
-   private boolean clearSupportValues;
+   @Nonnull
+   private SupportMode supportMode = SupportMode.KEEP_EXISTING;
 
    public boolean isRelativize() {
       return this.relativize;
@@ -57,11 +60,12 @@ public class PrefabSaverSettings {
       this.keepAnchors = keepAnchors;
    }
 
-   public boolean isClearSupportValues() {
-      return this.clearSupportValues;
+   @Nonnull
+   public SupportMode getSupportMode() {
+      return this.supportMode;
    }
 
-   public void setClearSupportValues(boolean clearSupportValues) {
-      this.clearSupportValues = clearSupportValues;
+   public void setSupportMode(@Nonnull SupportMode supportMode) {
+      this.supportMode = supportMode;
    }
 }

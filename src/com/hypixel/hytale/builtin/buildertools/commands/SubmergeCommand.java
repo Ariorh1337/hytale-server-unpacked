@@ -46,7 +46,7 @@ public class SubmergeCommand extends AbstractPlayerCommand {
          } else {
             BlockPattern pattern = BlockPattern.parse(fluidItemKey);
             BuilderToolsPlugin.addToQueue(
-               playerComponent, playerRef, (playerEntityRef, builderState, componentAccessor) -> builderState.set(pattern, componentAccessor)
+               playerComponent, playerRef, (playerEntityRef, builderState, componentAccessor) -> builderState.submerge(pattern, componentAccessor)
             );
             context.sendMessage(Message.translation("server.builderTools.submerge.submergedSelection"));
          }

@@ -365,6 +365,18 @@
 }
 ,{
   "Group": "Hytale",
+  "Name": "Wilderness",
+  "Version": "1.0.0",
+  "Website": "https://hypixel.com/",
+  "Main": "com.hypixel.hytale.builtin.adventure.wilderness.WildernessPlugin",
+  "ServerVersion": "*",
+  "Dependencies": {
+    "Hytale:BlockModule": "*",
+    "Hytale:LegacyModule": "*"
+  }
+}
+,{
+  "Group": "Hytale",
   "Name": "WorldLocationCondition",
   "Version": "1.0.0",
   "Website": "https://hypixel.com/",
@@ -586,6 +598,17 @@
   "ServerVersion": "*",
   "Dependencies": {
     "Hytale:LegacyModule": "*"
+  }
+}
+,{
+  "Group": "Hytale",
+  "Name": "ReactiveBlocks",
+  "Version": "1.0.0",
+  "Website": "https://hypixel.com/",
+  "Main": "com.hypixel.hytale.builtin.reactiveblocks.ReactiveBlocksPlugin",
+  "ServerVersion": "*",
+  "Dependencies": {
+    "Hytale:BlockModule": "*"
   }
 }
 ,{

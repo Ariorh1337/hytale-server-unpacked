@@ -261,6 +261,7 @@ public class EntityEffect
       })
       .build();
    public static final Codec<String> CHILD_ASSET_CODEC = new ContainedAssetCodec<>(EntityEffect.class, CODEC);
+   public static final Codec<String[]> CHILD_ASSET_CODEC_ARRAY = new ArrayCodec<>(CHILD_ASSET_CODEC, String[]::new);
    @Nullable
    private static AssetStore<String, EntityEffect, IndexedLookupTableAssetMap<String, EntityEffect>> STORE;
    public static final ValidatorCache<String> VALIDATOR_CACHE = new ValidatorCache<>(new AssetKeyValidator<>(EntityEffect::getAssetStore));

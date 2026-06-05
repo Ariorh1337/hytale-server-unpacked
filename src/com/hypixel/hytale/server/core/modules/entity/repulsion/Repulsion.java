@@ -53,6 +53,7 @@ public class Repulsion implements Component<EntityStore> {
    public Component<EntityStore> clone() {
       Repulsion component = new Repulsion();
       component.repulsionConfigIndex = this.repulsionConfigIndex;
+      component.data = this.data;
       return component;
    }
 }

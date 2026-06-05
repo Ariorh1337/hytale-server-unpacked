@@ -153,18 +153,6 @@ public class SegmentMusicContainer extends MusicContainer {
       }
    }
 
-   @Override
-   public void refreshAudioStateResolution() {
-      super.refreshAudioStateResolution();
-      if (this.layers != null) {
-         for (LayerPlacement layer : this.layers) {
-            if (layer != null) {
-               AudioStateResolver.resolveBindings(layer.stateBindings);
-            }
-         }
-      }
-   }
-
    @Nonnull
    public com.hypixel.hytale.protocol.MusicContainer toPacket() {
       com.hypixel.hytale.protocol.SegmentMusicContainer packet = new com.hypixel.hytale.protocol.SegmentMusicContainer();

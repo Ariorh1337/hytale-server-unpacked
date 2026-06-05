@@ -46,6 +46,8 @@ public class ConstantPropDistribution extends PropDistribution {
       this.rPositionProviderContext.bounds.min.set(context.bounds.min);
       this.rPositionProviderContext.bounds.max.set(context.bounds.max);
       this.rPositionProviderContext.pipe = this.rPositionsPipe;
+      this.rPositionProviderContext.graphNode = context.graphNode;
+      this.rPositionProviderContext.anchor = context.anchor;
       this.positionProvider.generate(this.rPositionProviderContext);
    }
 

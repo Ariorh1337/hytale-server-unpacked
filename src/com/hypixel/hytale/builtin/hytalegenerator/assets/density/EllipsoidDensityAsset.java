@@ -23,9 +23,9 @@ public class EllipsoidDensityAsset extends DensityAsset {
    public static final BuilderCodec<EllipsoidDensityAsset> CODEC = BuilderCodec.builder(
          EllipsoidDensityAsset.class, EllipsoidDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Curve", CurveAsset.CODEC, true), (t, k) -> t.densityCurveAsset = k, k -> k.densityCurveAsset)
+      .append(new KeyedCodec<>("Curve", CurveAsset.CODEC, true), (asset, value) -> asset.densityCurveAsset = value, asset -> asset.densityCurveAsset)
       .add()
-      .<Vector3d>append(new KeyedCodec<>("Scale", Vector3dUtil.CODEC, false), (t, k) -> t.scaleVector = k, k -> k.scaleVector)
+      .<Vector3d>append(new KeyedCodec<>("Scale", Vector3dUtil.CODEC, false), (asset, value) -> asset.scaleVector = value, asset -> asset.scaleVector)
       .addValidator(new Validator<Vector3d>() {
          public void accept(Vector3d v, ValidationResults r) {
             if (v.x == 0.0 || v.y == 0.0 || v.z == 0.0) {
@@ -38,13 +38,13 @@ public class EllipsoidDensityAsset extends DensityAsset {
          }
       })
       .add()
-      .append(new KeyedCodec<>("NewYAxis", Vector3dUtil.CODEC, false), (t, k) -> {
-         if (k.length() != 0.0) {
-            t.newYAxis = k;
+      .append(new KeyedCodec<>("NewYAxis", Vector3dUtil.CODEC, false), (asset, value) -> {
+         if (value.length() != 0.0) {
+            asset.newYAxis = value;
          }
-      }, k -> k.newYAxis)
+      }, asset -> asset.newYAxis)
       .add()
-      .append(new KeyedCodec<>("Spin", Codec.DOUBLE, false), (t, k) -> t.spinAngle = k, k -> k.spinAngle)
+      .append(new KeyedCodec<>("Spin", Codec.DOUBLE, false), (asset, value) -> asset.spinAngle = value, asset -> asset.spinAngle)
       .add()
       .build();
    private CurveAsset densityCurveAsset = new ConstantCurveAsset();

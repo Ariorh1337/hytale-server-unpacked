@@ -33,4 +33,9 @@ public class RadialScannerAsset extends ScannerAsset {
       Scanner childScanner = this.scannerAsset.build(argument);
       return new RadialScanner(this.boundsAsset.build(), childScanner);
    }
+
+   @Override
+   public void cleanUp() {
+      this.scannerAsset.cleanUp();
+   }
 }

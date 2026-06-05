@@ -18,17 +18,21 @@ public class BiomeRangeAsset implements JsonAssetWithMap<String, DefaultAssetMap
          BiomeRangeAsset.class,
          BiomeRangeAsset::new,
          Codec.STRING,
-         (asset, id) -> asset.id = id,
-         config -> config.id,
-         (config, data) -> config.data = data,
-         config -> config.data
+         (asset, value) -> asset.id = value,
+         asset -> asset.id,
+         (asset, value) -> asset.data = value,
+         asset -> asset.data
       )
-      .append(new KeyedCodec<>("Biome", new ContainedAssetCodec<>(BiomeAsset.class, BiomeAsset.CODEC), true), (t, k) -> t.biomeAssetId = k, t -> t.biomeAssetId)
+      .append(
+         new KeyedCodec<>("Biome", new ContainedAssetCodec<>(BiomeAsset.class, BiomeAsset.CODEC), true),
+         (asset, value) -> asset.biomeAssetId = value,
+         asset -> asset.biomeAssetId
+      )
       .addValidatorLate(() -> BiomeAsset.VALIDATOR_CACHE.getValidator().late())
       .add()
-      .append(new KeyedCodec<>("Min", Codec.DOUBLE, true), (t, k) -> t.min = k, t -> t.min)
+      .append(new KeyedCodec<>("Min", Codec.DOUBLE, true), (asset, value) -> asset.min = value, asset -> asset.min)
       .add()
-      .append(new KeyedCodec<>("Max", Codec.DOUBLE, true), (t, k) -> t.max = k, t -> t.max)
+      .append(new KeyedCodec<>("Max", Codec.DOUBLE, true), (asset, value) -> asset.max = value, asset -> asset.max)
       .add()
       .build();
    private String id;

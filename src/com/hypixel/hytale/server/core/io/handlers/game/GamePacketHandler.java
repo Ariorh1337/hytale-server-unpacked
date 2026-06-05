@@ -7,6 +7,7 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Rotation3fc;
 import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.protocol.AnimationSlot;
 import com.hypixel.hytale.protocol.BlockRotation;
@@ -85,6 +86,7 @@ import com.hypixel.hytale.server.core.io.handlers.IPacketHandler;
 import com.hypixel.hytale.server.core.io.handlers.IWorldPacketHandler;
 import com.hypixel.hytale.server.core.io.handlers.SubPacketHandler;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
+import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.player.PlayerCreativeSettings;
 import com.hypixel.hytale.server.core.modules.entity.player.PlayerInput;
@@ -437,7 +439,7 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
                         response.argTypeId = packet.argTypeId;
                         response.values = result.getSuggestions().toArray(new String[0]);
                         response.continuations = toBooleanArray(result.getContinuations());
-                        response.isComplete = (packet.partial == null || packet.partial.isEmpty()) && argType.getSuggestionValueCount() >= 0;
+                        response.isComplete = !result.isTruncated();
                         this.write(response);
                      }
                   }
@@ -586,7 +588,13 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
                      section.invalidateBlock(targetBlock.x, targetBlock.y, targetBlock.z);
                   } else if (!InteractionValidation.canPlayerInteractWithBlock(ref, store, itemInHand, targetBlock)) {
                      LOGGER.at(Level.WARNING)
-                        .log("Entity %d failed place block packet distance check at [%d, %d, %d]", ref.getIndex(), targetBlock.x, targetBlock.y, targetBlock.z);
+                        .log(
+                           "%s failed place block packet distance check at [%d, %d, %d]",
+                           InteractionValidation.getEntityName(ref, store),
+                           targetBlock.x,
+                           targetBlock.y,
+                           targetBlock.z
+                        );
                      section.invalidateBlock(targetBlock.x, targetBlock.y, targetBlock.z);
                   } else {
                      String heldBlockKey = itemInHand.getBlockKey();
@@ -776,11 +784,17 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
          playerRef.sendMessage(Message.translation("server.general.disconnect.teleportToCoordinatesNotAllowed"));
       } else {
          world.getChunkStore().getChunkReferenceAsync(ChunkUtil.indexChunkFromBlock(packet.x, packet.y)).thenAcceptAsync(chunkRef -> {
-            BlockChunk blockChunkComponent = world.getChunkStore().getStore().getComponent((Ref<ChunkStore>)chunkRef, BlockChunk.getComponentType());
-            assert blockChunkComponent != null;
-            Vector3d position = new Vector3d(packet.x, blockChunkComponent.getHeight(packet.x, packet.y) + 2, packet.y);
-            Teleport teleportComponent = Teleport.createForPlayer(null, position, new Rotation3f(0.0F, 0.0F, 0.0F));
-            world.getEntityStore().getStore().addComponent(playerRef.getReference(), Teleport.getComponentType(), teleportComponent);
+            if (ref.isValid()) {
+               Store<EntityStore> entityStore = ref.getStore();
+               Store<ChunkStore> chunkStore = chunkRef.getStore();
+               BlockChunk blockChunkComponent = chunkStore.getComponent((Ref<ChunkStore>)chunkRef, BlockChunk.getComponentType());
+               assert blockChunkComponent != null;
+               Vector3d position = new Vector3d(packet.x, blockChunkComponent.getHeight(packet.x, packet.y) + 2, packet.y);
+               HeadRotation headRotation = entityStore.getComponent(ref, HeadRotation.getComponentType());
+               Rotation3fc rotation = headRotation != null ? headRotation.getRotation() : Rotation3f.ZERO;
+               Teleport teleportComponent = Teleport.createForPlayer(null, position, rotation);
+               entityStore.addComponent(ref, Teleport.getComponentType(), teleportComponent);
+            }
          }, world);
       }
    }

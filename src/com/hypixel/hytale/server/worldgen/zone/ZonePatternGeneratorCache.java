@@ -1,12 +1,10 @@
 package com.hypixel.hytale.server.worldgen.zone;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
+import com.hypixel.fastutil.ints.Int2ObjectConcurrentHashMap;
 
 public class ZonePatternGeneratorCache {
-   protected final Function<Integer, ZonePatternGenerator> compute;
-   protected final Map<Integer, ZonePatternGenerator> cache = new ConcurrentHashMap<>();
+   protected final Int2ObjectConcurrentHashMap.IntFunction<ZonePatternGenerator> compute;
+   protected final Int2ObjectConcurrentHashMap<ZonePatternGenerator> cache = new Int2ObjectConcurrentHashMap<>();
 
    public ZonePatternGeneratorCache(ZonePatternProvider provider) {
       this.compute = provider::createGenerator;

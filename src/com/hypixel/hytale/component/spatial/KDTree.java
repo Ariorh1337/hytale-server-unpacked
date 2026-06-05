@@ -7,6 +7,7 @@ import java.util.function.Predicate;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.joml.Vector3d;
+import org.joml.Vector3dc;
 
 public class KDTree<T> implements SpatialStructure<T> {
    @Nonnull
@@ -89,32 +90,32 @@ public class KDTree<T> implements SpatialStructure<T> {
 
    @Nullable
    @Override
-   public T closest(@Nonnull Vector3d point) {
+   public T closest(@Nonnull Vector3dc point) {
       KDTree.ClosestState<T> closestState = new KDTree.ClosestState<>(null, Double.MAX_VALUE);
       this.closest0(closestState, this.root, point, 0);
       return closestState.node == null ? null : closestState.node.data.getFirst();
    }
 
    @Override
-   public void collect(@Nonnull Vector3d center, double radius, @Nonnull List<T> results) {
+   public void collect(@Nonnull Vector3dc center, double radius, @Nonnull List<T> results) {
       double distanceSq = radius * radius;
       this.collect0(results, this.root, center, distanceSq, 0);
    }
 
    @Override
-   public void collectCylinder(@Nonnull Vector3d center, double radius, double height, @Nonnull List<T> results) {
+   public void collectCylinder(@Nonnull Vector3dc center, double radius, double height, @Nonnull List<T> results) {
       double radiusSq = radius * radius;
       double halfHeight = height / 2.0;
       this.collectCylinder0(results, this.root, center, radiusSq, halfHeight, radius, 0);
    }
 
    @Override
-   public void collectBox(@Nonnull Vector3d min, @Nonnull Vector3d max, @Nonnull List<T> results) {
+   public void collectBox(@Nonnull Vector3dc min, @Nonnull Vector3dc max, @Nonnull List<T> results) {
       this.collectBox0(results, this.root, min, max, 0);
    }
 
    @Override
-   public void ordered(@Nonnull Vector3d center, double radius, @Nonnull List<T> results) {
+   public void ordered(@Nonnull Vector3dc center, double radius, @Nonnull List<T> results) {
       double distanceSq = radius * radius;
       ObjectArrayList<KDTree.OrderedEntry<T>> entryResults = new ObjectArrayList<>();
       this.ordered0(entryResults, this.root, center, distanceSq, 0);
@@ -133,9 +134,9 @@ public class KDTree<T> implements SpatialStructure<T> {
    }
 
    @Override
-   public void ordered3DAxis(@Nonnull Vector3d center, double xSearchRadius, double YSearchRadius, double zSearchRadius, @Nonnull List<T> results) {
+   public void ordered3DAxis(@Nonnull Vector3dc center, double xSearchRadius, double ySearchRadius, double zSearchRadius, @Nonnull List<T> results) {
       ObjectArrayList<KDTree.OrderedEntry<T>> entryResults = new ObjectArrayList<>();
-      this._internal_ordered3DAxis(entryResults, this.root, center, xSearchRadius, YSearchRadius, zSearchRadius, 0);
+      this._internal_ordered3DAxis(entryResults, this.root, center, xSearchRadius, ySearchRadius, zSearchRadius, 0);
       entryResults.sort(Comparator.comparingDouble(o -> o.distanceSq));
 
       for (KDTree.OrderedEntry<T> entry : entryResults) {
@@ -157,7 +158,7 @@ public class KDTree<T> implements SpatialStructure<T> {
    }
 
    @Nonnull
-   private KDTree.Node<T> getPooledNode(Vector3d vector, List<T> data) {
+   private KDTree.Node<T> getPooledNode(Vector3dc vector, List<T> data) {
       if (this.nodePoolIndex < this.nodePool.size()) {
          KDTree.Node<T> node = this.nodePool.get(this.nodePoolIndex++);
          node.reset(vector, data);
@@ -223,7 +224,7 @@ public class KDTree<T> implements SpatialStructure<T> {
       }
    }
 
-   private void put0(@Nonnull KDTree.Node<T> node, @Nonnull Vector3d vector, @Nonnull List<T> list, int axis) {
+   private void put0(@Nonnull KDTree.Node<T> node, @Nonnull Vector3dc vector, @Nonnull List<T> list, int axis) {
       if (compare(node.vector, vector, axis) < 0) {
          if (node.one == null) {
             node.one = this.getPooledNode(vector, list);
@@ -237,7 +238,7 @@ public class KDTree<T> implements SpatialStructure<T> {
       }
    }
 
-   private void closest0(@Nonnull KDTree.ClosestState<T> closestState, @Nullable KDTree.Node<T> node, @Nonnull Vector3d vector, int depth) {
+   private void closest0(@Nonnull KDTree.ClosestState<T> closestState, @Nullable KDTree.Node<T> node, @Nonnull Vector3dc vector, int depth) {
       if (node != null) {
          if (vector.equals(node.vector)) {
             closestState.distanceSq = 0.0;
@@ -272,7 +273,7 @@ public class KDTree<T> implements SpatialStructure<T> {
       }
    }
 
-   private void collect0(@Nonnull List<T> results, @Nullable KDTree.Node<T> node, @Nonnull Vector3d vector, double distanceSq, int depth) {
+   private void collect0(@Nonnull List<T> results, @Nullable KDTree.Node<T> node, @Nonnull Vector3dc vector, double distanceSq, int depth) {
       if (node != null) {
          int axis = depth % 3;
          int compare = compare(node.vector, vector, axis);
@@ -309,15 +310,15 @@ public class KDTree<T> implements SpatialStructure<T> {
    }
 
    private void collectCylinder0(
-      @Nonnull List<T> results, @Nullable KDTree.Node<T> node, @Nonnull Vector3d center, double radiusSq, double halfHeight, double radius, int depth
+      @Nonnull List<T> results, @Nullable KDTree.Node<T> node, @Nonnull Vector3dc center, double radiusSq, double halfHeight, double radius, int depth
    ) {
       if (node != null) {
          int axis = depth % 3;
          int compare = compare(node.vector, center, axis);
-         double dy = node.vector.y - center.y;
+         double dy = node.vector.y() - center.y();
          if (Math.abs(dy) <= halfHeight) {
-            double dx = node.vector.x - center.x;
-            double dz = node.vector.z - center.z;
+            double dx = node.vector.x() - center.x();
+            double dz = node.vector.z() - center.z();
             double xzDistanceSq = dx * dx + dz * dz;
             if (xzDistanceSq <= radiusSq) {
                int i = 0;
@@ -351,15 +352,15 @@ public class KDTree<T> implements SpatialStructure<T> {
       }
    }
 
-   private void collectBox0(@Nonnull List<T> results, @Nullable KDTree.Node<T> node, @Nonnull Vector3d min, @Nonnull Vector3d max, int depth) {
+   private void collectBox0(@Nonnull List<T> results, @Nullable KDTree.Node<T> node, @Nonnull Vector3dc min, @Nonnull Vector3dc max, int depth) {
       if (node != null) {
          int axis = depth % 3;
-         if (node.vector.x >= min.x
-            && node.vector.x <= max.x
-            && node.vector.y >= min.y
-            && node.vector.y <= max.y
-            && node.vector.z >= min.z
-            && node.vector.z <= max.z) {
+         if (node.vector.x() >= min.x()
+            && node.vector.x() <= max.x()
+            && node.vector.y() >= min.y()
+            && node.vector.y() <= max.y()
+            && node.vector.z() >= min.z()
+            && node.vector.z() <= max.z()) {
             int i = 0;
 
             for (int bound = node.data.size(); i < bound; i++) {
@@ -384,7 +385,7 @@ public class KDTree<T> implements SpatialStructure<T> {
       }
    }
 
-   private void ordered0(@Nonnull List<KDTree.OrderedEntry<T>> results, @Nullable KDTree.Node<T> node, @Nonnull Vector3d vector, double distanceSq, int depth) {
+   private void ordered0(@Nonnull List<KDTree.OrderedEntry<T>> results, @Nullable KDTree.Node<T> node, @Nonnull Vector3dc vector, double distanceSq, int depth) {
       if (node != null) {
          int axis = depth % 3;
          int compare = compare(node.vector, vector, axis);
@@ -416,7 +417,7 @@ public class KDTree<T> implements SpatialStructure<T> {
    private void _internal_ordered3DAxis(
       @Nonnull List<KDTree.OrderedEntry<T>> results,
       @Nullable KDTree.Node<T> node,
-      @Nonnull Vector3d center,
+      @Nonnull Vector3dc center,
       double xSearchRadius,
       double ySearchRadius,
       double zSearchRadius,
@@ -424,12 +425,12 @@ public class KDTree<T> implements SpatialStructure<T> {
    ) {
       if (node != null) {
          int axis = depth % 3;
-         boolean inCuboid = node.vector.x >= center.x - xSearchRadius
-            && node.vector.x <= center.x + xSearchRadius
-            && node.vector.y >= center.y - ySearchRadius
-            && node.vector.y <= center.y + ySearchRadius
-            && node.vector.z >= center.z - zSearchRadius
-            && node.vector.z <= center.z + zSearchRadius;
+         boolean inCuboid = node.vector.x() >= center.x() - xSearchRadius
+            && node.vector.x() <= center.x() + xSearchRadius
+            && node.vector.y() >= center.y() - ySearchRadius
+            && node.vector.y() <= center.y() + ySearchRadius
+            && node.vector.z() >= center.z() - zSearchRadius
+            && node.vector.z() <= center.z() + zSearchRadius;
          if (inCuboid) {
             double nodeDistanceSq = node.vector.distanceSquared(center);
             results.add(new KDTree.OrderedEntry<>(nodeDistanceSq, node.data));
@@ -449,20 +450,20 @@ public class KDTree<T> implements SpatialStructure<T> {
       }
    }
 
-   private static int compare(@Nonnull Vector3d v1, @Nonnull Vector3d v2, int axis) {
+   private static int compare(@Nonnull Vector3dc v1, @Nonnull Vector3dc v2, int axis) {
       return switch (axis) {
-         case 0 -> Double.compare(v1.x, v2.x);
-         case 1 -> Double.compare(v1.z, v2.z);
-         case 2 -> Double.compare(v1.y, v2.y);
+         case 0 -> Double.compare(v1.x(), v2.x());
+         case 1 -> Double.compare(v1.z(), v2.z());
+         case 2 -> Double.compare(v1.y(), v2.y());
          default -> throw new IllegalArgumentException("Invalid axis: " + axis);
       };
    }
 
-   private static double get(@Nonnull Vector3d v, int axis) {
+   private static double get(@Nonnull Vector3dc v, int axis) {
       return switch (axis) {
-         case 0 -> v.x;
-         case 1 -> v.z;
-         case 2 -> v.y;
+         case 0 -> v.x();
+         case 1 -> v.z();
+         case 2 -> v.y();
          default -> throw new IllegalArgumentException("Invalid axis: " + axis);
       };
    }
@@ -478,19 +479,19 @@ public class KDTree<T> implements SpatialStructure<T> {
    }
 
    private static class Node<T> {
-      private Vector3d vector;
+      private Vector3dc vector;
       private List<T> data;
       @Nullable
       private KDTree.Node<T> one;
       @Nullable
       private KDTree.Node<T> two;
 
-      public Node(Vector3d vector, List<T> data) {
+      public Node(Vector3dc vector, List<T> data) {
          this.vector = vector;
          this.data = data;
       }
 
-      public void reset(Vector3d vector, List<T> data) {
+      public void reset(Vector3dc vector, List<T> data) {
          this.vector = vector;
          this.data = data;
          this.one = null;

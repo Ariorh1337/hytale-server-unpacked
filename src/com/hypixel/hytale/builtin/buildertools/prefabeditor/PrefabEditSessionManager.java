@@ -373,6 +373,7 @@ public class PrefabEditSessionManager {
 
          WorldConfig config = new WorldConfig();
          boolean enableTicking = context.isWorldTickingEnabled();
+         config.setBlockSpawnersResolved(false);
          config.setBlockTicking(enableTicking);
          config.setSpawningNPC(false);
          config.setIsSpawnMarkersEnabled(false);

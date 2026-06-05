@@ -13,7 +13,11 @@ public class OffsetDensityAsset extends DensityAsset {
    public static final BuilderCodec<OffsetDensityAsset> CODEC = BuilderCodec.builder(
          OffsetDensityAsset.class, OffsetDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("FunctionForY", NodeFunctionYOutAsset.CODEC, true), (t, k) -> t.nodeFunctionYOutAsset = k, k -> k.nodeFunctionYOutAsset)
+      .append(
+         new KeyedCodec<>("FunctionForY", NodeFunctionYOutAsset.CODEC, true),
+         (asset, value) -> asset.nodeFunctionYOutAsset = value,
+         asset -> asset.nodeFunctionYOutAsset
+      )
       .add()
       .build();
    @Nonnull

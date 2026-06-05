@@ -5,8 +5,6 @@ import com.hypixel.hytale.assetstore.AssetKeyValidator;
 import com.hypixel.hytale.assetstore.AssetRegistry;
 import com.hypixel.hytale.assetstore.AssetStore;
 import com.hypixel.hytale.assetstore.codec.AssetBuilderCodec;
-import com.hypixel.hytale.assetstore.event.LoadedAssetsEvent;
-import com.hypixel.hytale.assetstore.event.RemovedAssetsEvent;
 import com.hypixel.hytale.assetstore.map.IndexedLookupTableAssetMap;
 import com.hypixel.hytale.assetstore.map.JsonAssetWithMap;
 import com.hypixel.hytale.codec.Codec;
@@ -17,7 +15,7 @@ import com.hypixel.hytale.codec.validation.ValidatorCache;
 import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.common.util.AudioUtil;
 import com.hypixel.hytale.server.core.asset.type.audiocategory.config.AudioCategory;
-import com.hypixel.hytale.server.core.asset.type.audiostate.config.AudioState;
+import com.hypixel.hytale.server.core.asset.type.audiocategory.config.AudioCategoryDuckingRuleConfig;
 import com.hypixel.hytale.server.core.asset.type.audiostate.config.AudioStateResolver;
 import com.hypixel.hytale.server.core.asset.type.audiostate.config.StateBindingConfig;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
@@ -54,24 +52,6 @@ public class SoundEvent
       )
       .addValidator(Validators.range(-12.0F, 12.0F))
       .documentation("Pitch adjustment of the sound event in semitones.")
-      .add()
-      .<Float>appendInherited(
-         new KeyedCodec<>("MusicDuckingVolume", Codec.FLOAT),
-         (soundEvent, f) -> soundEvent.musicDuckingVolume = AudioUtil.decibelsToLinearGain(f),
-         soundEvent -> AudioUtil.linearGainToDecibels(soundEvent.musicDuckingVolume),
-         (soundEvent, parent) -> soundEvent.musicDuckingVolume = parent.musicDuckingVolume
-      )
-      .addValidator(Validators.range(-100.0F, 0.0F))
-      .documentation("Amount to duck music volume when playing in decibels.")
-      .add()
-      .<Float>appendInherited(
-         new KeyedCodec<>("AmbientDuckingVolume", Codec.FLOAT),
-         (soundEvent, f) -> soundEvent.ambientDuckingVolume = AudioUtil.decibelsToLinearGain(f),
-         soundEvent -> AudioUtil.linearGainToDecibels(soundEvent.ambientDuckingVolume),
-         (soundEvent, parent) -> soundEvent.ambientDuckingVolume = parent.ambientDuckingVolume
-      )
-      .addValidator(Validators.range(-100.0F, 0.0F))
-      .documentation("Amount to duck ambient sounds when playing in decibels.")
       .add()
       .<Float>appendInherited(
          new KeyedCodec<>("StartAttenuationDistance", Codec.FLOAT),
@@ -143,8 +123,23 @@ public class SoundEvent
       )
       .documentation("Subscribe this sound event to AudioState axes. Per-state volume deltas will be applied to all layers.")
       .add()
+      .<AudioCategoryDuckingRuleConfig[]>append(
+         new KeyedCodec<>("DuckingRules", AudioCategoryDuckingRuleConfig.CODEC_ARRAY),
+         (soundEvent, v) -> soundEvent.duckingRules = v,
+         soundEvent -> soundEvent.duckingRules
+      )
+      .documentation("While any layer of this SoundEvent is playing, each rule attenuates its TargetCategory.")
+      .add()
+      .<Boolean>append(
+         new KeyedCodec<>("BypassDucking", Codec.BOOLEAN), (soundEvent, b) -> soundEvent.bypassDucking = b, soundEvent -> soundEvent.bypassDucking
+      )
+      .documentation("When true, this SoundEvent's voices ignore the ducking contribution of their routing category.")
+      .add()
       .afterDecode(SoundEvent::processConfig)
-      .validator((soundEvent, results) -> AudioStateResolver.validateBindings(soundEvent.stateBindings, "SoundEvent '" + soundEvent.id + "'", results))
+      .validator((soundEvent, results) -> {
+         AudioStateResolver.validateBindings(soundEvent.stateBindings, "SoundEvent '" + soundEvent.id + "'", results);
+         AudioCategoryDuckingRuleConfig.validateUniqueTargets(soundEvent.duckingRules, "SoundEvent '" + soundEvent.id + "'", results);
+      })
       .build();
    public static final ValidatorCache<String> VALIDATOR_CACHE = new ValidatorCache<>(new AssetKeyValidator<>(SoundEvent::getAssetStore));
    private static AssetStore<String, SoundEvent, IndexedLookupTableAssetMap<String, SoundEvent>> ASSET_STORE;
@@ -152,8 +147,6 @@ public class SoundEvent
    protected String id;
    protected transient float volume = 1.0F;
    protected transient float pitch = 1.0F;
-   protected transient float musicDuckingVolume = 1.0F;
-   protected transient float ambientDuckingVolume = 1.0F;
    protected float startAttenuationDistance = 2.0F;
    protected float maxDistance = 16.0F;
    protected float spatialBlend = 0.6F;
@@ -165,6 +158,9 @@ public class SoundEvent
    protected transient int audioCategoryIndex = 0;
    @Nullable
    protected StateBindingConfig[] stateBindings;
+   @Nullable
+   protected AudioCategoryDuckingRuleConfig[] duckingRules;
+   protected boolean bypassDucking;
    protected transient int highestNumberOfChannels = 0;
    private SoftReference<com.hypixel.hytale.protocol.SoundEvent> cachedPacket;
 
@@ -196,12 +192,19 @@ public class SoundEvent
       AudioStateResolver.resolveBindings(this.stateBindings);
    }
 
+   @Nullable
+   public AudioCategoryDuckingRuleConfig[] getDuckingRules() {
+      return this.duckingRules;
+   }
+
+   public void invalidatePacketCache() {
+      this.cachedPacket = null;
+   }
+
    public SoundEvent(
       String id,
       float volume,
       float pitch,
-      float musicDuckingVolume,
-      float ambientDuckingVolume,
       float startAttenuationDistance,
       float maxDistance,
       int maxInstance,
@@ -211,8 +214,6 @@ public class SoundEvent
       this.id = id;
       this.volume = volume;
       this.pitch = pitch;
-      this.musicDuckingVolume = musicDuckingVolume;
-      this.ambientDuckingVolume = ambientDuckingVolume;
       this.startAttenuationDistance = startAttenuationDistance;
       this.maxDistance = maxDistance;
       this.maxInstance = maxInstance;
@@ -231,43 +232,12 @@ public class SoundEvent
       return this.id;
    }
 
-   public void refreshAudioStateResolution() {
-      AudioStateResolver.resolveBindings(this.stateBindings);
-      this.cachedPacket = null;
-   }
-
-   public static void onAudioStateLoaded(@Nonnull LoadedAssetsEvent<String, AudioState, IndexedLookupTableAssetMap<String, AudioState>> event) {
-      if (!event.isInitial()) {
-         refreshAllAudioStateResolutions();
-      }
-   }
-
-   public static void onAudioStateRemoved(@Nonnull RemovedAssetsEvent<String, AudioState, IndexedLookupTableAssetMap<String, AudioState>> event) {
-      refreshAllAudioStateResolutions();
-   }
-
-   private static void refreshAllAudioStateResolutions() {
-      for (SoundEvent se : getAssetMap().getAssetMap().values()) {
-         if (se != null) {
-            se.refreshAudioStateResolution();
-         }
-      }
-   }
-
    public float getVolume() {
       return this.volume;
    }
 
    public float getPitch() {
       return this.pitch;
-   }
-
-   public float getMusicDuckingVolume() {
-      return this.musicDuckingVolume;
-   }
-
-   public float getAmbientDuckingVolume() {
-      return this.ambientDuckingVolume;
    }
 
    public float getStartAttenuationDistance() {
@@ -316,10 +286,6 @@ public class SoundEvent
          + this.volume
          + ", pitch="
          + this.pitch
-         + ", musicDuckingVolume="
-         + this.musicDuckingVolume
-         + ", ambientDuckingVolume="
-         + this.ambientDuckingVolume
          + ", startAttenuationDistance="
          + this.startAttenuationDistance
          + ", maxDistance="
@@ -352,8 +318,6 @@ public class SoundEvent
       packet.id = this.id;
       packet.volume = this.volume;
       packet.pitch = this.pitch;
-      packet.musicDuckingVolume = this.musicDuckingVolume;
-      packet.ambientDuckingVolume = this.ambientDuckingVolume;
       packet.startAttenuationDistance = this.startAttenuationDistance;
       packet.maxDistance = this.maxDistance;
       packet.spatialBlend = this.spatialBlend;
@@ -369,6 +333,8 @@ public class SoundEvent
       }
 
       packet.stateBindings = AudioStateResolver.toPacketArray(this.stateBindings);
+      packet.duckingRules = AudioCategoryDuckingRuleConfig.toPacketArray(this.duckingRules);
+      packet.bypassDucking = this.bypassDucking;
       this.cachedPacket = new SoftReference<>(packet);
       return packet;
    }

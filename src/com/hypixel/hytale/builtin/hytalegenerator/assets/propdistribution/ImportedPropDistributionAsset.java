@@ -13,7 +13,7 @@ public class ImportedPropDistributionAsset extends PropDistributionAsset {
    public static final BuilderCodec<ImportedPropDistributionAsset> CODEC = BuilderCodec.builder(
          ImportedPropDistributionAsset.class, ImportedPropDistributionAsset::new, PropDistributionAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Name", Codec.STRING, true), (asset, v) -> asset.name = v, asset -> asset.name)
+      .append(new KeyedCodec<>("Name", Codec.STRING, true), (asset, value) -> asset.name = value, asset -> asset.name)
       .add()
       .build();
    private String name = "";

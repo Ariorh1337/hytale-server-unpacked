@@ -21,7 +21,7 @@ public class SandwichAssignmentsAsset extends AssignmentsAsset {
       )
       .append(
          new KeyedCodec<>("Delimiters", new ArrayCodec<>(SandwichAssignmentsAsset.DelimiterAsset.CODEC, SandwichAssignmentsAsset.DelimiterAsset[]::new), true),
-         (asset, v) -> asset.delimiterAssets = v,
+         (asset, value) -> asset.delimiterAssets = value,
          asset -> asset.delimiterAssets
       )
       .add()
@@ -59,16 +59,18 @@ public class SandwichAssignmentsAsset extends AssignmentsAsset {
             SandwichAssignmentsAsset.DelimiterAsset.class,
             SandwichAssignmentsAsset.DelimiterAsset::new,
             Codec.STRING,
-            (asset, id) -> asset.id = id,
-            config -> config.id,
-            (config, data) -> config.data = data,
-            config -> config.data
+            (asset, value) -> asset.id = value,
+            asset -> asset.id,
+            (asset, value) -> asset.data = value,
+            asset -> asset.data
          )
-         .append(new KeyedCodec<>("Assignments", AssignmentsAsset.CODEC, true), (t, v) -> t.assignmentsAsset = v, t -> t.assignmentsAsset)
+         .append(
+            new KeyedCodec<>("Assignments", AssignmentsAsset.CODEC, true), (asset, value) -> asset.assignmentsAsset = value, asset -> asset.assignmentsAsset
+         )
          .add()
-         .append(new KeyedCodec<>("MinY", Codec.DOUBLE, true), (t, v) -> t.min = v, t -> t.min)
+         .append(new KeyedCodec<>("MinY", Codec.DOUBLE, true), (asset, value) -> asset.min = value, asset -> asset.min)
          .add()
-         .append(new KeyedCodec<>("MaxY", Codec.DOUBLE, true), (t, v) -> t.max = v, t -> t.max)
+         .append(new KeyedCodec<>("MaxY", Codec.DOUBLE, true), (asset, value) -> asset.max = value, asset -> asset.max)
          .add()
          .build();
       private String id;

@@ -14,19 +14,19 @@ public class MeshPointGeneratorAsset extends PointGeneratorAsset {
    public static final BuilderCodec<MeshPointGeneratorAsset> CODEC = BuilderCodec.builder(
          MeshPointGeneratorAsset.class, MeshPointGeneratorAsset::new, PointGeneratorAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Jitter", Codec.DOUBLE, true), (asset, v) -> asset.jitter = v, asset -> asset.jitter)
+      .append(new KeyedCodec<>("Jitter", Codec.DOUBLE, true), (asset, value) -> asset.jitter = value, asset -> asset.jitter)
       .addValidator(Validators.range(0.0, 0.5))
       .add()
-      .<Double>append(new KeyedCodec<>("ScaleX", Codec.DOUBLE, true), (asset, v) -> asset.scaleX = v, asset -> asset.scaleX)
+      .<Double>append(new KeyedCodec<>("ScaleX", Codec.DOUBLE, true), (asset, value) -> asset.scaleX = value, asset -> asset.scaleX)
       .addValidator(Validators.greaterThan(0.0))
       .add()
-      .<Double>append(new KeyedCodec<>("ScaleY", Codec.DOUBLE, true), (asset, v) -> asset.scaleY = v, asset -> asset.scaleY)
+      .<Double>append(new KeyedCodec<>("ScaleY", Codec.DOUBLE, true), (asset, value) -> asset.scaleY = value, asset -> asset.scaleY)
       .addValidator(Validators.greaterThan(0.0))
       .add()
-      .<Double>append(new KeyedCodec<>("ScaleZ", Codec.DOUBLE, true), (asset, v) -> asset.scaleZ = v, asset -> asset.scaleZ)
+      .<Double>append(new KeyedCodec<>("ScaleZ", Codec.DOUBLE, true), (asset, value) -> asset.scaleZ = value, asset -> asset.scaleZ)
       .addValidator(Validators.greaterThan(0.0))
       .add()
-      .append(new KeyedCodec<>("Seed", Codec.STRING, true), (asset, seed) -> asset.seedKey = seed, asset -> asset.seedKey)
+      .append(new KeyedCodec<>("Seed", Codec.STRING, true), (asset, value) -> asset.seedKey = value, asset -> asset.seedKey)
       .add()
       .build();
    private double jitter = 0.35;

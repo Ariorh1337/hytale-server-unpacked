@@ -8,10 +8,13 @@ import com.hypixel.hytale.server.npc.asset.builder.Feature;
 import com.hypixel.hytale.server.npc.asset.builder.holder.AssetHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.BooleanHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.DoubleHolder;
+import com.hypixel.hytale.server.npc.asset.builder.holder.IntHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.NumberArrayHolder;
 import com.hypixel.hytale.server.npc.asset.builder.validators.AssetValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.DoubleRangeValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.DoubleSequenceValidator;
+import com.hypixel.hytale.server.npc.asset.builder.validators.IntRangeValidator;
+import com.hypixel.hytale.server.npc.asset.builder.validators.RelationalOperator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.asset.BlockSetExistsValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.asset.RootInteractionValidator;
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderBodyMotionBase;
@@ -32,7 +35,6 @@ public class BuilderBodyMotionCharge extends BuilderBodyMotionBase {
    protected final NumberArrayHolder windingUpDurationRange = new NumberArrayHolder();
    protected final NumberArrayHolder postChargeDurationRange = new NumberArrayHolder();
    protected final BooleanHolder windingUpUninterruptable = new BooleanHolder();
-   protected final BooleanHolder chargingUninterruptable = new BooleanHolder();
    protected final BooleanHolder clearOnceOnStateChange = new BooleanHolder();
    protected final DoubleHolder chargeAbsoluteSpeed = new DoubleHolder();
    protected final DoubleHolder chargeAcceleration = new DoubleHolder();
@@ -45,8 +47,13 @@ public class BuilderBodyMotionCharge extends BuilderBodyMotionBase {
    protected final DoubleHolder climbSlope = new DoubleHolder();
    protected final DoubleHolder dropSlope = new DoubleHolder();
    protected final DoubleHolder horizontalSkipGapWidth = new DoubleHolder();
-   protected double lockedOnToleranceAngleDegrees;
-   private String ignoredBlockSet;
+   protected final DoubleHolder knockbackThreshold = new DoubleHolder();
+   protected final DoubleHolder probeChargeRecomputeDistance = new DoubleHolder();
+   protected final IntHolder probeMinFrequency = new IntHolder();
+   protected final IntHolder probeMaxFrequency = new IntHolder();
+   protected final DoubleHolder probeMinDirectionChangeDegrees = new DoubleHolder();
+   protected final DoubleHolder lockedOnToleranceAngleDegrees = new DoubleHolder();
+   protected final AssetHolder ignoredBlockSet = new AssetHolder();
 
    @Nonnull
    public BodyMotion build(@Nonnull BuilderSupport builderSupport) {
@@ -86,7 +93,7 @@ public class BuilderBodyMotionCharge extends BuilderBodyMotionBase {
       this.getDouble(
          data,
          "LockedOnToleranceAngle",
-         d -> this.lockedOnToleranceAngleDegrees = d,
+         this.lockedOnToleranceAngleDegrees,
          15.0,
          DoubleRangeValidator.fromExclToIncl(0.0, 360.0),
          BuilderDescriptorState.Stable,
@@ -139,7 +146,7 @@ public class BuilderBodyMotionCharge extends BuilderBodyMotionBase {
          1.0,
          DoubleRangeValidator.between(0.0, 2.0),
          BuilderDescriptorState.Stable,
-         "Relative turn speed during WindingUp",
+         "Relative turn speed during WindingUp. Can be 0 to disable rotation in that phase",
          null
       );
       this.getDouble(
@@ -164,7 +171,7 @@ public class BuilderBodyMotionCharge extends BuilderBodyMotionBase {
       this.getAsset(
          data,
          "IgnoredBlockSet",
-         v -> this.ignoredBlockSet = v,
+         this.ignoredBlockSet,
          "",
          BlockSetExistsValidator.withConfig(AssetValidator.CanBeEmpty),
          BuilderDescriptorState.Stable,
@@ -289,6 +296,57 @@ public class BuilderBodyMotionCharge extends BuilderBodyMotionBase {
          "Maximum horizontal width (in blocks) the NPC may stride over while sloping a climb/drop or when collapsing a drop+climb dip whose endpoints are at the same height. 0 disables both shortcuts",
          null
       );
+      this.getDouble(
+         data,
+         "KnockbackThreshold",
+         this.knockbackThreshold,
+         0.0,
+         DoubleRangeValidator.between(0.0, Double.MAX_VALUE),
+         BuilderDescriptorState.Stable,
+         "Threshold for external knockback magnitude while Charging. If the combined external velocity is below this value the knockback is ignored and cleared; otherwise Charging transitions to Knockback",
+         null
+      );
+      this.getDouble(
+         data,
+         "ProbeChargeRecomputeDistance",
+         this.probeChargeRecomputeDistance,
+         0.0,
+         DoubleRangeValidator.between(-Double.MAX_VALUE, Double.MAX_VALUE),
+         BuilderDescriptorState.Stable,
+         "Interval in blocks during Charging for re-validating the walk path against world changes (2D motion controllers only). Must be > 0; values <= 0 disable mid-charge re-validation",
+         null
+      );
+      this.getInt(
+         data,
+         "ProbeMinFrequency",
+         this.probeMinFrequency,
+         2,
+         IntRangeValidator.between(0, 30),
+         BuilderDescriptorState.Stable,
+         "Minimum frequency for executing the reachability test during updates. 0 means maximum frequency (as often as possible)",
+         null
+      );
+      this.getInt(
+         data,
+         "ProbeMaxFrequency",
+         this.probeMaxFrequency,
+         10,
+         IntRangeValidator.between(0, 30),
+         BuilderDescriptorState.Stable,
+         "Maximum frequency for executing the reachability test during updates. 0 means maximum frequency (as often as possible)",
+         null
+      );
+      this.validateIntRelation(this.probeMinFrequency, RelationalOperator.LessEqual, this.probeMaxFrequency);
+      this.getDouble(
+         data,
+         "ProbeMinDirectionChange",
+         this.probeMinDirectionChangeDegrees,
+         5.0,
+         DoubleRangeValidator.between(0.0, 180.0),
+         BuilderDescriptorState.Stable,
+         "Minimum angular change to target in degrees required before executing another reachability test",
+         null
+      );
       this.requireFeature(Feature.AnyPosition);
       this.providePreceding(BodyMotionCharge.class);
       return this;
@@ -298,8 +356,8 @@ public class BuilderBodyMotionCharge extends BuilderBodyMotionBase {
       return this.relativeTurnSpeed.get(support.getExecutionContext());
    }
 
-   public double getLockedOnHalfAngleRadians() {
-      return this.lockedOnToleranceAngleDegrees / 2.0 * (float) (Math.PI / 180.0);
+   public double getLockedOnHalfAngleRadians(@Nonnull BuilderSupport support) {
+      return this.lockedOnToleranceAngleDegrees.get(support.getExecutionContext()) / 2.0 * (float) (Math.PI / 180.0);
    }
 
    @Nonnull
@@ -321,10 +379,6 @@ public class BuilderBodyMotionCharge extends BuilderBodyMotionBase {
       return this.windingUpUninterruptable.get(support.getExecutionContext());
    }
 
-   public boolean isChargingUninterruptable(@Nonnull BuilderSupport support) {
-      return this.chargingUninterruptable.get(support.getExecutionContext());
-   }
-
    public boolean isClearOnceOnStateChange(@Nonnull BuilderSupport support) {
       return this.clearOnceOnStateChange.get(support.getExecutionContext());
    }
@@ -342,11 +396,12 @@ public class BuilderBodyMotionCharge extends BuilderBodyMotionBase {
       return this.chargeDistanceRange.get(support.getExecutionContext());
    }
 
-   public int getIgnoredBlockSet() {
-      if (this.ignoredBlockSet != null && !this.ignoredBlockSet.isEmpty()) {
-         int index = BlockSet.getAssetMap().getIndex(this.ignoredBlockSet);
+   public int getIgnoredBlockSet(@Nonnull BuilderSupport support) {
+      String key = this.ignoredBlockSet.get(support.getExecutionContext());
+      if (key != null && !key.isEmpty()) {
+         int index = BlockSet.getAssetMap().getIndex(key);
          if (index == Integer.MIN_VALUE) {
-            throw new IllegalArgumentException("Unknown BlockSet: " + this.ignoredBlockSet);
+            throw new IllegalArgumentException("Unknown BlockSet: " + key);
          } else {
             return index;
          }
@@ -403,5 +458,34 @@ public class BuilderBodyMotionCharge extends BuilderBodyMotionBase {
 
    public double getRepeatCollisionIgnoreDuration(@Nonnull BuilderSupport support) {
       return this.repeatCollisionIgnoreDuration.get(support.getExecutionContext());
+   }
+
+   public double getKnockbackThreshold(@Nonnull BuilderSupport support) {
+      return this.knockbackThreshold.get(support.getExecutionContext());
+   }
+
+   public double getProbeChargeRecomputeDistance(@Nonnull BuilderSupport support) {
+      return this.probeChargeRecomputeDistance.get(support.getExecutionContext());
+   }
+
+   public double getProbeMinInterval(@Nonnull BuilderSupport support) {
+      return frequencyToDuration(this.probeMaxFrequency.get(support.getExecutionContext()));
+   }
+
+   public double getProbeMaxInterval(@Nonnull BuilderSupport support) {
+      return frequencyToDuration(this.probeMinFrequency.get(support.getExecutionContext()));
+   }
+
+   public double getProbeMinDirectionChangeRadians(@Nonnull BuilderSupport support) {
+      return this.probeMinDirectionChangeDegrees.get(support.getExecutionContext()) * (float) (Math.PI / 180.0);
+   }
+
+   private static double frequencyToDuration(int frequency) {
+      if (frequency <= 0) {
+         return 0.0;
+      }
+
+      int cappedFrequency = Math.min(frequency, 30);
+      return 1.0 / cappedFrequency;
    }
 }

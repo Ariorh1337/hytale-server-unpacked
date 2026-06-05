@@ -20,21 +20,27 @@ public class SpaceAndDepthMaterialProviderAsset extends MaterialProviderAsset {
    public static final BuilderCodec<SpaceAndDepthMaterialProviderAsset> CODEC = BuilderCodec.builder(
          SpaceAndDepthMaterialProviderAsset.class, SpaceAndDepthMaterialProviderAsset::new, MaterialProviderAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("LayerContext", SpaceAndDepthMaterialProvider.LayerContextType.CODEC, true), (t, k) -> t.layerContext = k, k -> k.layerContext)
+      .append(
+         new KeyedCodec<>("LayerContext", SpaceAndDepthMaterialProvider.LayerContextType.CODEC, true),
+         (asset, value) -> asset.layerContext = value,
+         asset -> asset.layerContext
+      )
       .add()
-      .<Integer>append(new KeyedCodec<>("MaxExpectedDepth", Codec.INTEGER, true), (t, k) -> t.maxDistance = k, k -> k.maxDistance)
+      .<Integer>append(new KeyedCodec<>("MaxExpectedDepth", Codec.INTEGER, true), (asset, value) -> asset.maxDistance = value, asset -> asset.maxDistance)
       .addValidator(Validators.greaterThanOrEqual(0))
       .add()
-      .append(new KeyedCodec<>("Condition", ConditionAsset.CODEC, false), (t, k) -> t.conditionAsset = k, k -> k.conditionAsset)
+      .append(new KeyedCodec<>("Condition", ConditionAsset.CODEC, false), (asset, value) -> asset.conditionAsset = value, asset -> asset.conditionAsset)
       .add()
       .<LayerAsset[]>append(
-         new KeyedCodec<>("Layers", new ArrayCodec<>(LayerAsset.CODEC, LayerAsset[]::new), false), (t, k) -> t.layerAssets = k, k -> k.layerAssets
+         new KeyedCodec<>("Layers", new ArrayCodec<>(LayerAsset.CODEC, LayerAsset[]::new), false),
+         (asset, value) -> asset.layerAssets = value,
+         asset -> asset.layerAssets
       )
       .addValidator(Validators.nonNullArrayElements())
       .add()
       .build();
    private SpaceAndDepthMaterialProvider.LayerContextType layerContext = SpaceAndDepthMaterialProvider.LayerContextType.DEPTH_INTO_FLOOR;
-   private int maxDistance = 16;
+   private int maxDistance = 3;
    private ConditionAsset conditionAsset = new AlwaysTrueConditionAsset();
    private LayerAsset[] layerAssets = new LayerAsset[0];
 

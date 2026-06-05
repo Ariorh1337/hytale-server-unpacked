@@ -31,11 +31,11 @@ public class DensityDelimitedEnvironmentProviderAsset extends EnvironmentProvide
             new ArrayCodec<>(DensityDelimitedEnvironmentProviderAsset.DelimiterAsset.CODEC, DensityDelimitedEnvironmentProviderAsset.DelimiterAsset[]::new),
             true
          ),
-         (t, k) -> t.delimiterAssets = k,
-         k -> k.delimiterAssets
+         (asset, value) -> asset.delimiterAssets = value,
+         asset -> asset.delimiterAssets
       )
       .add()
-      .append(new KeyedCodec<>("Density", DensityAsset.CODEC, true), (t, value) -> t.densityAsset = value, t -> t.densityAsset)
+      .append(new KeyedCodec<>("Density", DensityAsset.CODEC, true), (asset, value) -> asset.densityAsset = value, asset -> asset.densityAsset)
       .add()
       .build();
    private DensityDelimitedEnvironmentProviderAsset.DelimiterAsset[] delimiterAssets = new DensityDelimitedEnvironmentProviderAsset.DelimiterAsset[0];
@@ -75,17 +75,17 @@ public class DensityDelimitedEnvironmentProviderAsset extends EnvironmentProvide
             DensityDelimitedEnvironmentProviderAsset.DelimiterAsset.class,
             DensityDelimitedEnvironmentProviderAsset.DelimiterAsset::new,
             Codec.STRING,
-            (asset, id) -> asset.id = id,
-            config -> config.id,
-            (config, data) -> config.data = data,
-            config -> config.data
+            (asset, value) -> asset.id = value,
+            asset -> asset.id,
+            (asset, value) -> asset.data = value,
+            asset -> asset.data
          )
-         .append(new KeyedCodec<>("Range", RangeDoubleAsset.CODEC, true), (t, value) -> t.rangeAsset = value, t -> t.rangeAsset)
+         .append(new KeyedCodec<>("Range", RangeDoubleAsset.CODEC, true), (asset, value) -> asset.rangeAsset = value, asset -> asset.rangeAsset)
          .add()
          .append(
             new KeyedCodec<>("Environment", EnvironmentProviderAsset.CODEC, true),
-            (t, value) -> t.environmentProviderAsset = value,
-            t -> t.environmentProviderAsset
+            (asset, value) -> asset.environmentProviderAsset = value,
+            asset -> asset.environmentProviderAsset
          )
          .add()
          .build();

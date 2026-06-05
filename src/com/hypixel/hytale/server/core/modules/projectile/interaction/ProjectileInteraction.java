@@ -16,6 +16,7 @@ import com.hypixel.hytale.protocol.WaitForDataFrom;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInstantInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.util.InteractionValidation;
 import com.hypixel.hytale.server.core.modules.physics.component.Velocity;
 import com.hypixel.hytale.server.core.modules.projectile.ProjectileModule;
 import com.hypixel.hytale.server.core.modules.projectile.config.BallisticData;
@@ -125,7 +126,12 @@ public class ProjectileInteraction extends SimpleInstantInteraction implements B
          double desyncAllowanceSq = Math.max(velocityComponent.getClientVelocity().lengthSquared(), SPAWN_TRANSFORM_DESYNC_ALLOWANCE_MINIMUM_SQUARED);
          if (distSq > desyncAllowanceSq * SPAWN_TRANSFORM_DESYNC_ALLOWANCE_MULTIPLIER) {
             LOGGER.at(Level.WARNING)
-               .log("Entity %d was too far from requested projectile spawn position (%f > %f)", context.getEntity().getIndex(), distSq, desyncAllowanceSq);
+               .log(
+                  "%s was too far from requested projectile spawn position (%f > %f)",
+                  InteractionValidation.getEntityName(context.getEntity(), context.getCommandBuffer()),
+                  distSq,
+                  desyncAllowanceSq
+               );
             return serverTransform;
          } else {
             return new Transform(

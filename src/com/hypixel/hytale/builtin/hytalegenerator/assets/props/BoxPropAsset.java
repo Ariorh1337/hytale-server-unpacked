@@ -18,13 +18,13 @@ import org.joml.Vector3i;
 public class BoxPropAsset extends PropAsset {
    @Nonnull
    public static final BuilderCodec<BoxPropAsset> CODEC = BuilderCodec.builder(BoxPropAsset.class, BoxPropAsset::new, PropAsset.ABSTRACT_CODEC)
-      .append(new KeyedCodec<>("Range", Vector3iUtil.CODEC, true), (asset, v) -> asset.range = v, asset -> asset.range)
+      .append(new KeyedCodec<>("Range", Vector3iUtil.CODEC, true), (asset, value) -> asset.range = value, asset -> asset.range)
       .add()
       .append(new KeyedCodec<>("Material", MaterialAsset.CODEC, true), (asset, value) -> asset.materialAsset = value, asset -> asset.materialAsset)
       .add()
-      .append(new KeyedCodec<>("Pattern", PatternAsset.CODEC, true), (asset, v) -> asset.patternAsset = v, asset -> asset.patternAsset)
+      .append(new KeyedCodec<>("Pattern", PatternAsset.CODEC, true), (asset, value) -> asset.patternAsset = value, asset -> asset.patternAsset)
       .add()
-      .append(new KeyedCodec<>("Scanner", ScannerAsset.CODEC, true), (asset, v) -> asset.scannerAsset = v, asset -> asset.scannerAsset)
+      .append(new KeyedCodec<>("Scanner", ScannerAsset.CODEC, true), (asset, value) -> asset.scannerAsset = value, asset -> asset.scannerAsset)
       .add()
       .build();
    private Vector3i range = new Vector3i();
@@ -51,5 +51,6 @@ public class BoxPropAsset extends PropAsset {
    public void cleanUp() {
       this.patternAsset.cleanUp();
       this.scannerAsset.cleanUp();
+      this.materialAsset.cleanUp();
    }
 }

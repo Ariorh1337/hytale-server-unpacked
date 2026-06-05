@@ -20,31 +20,33 @@ public class PositionsPinchDensityAsset extends DensityAsset {
          PositionsPinchDensityAsset.class, PositionsPinchDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
       .append(
-         new KeyedCodec<>("Positions", PositionProviderAsset.CODEC, true), (asset, v) -> asset.positionProviderAsset = v, asset -> asset.positionProviderAsset
+         new KeyedCodec<>("Positions", PositionProviderAsset.CODEC, true),
+         (asset, value) -> asset.positionProviderAsset = value,
+         asset -> asset.positionProviderAsset
       )
       .add()
-      .append(new KeyedCodec<>("PinchCurve", CurveAsset.CODEC, true), (asset, v) -> asset.pinchCurveAsset = v, asset -> asset.pinchCurveAsset)
+      .append(new KeyedCodec<>("PinchCurve", CurveAsset.CODEC, true), (asset, value) -> asset.pinchCurveAsset = value, asset -> asset.pinchCurveAsset)
       .add()
-      .<Double>append(new KeyedCodec<>("MaxDistance", Codec.DOUBLE, true), (asset, v) -> asset.maxDistance = v, asset -> asset.maxDistance)
+      .<Double>append(new KeyedCodec<>("MaxDistance", Codec.DOUBLE, true), (asset, value) -> asset.maxDistance = value, asset -> asset.maxDistance)
       .addValidator(Validators.greaterThanOrEqual(0.0))
       .add()
-      .append(new KeyedCodec<>("NormalizeDistance", Codec.BOOLEAN, true), (asset, v) -> asset.normalizeDistance = v, asset -> asset.normalizeDistance)
+      .append(new KeyedCodec<>("NormalizeDistance", Codec.BOOLEAN, true), (asset, value) -> asset.normalizeDistance = value, asset -> asset.normalizeDistance)
       .add()
-      .append(new KeyedCodec<>("HorizontalPinch", Codec.BOOLEAN, false), (asset, v) -> asset.isHorizontal = v, asset -> asset.isHorizontal)
+      .append(new KeyedCodec<>("HorizontalPinch", Codec.BOOLEAN, false), (asset, value) -> asset.isHorizontal = value, asset -> asset.isHorizontal)
       .add()
-      .append(new KeyedCodec<>("PositionsMinY", Codec.DOUBLE, false), (asset, v) -> asset.positionsMinY = v, asset -> asset.positionsMinY)
+      .append(new KeyedCodec<>("PositionsMinY", Codec.DOUBLE, false), (asset, value) -> asset.positionsMinY = value, asset -> asset.positionsMinY)
       .add()
-      .append(new KeyedCodec<>("PositionsMaxY", Codec.DOUBLE, false), (asset, v) -> asset.positionsMaxY = v, asset -> asset.positionsMaxY)
+      .append(new KeyedCodec<>("PositionsMaxY", Codec.DOUBLE, false), (asset, value) -> asset.positionsMaxY = value, asset -> asset.positionsMaxY)
       .add()
       .build();
    @Nonnull
-   private PositionProviderAsset positionProviderAsset = new ListPositionProviderAsset();
+   private PositionProviderAsset positionProviderAsset = ListPositionProviderAsset.INSTANCE;
    @Nonnull
    private CurveAsset pinchCurveAsset = new ConstantCurveAsset();
-   private double maxDistance;
-   private boolean normalizeDistance;
-   private boolean isHorizontal;
-   private double positionsMinY;
+   private double maxDistance = 0.0;
+   private boolean normalizeDistance = true;
+   private boolean isHorizontal = true;
+   private double positionsMinY = 0.0;
    private double positionsMaxY = 1.0E-6;
 
    @Nonnull

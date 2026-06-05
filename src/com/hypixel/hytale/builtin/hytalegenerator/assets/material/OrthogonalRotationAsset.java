@@ -16,10 +16,10 @@ public class OrthogonalRotationAsset implements JsonAssetWithMap<String, Default
          OrthogonalRotationAsset.class,
          OrthogonalRotationAsset::new,
          Codec.STRING,
-         (asset, id) -> asset.id = id,
-         config -> config.id,
-         (config, data) -> config.data = data,
-         config -> config.data
+         (asset, value) -> asset.id = value,
+         asset -> asset.id,
+         (asset, value) -> asset.data = value,
+         asset -> asset.data
       )
       .append(new KeyedCodec<>("Yaw", Rotation.CODEC, false), (asset, value) -> asset.yaw = value, asset -> asset.yaw)
       .add()

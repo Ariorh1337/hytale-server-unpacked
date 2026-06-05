@@ -22,12 +22,12 @@ public class MaterialSetAsset implements JsonAssetWithMap<String, DefaultAssetMa
          MaterialSetAsset.class,
          MaterialSetAsset::new,
          Codec.STRING,
-         (asset, id) -> asset.id = id,
-         config -> config.id,
-         (config, data) -> config.data = data,
-         config -> config.data
+         (asset, value) -> asset.id = value,
+         asset -> asset.id,
+         (asset, value) -> asset.data = value,
+         asset -> asset.data
       )
-      .append(new KeyedCodec<>("Inclusive", Codec.BOOLEAN, false), (t, k) -> t.inclusive = k, t -> t.inclusive)
+      .append(new KeyedCodec<>("Inclusive", Codec.BOOLEAN, false), (asset, value) -> asset.inclusive = value, asset -> asset.inclusive)
       .add()
       .append(
          new KeyedCodec<>("Materials", new ArrayCodec<>(MaterialAsset.CODEC, MaterialAsset[]::new), true),

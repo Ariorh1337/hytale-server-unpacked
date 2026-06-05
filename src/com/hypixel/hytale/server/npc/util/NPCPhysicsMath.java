@@ -2,6 +2,7 @@ package com.hypixel.hytale.server.npc.util;
 
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
@@ -14,11 +15,15 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.modules.entity.component.BoundingBox;
 import com.hypixel.hytale.server.core.modules.physics.util.PhysicsMath;
 import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
+import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.role.Role;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 
@@ -481,7 +486,7 @@ public class NPCPhysicsMath {
       return dx == 0.0 && dz == 0.0 ? headingHint : PhysicsMath.headingFromDirection(dx, dz);
    }
 
-   public static double blockEmptySpace(@Nonnull BlockType blockType, int rotation, @Nonnull NPCPhysicsMath.Direction direction) {
+   public static double blockEmptySpace(@Nullable BlockType blockType, int rotation, @Nonnull NPCPhysicsMath.Direction direction) {
       if (blockType == null) {
          return 1.0;
       }
@@ -527,31 +532,52 @@ public class NPCPhysicsMath {
       int ix = MathUtil.floor(x);
       int iy = MathUtil.floor(y);
       int iz = MathUtil.floor(z);
-      WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(ix, iz));
-      if (chunk == null) {
+      ChunkStore chunkStore = world.getChunkStore();
+      Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(ChunkUtil.indexChunkFromBlock(ix, iz));
+      if (chunkRef != null && chunkRef.isValid()) {
+         Store<ChunkStore> chunkComponentStore = chunkStore.getStore();
+         BlockChunk blockChunkComponent = chunkComponentStore.getComponent(chunkRef, BlockChunk.getComponentType());
+         if (blockChunkComponent == null) {
+            return iy + 1;
+         }
+
+         BlockSection section = blockChunkComponent.getSectionAtBlockY(iy);
+         BlockType blockType = BlockType.getAssetMap().getAsset(section.get(ix, iy, iz));
+         int rotation = section.getRotationIndex(ix, iy, iz);
+         return iy + blockHeight(blockType, rotation);
+      } else {
          return iy + 1;
       }
-
-      BlockType blockType = chunk.getBlockType(ix, iy, iz);
-      int rotation = chunk.getRotationIndex(ix, iy, iz);
-      return iy + blockHeight(blockType, rotation);
    }
 
    public static double heightOverGround(@Nonnull World world, double x, double z) {
       int ix = MathUtil.floor(x);
       int iz = MathUtil.floor(z);
-      WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(ix, iz));
-      if (chunk == null) {
+      ChunkStore chunkStore = world.getChunkStore();
+      Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(ChunkUtil.indexChunkFromBlock(ix, iz));
+      if (chunkRef != null && chunkRef.isValid()) {
+         Store<ChunkStore> chunkComponentStore = chunkStore.getStore();
+         WorldChunk worldChunkComponent = chunkComponentStore.getComponent(chunkRef, WorldChunk.getComponentType());
+         if (worldChunkComponent == null) {
+            return -1.0;
+         }
+
+         BlockChunk blockChunkComponent = chunkComponentStore.getComponent(chunkRef, BlockChunk.getComponentType());
+         if (blockChunkComponent == null) {
+            return -1.0;
+         }
+
+         int iy = worldChunkComponent.getHeight(ix, iz);
+         BlockSection section = blockChunkComponent.getSectionAtBlockY(iy);
+         BlockType blockType = BlockType.getAssetMap().getAsset(section.get(ix, iy, iz));
+         int rotationIndex = section.getRotationIndex(ix, iy, iz);
+         return iy + blockHeight(blockType, rotationIndex);
+      } else {
          return -1.0;
       }
-
-      int iy = chunk.getHeight(ix, iz);
-      BlockType blockType = chunk.getBlockType(ix, iy, iz);
-      int rotationIndex = chunk.getRotationIndex(ix, iy, iz);
-      return iy + blockHeight(blockType, rotationIndex);
    }
 
-   public static double blockHeight(@Nonnull BlockType blockType, int rotation) {
+   public static double blockHeight(@Nullable BlockType blockType, int rotation) {
       return 1.0 - blockEmptySpace(blockType, rotation, NPCPhysicsMath.Direction.NEG_Y);
    }
 
@@ -569,6 +595,57 @@ public class NPCPhysicsMath {
 
    public static double projectedLength(@Nonnull Vector3d v, @Nonnull Vector3d componentSelector) {
       return Math.sqrt(projectedLengthSquared(v, componentSelector));
+   }
+
+   public static double getMaxBoundingBoxExtent(@Nonnull Box box, @Nonnull Vector3dc componentSelector) {
+      double maxExtent = 0.0;
+      if (componentSelector.x() != 0.0) {
+         maxExtent = box.width();
+      }
+
+      if (componentSelector.y() != 0.0) {
+         maxExtent = Math.max(maxExtent, box.height());
+      }
+
+      if (componentSelector.z() != 0.0) {
+         maxExtent = Math.max(maxExtent, box.depth());
+      }
+
+      return maxExtent;
+   }
+
+   public static double getMinBoundingBoxExtent(@Nonnull Box box, @Nonnull Vector3dc componentSelector) {
+      double minExtent = Double.MAX_VALUE;
+      if (componentSelector.x() != 0.0) {
+         minExtent = box.width();
+      }
+
+      if (componentSelector.y() != 0.0) {
+         minExtent = Math.min(minExtent, box.height());
+      }
+
+      if (componentSelector.z() != 0.0) {
+         minExtent = Math.min(minExtent, box.depth());
+      }
+
+      return minExtent == Double.MAX_VALUE ? 0.0 : minExtent;
+   }
+
+   public static double getMinBoundingBoxDistance(@Nonnull Box box, @Nonnull Box box2, @Nonnull Vector3dc componentSelector) {
+      double minExtent = Double.MAX_VALUE;
+      if (componentSelector.x() != 0.0) {
+         minExtent = box.width() + box2.width();
+      }
+
+      if (componentSelector.y() != 0.0) {
+         minExtent = Math.min(minExtent, box.height() + box2.height());
+      }
+
+      if (componentSelector.z() != 0.0) {
+         minExtent = Math.min(minExtent, box.depth() + box2.depth());
+      }
+
+      return minExtent == Double.MAX_VALUE ? 0.0 : minExtent / 2.0;
    }
 
    public static double dotProductWithSelector(@Nonnull Vector3d p, @Nonnull Vector3d q, @Nonnull Vector3d componentSelector) {

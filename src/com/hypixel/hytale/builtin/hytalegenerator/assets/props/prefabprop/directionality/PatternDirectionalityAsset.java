@@ -17,17 +17,19 @@ public class PatternDirectionalityAsset extends DirectionalityAsset {
    public static final BuilderCodec<PatternDirectionalityAsset> CODEC = BuilderCodec.builder(
          PatternDirectionalityAsset.class, PatternDirectionalityAsset::new, DirectionalityAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("InitialDirection", OrthogonalDirection.CODEC, true), (asset, v) -> asset.prefabDirection = v, asset -> asset.prefabDirection)
+      .append(
+         new KeyedCodec<>("InitialDirection", OrthogonalDirection.CODEC, true), (asset, value) -> asset.prefabDirection = value, asset -> asset.prefabDirection
+      )
       .add()
-      .append(new KeyedCodec<>("Seed", Codec.STRING, true), (asset, v) -> asset.seed = v, asset -> asset.seed)
+      .append(new KeyedCodec<>("Seed", Codec.STRING, true), (asset, value) -> asset.seed = value, asset -> asset.seed)
       .add()
-      .append(new KeyedCodec<>("NorthPattern", PatternAsset.CODEC, true), (asset, v) -> asset.northPatternAsset = v, asset -> asset.northPatternAsset)
+      .append(new KeyedCodec<>("NorthPattern", PatternAsset.CODEC, true), (asset, value) -> asset.northPatternAsset = value, asset -> asset.northPatternAsset)
       .add()
-      .append(new KeyedCodec<>("SouthPattern", PatternAsset.CODEC, true), (asset, v) -> asset.southPatternAsset = v, asset -> asset.southPatternAsset)
+      .append(new KeyedCodec<>("SouthPattern", PatternAsset.CODEC, true), (asset, value) -> asset.southPatternAsset = value, asset -> asset.southPatternAsset)
       .add()
-      .append(new KeyedCodec<>("EastPattern", PatternAsset.CODEC, true), (asset, v) -> asset.eastPatternAsset = v, asset -> asset.eastPatternAsset)
+      .append(new KeyedCodec<>("EastPattern", PatternAsset.CODEC, true), (asset, value) -> asset.eastPatternAsset = value, asset -> asset.eastPatternAsset)
       .add()
-      .append(new KeyedCodec<>("WestPattern", PatternAsset.CODEC, true), (asset, v) -> asset.westPatternAsset = v, asset -> asset.westPatternAsset)
+      .append(new KeyedCodec<>("WestPattern", PatternAsset.CODEC, true), (asset, value) -> asset.westPatternAsset = value, asset -> asset.westPatternAsset)
       .add()
       .build();
    private String seed = "A";

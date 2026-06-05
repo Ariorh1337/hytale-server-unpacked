@@ -11,19 +11,19 @@ import javax.annotation.Nonnull;
 public class SimplexNoiseAsset extends NoiseAsset {
    @Nonnull
    public static final BuilderCodec<SimplexNoiseAsset> CODEC = BuilderCodec.builder(SimplexNoiseAsset.class, SimplexNoiseAsset::new, NoiseAsset.ABSTRACT_CODEC)
-      .append(new KeyedCodec<>("Lacunarity", Codec.DOUBLE, true), (asset, lacunarity) -> asset.lacunarity = lacunarity, asset -> asset.lacunarity)
+      .append(new KeyedCodec<>("Lacunarity", Codec.DOUBLE, true), (asset, value) -> asset.lacunarity = value, asset -> asset.lacunarity)
       .addValidator(Validators.greaterThan(0.0))
       .add()
-      .<Double>append(new KeyedCodec<>("Persistence", Codec.DOUBLE, true), (asset, persistence) -> asset.persistence = persistence, asset -> asset.persistence)
+      .<Double>append(new KeyedCodec<>("Persistence", Codec.DOUBLE, true), (asset, value) -> asset.persistence = value, asset -> asset.persistence)
       .addValidator(Validators.greaterThan(0.0))
       .add()
-      .<Double>append(new KeyedCodec<>("Scale", Codec.DOUBLE, true), (asset, scale) -> asset.scale = scale, asset -> asset.scale)
+      .<Double>append(new KeyedCodec<>("Scale", Codec.DOUBLE, true), (asset, value) -> asset.scale = value, asset -> asset.scale)
       .addValidator(Validators.greaterThan(0.0))
       .add()
-      .<Integer>append(new KeyedCodec<>("Octaves", Codec.INTEGER, true), (asset, octaves) -> asset.octaves = octaves, asset -> asset.octaves)
+      .<Integer>append(new KeyedCodec<>("Octaves", Codec.INTEGER, true), (asset, value) -> asset.octaves = value, asset -> asset.octaves)
       .addValidator(Validators.greaterThan(0))
       .add()
-      .append(new KeyedCodec<>("Seed", Codec.STRING, true), (asset, seed) -> asset.seedKey = seed, asset -> asset.seedKey)
+      .append(new KeyedCodec<>("Seed", Codec.STRING, true), (asset, value) -> asset.seedKey = value, asset -> asset.seedKey)
       .add()
       .build();
    private double lacunarity = 1.0;

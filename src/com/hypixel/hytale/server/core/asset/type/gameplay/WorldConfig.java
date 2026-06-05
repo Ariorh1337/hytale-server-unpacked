@@ -55,6 +55,13 @@ public class WorldConfig {
       )
       .documentation("Configurations related to sleeping in this world (in beds)")
       .add()
+      .<WildernessConfig>append(
+         new KeyedCodec<>("Wilderness", WildernessConfig.CODEC),
+         (worldConfig, w) -> worldConfig.wildernessConfig = w,
+         worldConfig -> worldConfig.wildernessConfig
+      )
+      .documentation("Configuration related to wilderness tracking in this world")
+      .add()
       .build();
    public static final int DEFAULT_TOTAL_DAY_DURATION_SECONDS = 2880;
    public static final int DEFAULT_DAYTIME_DURATION_SECONDS = 1728;
@@ -67,6 +74,7 @@ public class WorldConfig {
    private int totalMoonPhases = 5;
    protected float blockPlacementFragilityTimer;
    private SleepConfig sleepConfig = SleepConfig.DEFAULT;
+   protected WildernessConfig wildernessConfig = WildernessConfig.DEFAULT;
 
    public boolean isBlockBreakingAllowed() {
       return this.allowBlockBreaking;
@@ -98,5 +106,9 @@ public class WorldConfig {
 
    public SleepConfig getSleepConfig() {
       return this.sleepConfig;
+   }
+
+   public WildernessConfig getWildernessConfig() {
+      return this.wildernessConfig;
    }
 }

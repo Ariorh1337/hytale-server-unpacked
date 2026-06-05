@@ -15,21 +15,23 @@ public class BaseHeightPositionProviderAsset extends PositionProviderAsset {
    public static final BuilderCodec<BaseHeightPositionProviderAsset> CODEC = BuilderCodec.builder(
          BaseHeightPositionProviderAsset.class, BaseHeightPositionProviderAsset::new, PositionProviderAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("MinYRead", Codec.DOUBLE, false), (asset, v) -> asset.minYRead = v, asset -> asset.minYRead)
+      .append(new KeyedCodec<>("MinYRead", Codec.DOUBLE, false), (asset, value) -> asset.minYRead = value, asset -> asset.minYRead)
       .add()
-      .append(new KeyedCodec<>("MaxYRead", Codec.DOUBLE, false), (asset, v) -> asset.maxYRead = v, asset -> asset.maxYRead)
+      .append(new KeyedCodec<>("MaxYRead", Codec.DOUBLE, false), (asset, value) -> asset.maxYRead = value, asset -> asset.maxYRead)
       .add()
-      .append(new KeyedCodec<>("BedName", Codec.STRING, false), (asset, v) -> asset.baseHeightName = v, asset -> asset.baseHeightName)
+      .append(new KeyedCodec<>("BedName", Codec.STRING, false), (asset, value) -> asset.baseHeightName = value, asset -> asset.baseHeightName)
       .add()
       .append(
-         new KeyedCodec<>("Positions", PositionProviderAsset.CODEC, true), (asset, v) -> asset.positionProviderAsset = v, asset -> asset.positionProviderAsset
+         new KeyedCodec<>("Positions", PositionProviderAsset.CODEC, true),
+         (asset, value) -> asset.positionProviderAsset = value,
+         asset -> asset.positionProviderAsset
       )
       .add()
       .build();
    private double minYRead = -1.0;
    private double maxYRead = 1.0;
    private String baseHeightName = "";
-   private PositionProviderAsset positionProviderAsset = new ListPositionProviderAsset();
+   private PositionProviderAsset positionProviderAsset = ListPositionProviderAsset.INSTANCE;
 
    @Nonnull
    @Override

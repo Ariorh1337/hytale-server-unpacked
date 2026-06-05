@@ -24,8 +24,9 @@ import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.modules.block.BlockModule;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import java.util.HashSet;
-import java.util.Set;
+import it.unimi.dsi.fastutil.shorts.ShortIterator;
+import it.unimi.dsi.fastutil.shorts.ShortOpenHashSet;
+import it.unimi.dsi.fastutil.shorts.ShortSet;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -42,9 +43,9 @@ public class ProcessingBenchWindow extends BenchWindow implements ItemContainerW
    private float progress;
    private boolean active;
    @Nonnull
-   private final Set<Short> processingSlots = new HashSet<>();
+   private final ShortSet processingSlots = new ShortOpenHashSet();
    @Nonnull
-   private final Set<Short> processingFuelSlots = new HashSet<>();
+   private final ShortSet processingFuelSlots = new ShortOpenHashSet();
 
    public ProcessingBenchWindow(
       @Nonnull ProcessingBenchBlock benchState,
@@ -154,14 +155,15 @@ public class ProcessingBenchWindow extends BenchWindow implements ItemContainerW
       }
    }
 
-   public void setProcessingSlots(@Nonnull Set<Short> slots) {
+   public void setProcessingSlots(@Nonnull ShortSet slots) {
       if (!this.processingSlots.equals(slots)) {
          this.processingSlots.clear();
          this.processingSlots.addAll(slots);
          int bitMask = 0;
+         ShortIterator iterator = slots.iterator();
 
-         for (Short processingSlot : slots) {
-            bitMask |= 1 << processingSlot.intValue();
+         while (iterator.hasNext()) {
+            bitMask |= 1 << iterator.nextShort();
          }
 
          this.windowData.addProperty("processingSlots", (byte)bitMask);
@@ -169,14 +171,15 @@ public class ProcessingBenchWindow extends BenchWindow implements ItemContainerW
       }
    }
 
-   public void setProcessingFuelSlots(@Nonnull Set<Short> slots) {
+   public void setProcessingFuelSlots(@Nonnull ShortSet slots) {
       if (!this.processingFuelSlots.equals(slots)) {
          this.processingFuelSlots.clear();
          this.processingFuelSlots.addAll(slots);
          int bitMask = 0;
+         ShortIterator iterator = slots.iterator();
 
-         for (Short processingFuelSlots : slots) {
-            bitMask |= 1 << processingFuelSlots.intValue();
+         while (iterator.hasNext()) {
+            bitMask |= 1 << iterator.nextShort();
          }
 
          this.windowData.addProperty("processingFuelSlots", (byte)bitMask);

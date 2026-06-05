@@ -26,7 +26,7 @@ public class RotatorPatternAsset extends PatternAsset {
    @Nonnull
    @Override
    public Pattern build(@Nonnull PatternAsset.Argument argument) {
-      return super.isSkipped()
+      return super.skip()
          ? ConstantPattern.INSTANCE_FALSE
          : new RotatorPattern(this.patternAsset.build(argument), this.rotationAsset.build(), argument.materialCache);
    }

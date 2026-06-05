@@ -19,7 +19,7 @@ public class StaticDirectionalityAsset extends DirectionalityAsset {
    public static final BuilderCodec<StaticDirectionalityAsset> CODEC = BuilderCodec.builder(
          StaticDirectionalityAsset.class, StaticDirectionalityAsset::new, DirectionalityAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Rotation", Codec.INTEGER, false), (asset, v) -> asset.rotation = v, asset -> asset.rotation)
+      .append(new KeyedCodec<>("Rotation", Codec.INTEGER, false), (asset, value) -> asset.rotation = value, asset -> asset.rotation)
       .addValidator(new Validator<Integer>() {
          public void accept(Integer v, ValidationResults r) {
             if (v != 0 && v != 90 && v != 180 && v != 270) {
@@ -32,7 +32,7 @@ public class StaticDirectionalityAsset extends DirectionalityAsset {
          }
       })
       .add()
-      .append(new KeyedCodec<>("Pattern", PatternAsset.CODEC, true), (asset, v) -> asset.patternAsset = v, asset -> asset.patternAsset)
+      .append(new KeyedCodec<>("Pattern", PatternAsset.CODEC, true), (asset, value) -> asset.patternAsset = value, asset -> asset.patternAsset)
       .add()
       .build();
    private int rotation = 0;
@@ -48,5 +48,10 @@ public class StaticDirectionalityAsset extends DirectionalityAsset {
          default -> PrefabRotation.ROTATION_0;
       };
       return new StaticDirectionality(prefabRotation, this.patternAsset.build(PatternAsset.argumentFrom(argument)));
+   }
+
+   @Override
+   public void cleanUp() {
+      this.patternAsset.cleanUp();
    }
 }

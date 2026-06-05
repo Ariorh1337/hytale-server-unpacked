@@ -68,6 +68,22 @@ public class ProjectileConfig
       }, o -> o.spawnRotationOffset, (o, p) -> o.spawnRotationOffset = p.spawnRotationOffset)
       .addValidator(Validators.nonNull())
       .add()
+      .<Boolean>appendInherited(
+         new KeyedCodec<>("RotateSpawnOffsetByPitch", Codec.BOOLEAN),
+         (o, i) -> o.rotateSpawnOffsetByPitch = i,
+         o -> o.rotateSpawnOffsetByPitch,
+         (o, p) -> o.rotateSpawnOffsetByPitch = p.rotateSpawnOffsetByPitch
+      )
+      .documentation("Whether SpawnOffset should be rotated by the entity's pitch.")
+      .add()
+      .<Boolean>appendInherited(
+         new KeyedCodec<>("RotateSpawnOffsetByYaw", Codec.BOOLEAN),
+         (o, i) -> o.rotateSpawnOffsetByYaw = i,
+         o -> o.rotateSpawnOffsetByYaw,
+         (o, p) -> o.rotateSpawnOffsetByYaw = p.rotateSpawnOffsetByYaw
+      )
+      .documentation("Whether SpawnOffset should be rotated by the entity's yaw.")
+      .add()
       .<Map<InteractionType, String>>appendInherited(
          new KeyedCodec<>("Interactions", new EnumMapCodec<>(InteractionType.class, RootInteraction.CHILD_ASSET_CODEC)),
          (o, i) -> o.interactions = i,
@@ -125,6 +141,8 @@ public class ProjectileConfig
    protected Vector3f spawnOffset = new Vector3f(0.0F, 0.0F, 0.0F);
    @Nonnull
    protected Direction spawnRotationOffset = new Direction(0.0F, 0.0F, 0.0F);
+   protected boolean rotateSpawnOffsetByPitch = true;
+   protected boolean rotateSpawnOffsetByYaw = true;
    @Nonnull
    protected Map<InteractionType, String> interactions = Collections.emptyMap();
    protected String launchLocalSoundEventId;
@@ -214,7 +232,7 @@ public class ProjectileConfig
 
    @Override
    public boolean isPitchAdjustShot() {
-      return true;
+      return this.rotateSpawnOffsetByPitch;
    }
 
    public Map<InteractionType, String> getInteractions() {
@@ -234,6 +252,14 @@ public class ProjectileConfig
       return this.spawnOffset;
    }
 
+   public boolean isRotateSpawnOffsetByPitch() {
+      return this.rotateSpawnOffsetByPitch;
+   }
+
+   public boolean isRotateSpawnOffsetByYaw() {
+      return this.rotateSpawnOffsetByYaw;
+   }
+
    @Nonnull
    public Direction getSpawnRotationOffset() {
       return this.spawnRotationOffset;
@@ -242,8 +268,14 @@ public class ProjectileConfig
    @Nonnull
    public Vector3d getCalculatedOffset(float pitch, float yaw) {
       Vector3d offset = new Vector3d(this.spawnOffset.x, this.spawnOffset.y, this.spawnOffset.z);
-      offset.rotateX(pitch);
-      offset.rotateY(yaw);
+      if (this.rotateSpawnOffsetByPitch) {
+         offset.rotateX(pitch);
+      }
+
+      if (this.rotateSpawnOffsetByYaw) {
+         offset.rotateY(yaw);
+      }
+
       return offset;
    }
 
@@ -255,6 +287,8 @@ public class ProjectileConfig
       config.launchForce = this.launchForce;
       config.spawnOffset = this.spawnOffset;
       config.rotationOffset = this.spawnRotationOffset;
+      config.rotateSpawnOffsetByPitch = this.rotateSpawnOffsetByPitch;
+      config.rotateSpawnOffsetByYaw = this.rotateSpawnOffsetByYaw;
       config.launchLocalSoundEventIndex = this.launchLocalSoundEventIndex;
       config.launchWorldSoundEventIndex = this.launchWorldSoundEventIndex;
       config.projectileSoundEventIndex = this.projectileSoundEventIndex;

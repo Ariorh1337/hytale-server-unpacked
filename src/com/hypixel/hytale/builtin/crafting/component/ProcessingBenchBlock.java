@@ -48,14 +48,14 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.shorts.ShortOpenHashSet;
+import it.unimi.dsi.fastutil.shorts.ShortSet;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Level;
@@ -99,9 +99,9 @@ public class ProcessingBenchBlock implements Component<ChunkStore> {
    private static final float EJECT_SPREAD_VELOCITY = 1.0F;
    private static final float EJECT_VERTICAL_VELOCITY = 3.25F;
    @Nonnull
-   private final Set<Short> processingSlots = new HashSet<>();
+   private final ShortSet processingSlots = new ShortOpenHashSet();
    @Nonnull
-   private final Set<Short> processingFuelSlots = new HashSet<>();
+   private final ShortSet processingFuelSlots = new ShortOpenHashSet();
    private transient Bench bench;
    private transient ProcessingBench processingBench;
    private ItemContainer inputContainer;
@@ -158,12 +158,12 @@ public class ProcessingBenchBlock implements Component<ChunkStore> {
    }
 
    @Nonnull
-   public Set<Short> getProcessingSlots() {
+   public ShortSet getProcessingSlots() {
       return this.processingSlots;
    }
 
    @Nonnull
-   public Set<Short> getProcessingFuelSlots() {
+   public ShortSet getProcessingFuelSlots() {
       return this.processingFuelSlots;
    }
 

@@ -180,7 +180,9 @@ public class PrefabSaver {
                            holder = holder.clone();
                         }
 
-                        int supportValue = settings.isClearSupportValues() ? 0 : (blockPhysicsComponent != null ? blockPhysicsComponent.get(x, y, z) : 0);
+                        int supportValue = settings.getSupportMode() != SupportMode.KEEP_EXISTING
+                           ? 0
+                           : (blockPhysicsComponent != null ? blockPhysicsComponent.get(x, y, z) : 0);
                         selection.addBlockAtWorldPos(x, y, z, block, sectionComponent.getRotationIndex(x, y, z), filler, supportValue, holder);
                         blockCount++;
                      }
@@ -328,6 +330,7 @@ public class PrefabSaver {
       try {
          long start = System.nanoTime();
          BlockSelection postClone = settings.isRelativize() ? copiedSelection.relativize() : copiedSelection.cloneSelection();
+         PrefabSaveSupport.apply(postClone, settings);
          PrefabStore.get().savePrefab(saveFilePath, postClone, settings.isOverwriteExisting());
          long diff = System.nanoTime() - start;
          BuilderToolsPlugin.get()

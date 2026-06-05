@@ -13,7 +13,7 @@ public class ImportedPositionProviderAsset extends PositionProviderAsset {
    public static final BuilderCodec<ImportedPositionProviderAsset> CODEC = BuilderCodec.builder(
          ImportedPositionProviderAsset.class, ImportedPositionProviderAsset::new, PositionProviderAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Name", Codec.STRING, true), (asset, v) -> asset.name = v, asset -> asset.name)
+      .append(new KeyedCodec<>("Name", Codec.STRING, true), (asset, value) -> asset.name = value, asset -> asset.name)
       .add()
       .build();
    private String name = "";

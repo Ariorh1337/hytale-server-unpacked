@@ -235,7 +235,16 @@ public class TerrainStage implements Stage {
    ) {
       Bounds3i bounds_voxelGrid = materialSpace.getBounds();
       MaterialProvider.Context context = new MaterialProvider.Context(
-         new Vector3i(), 0.0, 0, 0, 0, 0, position -> this.getOrGenerateDensity(position, densityBuffer, biomeSpace, distanceSpace, biomeRegistry), 0.0
+         new Vector3i(),
+         0.0,
+         0,
+         0,
+         0,
+         0,
+         position -> this.getOrGenerateDensity(position, densityBuffer, biomeSpace, distanceSpace, biomeRegistry),
+         0.0,
+         null,
+         null
       );
       TerrainStage.ColumnData columnData = new TerrainStage.ColumnData(bounds_voxelGrid.min.y, bounds_voxelGrid.max.y, densityBuffer);
       Vector3i position_voxelGrid = new Vector3i();

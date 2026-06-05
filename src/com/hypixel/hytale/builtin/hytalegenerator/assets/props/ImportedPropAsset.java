@@ -11,7 +11,7 @@ import javax.annotation.Nonnull;
 public class ImportedPropAsset extends PropAsset {
    @Nonnull
    public static final BuilderCodec<ImportedPropAsset> CODEC = BuilderCodec.builder(ImportedPropAsset.class, ImportedPropAsset::new, PropAsset.ABSTRACT_CODEC)
-      .append(new KeyedCodec<>("Name", Codec.STRING, true), (asset, v) -> asset.name = v, asset -> asset.name)
+      .append(new KeyedCodec<>("Name", Codec.STRING, true), (asset, value) -> asset.name = value, asset -> asset.name)
       .add()
       .build();
    private String name = "";

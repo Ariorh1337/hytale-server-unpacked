@@ -14,13 +14,13 @@ public class SmoothFloorDensityAsset extends DensityAsset {
    public static final BuilderCodec<SmoothFloorDensityAsset> CODEC = BuilderCodec.builder(
          SmoothFloorDensityAsset.class, SmoothFloorDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Limit", Codec.DOUBLE, true), (t, k) -> t.limit = k, k -> k.limit)
+      .append(new KeyedCodec<>("Limit", Codec.DOUBLE, true), (asset, value) -> asset.limit = value, asset -> asset.limit)
       .add()
-      .<Double>append(new KeyedCodec<>("SmoothRange", Codec.DOUBLE, true), (t, k) -> t.smoothRange = k, k -> k.smoothRange)
+      .<Double>append(new KeyedCodec<>("SmoothRange", Codec.DOUBLE, true), (asset, value) -> asset.smoothRange = value, asset -> asset.smoothRange)
       .addValidator(Validators.greaterThanOrEqual(0.0))
       .add()
       .build();
-   private double smoothRange = 1.0;
+   private double smoothRange = 0.2;
    private double limit;
 
    @Nonnull

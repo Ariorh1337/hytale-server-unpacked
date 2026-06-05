@@ -13,9 +13,13 @@ public class DownwardDepthMaterialProviderAsset extends MaterialProviderAsset {
    public static final BuilderCodec<DownwardDepthMaterialProviderAsset> CODEC = BuilderCodec.builder(
          DownwardDepthMaterialProviderAsset.class, DownwardDepthMaterialProviderAsset::new, MaterialProviderAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Depth", Codec.INTEGER, true), (t, k) -> t.depth = k, k -> k.depth)
+      .append(new KeyedCodec<>("Depth", Codec.INTEGER, true), (asset, value) -> asset.depth = value, asset -> asset.depth)
       .add()
-      .append(new KeyedCodec<>("Material", MaterialProviderAsset.CODEC, true), (t, k) -> t.materialProviderAsset = k, k -> k.materialProviderAsset)
+      .append(
+         new KeyedCodec<>("Material", MaterialProviderAsset.CODEC, true),
+         (asset, value) -> asset.materialProviderAsset = value,
+         asset -> asset.materialProviderAsset
+      )
       .add()
       .build();
    private int depth;

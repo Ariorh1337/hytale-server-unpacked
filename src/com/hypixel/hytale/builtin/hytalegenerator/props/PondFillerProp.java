@@ -37,7 +37,7 @@ public class PondFillerProp extends Prop {
       this.rLocalBounds = new Bounds3i();
       this.rLocalWriteBounds = new Bounds3i();
       this.rMask = new ArrayVoxelSpace<>(bounds);
-      this.rMaterialProviderContext = new MaterialProvider.Context(new Vector3i(), 0.0, 0, 0, 0, 0, null, Double.MAX_VALUE);
+      this.rMaterialProviderContext = new MaterialProvider.Context(new Vector3i(), 0.0, 0, 0, 0, 0, null, Double.MAX_VALUE, null, null);
    }
 
    @Override

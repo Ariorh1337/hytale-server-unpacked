@@ -838,7 +838,7 @@ public abstract class MotionControllerBase implements MotionController {
                   double t = firstChar.collisionStart;
                   if (t < stopT) {
                      stopT = Math.max(0.0, t);
-                     result.obstructed = true;
+                     result.hitEntity = true;
                   }
                }
             }
@@ -1082,6 +1082,30 @@ public abstract class MotionControllerBase implements MotionController {
    @Override
    public Vector3d getExternalVelocity() {
       return this.externalVelocity;
+   }
+
+   @Override
+   public double getCombinedExternalVelocityLength() {
+      double vx = this.externalVelocity.x;
+      double vy = this.externalVelocity.y;
+      double vz = this.externalVelocity.z;
+
+      for (int i = 0; i < this.appliedVelocities.size(); i++) {
+         Vector3d velocity = this.appliedVelocities.get(i).velocity;
+         vx += velocity.x;
+         vy += velocity.y;
+         vz += velocity.z;
+      }
+
+      return Math.sqrt(vx * vx + vy * vy + vz * vz);
+   }
+
+   @Override
+   public void clearExternalForces() {
+      this.externalVelocity.zero();
+      this.appliedVelocity.zero();
+      this.appliedVelocities.clear();
+      this.ignoreDamping = false;
    }
 
    @Override
@@ -1399,6 +1423,12 @@ public abstract class MotionControllerBase implements MotionController {
       Vector3d position, Box boundingBox, double minYValue, double maxYValue, ComponentAccessor<EntityStore> componentAccessor
    ) {
       return true;
+   }
+
+   @Nonnull
+   @Override
+   public Box getCollisionBoundingBox() {
+      return this.collisionBoundingBox;
    }
 
    @Override

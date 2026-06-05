@@ -232,6 +232,10 @@ public class CraftingRecipe implements JsonAssetWithMap<String, DefaultAssetMap<
          this.outputs = new MaterialQuantity[]{this.primaryOutput};
       }
 
+      this.applyOutputExclusions();
+   }
+
+   void applyOutputExclusions() {
       Set<String> ids = new HashSet<>();
       if (this.outputs != null) {
          for (MaterialQuantity output : this.outputs) {

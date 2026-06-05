@@ -275,7 +275,7 @@ public class ProjectileComponent implements Component<EntityStore> {
          Store<ChunkStore> chunkStore = world.getChunkStore().getStore();
          Ref<EntityStore> creatorRef = entityStore.getRefFromUUID(this.creatorUuid);
          Damage.ProjectileSource damageSource = new Damage.ProjectileSource(creatorRef != null ? creatorRef : ref, ref);
-         ExplosionUtils.performExplosion(damageSource, position, explosionConfig, ref, commandBuffer, chunkStore);
+         ExplosionUtils.performExplosion(damageSource, position, new Rotation3f(0.0F, 0.0F, 0.0F), explosionConfig, ref, commandBuffer, chunkStore);
       }
 
       if (!this.haveHit || this.projectile.isDeathEffectsOnHit()) {

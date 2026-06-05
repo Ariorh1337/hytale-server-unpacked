@@ -19,7 +19,7 @@ public class ExportedVectorProviderAsset extends VectorProviderAsset {
       .append(
          new KeyedCodec<>("VectorProvider", VectorProviderAsset.CODEC, true),
          (asset, value) -> asset.vectorProviderAsset = value,
-         value -> value.vectorProviderAsset
+         asset -> asset.vectorProviderAsset
       )
       .add()
       .build();

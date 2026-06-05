@@ -40,4 +40,11 @@ public class UnionPropDistributionAsset extends PropDistributionAsset {
 
       return new UnionPropDistribution(propDistributions);
    }
+
+   @Override
+   public void cleanUp() {
+      for (PropDistributionAsset propDistributionAsset : this.propDistributionAssets) {
+         propDistributionAsset.cleanUp();
+      }
+   }
 }

@@ -45,7 +45,9 @@ public class UseEntityInteraction extends SimpleInstantInteraction {
          if (!InteractionValidation.canPlayerInteractWithEntity(context.getEntity(), commandBuffer, context.getHeldItem(), targetRef)) {
             LOGGER.at(Level.WARNING)
                .log(
-                  "Entity %d failed use entity interaction distance check for target entity %d", (int)context.getEntity().getIndex(), (int)targetRef.getIndex()
+                  "%s failed use entity interaction distance check for target entity %d",
+                  InteractionValidation.getEntityName(context.getEntity(), commandBuffer),
+                  targetRef.getIndex()
                );
             context.getState().state = InteractionState.Failed;
          } else {

@@ -805,10 +805,12 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
          TriggerEffect effect = effects.get(i);
          if (effect.getEventType() == eventType) {
             VolumeEntry.EffectEntityKey intervalKey = null;
+            boolean hasFiredBefore = false;
             if (eventType == TriggerEventType.TICK && effect.getInterval() > 0.0F) {
                intervalKey = new VolumeEntry.EffectEntityKey(bucket, i, entityUuid);
-               Long lastFire = entry.getLastFireTimes().get(intervalKey);
-               if (lastFire != null) {
+               long lastFire = entry.getLastFireTimes().getOrDefault(intervalKey, Long.MIN_VALUE);
+               hasFiredBefore = lastFire != Long.MIN_VALUE;
+               if (hasFiredBefore) {
                   double elapsedSeconds = (nowNanos - lastFire) / 1.0E9;
                   if (elapsedSeconds < effect.getInterval()) {
                      continue;
@@ -816,7 +818,7 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
                }
             }
 
-            float totalDelay = activationDelay + effectDelay(eventType, effect, intervalKey != null && entry.getLastFireTimes().containsKey(intervalKey));
+            float totalDelay = activationDelay + effectDelay(eventType, effect, hasFiredBefore);
             if (totalDelay > 0.0F) {
                DelayedEffectScheduler scheduler = this.getScheduler(store);
                if (intervalKey != null) {
@@ -1112,7 +1114,7 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
    }
 
    private void clearIntervalTimers(@Nonnull VolumeEntry entry, @Nonnull UUID entityUuid) {
-      entry.getLastFireTimes().entrySet().removeIf(lastFireEntry -> lastFireEntry.getKey().entityId().equals(entityUuid));
+      entry.getLastFireTimes().object2LongEntrySet().removeIf(lastFireEntry -> lastFireEntry.getKey().entityId().equals(entityUuid));
    }
 
    private void processTrackedEntityExits(@Nonnull VolumeEntry entry, @Nonnull Store<EntityStore> store, @Nonnull TriggerVolumeManager manager) {

@@ -9,9 +9,9 @@ import javax.annotation.Nonnull;
 public class CeilingCurveAsset extends CurveAsset {
    @Nonnull
    public static final BuilderCodec<CeilingCurveAsset> CODEC = BuilderCodec.builder(CeilingCurveAsset.class, CeilingCurveAsset::new, CurveAsset.ABSTRACT_CODEC)
-      .append(new KeyedCodec<>("Curve", CurveAsset.CODEC, true), (t, k) -> t.curveAsset = k, k -> k.curveAsset)
+      .append(new KeyedCodec<>("Curve", CurveAsset.CODEC, true), (asset, value) -> asset.curveAsset = value, asset -> asset.curveAsset)
       .add()
-      .append(new KeyedCodec<>("Ceiling", Codec.DOUBLE, true), (t, k) -> t.limit = k, k -> k.limit)
+      .append(new KeyedCodec<>("Ceiling", Codec.DOUBLE, true), (asset, value) -> asset.limit = value, asset -> asset.limit)
       .add()
       .build();
    private CurveAsset curveAsset = new ConstantCurveAsset();

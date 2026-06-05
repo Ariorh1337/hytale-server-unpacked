@@ -12,7 +12,7 @@ public class ImportedCurveAsset extends CurveAsset {
    public static final BuilderCodec<ImportedCurveAsset> CODEC = BuilderCodec.builder(
          ImportedCurveAsset.class, ImportedCurveAsset::new, CurveAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Name", Codec.STRING, true), (t, k) -> t.name = k, k -> k.name)
+      .append(new KeyedCodec<>("Name", Codec.STRING, true), (asset, value) -> asset.name = value, asset -> asset.name)
       .add()
       .build();
    private String name;

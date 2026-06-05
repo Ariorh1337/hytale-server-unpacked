@@ -13,11 +13,11 @@ public class ScaleDensityAsset extends DensityAsset {
    public static final BuilderCodec<ScaleDensityAsset> CODEC = BuilderCodec.builder(
          ScaleDensityAsset.class, ScaleDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("ScaleX", Codec.DOUBLE, false), (t, k) -> t.scaleX = k, k -> k.scaleX)
+      .append(new KeyedCodec<>("ScaleX", Codec.DOUBLE, false), (asset, value) -> asset.scaleX = value, asset -> asset.scaleX)
       .add()
-      .append(new KeyedCodec<>("ScaleY", Codec.DOUBLE, false), (t, k) -> t.scaleY = k, k -> k.scaleY)
+      .append(new KeyedCodec<>("ScaleY", Codec.DOUBLE, false), (asset, value) -> asset.scaleY = value, asset -> asset.scaleY)
       .add()
-      .append(new KeyedCodec<>("ScaleZ", Codec.DOUBLE, false), (t, k) -> t.scaleZ = k, k -> k.scaleZ)
+      .append(new KeyedCodec<>("ScaleZ", Codec.DOUBLE, false), (asset, value) -> asset.scaleZ = value, asset -> asset.scaleZ)
       .add()
       .build();
    private double scaleX = 1.0;

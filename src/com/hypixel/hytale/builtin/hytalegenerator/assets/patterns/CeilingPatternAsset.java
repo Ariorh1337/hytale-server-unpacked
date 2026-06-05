@@ -12,9 +12,9 @@ public class CeilingPatternAsset extends PatternAsset {
    public static final BuilderCodec<CeilingPatternAsset> CODEC = BuilderCodec.builder(
          CeilingPatternAsset.class, CeilingPatternAsset::new, PatternAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Ceiling", PatternAsset.CODEC, true), (t, k) -> t.ceiling = k, k -> k.ceiling)
+      .append(new KeyedCodec<>("Ceiling", PatternAsset.CODEC, true), (asset, value) -> asset.ceiling = value, asset -> asset.ceiling)
       .add()
-      .append(new KeyedCodec<>("Origin", PatternAsset.CODEC, true), (t, k) -> t.origin = k, k -> k.origin)
+      .append(new KeyedCodec<>("Origin", PatternAsset.CODEC, true), (asset, value) -> asset.origin = value, asset -> asset.origin)
       .add()
       .build();
    private PatternAsset ceiling = new ConstantPatternAsset();
@@ -23,7 +23,7 @@ public class CeilingPatternAsset extends PatternAsset {
    @Nonnull
    @Override
    public Pattern build(@Nonnull PatternAsset.Argument argument) {
-      if (super.isSkipped()) {
+      if (super.skip()) {
          return ConstantPattern.INSTANCE_FALSE;
       }
 

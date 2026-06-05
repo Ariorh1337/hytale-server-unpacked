@@ -10,12 +10,14 @@ import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionSyncData;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.WaitForDataFrom;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.entity.InteractionManager;
+import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.interaction.InteractionModule;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
@@ -23,6 +25,7 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.dat
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.data.CollectorTag;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.operation.Label;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.operation.OperationsBuilder;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.util.InteractionValidation;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
@@ -30,10 +33,12 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class ChainingInteraction extends Interaction {
+   private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
    @Nonnull
    public static final BuilderCodec<ChainingInteraction> CODEC = BuilderCodec.builder(
          ChainingInteraction.class, ChainingInteraction::new, Interaction.ABSTRACT_CODEC
@@ -86,6 +91,8 @@ public class ChainingInteraction extends Interaction {
    @Nullable
    protected Object2IntMap<String> flagIndex;
    private String[] sortedFlagKeys;
+   private static final float MAX_GRACE_SECONDS = 0.5F;
+   private static final float GRACE_RATIO = 0.25F;
 
    @Nonnull
    @Override
@@ -101,14 +108,81 @@ public class ChainingInteraction extends Interaction {
       assert clientState != null;
       InteractionSyncData state = context.getState();
       if (clientState.flagIndex != -1) {
-         state.state = InteractionState.Finished;
-         context.jump(context.getLabel(this.next.length + clientState.flagIndex));
+         if (this.sortedFlagKeys != null && clientState.flagIndex >= 0 && clientState.flagIndex < this.sortedFlagKeys.length) {
+            state.state = InteractionState.Finished;
+            context.jump(context.getLabel(this.next.length + clientState.flagIndex));
+         } else {
+            LOGGER.at(Level.WARNING)
+               .log(
+                  "%s sent out-of-bounds flagIndex %d (max %d)",
+                  InteractionValidation.getEntityName(context.getEntity(), context.getCommandBuffer()),
+                  clientState.flagIndex,
+                  this.sortedFlagKeys != null ? this.sortedFlagKeys.length : 0
+               );
+            state.state = InteractionState.Failed;
+         }
       } else if (clientState.chainingIndex == -1) {
          state.state = InteractionState.NotFinished;
-      } else {
+      } else if (clientState.chainingIndex >= 0 && clientState.chainingIndex < this.next.length) {
+         CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
+         if (commandBuffer != null) {
+            Ref<EntityStore> ref = context.getEntity();
+            if (commandBuffer.getComponent(ref, Player.getComponentType()) != null) {
+               ChainingInteraction.Data dataComponent = commandBuffer.ensureAndGetComponent(ref, ChainingInteraction.Data.getComponentType());
+               if (dataComponent != null) {
+                  String id = this.chainId == null ? this.id : this.chainId;
+                  Object2IntMap<String> map = this.chainId == null ? dataComponent.map : dataComponent.namedMap;
+                  if (!this.isAcceptedChainIndex(clientState.chainingIndex, map, id, dataComponent)) {
+                     LOGGER.at(Level.WARNING)
+                        .log(
+                           "%s sent unexpected chainingIndex %d for chain '%s'",
+                           InteractionValidation.getEntityName(context.getEntity(), context.getCommandBuffer()),
+                           clientState.chainingIndex,
+                           id
+                        );
+                  }
+
+                  map.put(id, clientState.chainingIndex);
+                  dataComponent.lastAttack = System.nanoTime();
+               }
+            }
+         }
+
          state.state = InteractionState.Finished;
          context.jump(context.getLabel(clientState.chainingIndex));
+      } else {
+         LOGGER.at(Level.WARNING)
+            .log(
+               "%s sent out-of-bounds chainingIndex %d (max %d)",
+               InteractionValidation.getEntityName(context.getEntity(), context.getCommandBuffer()),
+               clientState.chainingIndex,
+               this.next.length
+            );
+         state.state = InteractionState.Failed;
       }
+   }
+
+   private boolean isAcceptedChainIndex(
+      int clientIndex, @Nonnull Object2IntMap<String> map, @Nonnull String id, @Nonnull ChainingInteraction.Data dataComponent
+   ) {
+      int lastStoredIndex = map.getInt(id);
+      float timeSinceLastAttack = dataComponent.getTimeSinceLastAttackInSeconds();
+      if (timeSinceLastAttack == 0.0F) {
+         return clientIndex == 0;
+      }
+
+      int sequentialIndex = lastStoredIndex + 1;
+      if (sequentialIndex >= this.next.length) {
+         sequentialIndex = 0;
+      }
+
+      float grace = Math.min(0.5F, this.chainingAllowance * 0.25F);
+      boolean allowanceExpired = this.chainingAllowance > 0.0F && timeSinceLastAttack > this.chainingAllowance;
+      boolean nearAllowanceBoundary = this.chainingAllowance > 0.0F
+         && timeSinceLastAttack > this.chainingAllowance - grace
+         && timeSinceLastAttack <= this.chainingAllowance + grace;
+      int expectedIndex = allowanceExpired ? 0 : sequentialIndex;
+      return !nearAllowanceBoundary ? clientIndex == expectedIndex : clientIndex == 0 || clientIndex == sequentialIndex;
    }
 
    @Override
@@ -292,6 +366,7 @@ public class ChainingInteraction extends Interaction {
       public Component<EntityStore> clone() {
          ChainingInteraction.Data c = new ChainingInteraction.Data();
          c.map.putAll(this.map);
+         c.namedMap.putAll(this.namedMap);
          c.lastAttack = this.lastAttack;
          return c;
       }

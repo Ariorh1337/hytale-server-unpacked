@@ -23,7 +23,7 @@ public abstract class ReturnTypeAsset implements JsonAssetWithMap<String, Defaul
    private static final ReturnTypeAsset[] EMPTY_INPUTS = new ReturnTypeAsset[0];
    @Nonnull
    public static final AssetCodecMapCodec<String, ReturnTypeAsset> CODEC = new AssetCodecMapCodec<>(
-      Codec.STRING, (t, k) -> t.id = k, t -> t.id, (t, data) -> t.data = data, t -> t.data
+      Codec.STRING, (asset, value) -> asset.id = value, asset -> asset.id, (asset, value) -> asset.data = value, asset -> asset.data
    );
    @Nonnull
    private static final Map<String, ReturnTypeAsset> exportedNodes = new HashMap<>();
@@ -33,7 +33,7 @@ public abstract class ReturnTypeAsset implements JsonAssetWithMap<String, Defaul
    public static final Codec<String[]> CHILD_ASSET_CODEC_ARRAY = new ArrayCodec<>(CHILD_ASSET_CODEC, String[]::new);
    @Nonnull
    public static final BuilderCodec<ReturnTypeAsset> ABSTRACT_CODEC = BuilderCodec.abstractBuilder(ReturnTypeAsset.class)
-      .append(new KeyedCodec<>("ExportAs", Codec.STRING, false), (t, k) -> t.exportName = k, t -> t.exportName)
+      .append(new KeyedCodec<>("ExportAs", Codec.STRING, false), (asset, value) -> asset.exportName = value, asset -> asset.exportName)
       .add()
       .afterDecode(asset -> {
          if (asset.exportName != null && !asset.exportName.isEmpty()) {

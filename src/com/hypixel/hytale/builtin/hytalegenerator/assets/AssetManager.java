@@ -55,12 +55,14 @@ import com.hypixel.hytale.builtin.hytalegenerator.assets.density.CylinderDensity
 import com.hypixel.hytale.builtin.hytalegenerator.assets.density.DensityAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.density.DistanceDensityAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.density.DistanceToBiomeEdgeDensityAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.density.DistanceToGraphEdgeDensityAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.density.EllipsoidDensityAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.density.ExportedDensityAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.density.FastGradientWarpDensityAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.density.FloorDensityAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.density.GradientDensityAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.density.GradientWarpDensityAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.density.GraphDensityAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.density.ImportedDensityAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.density.InverterDensityAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.density.MaxDensityAsset;
@@ -93,6 +95,7 @@ import com.hypixel.hytale.builtin.hytalegenerator.assets.density.SwitchDensityAs
 import com.hypixel.hytale.builtin.hytalegenerator.assets.density.SwitchStateDensityAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.density.TerrainDensityAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.density.VectorWarpDensityAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.density.WhiteNoiseDensityAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.density.XOverrideDensityAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.density.XValueDensityAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.density.YOverrideDensityAsset;
@@ -122,10 +125,75 @@ import com.hypixel.hytale.builtin.hytalegenerator.assets.environmentproviders.En
 import com.hypixel.hytale.builtin.hytalegenerator.assets.framework.DecimalConstantsFrameworkAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.framework.FrameworkAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.framework.PositionsFrameworkAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.GraphGeneratorAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.contentpredicates.AndContentPredicateAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.contentpredicates.ConstantContentPredicateAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.contentpredicates.ContentPredicateAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.contentpredicates.ImportedContentPredicateAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.contentpredicates.NotContentPredicateAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.contentpredicates.OrContentPredicateAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.contentpredicates.SetContentPredicateAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.contentsuppliers.ConstantContentSupplierAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.contentsuppliers.ContentSupplierAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.contentsuppliers.ImportedContentSupplierAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.contentsuppliers.WeightedContentSupplierAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.edgeactions.DeleteEdgeActionAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.edgeactions.EdgeActionAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.edgeactions.EmptyEdgeActionAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.edgeactions.ImportedEdgeActionAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.edgeactions.NodesEdgeActionAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.edgeactions.ProxyEdgeActionAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.edgeactions.SelectorEdgeActionAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.edgeactions.SplitterEdgeActionAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.edgeselectors.AllEdgeSelectorAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.edgeselectors.AndEdgeSelectorAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.edgeselectors.AngleEdgeSelectorAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.edgeselectors.EdgeSelectorAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.edgeselectors.ImportedEdgeSelectorAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.edgeselectors.LengthEdgeSelectorAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.edgeselectors.NodesEdgeSelectorAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.edgeselectors.NotEdgeSelectorAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.edgeselectors.OrEdgeSelectorAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.edgeselectors.RandomEdgeSelectorAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.nodeactions.ConnectedEdgesNodeActionAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.nodeactions.ConnectedNodesNodeActionAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.nodeactions.ContentCopyNodeActionAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.nodeactions.ContentNodeActionAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.nodeactions.DeleteNodeActionAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.nodeactions.EmptyNodeActionAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.nodeactions.ImportedNodeActionAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.nodeactions.Jitter2dNodeActionAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.nodeactions.Jitter3dNodeActionAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.nodeactions.MoveNodeActionAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.nodeactions.NodeActionAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.nodeactions.ProximityConnectorNodeActionAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.nodeactions.SelectorNodeActionAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.nodeactions.SpawnerNodeActionAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.nodeactions.WeightedNodeActionAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.nodeselectors.AllNodeSelectorAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.nodeselectors.AndNodeSelectorAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.nodeselectors.ConnectionCountNodeSelectorAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.nodeselectors.ContentNodeSelectorAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.nodeselectors.DensityDelimitedNodeSelectorAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.nodeselectors.ImportedNodeSelectorAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.nodeselectors.NeighborEdgesNodeSelectorAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.nodeselectors.NeighborNodesNodeSelectorAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.nodeselectors.NodeSelectorAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.nodeselectors.NotNodeSelectorAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.nodeselectors.OrNodeSelectorAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.nodeselectors.RandomNodeSelectorAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.passes.EdgeActionGraphPassAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.passes.EmptyGraphPassAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.passes.GraphPassAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.passes.ImportedGraphPassAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.passes.ManualGraphPassAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.passes.NodeActionGraphPassAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.passes.PositionsGraphPassAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders.ConstantMaterialProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders.DownwardDepthMaterialProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders.DownwardSpaceMaterialProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders.FieldFunctionMaterialProviderAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders.GraphMaterialProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders.ImportedMaterialProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders.MaterialProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders.QueueMaterialProviderAsset;
@@ -133,6 +201,7 @@ import com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders.Simpl
 import com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders.SolidityMaterialProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders.StripedMaterialProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders.TerrainDensityMaterialProviderAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders.TransparentMaterialProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders.UpwardDepthMaterialProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders.UpwardSpaceMaterialProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders.WeightedMaterialProviderAsset;
@@ -176,9 +245,11 @@ import com.hypixel.hytale.builtin.hytalegenerator.assets.positionproviders.BaseH
 import com.hypixel.hytale.builtin.hytalegenerator.assets.positionproviders.BoundPositionProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.positionproviders.CachedPositionProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.positionproviders.ClustersPositionProviderAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.positionproviders.DirectionalJitterPositionProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.positionproviders.FieldFunctionOccurrencePositionProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.positionproviders.FieldFunctionPositionProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.positionproviders.FrameworkPositionProviderAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.positionproviders.GraphPositionProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.positionproviders.ImportedPositionProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.positionproviders.Jitter2dPositionProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.positionproviders.Jitter3dPositionProviderAsset;
@@ -193,8 +264,11 @@ import com.hypixel.hytale.builtin.hytalegenerator.assets.positionproviders.Squar
 import com.hypixel.hytale.builtin.hytalegenerator.assets.positionproviders.SquareGrid3dPositionProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.positionproviders.TriangularGrid2dPositionProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.positionproviders.UnionPositionProviderAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.positionproviders.VectorOffsetPositionProviderAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.propdistribution.AnchorPropDistributionAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.propdistribution.AssignedPropDistributionAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.propdistribution.ConstantPropDistributionAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.propdistribution.GraphPropDistributionAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.propdistribution.ImportedPropDistributionAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.propdistribution.NoPropDistributionAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.propdistribution.PositionsPropDistributionAsset;
@@ -241,11 +315,24 @@ import com.hypixel.hytale.builtin.hytalegenerator.assets.terrains.TerrainAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.tintproviders.ConstantTintProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.tintproviders.DensityDelimitedTintProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.tintproviders.TintProviderAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.vectorproviders.AdderVectorProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.vectorproviders.CacheVectorProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.vectorproviders.ConstantVectorProviderAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.vectorproviders.CrossVectorProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.vectorproviders.DensityGradientVectorProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.vectorproviders.ExportedVectorProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.vectorproviders.ImportedVectorProviderAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.vectorproviders.MultiplierVectorProviderAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.vectorproviders.NormalizerVectorProviderAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.vectorproviders.OpposedToGraphEdgesVectorProviderAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.vectorproviders.PlaneProjectorVectorProviderAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.vectorproviders.RandomVectorProviderAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.vectorproviders.ScalarMultiplierVectorProviderAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.vectorproviders.SetXVectorProviderAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.vectorproviders.SetYVectorProviderAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.vectorproviders.SetZVectorProviderAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.vectorproviders.SubtracterVectorProviderAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.vectorproviders.VectorProjectorVectorProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.vectorproviders.VectorProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.worldstructures.WorldStructureAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.worldstructures.basic.BasicWorldStructureAsset;
@@ -276,6 +363,14 @@ public class AssetManager {
    private final HashMap<String, PositionProviderAsset> positionProviderAssets;
    @Nonnull
    private final HashMap<String, PropAsset> propAssets;
+   @Nonnull
+   private final HashMap<String, GraphGeneratorAsset> graphGeneratorAssets;
+   @Nonnull
+   private final HashMap<String, GraphPassAsset> graphPassAssets;
+   @Nonnull
+   private final HashMap<String, ContentSupplierAsset> contentSupplierAssets;
+   @Nonnull
+   private final HashMap<String, ContentPredicateAsset> contentPredicateAssets;
    private SettingsAsset settingsAsset = new SettingsAsset();
    @Nonnull
    private final HytaleLogger logger;
@@ -292,6 +387,10 @@ public class AssetManager {
       this.propDistributionAssets = new HashMap<>(1);
       this.positionProviderAssets = new HashMap<>(1);
       this.propAssets = new HashMap<>(1);
+      this.graphGeneratorAssets = new HashMap<>(1);
+      this.graphPassAssets = new HashMap<>(1);
+      this.contentSupplierAssets = new HashMap<>(1);
+      this.contentPredicateAssets = new HashMap<>(1);
       eventRegistry.register(LoadedAssetsEvent.class, DensityAsset.class, this::onDensityLoadEvent);
       eventRegistry.register(RemovedAssetsEvent.class, DensityAsset.class, this::onDensityRemoveEvent);
       eventRegistry.register(LoadedAssetsEvent.class, AssignmentsAsset.class, this::onAssignmentsLoadEvent);
@@ -307,14 +406,85 @@ public class AssetManager {
       eventRegistry.register(RemovedAssetsEvent.class, PositionProviderAsset.class, this::onPositionProviderRemoveEvent);
       eventRegistry.register(LoadedAssetsEvent.class, PropAsset.class, this::onPropLoadEvent);
       eventRegistry.register(RemovedAssetsEvent.class, PropAsset.class, this::onPropRemoveEvent);
+      eventRegistry.register(LoadedAssetsEvent.class, GraphGeneratorAsset.class, this::onGraphGeneratorLoadEvent);
+      eventRegistry.register(RemovedAssetsEvent.class, GraphGeneratorAsset.class, this::onGraphGeneratorRemoveEvent);
+      eventRegistry.register(LoadedAssetsEvent.class, GraphPassAsset.class, this::onGraphPassLoadEvent);
+      eventRegistry.register(RemovedAssetsEvent.class, GraphPassAsset.class, this::onGraphPassRemoveEvent);
+      eventRegistry.register(LoadedAssetsEvent.class, ContentSupplierAsset.class, this::onContentSupplierLoadEvent);
+      eventRegistry.register(RemovedAssetsEvent.class, ContentSupplierAsset.class, this::onContentSupplierRemoveEvent);
+      eventRegistry.register(LoadedAssetsEvent.class, ContentPredicateAsset.class, this::onContentPredicateLoadEvent);
+      eventRegistry.register(RemovedAssetsEvent.class, ContentPredicateAsset.class, this::onContentPredicateRemoveEvent);
       eventRegistry.register(LoadedAssetsEvent.class, WorldStructureAsset.class, this::onWorldStructureLoadEvent);
       eventRegistry.register(RemovedAssetsEvent.class, WorldStructureAsset.class, this::onWorldStructureRemoveEvent);
+   }
+
+   private void onGraphPassLoadEvent(@Nonnull LoadedAssetsEvent<String, GraphPassAsset, DefaultAssetMap<String, GraphPassAsset>> event) {
+      for (GraphPassAsset value : event.getLoadedAssets().values()) {
+         this.graphPassAssets.put(value.getId(), value);
+      }
+
+      this.triggerReloadListeners();
+   }
+
+   private void onGraphPassRemoveEvent(@Nonnull RemovedAssetsEvent<String, GraphPassAsset, DefaultAssetMap<String, GraphPassAsset>> event) {
+      for (String key : event.getRemovedAssets()) {
+         this.graphPassAssets.remove(key);
+      }
+
+      this.triggerReloadListeners();
+   }
+
+   private void onContentSupplierLoadEvent(@Nonnull LoadedAssetsEvent<String, ContentSupplierAsset, DefaultAssetMap<String, ContentSupplierAsset>> event) {
+      for (ContentSupplierAsset value : event.getLoadedAssets().values()) {
+         this.contentSupplierAssets.put(value.getId(), value);
+      }
+
+      this.triggerReloadListeners();
+   }
+
+   private void onContentSupplierRemoveEvent(@Nonnull RemovedAssetsEvent<String, ContentSupplierAsset, DefaultAssetMap<String, ContentSupplierAsset>> event) {
+      for (String key : event.getRemovedAssets()) {
+         this.contentSupplierAssets.remove(key);
+      }
+
+      this.triggerReloadListeners();
+   }
+
+   private void onContentPredicateLoadEvent(@Nonnull LoadedAssetsEvent<String, ContentPredicateAsset, DefaultAssetMap<String, ContentPredicateAsset>> event) {
+      for (ContentPredicateAsset value : event.getLoadedAssets().values()) {
+         this.contentPredicateAssets.put(value.getId(), value);
+      }
+
+      this.triggerReloadListeners();
+   }
+
+   private void onContentPredicateRemoveEvent(@Nonnull RemovedAssetsEvent<String, ContentPredicateAsset, DefaultAssetMap<String, ContentPredicateAsset>> event) {
+      for (String key : event.getRemovedAssets()) {
+         this.contentPredicateAssets.remove(key);
+      }
+
+      this.triggerReloadListeners();
+   }
+
+   private void onGraphGeneratorLoadEvent(@Nonnull LoadedAssetsEvent<String, GraphGeneratorAsset, DefaultAssetMap<String, GraphGeneratorAsset>> event) {
+      for (GraphGeneratorAsset value : event.getLoadedAssets().values()) {
+         this.graphGeneratorAssets.put(value.getId(), value);
+      }
+
+      this.triggerReloadListeners();
+   }
+
+   private void onGraphGeneratorRemoveEvent(@Nonnull RemovedAssetsEvent<String, GraphGeneratorAsset, DefaultAssetMap<String, GraphGeneratorAsset>> event) {
+      for (String key : event.getRemovedAssets()) {
+         this.graphGeneratorAssets.remove(key);
+      }
+
+      this.triggerReloadListeners();
    }
 
    private void onPropLoadEvent(@Nonnull LoadedAssetsEvent<String, PropAsset, DefaultAssetMap<String, PropAsset>> event) {
       for (PropAsset value : event.getLoadedAssets().values()) {
          this.propAssets.put(value.getId(), value);
-         this.logger.at(Level.FINE).log("Loaded Prop asset " + value);
       }
 
       this.triggerReloadListeners();
@@ -331,7 +501,6 @@ public class AssetManager {
    private void onPositionProviderLoadEvent(@Nonnull LoadedAssetsEvent<String, PositionProviderAsset, DefaultAssetMap<String, PositionProviderAsset>> event) {
       for (PositionProviderAsset value : event.getLoadedAssets().values()) {
          this.positionProviderAssets.put(value.getId(), value);
-         this.logger.at(Level.FINE).log("Loaded PositionProvider asset " + value);
       }
 
       this.triggerReloadListeners();
@@ -348,7 +517,6 @@ public class AssetManager {
    private void onPropDistributionLoadEvent(@Nonnull LoadedAssetsEvent<String, PropDistributionAsset, DefaultAssetMap<String, PropDistributionAsset>> event) {
       for (PropDistributionAsset value : event.getLoadedAssets().values()) {
          this.propDistributionAssets.put(value.getId(), value);
-         this.logger.at(Level.FINE).log("Loaded PropDistribution asset " + value);
       }
 
       this.triggerReloadListeners();
@@ -365,7 +533,6 @@ public class AssetManager {
    private void onBlockMaskLoadEvent(@Nonnull LoadedAssetsEvent<String, BlockMaskAsset, DefaultAssetMap<String, BlockMaskAsset>> event) {
       for (BlockMaskAsset value : event.getLoadedAssets().values()) {
          this.blockMaskAssets.put(value.getId(), value);
-         this.logger.at(Level.FINE).log("Loaded BlockMask asset " + value);
       }
 
       this.triggerReloadListeners();
@@ -382,7 +549,6 @@ public class AssetManager {
    private void onDensityLoadEvent(@Nonnull LoadedAssetsEvent<String, DensityAsset, DefaultAssetMap<String, DensityAsset>> event) {
       for (DensityAsset value : event.getLoadedAssets().values()) {
          this.densityAssets.put(value.getId(), value);
-         this.logger.at(Level.FINE).log("Loaded Density asset " + value);
       }
 
       this.triggerReloadListeners();
@@ -437,8 +603,8 @@ public class AssetManager {
    }
 
    private void onWorldStructureRemoveEvent(@Nonnull RemovedAssetsEvent<String, WorldStructureAsset, DefaultAssetMap<String, WorldStructureAsset>> event) {
-      for (String value : event.getRemovedAssets()) {
-         this.worldStructureAssets.remove(value);
+      for (String key : event.getRemovedAssets()) {
+         this.worldStructureAssets.remove(key);
       }
 
       this.triggerReloadListeners();
@@ -553,6 +719,40 @@ public class AssetManager {
                .setCodec(SettingsAsset.CODEC))
             .build()
       );
+      AssetRegistry.register(
+         ((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(GraphPassAsset.class, new DefaultAssetMap())
+                     .setPath("HytaleGenerator/GraphPasses"))
+                  .setKeyFunction(GraphPassAsset::getId))
+               .setCodec(GraphPassAsset.CODEC))
+            .build()
+      );
+      AssetRegistry.register(
+         ((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(
+                        ContentSupplierAsset.class, new DefaultAssetMap()
+                     )
+                     .setPath("HytaleGenerator/GraphContentSuppliers"))
+                  .setKeyFunction(ContentSupplierAsset::getId))
+               .setCodec(ContentSupplierAsset.CODEC))
+            .build()
+      );
+      AssetRegistry.register(
+         ((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(
+                        ContentPredicateAsset.class, new DefaultAssetMap()
+                     )
+                     .setPath("HytaleGenerator/GraphContentPredicates"))
+                  .setKeyFunction(ContentPredicateAsset::getId))
+               .setCodec(ContentPredicateAsset.CODEC))
+            .build()
+      );
+      AssetRegistry.register(
+         ((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(
+                        GraphGeneratorAsset.class, new DefaultAssetMap()
+                     )
+                     .setPath("HytaleGenerator/GraphGenerators"))
+                  .setKeyFunction(GraphGeneratorAsset::getId))
+               .setCodec(GraphGeneratorAsset.CODEC))
+            .build()
+      );
       DensityAsset.CODEC.register("SimplexNoise2D", SimplexNoise2dDensityAsset.class, SimplexNoise2dDensityAsset.CODEC);
       DensityAsset.CODEC.register("SimplexNoise3D", SimplexNoise3DDensityAsset.class, SimplexNoise3DDensityAsset.CODEC);
       DensityAsset.CODEC.register("Offset", OffsetDensityAsset.class, OffsetDensityAsset.CODEC);
@@ -621,6 +821,65 @@ public class AssetManager {
       DensityAsset.CODEC.register("Terrain", TerrainDensityAsset.class, TerrainDensityAsset.CODEC);
       DensityAsset.CODEC.register("DistanceToBiomeEdge", DistanceToBiomeEdgeDensityAsset.class, DistanceToBiomeEdgeDensityAsset.CODEC);
       DensityAsset.CODEC.register("YSampled", YSampledDensityAsset.class, YSampledDensityAsset.CODEC);
+      DensityAsset.CODEC.register("Graph", GraphDensityAsset.class, GraphDensityAsset.CODEC);
+      DensityAsset.CODEC.register("DistanceToGraphEdge", DistanceToGraphEdgeDensityAsset.class, DistanceToGraphEdgeDensityAsset.CODEC);
+      DensityAsset.CODEC.register("WhiteNoise", WhiteNoiseDensityAsset.class, WhiteNoiseDensityAsset.CODEC);
+      GraphPassAsset.CODEC.register("Manual", ManualGraphPassAsset.class, ManualGraphPassAsset.CODEC);
+      GraphPassAsset.CODEC.register("Empty", EmptyGraphPassAsset.class, EmptyGraphPassAsset.CODEC);
+      GraphPassAsset.CODEC.register("NodeAction", NodeActionGraphPassAsset.class, NodeActionGraphPassAsset.CODEC);
+      GraphPassAsset.CODEC.register("EdgeAction", EdgeActionGraphPassAsset.class, EdgeActionGraphPassAsset.CODEC);
+      GraphPassAsset.CODEC.register("Positions", PositionsGraphPassAsset.class, PositionsGraphPassAsset.CODEC);
+      GraphPassAsset.CODEC.register("Imported", ImportedGraphPassAsset.class, ImportedGraphPassAsset.CODEC);
+      NodeSelectorAsset.CODEC.register("All", AllNodeSelectorAsset.class, AllNodeSelectorAsset.CODEC);
+      NodeSelectorAsset.CODEC.register("ConnectionCount", ConnectionCountNodeSelectorAsset.class, ConnectionCountNodeSelectorAsset.CODEC);
+      NodeSelectorAsset.CODEC.register("NeighborNodes", NeighborNodesNodeSelectorAsset.class, NeighborNodesNodeSelectorAsset.CODEC);
+      NodeSelectorAsset.CODEC.register("NeighborEdges", NeighborEdgesNodeSelectorAsset.class, NeighborEdgesNodeSelectorAsset.CODEC);
+      NodeSelectorAsset.CODEC.register("Random", RandomNodeSelectorAsset.class, RandomNodeSelectorAsset.CODEC);
+      NodeSelectorAsset.CODEC.register("DensityDelimited", DensityDelimitedNodeSelectorAsset.class, DensityDelimitedNodeSelectorAsset.CODEC);
+      NodeSelectorAsset.CODEC.register("Content", ContentNodeSelectorAsset.class, ContentNodeSelectorAsset.CODEC);
+      NodeSelectorAsset.CODEC.register("Not", NotNodeSelectorAsset.class, NotNodeSelectorAsset.CODEC);
+      NodeSelectorAsset.CODEC.register("And", AndNodeSelectorAsset.class, AndNodeSelectorAsset.CODEC);
+      NodeSelectorAsset.CODEC.register("Or", OrNodeSelectorAsset.class, OrNodeSelectorAsset.CODEC);
+      NodeSelectorAsset.CODEC.register("Imported", ImportedNodeSelectorAsset.class, ImportedNodeSelectorAsset.CODEC);
+      ContentPredicateAsset.CODEC.register("Constant", ConstantContentPredicateAsset.class, ConstantContentPredicateAsset.CODEC);
+      ContentPredicateAsset.CODEC.register("And", AndContentPredicateAsset.class, AndContentPredicateAsset.CODEC);
+      ContentPredicateAsset.CODEC.register("Or", OrContentPredicateAsset.class, OrContentPredicateAsset.CODEC);
+      ContentPredicateAsset.CODEC.register("Not", NotContentPredicateAsset.class, NotContentPredicateAsset.CODEC);
+      ContentPredicateAsset.CODEC.register("Set", SetContentPredicateAsset.class, SetContentPredicateAsset.CODEC);
+      ContentPredicateAsset.CODEC.register("Imported", ImportedContentPredicateAsset.class, ImportedContentPredicateAsset.CODEC);
+      ContentSupplierAsset.CODEC.register("Constant", ConstantContentSupplierAsset.class, ConstantContentSupplierAsset.CODEC);
+      ContentSupplierAsset.CODEC.register("Weighted", WeightedContentSupplierAsset.class, WeightedContentSupplierAsset.CODEC);
+      ContentSupplierAsset.CODEC.register("Imported", ImportedContentSupplierAsset.class, ImportedContentSupplierAsset.CODEC);
+      NodeActionAsset.CODEC.register("ConnectedEdges", ConnectedEdgesNodeActionAsset.class, ConnectedEdgesNodeActionAsset.CODEC);
+      NodeActionAsset.CODEC.register("ConnectedNodes", ConnectedNodesNodeActionAsset.class, ConnectedNodesNodeActionAsset.CODEC);
+      NodeActionAsset.CODEC.register("Content", ContentNodeActionAsset.class, ContentNodeActionAsset.CODEC);
+      NodeActionAsset.CODEC.register("Delete", DeleteNodeActionAsset.class, DeleteNodeActionAsset.CODEC);
+      NodeActionAsset.CODEC.register("Empty", EmptyNodeActionAsset.class, EmptyNodeActionAsset.CODEC);
+      NodeActionAsset.CODEC.register("Jitter2d", Jitter2dNodeActionAsset.class, Jitter2dNodeActionAsset.CODEC);
+      NodeActionAsset.CODEC.register("Jitter3d", Jitter3dNodeActionAsset.class, Jitter3dNodeActionAsset.CODEC);
+      NodeActionAsset.CODEC.register("ProximityConnector", ProximityConnectorNodeActionAsset.class, ProximityConnectorNodeActionAsset.CODEC);
+      NodeActionAsset.CODEC.register("Selector", SelectorNodeActionAsset.class, SelectorNodeActionAsset.CODEC);
+      NodeActionAsset.CODEC.register("Weighted", WeightedNodeActionAsset.class, WeightedNodeActionAsset.CODEC);
+      NodeActionAsset.CODEC.register("Imported", ImportedNodeActionAsset.class, ImportedNodeActionAsset.CODEC);
+      NodeActionAsset.CODEC.register("Move", MoveNodeActionAsset.class, MoveNodeActionAsset.CODEC);
+      NodeActionAsset.CODEC.register("ContentCopy", ContentCopyNodeActionAsset.class, ContentCopyNodeActionAsset.CODEC);
+      NodeActionAsset.CODEC.register("Spawner", SpawnerNodeActionAsset.class, SpawnerNodeActionAsset.CODEC);
+      EdgeSelectorAsset.CODEC.register("All", AllEdgeSelectorAsset.class, AllEdgeSelectorAsset.CODEC);
+      EdgeSelectorAsset.CODEC.register("Random", RandomEdgeSelectorAsset.class, RandomEdgeSelectorAsset.CODEC);
+      EdgeSelectorAsset.CODEC.register("Nodes", NodesEdgeSelectorAsset.class, NodesEdgeSelectorAsset.CODEC);
+      EdgeSelectorAsset.CODEC.register("Not", NotEdgeSelectorAsset.class, NotEdgeSelectorAsset.CODEC);
+      EdgeSelectorAsset.CODEC.register("And", AndEdgeSelectorAsset.class, AndEdgeSelectorAsset.CODEC);
+      EdgeSelectorAsset.CODEC.register("Or", OrEdgeSelectorAsset.class, OrEdgeSelectorAsset.CODEC);
+      EdgeSelectorAsset.CODEC.register("Imported", ImportedEdgeSelectorAsset.class, ImportedEdgeSelectorAsset.CODEC);
+      EdgeSelectorAsset.CODEC.register("Angle", AngleEdgeSelectorAsset.class, AngleEdgeSelectorAsset.CODEC);
+      EdgeSelectorAsset.CODEC.register("Length", LengthEdgeSelectorAsset.class, LengthEdgeSelectorAsset.CODEC);
+      EdgeActionAsset.CODEC.register("Delete", DeleteEdgeActionAsset.class, DeleteEdgeActionAsset.CODEC);
+      EdgeActionAsset.CODEC.register("Empty", EmptyEdgeActionAsset.class, EmptyEdgeActionAsset.CODEC);
+      EdgeActionAsset.CODEC.register("Selector", SelectorEdgeActionAsset.class, SelectorEdgeActionAsset.CODEC);
+      EdgeActionAsset.CODEC.register("Nodes", NodesEdgeActionAsset.class, NodesEdgeActionAsset.CODEC);
+      EdgeActionAsset.CODEC.register("Imported", ImportedEdgeActionAsset.class, ImportedEdgeActionAsset.CODEC);
+      EdgeActionAsset.CODEC.register("Proxy", ProxyEdgeActionAsset.class, ProxyEdgeActionAsset.CODEC);
+      EdgeActionAsset.CODEC.register("Splitter", SplitterEdgeActionAsset.class, SplitterEdgeActionAsset.CODEC);
       FrameworkAsset.CODEC.register("DecimalConstants", DecimalConstantsFrameworkAsset.class, DecimalConstantsFrameworkAsset.CODEC);
       FrameworkAsset.CODEC.register("Positions", PositionsFrameworkAsset.class, PositionsFrameworkAsset.CODEC);
       TerrainAsset.CODEC.register("DAOTerrain", DensityTerrainAsset.class, DensityTerrainAsset.CODEC);
@@ -641,6 +900,8 @@ public class AssetManager {
       MaterialProviderAsset.CODEC.register("Weighted", WeightedMaterialProviderAsset.class, WeightedMaterialProviderAsset.CODEC);
       MaterialProviderAsset.CODEC.register("SpaceAndDepth", SpaceAndDepthMaterialProviderAsset.class, SpaceAndDepthMaterialProviderAsset.CODEC);
       MaterialProviderAsset.CODEC.register("Imported", ImportedMaterialProviderAsset.class, ImportedMaterialProviderAsset.CODEC);
+      MaterialProviderAsset.CODEC.register("Graph", GraphMaterialProviderAsset.class, GraphMaterialProviderAsset.CODEC);
+      MaterialProviderAsset.CODEC.register("Transparent", TransparentMaterialProviderAsset.class, TransparentMaterialProviderAsset.CODEC);
       LayerAsset.CODEC.register("ConstantThickness", ConstantThicknessLayerAsset.class, ConstantThicknessLayerAsset.CODEC);
       LayerAsset.CODEC.register("NoiseThickness", NoiseThicknessAsset.class, NoiseThicknessAsset.CODEC);
       LayerAsset.CODEC.register("RangeThickness", RangeThicknessAsset.class, RangeThicknessAsset.CODEC);
@@ -674,6 +935,9 @@ public class AssetManager {
       PositionProviderAsset.CODEC.register("Jitter2d", Jitter2dPositionProviderAsset.class, Jitter2dPositionProviderAsset.CODEC);
       PositionProviderAsset.CODEC.register("Jitter3d", Jitter3dPositionProviderAsset.class, Jitter3dPositionProviderAsset.CODEC);
       PositionProviderAsset.CODEC.register("Clusters", ClustersPositionProviderAsset.class, ClustersPositionProviderAsset.CODEC);
+      PositionProviderAsset.CODEC.register("DirectionalJitter", DirectionalJitterPositionProviderAsset.class, DirectionalJitterPositionProviderAsset.CODEC);
+      PositionProviderAsset.CODEC.register("VectorOffset", VectorOffsetPositionProviderAsset.class, VectorOffsetPositionProviderAsset.CODEC);
+      PositionProviderAsset.CODEC.register("Graph", GraphPositionProviderAsset.class, GraphPositionProviderAsset.CODEC);
       PointGeneratorAsset.CODEC.register("Mesh", MeshPointGeneratorAsset.class, MeshPointGeneratorAsset.CODEC);
       AssignmentsAsset.CODEC.register("FieldFunction", FieldFunctionAssignmentsAsset.class, FieldFunctionAssignmentsAsset.CODEC);
       AssignmentsAsset.CODEC.register("Sandwich", SandwichAssignmentsAsset.class, SandwichAssignmentsAsset.CODEC);
@@ -706,6 +970,8 @@ public class AssetManager {
       PropDistributionAsset.CODEC.register("Union", UnionPropDistributionAsset.class, UnionPropDistributionAsset.CODEC);
       PropDistributionAsset.CODEC.register("Imported", ImportedPropDistributionAsset.class, ImportedPropDistributionAsset.CODEC);
       PropDistributionAsset.CODEC.register("None", NoPropDistributionAsset.class, NoPropDistributionAsset.CODEC);
+      PropDistributionAsset.CODEC.register("Graph", GraphPropDistributionAsset.class, GraphPropDistributionAsset.CODEC);
+      PropDistributionAsset.CODEC.register("Anchor", AnchorPropDistributionAsset.class, AnchorPropDistributionAsset.CODEC);
       DirectionalityAsset.CODEC.register("Imported", ImportedDirectionalityAsset.class, ImportedDirectionalityAsset.CODEC);
       DirectionalityAsset.CODEC.register("Static", StaticDirectionalityAsset.class, StaticDirectionalityAsset.CODEC);
       DirectionalityAsset.CODEC.register("Random", RandomDirectionalityAsset.class, RandomDirectionalityAsset.CODEC);
@@ -775,5 +1041,18 @@ public class AssetManager {
       VectorProviderAsset.CODEC.register("Cache", CacheVectorProviderAsset.class, CacheVectorProviderAsset.CODEC);
       VectorProviderAsset.CODEC.register("Exported", ExportedVectorProviderAsset.class, ExportedVectorProviderAsset.CODEC);
       VectorProviderAsset.CODEC.register("Imported", ImportedVectorProviderAsset.class, ImportedVectorProviderAsset.CODEC);
+      VectorProviderAsset.CODEC.register("ScalarMultiplier", ScalarMultiplierVectorProviderAsset.class, ScalarMultiplierVectorProviderAsset.CODEC);
+      VectorProviderAsset.CODEC.register("Random", RandomVectorProviderAsset.class, RandomVectorProviderAsset.CODEC);
+      VectorProviderAsset.CODEC.register("Normalizer", NormalizerVectorProviderAsset.class, NormalizerVectorProviderAsset.CODEC);
+      VectorProviderAsset.CODEC.register("Adder", AdderVectorProviderAsset.class, AdderVectorProviderAsset.CODEC);
+      VectorProviderAsset.CODEC.register("Subtracter", SubtracterVectorProviderAsset.class, SubtracterVectorProviderAsset.CODEC);
+      VectorProviderAsset.CODEC.register("Multiplier", MultiplierVectorProviderAsset.class, MultiplierVectorProviderAsset.CODEC);
+      VectorProviderAsset.CODEC.register("Cross", CrossVectorProviderAsset.class, CrossVectorProviderAsset.CODEC);
+      VectorProviderAsset.CODEC.register("SetX", SetXVectorProviderAsset.class, SetXVectorProviderAsset.CODEC);
+      VectorProviderAsset.CODEC.register("SetY", SetYVectorProviderAsset.class, SetYVectorProviderAsset.CODEC);
+      VectorProviderAsset.CODEC.register("SetZ", SetZVectorProviderAsset.class, SetZVectorProviderAsset.CODEC);
+      VectorProviderAsset.CODEC.register("PlaneProjector", PlaneProjectorVectorProviderAsset.class, PlaneProjectorVectorProviderAsset.CODEC);
+      VectorProviderAsset.CODEC.register("VectorProjector", VectorProjectorVectorProviderAsset.class, VectorProjectorVectorProviderAsset.CODEC);
+      VectorProviderAsset.CODEC.register("OpposedToGraphEdges", OpposedToGraphEdgesVectorProviderAsset.class, OpposedToGraphEdgesVectorProviderAsset.CODEC);
    }
 }

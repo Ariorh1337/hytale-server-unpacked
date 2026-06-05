@@ -10,7 +10,7 @@ import javax.annotation.Nonnull;
 public class NotPatternAsset extends PatternAsset {
    @Nonnull
    public static final BuilderCodec<NotPatternAsset> CODEC = BuilderCodec.builder(NotPatternAsset.class, NotPatternAsset::new, PatternAsset.ABSTRACT_CODEC)
-      .append(new KeyedCodec<>("Pattern", PatternAsset.CODEC, true), (t, k) -> t.patternAsset = k, k -> k.patternAsset)
+      .append(new KeyedCodec<>("Pattern", PatternAsset.CODEC, true), (asset, value) -> asset.patternAsset = value, asset -> asset.patternAsset)
       .add()
       .build();
    private PatternAsset patternAsset = new ConstantPatternAsset();
@@ -18,7 +18,7 @@ public class NotPatternAsset extends PatternAsset {
    @Nonnull
    @Override
    public Pattern build(@Nonnull PatternAsset.Argument argument) {
-      return super.isSkipped() ? ConstantPattern.INSTANCE_FALSE : new NotPattern(this.patternAsset.build(argument));
+      return super.skip() ? ConstantPattern.INSTANCE_FALSE : new NotPattern(this.patternAsset.build(argument));
    }
 
    @Override

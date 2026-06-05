@@ -39,6 +39,7 @@ public class RespawnBlock implements Component<ChunkStore> {
       )
       .add()
       .build();
+   @Nullable
    private UUID ownerUUID;
 
    public static ComponentType<ChunkStore, RespawnBlock> getComponentType() {
@@ -48,15 +49,16 @@ public class RespawnBlock implements Component<ChunkStore> {
    public RespawnBlock() {
    }
 
-   public RespawnBlock(UUID ownerUUID) {
+   public RespawnBlock(@Nullable UUID ownerUUID) {
       this.ownerUUID = ownerUUID;
    }
 
+   @Nullable
    public UUID getOwnerUUID() {
       return this.ownerUUID;
    }
 
-   public void setOwnerUUID(UUID ownerUUID) {
+   public void setOwnerUUID(@Nullable UUID ownerUUID) {
       this.ownerUUID = ownerUUID;
    }
 

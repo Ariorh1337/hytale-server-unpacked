@@ -121,7 +121,7 @@ public class StashPlugin extends JavaPlugin {
          @Nonnull Ref<ChunkStore> ref, @Nonnull AddReason reason, @Nonnull Store<ChunkStore> store, @Nonnull CommandBuffer<ChunkStore> commandBuffer
       ) {
          World world = store.getExternalData().getWorld();
-         if (world.getWorldConfig().isBlockSpawnersEnabled()) {
+         if (world.getWorldConfig().isBlockSpawnersResolved()) {
             ItemContainerBlock itemContainerStateComponent = store.getComponent(ref, this.itemContainerStateComponentType);
             assert itemContainerStateComponent != null;
             BlockModule.BlockStateInfo blockStateInfo = store.getComponent(ref, this.blockStateInfoComponentType);

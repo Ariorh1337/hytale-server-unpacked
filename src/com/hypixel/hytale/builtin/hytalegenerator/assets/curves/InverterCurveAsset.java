@@ -10,7 +10,7 @@ public class InverterCurveAsset extends CurveAsset {
    public static final BuilderCodec<InverterCurveAsset> CODEC = BuilderCodec.builder(
          InverterCurveAsset.class, InverterCurveAsset::new, CurveAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Curve", CurveAsset.CODEC, true), (t, k) -> t.curveAsset = k, k -> k.curveAsset)
+      .append(new KeyedCodec<>("Curve", CurveAsset.CODEC, true), (asset, value) -> asset.curveAsset = value, asset -> asset.curveAsset)
       .add()
       .build();
    private CurveAsset curveAsset = new ConstantCurveAsset();

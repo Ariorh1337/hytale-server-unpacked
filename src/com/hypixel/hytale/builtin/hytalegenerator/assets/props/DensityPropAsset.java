@@ -28,15 +28,17 @@ import org.joml.Vector3i;
 public class DensityPropAsset extends PropAsset {
    @Nonnull
    public static final BuilderCodec<DensityPropAsset> CODEC = BuilderCodec.builder(DensityPropAsset.class, DensityPropAsset::new, PropAsset.ABSTRACT_CODEC)
-      .append(new KeyedCodec<>("Density", DensityAsset.CODEC, true), (asset, v) -> asset.densityAsset = v, asset -> asset.densityAsset)
+      .append(new KeyedCodec<>("Density", DensityAsset.CODEC, true), (asset, value) -> asset.densityAsset = value, asset -> asset.densityAsset)
       .add()
       .append(
-         new KeyedCodec<>("Material", MaterialProviderAsset.CODEC, true), (asset, v) -> asset.materialProviderAsset = v, asset -> asset.materialProviderAsset
+         new KeyedCodec<>("Material", MaterialProviderAsset.CODEC, true),
+         (asset, value) -> asset.materialProviderAsset = value,
+         asset -> asset.materialProviderAsset
       )
       .add()
-      .append(new KeyedCodec<>("Bounds", IntegerBounds3dAsset.CODEC, true), (asset, v) -> asset.boundsAsset = v, asset -> asset.boundsAsset)
+      .append(new KeyedCodec<>("Bounds", IntegerBounds3dAsset.CODEC, true), (asset, value) -> asset.boundsAsset = value, asset -> asset.boundsAsset)
       .add()
-      .<Vector3i>append(new KeyedCodec<>("Range", Vector3iUtil.CODEC, true), (asset, v) -> asset.range = v, asset -> asset.range)
+      .<Vector3i>append(new KeyedCodec<>("Range", Vector3iUtil.CODEC, true), (asset, value) -> asset.range = value, asset -> asset.range)
       .addValidator(new Validator<Vector3i>() {
          public void accept(Vector3i v, ValidationResults r) {
             if (v.x < 0 || v.y < 0 || v.z < 0) {
@@ -49,11 +51,13 @@ public class DensityPropAsset extends PropAsset {
          }
       })
       .add()
-      .append(new KeyedCodec<>("PlacementMask", BlockMaskAsset.CODEC, true), (asset, v) -> asset.placementMaskAsset = v, asset -> asset.placementMaskAsset)
+      .append(
+         new KeyedCodec<>("PlacementMask", BlockMaskAsset.CODEC, true), (asset, value) -> asset.placementMaskAsset = value, asset -> asset.placementMaskAsset
+      )
       .add()
-      .append(new KeyedCodec<>("Pattern", PatternAsset.CODEC, true), (asset, v) -> asset.patternAsset = v, asset -> asset.patternAsset)
+      .append(new KeyedCodec<>("Pattern", PatternAsset.CODEC, true), (asset, value) -> asset.patternAsset = value, asset -> asset.patternAsset)
       .add()
-      .append(new KeyedCodec<>("Scanner", ScannerAsset.CODEC, true), (asset, v) -> asset.scannerAsset = v, asset -> asset.scannerAsset)
+      .append(new KeyedCodec<>("Scanner", ScannerAsset.CODEC, true), (asset, value) -> asset.scannerAsset = value, asset -> asset.scannerAsset)
       .add()
       .build();
    @Nonnull

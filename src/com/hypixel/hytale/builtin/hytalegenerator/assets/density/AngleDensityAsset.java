@@ -21,7 +21,7 @@ public class AngleDensityAsset extends DensityAsset {
       .append(
          new KeyedCodec<>("VectorProvider", VectorProviderAsset.CODEC, true),
          (asset, value) -> asset.vectorProviderAsset = value,
-         value -> value.vectorProviderAsset
+         asset -> asset.vectorProviderAsset
       )
       .add()
       .append(new KeyedCodec<>("Vector", Vector3dUtil.CODEC, true), (asset, value) -> asset.vector = value, asset -> asset.vector)

@@ -13,18 +13,18 @@ public class NormalizerDensityAsset extends DensityAsset {
    public static final BuilderCodec<NormalizerDensityAsset> CODEC = BuilderCodec.builder(
          NormalizerDensityAsset.class, NormalizerDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("FromMin", Codec.DOUBLE, true), (t, k) -> t.fromMin = k, k -> k.fromMin)
+      .append(new KeyedCodec<>("FromMin", Codec.DOUBLE, true), (asset, value) -> asset.fromMin = value, asset -> asset.fromMin)
       .add()
-      .append(new KeyedCodec<>("FromMax", Codec.DOUBLE, true), (t, k) -> t.fromMax = k, k -> k.fromMax)
+      .append(new KeyedCodec<>("FromMax", Codec.DOUBLE, true), (asset, value) -> asset.fromMax = value, asset -> asset.fromMax)
       .add()
-      .append(new KeyedCodec<>("ToMin", Codec.DOUBLE, true), (t, k) -> t.toMin = k, k -> k.toMin)
+      .append(new KeyedCodec<>("ToMin", Codec.DOUBLE, true), (asset, value) -> asset.toMin = value, asset -> asset.toMin)
       .add()
-      .append(new KeyedCodec<>("ToMax", Codec.DOUBLE, true), (t, k) -> t.toMax = k, k -> k.toMax)
+      .append(new KeyedCodec<>("ToMax", Codec.DOUBLE, true), (asset, value) -> asset.toMax = value, asset -> asset.toMax)
       .add()
       .build();
-   private double fromMin;
+   private double fromMin = -1.0;
    private double fromMax = 1.0;
-   private double toMin;
+   private double toMin = -1.0;
    private double toMax = 1.0;
 
    @Nonnull

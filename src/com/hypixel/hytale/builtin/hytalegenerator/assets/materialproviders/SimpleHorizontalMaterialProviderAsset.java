@@ -14,15 +14,21 @@ public class SimpleHorizontalMaterialProviderAsset extends MaterialProviderAsset
    public static final BuilderCodec<SimpleHorizontalMaterialProviderAsset> CODEC = BuilderCodec.builder(
          SimpleHorizontalMaterialProviderAsset.class, SimpleHorizontalMaterialProviderAsset::new, MaterialProviderAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("TopY", Codec.INTEGER, true), (t, k) -> t.topY = k, k -> k.topY)
+      .append(new KeyedCodec<>("TopY", Codec.INTEGER, true), (asset, value) -> asset.topY = value, asset -> asset.topY)
       .add()
-      .append(new KeyedCodec<>("BottomY", Codec.INTEGER, true), (t, k) -> t.bottomY = k, k -> k.bottomY)
+      .append(new KeyedCodec<>("BottomY", Codec.INTEGER, true), (asset, value) -> asset.bottomY = value, asset -> asset.bottomY)
       .add()
-      .append(new KeyedCodec<>("Material", MaterialProviderAsset.CODEC, true), (t, k) -> t.materialProviderAsset = k, k -> k.materialProviderAsset)
+      .append(
+         new KeyedCodec<>("Material", MaterialProviderAsset.CODEC, true),
+         (asset, value) -> asset.materialProviderAsset = value,
+         asset -> asset.materialProviderAsset
+      )
       .add()
-      .append(new KeyedCodec<>("TopBaseHeight", Codec.STRING, false), (t, k) -> t.topBaseHeightName = k, t -> t.topBaseHeightName)
+      .append(new KeyedCodec<>("TopBaseHeight", Codec.STRING, false), (asset, value) -> asset.topBaseHeightName = value, asset -> asset.topBaseHeightName)
       .add()
-      .append(new KeyedCodec<>("BottomBaseHeight", Codec.STRING, false), (t, k) -> t.bottomBaseHeightName = k, t -> t.bottomBaseHeightName)
+      .append(
+         new KeyedCodec<>("BottomBaseHeight", Codec.STRING, false), (asset, value) -> asset.bottomBaseHeightName = value, asset -> asset.bottomBaseHeightName
+      )
       .add()
       .build();
    private int topY;

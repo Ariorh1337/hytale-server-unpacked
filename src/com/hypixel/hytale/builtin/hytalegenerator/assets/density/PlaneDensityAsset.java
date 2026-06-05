@@ -21,11 +21,11 @@ public class PlaneDensityAsset extends DensityAsset {
    public static final BuilderCodec<PlaneDensityAsset> CODEC = BuilderCodec.builder(
          PlaneDensityAsset.class, PlaneDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Curve", CurveAsset.CODEC, true), (t, k) -> t.distanceCurveAsset = k, k -> k.distanceCurveAsset)
+      .append(new KeyedCodec<>("Curve", CurveAsset.CODEC, true), (asset, value) -> asset.distanceCurveAsset = value, asset -> asset.distanceCurveAsset)
       .add()
-      .append(new KeyedCodec<>("IsAnchored", Codec.BOOLEAN, false), (t, k) -> t.isAnchored = k, k -> k.isAnchored)
+      .append(new KeyedCodec<>("IsAnchored", Codec.BOOLEAN, false), (asset, value) -> asset.isAnchored = value, asset -> asset.isAnchored)
       .add()
-      .<Vector3d>append(new KeyedCodec<>("PlaneNormal", Vector3dUtil.CODEC, false), (t, k) -> t.planeNormal = k, k -> k.planeNormal)
+      .<Vector3d>append(new KeyedCodec<>("PlaneNormal", Vector3dUtil.CODEC, false), (asset, value) -> asset.planeNormal = value, asset -> asset.planeNormal)
       .addValidator(new Validator<Vector3d>() {
          public void accept(Vector3d v, ValidationResults r) {
             if (v.length() == 0.0) {

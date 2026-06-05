@@ -10,13 +10,15 @@ public class ComponentType<ECS_TYPE, T extends Component<ECS_TYPE>> implements C
    private ComponentRegistry<ECS_TYPE> registry;
    private Class<? super T> tClass;
    private int index;
-   private boolean invalid = true;
+   private int hashCode;
+   private boolean valid = false;
 
    void init(@Nonnull ComponentRegistry<ECS_TYPE> registry, @Nonnull Class<? super T> tClass, int index) {
       this.registry = registry;
       this.tClass = tClass;
       this.index = index;
-      this.invalid = false;
+      this.hashCode = 31 * registry.hashCode() + index;
+      this.valid = true;
    }
 
    @Nonnull
@@ -34,11 +36,11 @@ public class ComponentType<ECS_TYPE, T extends Component<ECS_TYPE>> implements C
    }
 
    void invalidate() {
-      this.invalid = true;
+      this.valid = false;
    }
 
    boolean isValid() {
-      return !this.invalid;
+      return this.valid;
    }
 
    @Override
@@ -60,7 +62,7 @@ public class ComponentType<ECS_TYPE, T extends Component<ECS_TYPE>> implements C
 
    @Override
    public void validate() {
-      if (this.invalid) {
+      if (!this.valid) {
          throw new IllegalStateException("ComponentType is invalid!");
       }
    }
@@ -73,8 +75,7 @@ public class ComponentType<ECS_TYPE, T extends Component<ECS_TYPE>> implements C
    public boolean equals(@Nullable Object o) {
       if (this == o) {
          return true;
-      } else if (o != null && this.getClass() == o.getClass()) {
-         ComponentType<?, ?> that = (ComponentType<?, ?>)o;
+      } else if (o instanceof ComponentType<?, ?> that) {
          return this.index != that.index ? false : this.registry == that.registry;
       } else {
          return false;
@@ -83,8 +84,7 @@ public class ComponentType<ECS_TYPE, T extends Component<ECS_TYPE>> implements C
 
    @Override
    public int hashCode() {
-      int result = this.registry.hashCode();
-      return 31 * result + this.index;
+      return this.hashCode;
    }
 
    @Nonnull

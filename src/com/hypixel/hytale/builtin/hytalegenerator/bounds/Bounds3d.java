@@ -1,6 +1,7 @@
 package com.hypixel.hytale.builtin.hytalegenerator.bounds;
 
 import com.hypixel.hytale.builtin.hytalegenerator.engine.performanceinstruments.MemInstrument;
+import com.hypixel.hytale.builtin.hytalegenerator.math.Calculator;
 import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
 import javax.annotation.Nonnull;
@@ -12,12 +13,19 @@ public class Bounds3d implements MemInstrument {
    @Nonnull
    public static final Bounds3d ZERO = new Bounds3d();
    @Nonnull
+   public static final Bounds3d ALL = new Bounds3d(Vector3dUtil.MIN, Vector3dUtil.MAX);
+   @Nonnull
    public final Vector3d min;
    @Nonnull
    public final Vector3d max;
 
    public Bounds3d() {
       this(Vector3dUtil.ZERO, Vector3dUtil.ZERO);
+   }
+
+   public Bounds3d(@Nonnull Bounds3d other) {
+      this.min = new Vector3d(other.min);
+      this.max = new Vector3d(other.max);
    }
 
    public Bounds3d(@Nonnull Vector3dc min, @Nonnull Vector3dc max) {
@@ -43,13 +51,13 @@ public class Bounds3d implements MemInstrument {
          && position.z < this.max.z;
    }
 
-   public boolean contains(@Nonnull Vector3d position) {
-      return position.x >= this.min.x
-         && position.y >= this.min.y
-         && position.z >= this.min.z
-         && position.x < this.max.x
-         && position.y < this.max.y
-         && position.z < this.max.z;
+   public boolean contains(@Nonnull Vector3dc position) {
+      return position.x() >= this.min.x
+         && position.y() >= this.min.y
+         && position.z() >= this.min.z
+         && position.x() < this.max.x
+         && position.y() < this.max.y
+         && position.z() < this.max.z;
    }
 
    public boolean contains(@Nonnull Bounds3d other) {
@@ -77,6 +85,10 @@ public class Bounds3d implements MemInstrument {
    @Nonnull
    public Vector3d getSize() {
       return new Vector3d(this.max).sub(this.min);
+   }
+
+   public double maxRangeOrthogonal() {
+      return Calculator.max(Math.abs(this.min.x), Math.abs(this.min.y), Math.abs(this.min.z), Math.abs(this.max.x), Math.abs(this.max.y), Math.abs(this.max.z));
    }
 
    @Nonnull
@@ -165,6 +177,29 @@ public class Bounds3d implements MemInstrument {
       } else {
          return this;
       }
+   }
+
+   @Nonnull
+   public Bounds3d stackOrAssign(@Nonnull Bounds3d other) {
+      if (this.isZeroVolume()) {
+         this.assign(other);
+      } else {
+         this.stack(other);
+      }
+
+      return this;
+   }
+
+   @Nonnull
+   public Bounds3d expand(double distance) {
+      this.correct();
+      this.min.add(-distance, -distance, -distance);
+      this.max.add(distance, distance, distance);
+      if (distance < 0.0) {
+         this.correct();
+      }
+
+      return this;
    }
 
    @Nonnull

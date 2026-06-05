@@ -794,6 +794,13 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
       )
       .documentation("The explosion config associated with this block.")
       .add()
+      .appendInherited(
+         new KeyedCodec<>("ExplosionReactionState", Codec.STRING),
+         (blockType, v) -> blockType.explosionReactionState = v,
+         blockType -> blockType.explosionReactionState,
+         (blockType, parent) -> blockType.explosionReactionState = parent.explosionReactionState
+      )
+      .add()
       .afterDecode(BlockType::processConfig)
       .build();
    public static final String[] EMPTY_ALIAS_LIST = new String[0];
@@ -1025,6 +1032,8 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
    @Nullable
    protected RailConfig[] rotatedRailConfig;
    @Nullable
+   protected String explosionReactionState;
+   @Nullable
    protected ExplosionConfig explosionConfig;
    protected String[] aliases = EMPTY_ALIAS_LIST;
    @Nullable
@@ -1138,6 +1147,7 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
       this.connectedBlockRuleSet = other.connectedBlockRuleSet;
       this.railConfig = other.railConfig;
       this.ignoreSupportWhenPlaced = other.ignoreSupportWhenPlaced;
+      this.explosionReactionState = other.explosionReactionState;
    }
 
    @Nonnull
@@ -2028,6 +2038,11 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
       outCenter.set(boundingBox.middleX(), boundingBox.middleY(), boundingBox.middleZ());
    }
 
+   @Nullable
+   public String getExplosionReactionState() {
+      return this.explosionReactionState;
+   }
+
    @Nonnull
    @Override
    public String toString() {
@@ -2171,6 +2186,8 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
          + this.interactions
          + ", railConfig="
          + this.railConfig
+         + ", explosionReactionState="
+         + this.explosionReactionState
          + "}";
    }
 

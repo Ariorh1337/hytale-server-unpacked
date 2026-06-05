@@ -13,7 +13,7 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
-import com.hypixel.hytale.server.core.universe.world.meta.state.RespawnBlock;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 import org.joml.Vector3i;
@@ -22,14 +22,14 @@ public class SetNameRespawnPointPage extends RespawnPointPage {
    @Nonnull
    private final Vector3i respawnBlockPosition;
    @Nonnull
-   private final RespawnBlock respawnBlock;
+   private final Ref<ChunkStore> blockRef;
 
    public SetNameRespawnPointPage(
-      @Nonnull PlayerRef playerRef, @Nonnull InteractionType interactionType, @Nonnull Vector3i respawnBlockPosition, @Nonnull RespawnBlock respawnBlock
+      @Nonnull PlayerRef playerRef, @Nonnull InteractionType interactionType, @Nonnull Vector3i respawnBlockPosition, @Nonnull Ref<ChunkStore> blockRef
    ) {
       super(playerRef, interactionType);
       this.respawnBlockPosition = respawnBlockPosition;
-      this.respawnBlock = respawnBlock;
+      this.blockRef = blockRef;
    }
 
    @Override
@@ -70,7 +70,7 @@ public class SetNameRespawnPointPage extends RespawnPointPage {
    public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull RespawnPointPage.RespawnPointEventData data) {
       String respawnPointName = data.getRespawnPointName();
       if (respawnPointName != null) {
-         this.setRespawnPointForPlayer(ref, store, this.respawnBlockPosition, this.respawnBlock, respawnPointName);
+         this.setRespawnPointForPlayer(ref, store, this.respawnBlockPosition, this.blockRef, respawnPointName);
       } else if ("Cancel".equals(data.getAction())) {
          Player playerComponent = store.getComponent(ref, Player.getComponentType());
          if (playerComponent != null) {

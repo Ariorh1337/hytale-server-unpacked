@@ -4,6 +4,7 @@ import com.hypixel.hytale.assetstore.AssetExtraInfo;
 import com.hypixel.hytale.assetstore.codec.AssetBuilderCodec;
 import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
 import com.hypixel.hytale.assetstore.map.JsonAssetWithMap;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.Cleanable;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.delimiters.RangeDoubleAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.density.DensityAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.delimiters.DelimiterDouble;
@@ -30,11 +31,11 @@ public class DensityDelimitedTintProviderAsset extends TintProviderAsset {
             new ArrayCodec<>(DensityDelimitedTintProviderAsset.DelimiterAsset.CODEC, DensityDelimitedTintProviderAsset.DelimiterAsset[]::new),
             true
          ),
-         (t, k) -> t.delimiterAssets = k,
-         k -> k.delimiterAssets
+         (asset, value) -> asset.delimiterAssets = value,
+         asset -> asset.delimiterAssets
       )
       .add()
-      .append(new KeyedCodec<>("Density", DensityAsset.CODEC, true), (t, value) -> t.densityAsset = value, t -> t.densityAsset)
+      .append(new KeyedCodec<>("Density", DensityAsset.CODEC, true), (asset, value) -> asset.densityAsset = value, asset -> asset.densityAsset)
       .add()
       .build();
    private DensityDelimitedTintProviderAsset.DelimiterAsset[] delimiterAssets = new DensityDelimitedTintProviderAsset.DelimiterAsset[0];
@@ -57,20 +58,29 @@ public class DensityDelimitedTintProviderAsset extends TintProviderAsset {
       return new DensityDelimitedTintProvider(delimiters, density);
    }
 
-   public static class DelimiterAsset implements JsonAssetWithMap<String, DefaultAssetMap<String, DensityDelimitedTintProviderAsset.DelimiterAsset>> {
+   @Override
+   public void cleanUp() {
+      this.densityAsset.cleanUp();
+
+      for (DensityDelimitedTintProviderAsset.DelimiterAsset delimiterAsset : this.delimiterAssets) {
+         delimiterAsset.cleanUp();
+      }
+   }
+
+   public static class DelimiterAsset implements Cleanable, JsonAssetWithMap<String, DefaultAssetMap<String, DensityDelimitedTintProviderAsset.DelimiterAsset>> {
       @Nonnull
       public static final AssetBuilderCodec<String, DensityDelimitedTintProviderAsset.DelimiterAsset> CODEC = AssetBuilderCodec.builder(
             DensityDelimitedTintProviderAsset.DelimiterAsset.class,
             DensityDelimitedTintProviderAsset.DelimiterAsset::new,
             Codec.STRING,
-            (asset, id) -> asset.id = id,
-            config -> config.id,
-            (config, data) -> config.data = data,
-            config -> config.data
+            (asset, value) -> asset.id = value,
+            asset -> asset.id,
+            (asset, value) -> asset.data = value,
+            asset -> asset.data
          )
-         .append(new KeyedCodec<>("Range", RangeDoubleAsset.CODEC, true), (t, value) -> t.rangeAsset = value, t -> t.rangeAsset)
+         .append(new KeyedCodec<>("Range", RangeDoubleAsset.CODEC, true), (asset, value) -> asset.rangeAsset = value, asset -> asset.rangeAsset)
          .add()
-         .append(new KeyedCodec<>("Tint", TintProviderAsset.CODEC, true), (t, value) -> t.tintProviderAsset = value, t -> t.tintProviderAsset)
+         .append(new KeyedCodec<>("Tint", TintProviderAsset.CODEC, true), (asset, value) -> asset.tintProviderAsset = value, asset -> asset.tintProviderAsset)
          .add()
          .build();
       private String id;
@@ -81,12 +91,17 @@ public class DensityDelimitedTintProviderAsset extends TintProviderAsset {
       @Nonnull
       public DelimiterDouble<TintProvider> build(@Nonnull TintProviderAsset.Argument argument) {
          RangeDouble range = this.rangeAsset.build();
-         TintProvider environmentProvider = this.tintProviderAsset.build(argument);
-         return new DelimiterDouble<>(range, environmentProvider);
+         TintProvider tintProvider = this.tintProviderAsset.build(argument);
+         return new DelimiterDouble<>(range, tintProvider);
       }
 
       public String getId() {
          return this.id;
+      }
+
+      @Override
+      public void cleanUp() {
+         this.tintProviderAsset.cleanUp();
       }
    }
 }

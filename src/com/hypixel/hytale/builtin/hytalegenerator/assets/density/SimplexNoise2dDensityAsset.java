@@ -18,26 +18,26 @@ public class SimplexNoise2dDensityAsset extends DensityAsset {
    public static final BuilderCodec<SimplexNoise2dDensityAsset> CODEC = BuilderCodec.builder(
          SimplexNoise2dDensityAsset.class, SimplexNoise2dDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Lacunarity", Codec.DOUBLE, true), (asset, lacunarity) -> asset.lacunarity = lacunarity, asset -> asset.lacunarity)
+      .append(new KeyedCodec<>("Lacunarity", Codec.DOUBLE, true), (asset, value) -> asset.lacunarity = value, asset -> asset.lacunarity)
       .addValidator(Validators.greaterThan(0.0))
       .add()
-      .<Double>append(new KeyedCodec<>("Persistence", Codec.DOUBLE, true), (asset, persistence) -> asset.persistence = persistence, asset -> asset.persistence)
+      .<Double>append(new KeyedCodec<>("Persistence", Codec.DOUBLE, true), (asset, value) -> asset.persistence = value, asset -> asset.persistence)
       .addValidator(Validators.greaterThan(0.0))
       .add()
-      .<Double>append(new KeyedCodec<>("Scale", Codec.DOUBLE, true), (asset, scale) -> asset.scale = scale, asset -> asset.scale)
+      .<Double>append(new KeyedCodec<>("Scale", Codec.DOUBLE, true), (asset, value) -> asset.scale = value, asset -> asset.scale)
       .addValidator(Validators.greaterThan(0.0))
       .add()
-      .<Integer>append(new KeyedCodec<>("Octaves", Codec.INTEGER, true), (asset, octaves) -> asset.octaves = octaves, asset -> asset.octaves)
+      .<Integer>append(new KeyedCodec<>("Octaves", Codec.INTEGER, true), (asset, value) -> asset.octaves = value, asset -> asset.octaves)
       .addValidator(Validators.greaterThan(0))
       .add()
-      .append(new KeyedCodec<>("Seed", Codec.STRING, true), (asset, seed) -> asset.seedKey = seed, asset -> asset.seedKey)
+      .append(new KeyedCodec<>("Seed", Codec.STRING, true), (asset, value) -> asset.seedKey = value, asset -> asset.seedKey)
       .add()
       .build();
-   private double lacunarity = 1.0;
-   private double persistence = 1.0;
-   private double scale = 1.0;
+   private double lacunarity = 2.0;
+   private double persistence = 0.5;
+   private double scale = 50.0;
    private int octaves = 1;
-   private String seedKey = "A";
+   private String seedKey = "";
 
    @Nonnull
    @Override

@@ -19,11 +19,11 @@ import org.joml.Vector3d;
 public class AxisDensityAsset extends DensityAsset {
    @Nonnull
    public static final BuilderCodec<AxisDensityAsset> CODEC = BuilderCodec.builder(AxisDensityAsset.class, AxisDensityAsset::new, DensityAsset.ABSTRACT_CODEC)
-      .append(new KeyedCodec<>("Curve", CurveAsset.CODEC, true), (t, k) -> t.distanceCurveAsset = k, k -> k.distanceCurveAsset)
+      .append(new KeyedCodec<>("Curve", CurveAsset.CODEC, true), (asset, value) -> asset.distanceCurveAsset = value, asset -> asset.distanceCurveAsset)
       .add()
-      .append(new KeyedCodec<>("IsAnchored", Codec.BOOLEAN, false), (t, k) -> t.isAnchored = k, k -> k.isAnchored)
+      .append(new KeyedCodec<>("IsAnchored", Codec.BOOLEAN, false), (asset, value) -> asset.isAnchored = value, asset -> asset.isAnchored)
       .add()
-      .<Vector3d>append(new KeyedCodec<>("Axis", Vector3dUtil.CODEC, false), (t, k) -> t.axis = k, k -> k.axis)
+      .<Vector3d>append(new KeyedCodec<>("Axis", Vector3dUtil.CODEC, false), (asset, value) -> asset.axis = value, asset -> asset.axis)
       .addValidator(new Validator<Vector3d>() {
          public void accept(Vector3d v, ValidationResults r) {
             if (v.length() == 0.0) {

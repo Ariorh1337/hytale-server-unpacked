@@ -20,15 +20,15 @@ public class WeightedAssignmentsAsset extends AssignmentsAsset {
    public static final BuilderCodec<WeightedAssignmentsAsset> CODEC = BuilderCodec.builder(
          WeightedAssignmentsAsset.class, WeightedAssignmentsAsset::new, AssignmentsAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("SkipChance", Codec.DOUBLE, true), (asset, v) -> asset.skipChance = v, asset -> asset.skipChance)
+      .append(new KeyedCodec<>("SkipChance", Codec.DOUBLE, true), (asset, value) -> asset.skipChance = value, asset -> asset.skipChance)
       .add()
-      .append(new KeyedCodec<>("Seed", Codec.STRING, true), (asset, v) -> asset.seed = v, asset -> asset.seed)
+      .append(new KeyedCodec<>("Seed", Codec.STRING, true), (asset, value) -> asset.seed = value, asset -> asset.seed)
       .add()
       .append(
          new KeyedCodec<>(
             "WeightedAssignments", new ArrayCodec<>(WeightedAssignmentsAsset.WeightedAssets.CODEC, WeightedAssignmentsAsset.WeightedAssets[]::new), true
          ),
-         (asset, v) -> asset.weightedAssets = v,
+         (asset, value) -> asset.weightedAssets = value,
          asset -> asset.weightedAssets
       )
       .add()
@@ -67,14 +67,16 @@ public class WeightedAssignmentsAsset extends AssignmentsAsset {
             WeightedAssignmentsAsset.WeightedAssets.class,
             WeightedAssignmentsAsset.WeightedAssets::new,
             Codec.STRING,
-            (asset, id) -> asset.id = id,
-            config -> config.id,
-            (config, data) -> config.data = data,
-            config -> config.data
+            (asset, value) -> asset.id = value,
+            asset -> asset.id,
+            (asset, value) -> asset.data = value,
+            asset -> asset.data
          )
-         .append(new KeyedCodec<>("Weight", Codec.DOUBLE, true), (t, v) -> t.weight = v, t -> t.weight)
+         .append(new KeyedCodec<>("Weight", Codec.DOUBLE, true), (asset, value) -> asset.weight = value, asset -> asset.weight)
          .add()
-         .append(new KeyedCodec<>("Assignments", AssignmentsAsset.CODEC, true), (t, v) -> t.assignmentsAsset = v, t -> t.assignmentsAsset)
+         .append(
+            new KeyedCodec<>("Assignments", AssignmentsAsset.CODEC, true), (asset, value) -> asset.assignmentsAsset = value, asset -> asset.assignmentsAsset
+         )
          .add()
          .build();
       private String id;

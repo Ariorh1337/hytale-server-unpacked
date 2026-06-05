@@ -81,7 +81,6 @@ public class TriggerVolumeManager implements Resource<EntityStore> {
    private final Map<UUID, String> playerSelections = new ConcurrentHashMap<>();
    private final transient Map<UUID, TriggerVolumeManager.SelectionObserver> selectionObservers = new ConcurrentHashMap<>();
    private final transient Map<UUID, TriggerVolumeManager.VolumeUpdateObserver> volumeUpdateObservers = new ConcurrentHashMap<>();
-   private final Set<Long> pendingWorldGenRegenChunks = ConcurrentHashMap.newKeySet();
    @Nonnull
    private final transient Deque<TriggerVolumeManager.PendingTriggerEvent> pendingEvents = new ArrayDeque<>();
    @Nonnull
@@ -199,12 +198,21 @@ public class TriggerVolumeManager implements Resource<EntityStore> {
       }
    }
 
-   public void markWorldGenRegenChunk(long chunkIndex) {
-      this.pendingWorldGenRegenChunks.add(chunkIndex);
-   }
+   public int removeAllVolumes() {
+      int removed = this.volumes.size();
+      if (removed == 0 && this.groups.isEmpty()) {
+         return 0;
+      }
 
-   public boolean consumeWorldGenRegenChunk(long chunkIndex) {
-      return this.pendingWorldGenRegenChunks.remove(chunkIndex);
+      for (VolumeEntry entry : this.volumes.values()) {
+         entry.markPendingDestroy();
+         this.notifyViewersRemove(entry.getId());
+      }
+
+      this.volumes.clear();
+      this.groups.clear();
+      this.spatialIndex.markDirty();
+      return removed;
    }
 
    @Nullable
@@ -393,6 +401,19 @@ public class TriggerVolumeManager implements Resource<EntityStore> {
       } while (this.hasVolume(id));
 
       return id;
+   }
+
+   @Nonnull
+   public String generateWorldGenVolumeId(int prefabInstanceId, @Nonnull Vector3d position, int prefabIndex) {
+      String base = "tvwg_"
+         + Integer.toUnsignedString(prefabInstanceId, 36)
+         + "_"
+         + (long)Math.floor(position.x())
+         + "_"
+         + (long)Math.floor(position.y())
+         + "_"
+         + (long)Math.floor(position.z());
+      return prefabIndex >= 0 ? base + "_" + Integer.toUnsignedString(prefabIndex, 36) : base;
    }
 
    @Nonnull

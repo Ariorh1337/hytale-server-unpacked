@@ -31,6 +31,7 @@ public class FieldFunctionOccurrencePositionProvider extends PositionProvider {
          FieldFunctionOccurrencePositionProvider.this.rDensityContext.position = position;
          FieldFunctionOccurrencePositionProvider.this.rDensityContext.positionsAnchor = FieldFunctionOccurrencePositionProvider.this.rContext.anchor;
          FieldFunctionOccurrencePositionProvider.this.rDensityContext.densityAnchor = FieldFunctionOccurrencePositionProvider.this.rContext.anchor;
+         FieldFunctionOccurrencePositionProvider.this.rDensityContext.graphNode = FieldFunctionOccurrencePositionProvider.this.rContext.graphNode;
          double discardChance = 1.0 - FieldFunctionOccurrencePositionProvider.this.field.process(FieldFunctionOccurrencePositionProvider.this.rDensityContext);
          FieldFunctionOccurrencePositionProvider.this.rRandom
             .setSeed(FieldFunctionOccurrencePositionProvider.this.rngField.get(position.x, position.y, position.z));

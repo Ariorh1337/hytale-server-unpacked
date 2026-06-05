@@ -83,6 +83,7 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.events.RemoveWorldEvent;
 import com.hypixel.hytale.server.core.universe.world.events.StartWorldEvent;
+import com.hypixel.hytale.server.core.universe.world.events.WorldGenChunksClearedEvent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.spawning.assets.spawnmarker.config.SpawnMarker;
 import java.nio.file.Files;
@@ -241,6 +242,7 @@ public class TriggerVolumesPlugin extends JavaPlugin {
       ServerManager.get().registerSubPacketHandlers(TriggerVolumeToolPacketHandler::new);
       this.getEventRegistry().registerGlobal(StartWorldEvent.class, event -> this.initManagerForWorld(event.getWorld()));
       this.getEventRegistry().registerGlobal(RemoveWorldEvent.class, this::onWorldRemoved);
+      this.getEventRegistry().registerGlobal(WorldGenChunksClearedEvent.class, this::onWorldGenChunksCleared);
       this.getEventRegistry().registerGlobal(RemovedPlayerFromWorldEvent.class, this::onPlayerRemovedFromWorld);
       this.getEventRegistry().registerGlobal(AddPlayerToWorldEvent.class, this::onPlayerAddedToWorld);
       this.getEventRegistry().registerGlobal(PlayerDisconnectEvent.class, this::onPlayerDisconnect);
@@ -283,6 +285,13 @@ public class TriggerVolumesPlugin extends JavaPlugin {
          }
 
          manager.clearViewers();
+      }
+   }
+
+   private void onWorldGenChunksCleared(@Nonnull WorldGenChunksClearedEvent event) {
+      TriggerVolumeManager manager = this.getManager(event.getWorld());
+      if (manager != null) {
+         manager.removeAllVolumes();
       }
    }
 

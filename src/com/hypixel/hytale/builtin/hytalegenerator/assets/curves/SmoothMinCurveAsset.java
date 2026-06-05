@@ -13,11 +13,11 @@ public class SmoothMinCurveAsset extends CurveAsset {
    public static final BuilderCodec<SmoothMinCurveAsset> CODEC = BuilderCodec.builder(
          SmoothMinCurveAsset.class, SmoothMinCurveAsset::new, CurveAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("CurveA", CurveAsset.CODEC, true), (t, k) -> t.curveAAsset = k, k -> k.curveAAsset)
+      .append(new KeyedCodec<>("CurveA", CurveAsset.CODEC, true), (asset, value) -> asset.curveAAsset = value, asset -> asset.curveAAsset)
       .add()
-      .append(new KeyedCodec<>("CurveB", CurveAsset.CODEC, true), (t, k) -> t.curveBAsset = k, k -> k.curveBAsset)
+      .append(new KeyedCodec<>("CurveB", CurveAsset.CODEC, true), (asset, value) -> asset.curveBAsset = value, asset -> asset.curveBAsset)
       .add()
-      .<Double>append(new KeyedCodec<>("Range", Codec.DOUBLE, true), (t, k) -> t.range = k, k -> k.range)
+      .<Double>append(new KeyedCodec<>("Range", Codec.DOUBLE, true), (asset, value) -> asset.range = value, asset -> asset.range)
       .addValidator(Validators.greaterThanOrEqual(0.0))
       .add()
       .build();

@@ -40,4 +40,11 @@ public class QueueScannerAsset extends ScannerAsset {
 
       return new QueueScanner(scanners);
    }
+
+   @Override
+   public void cleanUp() {
+      for (ScannerAsset scannerAsset : this.scannerAssets) {
+         scannerAsset.cleanUp();
+      }
+   }
 }

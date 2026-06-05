@@ -23,12 +23,16 @@ public class NodeFunctionYOutAsset implements JsonAssetWithMap<String, DefaultAs
          NodeFunctionYOutAsset.class,
          NodeFunctionYOutAsset::new,
          Codec.STRING,
-         (asset, id) -> asset.id = id,
-         config -> config.id,
-         (config, data) -> config.data = data,
-         config -> config.data
+         (asset, value) -> asset.id = value,
+         asset -> asset.id,
+         (asset, value) -> asset.data = value,
+         asset -> asset.data
       )
-      .append(new KeyedCodec<>("Points", new ArrayCodec<>(PointYOutAsset.CODEC, PointYOutAsset[]::new), true), (t, k) -> t.nodes = k, t -> t.nodes)
+      .append(
+         new KeyedCodec<>("Points", new ArrayCodec<>(PointYOutAsset.CODEC, PointYOutAsset[]::new), true),
+         (asset, value) -> asset.nodes = value,
+         asset -> asset.nodes
+      )
       .addValidator(new Validator<PointYOutAsset[]>() {
          public void accept(PointYOutAsset[] v, ValidationResults r) {
             DoubleOpenHashSet ySet = new DoubleOpenHashSet(v.length);

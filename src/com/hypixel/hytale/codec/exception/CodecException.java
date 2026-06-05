@@ -6,35 +6,35 @@ import javax.annotation.Nonnull;
 import org.bson.BsonValue;
 
 public class CodecException extends RuntimeException {
-   private final String message;
+   private final String rawMessage;
 
    public CodecException(String message) {
       super(message);
-      this.message = message;
+      this.rawMessage = message;
    }
 
    public CodecException(String message, Throwable cause) {
       super(message, cause);
-      this.message = message;
+      this.rawMessage = message;
    }
 
    public CodecException(String message, BsonValue bsonValue, @Nonnull ExtraInfo extraInfo, Throwable cause) {
       super(message + " '" + extraInfo.peekKey() + "' " + (cause instanceof CodecException ? "" : "\nFrom: '" + bsonValue + "'"), cause);
-      this.message = message;
+      this.rawMessage = message;
    }
 
    public CodecException(String message, RawJsonReader reader, @Nonnull ExtraInfo extraInfo, Throwable cause) {
       super(message + " '" + extraInfo.peekKey() + "' " + (cause instanceof CodecException ? "" : "\nFrom: " + reader + "'"), cause);
-      this.message = message;
+      this.rawMessage = message;
    }
 
    public CodecException(String message, Object obj, @Nonnull ExtraInfo extraInfo, Throwable cause) {
       super(message + " '" + extraInfo.peekKey() + "' " + (cause instanceof CodecException ? "" : "\nFor: '" + obj + "'"), cause);
-      this.message = message;
+      this.rawMessage = message;
    }
 
-   @Override
-   public String getMessage() {
-      return this.message;
+   @Nonnull
+   public String getRawMessage() {
+      return this.rawMessage;
    }
 }

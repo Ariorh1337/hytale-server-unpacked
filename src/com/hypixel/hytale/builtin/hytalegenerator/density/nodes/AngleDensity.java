@@ -23,7 +23,7 @@ public class AngleDensity extends Density {
       this.vectorProvider = vectorProvider;
       this.toAxis = toAxis;
       this.rOtherVector = new Vector3d();
-      this.rVectorProviderContext = new VectorProvider.Context(new Vector3d(), null);
+      this.rVectorProviderContext = new VectorProvider.Context(new Vector3d(), null, null);
    }
 
    @Override

@@ -13,14 +13,15 @@ public class ImportedPatternAsset extends PatternAsset {
    public static final BuilderCodec<ImportedPatternAsset> CODEC = BuilderCodec.builder(
          ImportedPatternAsset.class, ImportedPatternAsset::new, PatternAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Name", Codec.STRING, true), (t, k) -> t.name = k, k -> k.name)
+      .append(new KeyedCodec<>("Name", Codec.STRING, true), (asset, value) -> asset.name = value, asset -> asset.name)
       .add()
       .build();
+   @Nonnull
    private String name = "";
 
    @Override
    public Pattern build(@Nonnull PatternAsset.Argument argument) {
-      if (super.isSkipped()) {
+      if (super.skip()) {
          return ConstantPattern.INSTANCE_FALSE;
       } else if (this.name != null && !this.name.isEmpty()) {
          PatternAsset exportedAsset = PatternAsset.getExportedAsset(this.name);

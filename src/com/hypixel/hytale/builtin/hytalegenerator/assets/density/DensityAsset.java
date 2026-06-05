@@ -9,6 +9,7 @@ import com.hypixel.hytale.builtin.hytalegenerator.LoggerUtil;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.Cleanable;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.assignments.AssignmentsAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.environmentproviders.EnvironmentProviderAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.GraphGeneratorAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders.MaterialProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.patterns.PatternAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.positionproviders.PositionProviderAsset;
@@ -36,7 +37,7 @@ public abstract class DensityAsset implements JsonAssetWithMap<String, DefaultAs
    private static final DensityAsset[] EMPTY_INPUTS = new DensityAsset[0];
    @Nonnull
    public static final AssetCodecMapCodec<String, DensityAsset> CODEC = new AssetCodecMapCodec<>(
-      Codec.STRING, (t, k) -> t.id = k, t -> t.id, (t, data) -> t.data = data, t -> t.data
+      Codec.STRING, (asset, value) -> asset.id = value, asset -> asset.id, (asset, value) -> asset.data = value, asset -> asset.data
    );
    @Nonnull
    private static final Map<String, DensityAsset.Exported> exportedNodes = new ConcurrentHashMap<>();
@@ -46,11 +47,11 @@ public abstract class DensityAsset implements JsonAssetWithMap<String, DefaultAs
    public static final Codec<String[]> CHILD_ASSET_CODEC_ARRAY = new ArrayCodec<>(CHILD_ASSET_CODEC, String[]::new);
    @Nonnull
    public static final BuilderCodec<DensityAsset> ABSTRACT_CODEC = BuilderCodec.abstractBuilder(DensityAsset.class)
-      .append(new KeyedCodec<>("Inputs", new ArrayCodec<>(CODEC, DensityAsset[]::new), true), (t, k) -> t.inputs = k, t -> t.inputs)
+      .append(new KeyedCodec<>("Inputs", new ArrayCodec<>(CODEC, DensityAsset[]::new), true), (asset, value) -> asset.inputs = value, asset -> asset.inputs)
       .add()
-      .append(new KeyedCodec<>("Skip", Codec.BOOLEAN, false), (t, k) -> t.skip = k, t -> t.skip)
+      .append(new KeyedCodec<>("Skip", Codec.BOOLEAN, false), (asset, value) -> asset.skip = value, asset -> asset.skip)
       .add()
-      .append(new KeyedCodec<>("ExportAs", Codec.STRING, false), (t, k) -> t.exportName = k, t -> t.exportName)
+      .append(new KeyedCodec<>("ExportAs", Codec.STRING, false), (asset, value) -> asset.exportName = value, asset -> asset.exportName)
       .add()
       .afterDecode(asset -> {
          if (asset.exportName != null && !asset.exportName.isEmpty()) {
@@ -168,6 +169,11 @@ public abstract class DensityAsset implements JsonAssetWithMap<String, DefaultAs
    }
 
    @Nonnull
+   public static DensityAsset.Argument from(@Nonnull GraphGeneratorAsset.Argument argument) {
+      return new DensityAsset.Argument(argument.parentSeed, argument.referenceBundle, argument.workerId);
+   }
+
+   @Nonnull
    public static DensityAsset.Argument from(@Nonnull VectorProviderAsset.Argument argument) {
       return new DensityAsset.Argument(argument.parentSeed, argument.referenceBundle, argument.workerId);
    }
@@ -224,6 +230,12 @@ public abstract class DensityAsset implements JsonAssetWithMap<String, DefaultAs
       }
 
       public Argument(@Nonnull DensityAsset.Argument argument) {
+         this.parentSeed = argument.parentSeed;
+         this.referenceBundle = argument.referenceBundle;
+         this.workerId = argument.workerId;
+      }
+
+      public Argument(@Nonnull GraphGeneratorAsset.Argument argument) {
          this.parentSeed = argument.parentSeed;
          this.referenceBundle = argument.referenceBundle;
          this.workerId = argument.workerId;

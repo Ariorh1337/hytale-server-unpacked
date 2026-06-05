@@ -34,7 +34,7 @@ public class OffsetPositionProviderAsset extends PositionProviderAsset {
    @Nonnull
    private Vector3d offset = DEFAULT_OFFSET;
    @Nonnull
-   private PositionProviderAsset positionProviderAsset = new ListPositionProviderAsset();
+   private PositionProviderAsset positionProviderAsset = ListPositionProviderAsset.INSTANCE;
    private int offsetX = 0;
    private int offsetY = 0;
    private int offsetZ = 0;

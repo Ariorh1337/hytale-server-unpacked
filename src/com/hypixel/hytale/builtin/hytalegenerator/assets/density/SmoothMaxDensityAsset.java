@@ -14,11 +14,11 @@ public class SmoothMaxDensityAsset extends DensityAsset {
    public static final BuilderCodec<SmoothMaxDensityAsset> CODEC = BuilderCodec.builder(
          SmoothMaxDensityAsset.class, SmoothMaxDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Range", Codec.DOUBLE, true), (t, k) -> t.range = k, k -> k.range)
+      .append(new KeyedCodec<>("Range", Codec.DOUBLE, true), (asset, value) -> asset.range = value, asset -> asset.range)
       .addValidator(Validators.greaterThanOrEqual(0.0))
       .add()
       .build();
-   private double range = 1.0;
+   private double range = 0.2;
 
    @Nonnull
    @Override

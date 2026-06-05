@@ -17,13 +17,13 @@ public class ShellDensityAsset extends DensityAsset {
    public static final BuilderCodec<ShellDensityAsset> CODEC = BuilderCodec.builder(
          ShellDensityAsset.class, ShellDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Axis", Vector3dUtil.CODEC, true), (t, k) -> t.axis = k, k -> k.axis)
+      .append(new KeyedCodec<>("Axis", Vector3dUtil.CODEC, true), (asset, value) -> asset.axis = value, asset -> asset.axis)
       .add()
-      .append(new KeyedCodec<>("Mirror", Codec.BOOLEAN, false), (t, k) -> t.isMirrored = k, k -> k.isMirrored)
+      .append(new KeyedCodec<>("Mirror", Codec.BOOLEAN, false), (asset, value) -> asset.isMirrored = value, asset -> asset.isMirrored)
       .add()
-      .append(new KeyedCodec<>("AngleCurve", CurveAsset.CODEC, true), (t, k) -> t.angleCurveAsset = k, k -> k.angleCurveAsset)
+      .append(new KeyedCodec<>("AngleCurve", CurveAsset.CODEC, true), (asset, value) -> asset.angleCurveAsset = value, asset -> asset.angleCurveAsset)
       .add()
-      .append(new KeyedCodec<>("DistanceCurve", CurveAsset.CODEC, true), (t, k) -> t.distanceCurveAsset = k, k -> k.distanceCurveAsset)
+      .append(new KeyedCodec<>("DistanceCurve", CurveAsset.CODEC, true), (asset, value) -> asset.distanceCurveAsset = value, asset -> asset.distanceCurveAsset)
       .add()
       .build();
    private Vector3d axis = new Vector3d(0.0, 0.0, 0.0);

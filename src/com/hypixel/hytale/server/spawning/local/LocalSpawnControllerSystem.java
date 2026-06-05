@@ -18,7 +18,7 @@ import com.hypixel.hytale.server.core.modules.time.WorldTimeResource;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
-import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.spawning.SpawningPlugin;
 import com.hypixel.hytale.server.spawning.assets.spawns.LightType;
@@ -298,18 +298,21 @@ public class LocalSpawnControllerSystem extends TickingSystem<EntityStore> {
       if (cachedValue < 0) {
          int counted = 0;
          int total = 0;
+         ChunkStore chunkStore = world.getChunkStore();
+         Store<ChunkStore> chunkComponentStore = chunkStore.getStore();
 
          for (int xOffset = x - 4; xOffset < x + 4; xOffset++) {
             for (int zOffset = z - 4; zOffset < z + 4; zOffset++) {
-               WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(xOffset, zOffset));
-               if (chunk != null) {
-                  BlockChunk blockChunk = chunk.getBlockChunk();
-
-                  for (int yOffset = y; yOffset < y + 4; yOffset++) {
-                     int blockId = chunk.getBlock(xOffset, yOffset, zOffset);
-                     if (blockId == 0 || BlockType.getAssetMap().getAsset(blockId).getMaterial() != BlockMaterial.Solid) {
-                        counted++;
-                        total += valueCalculator.apply(xOffset, yOffset, zOffset, blockChunk, sunlightFactor);
+               Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(ChunkUtil.indexChunkFromBlock(xOffset, zOffset));
+               if (chunkRef != null && chunkRef.isValid()) {
+                  BlockChunk blockChunkComponent = chunkComponentStore.getComponent(chunkRef, BlockChunk.getComponentType());
+                  if (blockChunkComponent != null) {
+                     for (int yOffset = y; yOffset < y + 4; yOffset++) {
+                        int blockId = blockChunkComponent.getBlock(xOffset, yOffset, zOffset);
+                        if (blockId == 0 || BlockType.getAssetMap().getAsset(blockId).getMaterial() != BlockMaterial.Solid) {
+                           counted++;
+                           total += valueCalculator.apply(xOffset, yOffset, zOffset, blockChunkComponent, sunlightFactor);
+                        }
                      }
                   }
                }

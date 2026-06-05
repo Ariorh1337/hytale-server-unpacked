@@ -14,7 +14,7 @@ public class SwitchStateDensityAsset extends DensityAsset {
    public static final BuilderCodec<SwitchStateDensityAsset> CODEC = BuilderCodec.builder(
          SwitchStateDensityAsset.class, SwitchStateDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("SwitchState", Codec.STRING, true), (t, k) -> t.switchState = k, t -> t.switchState)
+      .append(new KeyedCodec<>("SwitchState", Codec.STRING, true), (asset, value) -> asset.switchState = value, asset -> asset.switchState)
       .add()
       .build();
    private String switchState = "";

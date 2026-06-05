@@ -3,10 +3,12 @@ package com.hypixel.hytale.builtin.buildertools.prefablist;
 import com.hypixel.hytale.assetstore.AssetPack;
 import com.hypixel.hytale.builtin.buildertools.BuilderToolsPlugin;
 import com.hypixel.hytale.builtin.buildertools.BuilderToolsUserData;
+import com.hypixel.hytale.builtin.buildertools.prefabeditor.saving.SupportMode;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.EnumCodec;
+import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.MathUtil;
@@ -17,6 +19,8 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.modules.singleplayer.SingleplayerModule;
+import com.hypixel.hytale.server.core.prefab.PrefabStore;
 import com.hypixel.hytale.server.core.ui.browser.AssetPackSaveBrowser;
 import com.hypixel.hytale.server.core.ui.browser.AssetPackSaveBrowserConfig;
 import com.hypixel.hytale.server.core.ui.browser.AssetPackSaveBrowserEventData;
@@ -25,6 +29,8 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.joml.Vector3d;
@@ -32,11 +38,15 @@ import org.joml.Vector3i;
 
 public class PrefabSavePage extends InteractiveCustomUIPage<PrefabSavePage.PageData> {
    @Nonnull
-   private static final Message MESSAGE_SERVER_BUILDER_TOOLS_PREFAB_SAVE_NAME_REQUIRED = Message.translation("server.builderTools.prefabSave.nameRequired");
+   private static final Message MESSAGE_NAME_REQUIRED = Message.translation("server.customUI.prefabSavePage.required");
+   @Nonnull
+   private static final Message MESSAGE_NAME_INVALID = Message.translation("server.customUI.prefabSavePage.invalid");
    @Nonnull
    private static final Message MESSAGE_PACK_REQUIRED = Message.translation("server.customUI.assetPackBrowser.packRequired");
    private final AssetPackSaveBrowser packBrowser = new AssetPackSaveBrowser(AssetPackSaveBrowserConfig.defaults());
    private boolean initialized = false;
+   @Nullable
+   private PrefabSavePage.PendingSave pendingSave;
 
    public PrefabSavePage(@Nonnull PlayerRef playerRef) {
       super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, PrefabSavePage.PageData.CODEC);
@@ -65,12 +75,14 @@ public class PrefabSavePage extends InteractiveCustomUIPage<PrefabSavePage.PageD
          commandBuilder.set("#MainPage #SelectedPackLabel.Text", this.packBrowser.getSelectedPackDisplayName());
       }
 
+      commandBuilder.set("#MainPage #NameRequiredText.Visible", false);
       commandBuilder.set("#MainPage #Entities #CheckBox.Value", true);
       commandBuilder.set("#MainPage #Empty #CheckBox.Value", false);
-      commandBuilder.set("#MainPage #Overwrite #CheckBox.Value", false);
       commandBuilder.set("#MainPage #FromClipboard #CheckBox.Value", false);
       commandBuilder.set("#MainPage #UsePlayerAnchor #CheckBox.Value", false);
-      commandBuilder.set("#MainPage #ClearSupport #CheckBox.Value", false);
+      commandBuilder.set("#MainPage #RemoveSupport #CheckBox.Value", false);
+      commandBuilder.set("#MainPage #SetupSupport #CheckBox.Value", false);
+      commandBuilder.set("#OverwriteConfirmPage.Visible", false);
       eventBuilder.addEventBinding(
          CustomUIEventBindingType.Activating,
          "#MainPage #SaveButton",
@@ -79,13 +91,39 @@ public class PrefabSavePage extends InteractiveCustomUIPage<PrefabSavePage.PageD
             .append("@Name", "#MainPage #NameInput.Value")
             .append("@Entities", "#MainPage #Entities #CheckBox.Value")
             .append("@Empty", "#MainPage #Empty #CheckBox.Value")
-            .append("@Overwrite", "#MainPage #Overwrite #CheckBox.Value")
             .append("@FromClipboard", "#MainPage #FromClipboard #CheckBox.Value")
             .append("@UsePlayerAnchor", "#MainPage #UsePlayerAnchor #CheckBox.Value")
-            .append("@ClearSupport", "#MainPage #ClearSupport #CheckBox.Value")
+            .append("@RemoveSupport", "#MainPage #RemoveSupport #CheckBox.Value")
+            .append("@SetupSupport", "#MainPage #SetupSupport #CheckBox.Value")
       );
       eventBuilder.addEventBinding(
          CustomUIEventBindingType.Activating, "#MainPage #CancelButton", new EventData().append("Action", PrefabSavePage.Action.Cancel.name())
+      );
+      eventBuilder.addEventBinding(
+         CustomUIEventBindingType.ValueChanged,
+         "#MainPage #RemoveSupport #CheckBox",
+         new EventData()
+            .append("Action", PrefabSavePage.Action.RemoveSupportChanged.name())
+            .append("@RemoveSupport", "#MainPage #RemoveSupport #CheckBox.Value"),
+         false
+      );
+      eventBuilder.addEventBinding(
+         CustomUIEventBindingType.ValueChanged,
+         "#MainPage #SetupSupport #CheckBox",
+         new EventData().append("Action", PrefabSavePage.Action.SetupSupportChanged.name()).append("@SetupSupport", "#MainPage #SetupSupport #CheckBox.Value"),
+         false
+      );
+      eventBuilder.addEventBinding(
+         CustomUIEventBindingType.Activating,
+         "#OverwriteConfirmPage #ConfirmOverwriteButton",
+         new EventData().append("Action", PrefabSavePage.Action.ConfirmOverwrite.name()),
+         false
+      );
+      eventBuilder.addEventBinding(
+         CustomUIEventBindingType.Activating,
+         "#OverwriteConfirmPage #CancelOverwriteButton",
+         new EventData().append("Action", PrefabSavePage.Action.CancelOverwrite.name()),
+         false
       );
       this.packBrowser.buildEventBindings(eventBuilder, "#MainPage #BrowsePackButton");
       this.packBrowser.buildUI(commandBuilder, eventBuilder);
@@ -109,12 +147,28 @@ public class PrefabSavePage extends InteractiveCustomUIPage<PrefabSavePage.PageD
       } else {
          switch (data.action) {
             case Save:
-               if (data.name == null || data.name.isBlank()) {
-                  this.playerRef.sendMessage(MESSAGE_SERVER_BUILDER_TOOLS_PREFAB_SAVE_NAME_REQUIRED);
-                  this.sendUpdate(null, null, false);
+               String name = data.name != null ? data.name.trim() : null;
+               if (name == null || name.isBlank()) {
+                  UICommandBuilder commandBuilderx = new UICommandBuilder();
+                  commandBuilderx.set("#MainPage #NameRequiredText.Visible", true);
+                  commandBuilderx.set("#MainPage #NameRequiredText.TextSpans", MESSAGE_NAME_REQUIRED);
+                  this.sendUpdate(commandBuilderx, null, false);
                   return;
                }
 
+               if (name.contains("..")) {
+                  UICommandBuilder commandBuilderx = new UICommandBuilder();
+                  commandBuilderx.set("#MainPage #NameInput.Value", name);
+                  commandBuilderx.set("#MainPage #NameRequiredText.Visible", true);
+                  commandBuilderx.set("#MainPage #NameRequiredText.TextSpans", MESSAGE_NAME_INVALID);
+                  this.sendUpdate(commandBuilderx, null, false);
+                  return;
+               }
+
+               UICommandBuilder clearErrorBuilder = new UICommandBuilder();
+               clearErrorBuilder.set("#MainPage #NameInput.Value", name);
+               clearErrorBuilder.set("#MainPage #NameRequiredText.Visible", false);
+               this.sendUpdate(clearErrorBuilder, null, false);
                AssetPack targetPack = this.packBrowser.getSelectedPack();
                if (targetPack == null) {
                   this.playerRef.sendMessage(MESSAGE_PACK_REQUIRED);
@@ -123,24 +177,84 @@ public class PrefabSavePage extends InteractiveCustomUIPage<PrefabSavePage.PageD
                }
 
                BuilderToolsUserData.get(playerComponent).setLastSavePack(targetPack.getName());
-               playerComponent.getPageManager().setPage(ref, store, Page.None);
                Vector3i playerAnchor = this.getPlayerAnchor(ref, store, data.usePlayerAnchor && !data.fromClipboard);
-               BuilderToolsPlugin.addToQueue(
-                  playerComponent,
-                  this.playerRef,
-                  (r, s, componentAccessor) -> {
-                     if (data.fromClipboard) {
-                        s.save(r, data.name, true, data.overwrite, data.clearSupport, targetPack, componentAccessor);
-                     } else {
-                        s.saveFromSelection(
-                           r, data.name, true, data.overwrite, data.entities, data.empty, playerAnchor, data.clearSupport, targetPack, componentAccessor
-                        );
-                     }
-                  }
-               );
+               SupportMode finalSupportMode;
+               if (data.setupSupport) {
+                  finalSupportMode = SupportMode.CALCULATE;
+               } else if (data.removeSupport) {
+                  finalSupportMode = SupportMode.REMOVE;
+               } else {
+                  finalSupportMode = SupportMode.KEEP_EXISTING;
+               }
+
+               String fileName = name;
+               if (!fileName.endsWith(".prefab.json")) {
+                  fileName = fileName + ".prefab.json";
+               }
+
+               Path targetPrefabsPath = PrefabStore.get().getAssetPrefabsPathForPack(targetPack);
+               Path targetPath = targetPrefabsPath.resolve(fileName).toAbsolutePath().normalize();
+               if (!PathUtil.isChildOf(targetPrefabsPath, targetPath) && !SingleplayerModule.isOwner(this.playerRef)) {
+                  UICommandBuilder commandBuilderx = new UICommandBuilder();
+                  commandBuilderx.set("#MainPage #NameRequiredText.Visible", true);
+                  commandBuilderx.set("#MainPage #NameRequiredText.TextSpans", MESSAGE_NAME_INVALID);
+                  this.sendUpdate(commandBuilderx, null, false);
+                  return;
+               }
+
+               if (Files.exists(targetPath)) {
+                  this.pendingSave = new PrefabSavePage.PendingSave(
+                     name, data.entities, data.empty, data.fromClipboard, playerAnchor, finalSupportMode, targetPack, playerComponent
+                  );
+                  UICommandBuilder confirmBuilder = new UICommandBuilder();
+                  confirmBuilder.set("#MainPage.Visible", false);
+                  confirmBuilder.set("#OverwriteConfirmPage.Visible", true);
+                  confirmBuilder.set(
+                     "#OverwriteConfirmPage #MessageText.TextSpans",
+                     Message.translation("server.customUI.prefabSavePage.overwriteConfirm.messageSingle").param("name", targetPath.getFileName().toString())
+                  );
+                  this.sendUpdate(confirmBuilder);
+                  return;
+               }
+
+               playerComponent.getPageManager().setPage(ref, store, Page.None);
+               this.queueSave(playerComponent, name, data.entities, data.empty, data.fromClipboard, playerAnchor, finalSupportMode, targetPack, false);
                break;
             case Cancel:
                playerComponent.getPageManager().setPage(ref, store, Page.None);
+               break;
+            case ConfirmOverwrite:
+               if (this.pendingSave == null) {
+                  return;
+               }
+
+               PrefabSavePage.PendingSave save = this.pendingSave;
+               this.pendingSave = null;
+               save.playerComponent.getPageManager().setPage(ref, store, Page.None);
+               this.queueSave(
+                  save.playerComponent, save.name, save.entities, save.empty, save.fromClipboard, save.playerAnchor, save.supportMode, save.targetPack, true
+               );
+               break;
+            case CancelOverwrite:
+               this.pendingSave = null;
+               UICommandBuilder commandBuilder = new UICommandBuilder();
+               commandBuilder.set("#OverwriteConfirmPage.Visible", false);
+               commandBuilder.set("#MainPage.Visible", true);
+               this.sendUpdate(commandBuilder);
+               break;
+            case RemoveSupportChanged:
+               if (data.removeSupport) {
+                  UICommandBuilder commandBuilderx = new UICommandBuilder();
+                  commandBuilderx.set("#MainPage #SetupSupport #CheckBox.Value", false);
+                  this.sendUpdate(commandBuilderx, null, false);
+               }
+               break;
+            case SetupSupportChanged:
+               if (data.setupSupport) {
+                  UICommandBuilder commandBuilderx = new UICommandBuilder();
+                  commandBuilderx.set("#MainPage #RemoveSupport #CheckBox.Value", false);
+                  this.sendUpdate(commandBuilderx, null, false);
+               }
          }
       }
    }
@@ -160,9 +274,33 @@ public class PrefabSavePage extends InteractiveCustomUIPage<PrefabSavePage.PageD
       return new Vector3i(MathUtil.floor(position.x()), MathUtil.floor(position.y()), MathUtil.floor(position.z()));
    }
 
+   private void queueSave(
+      @Nonnull Player playerComponent,
+      @Nonnull String name,
+      boolean entities,
+      boolean empty,
+      boolean fromClipboard,
+      @Nullable Vector3i playerAnchor,
+      @Nonnull SupportMode supportMode,
+      @Nonnull AssetPack targetPack,
+      boolean overwrite
+   ) {
+      BuilderToolsPlugin.addToQueue(playerComponent, this.playerRef, (r, s, componentAccessor) -> {
+         if (fromClipboard) {
+            s.save(r, name, true, overwrite, supportMode, targetPack, componentAccessor);
+         } else {
+            s.saveFromSelection(r, name, true, overwrite, entities, empty, playerAnchor, supportMode, targetPack, componentAccessor);
+         }
+      });
+   }
+
    public enum Action {
       Save,
       Cancel,
+      ConfirmOverwrite,
+      CancelOverwrite,
+      RemoveSupportChanged,
+      SetupSupportChanged,
       OpenPackBrowser,
       ConfirmPackBrowser,
       CancelPackBrowser,
@@ -177,10 +315,10 @@ public class PrefabSavePage extends InteractiveCustomUIPage<PrefabSavePage.PageD
       public static final String NAME = "@Name";
       public static final String ENTITIES = "@Entities";
       public static final String EMPTY = "@Empty";
-      public static final String OVERWRITE = "@Overwrite";
       public static final String FROM_CLIPBOARD = "@FromClipboard";
       public static final String USE_PLAYER_ANCHOR = "@UsePlayerAnchor";
-      public static final String CLEAR_SUPPORT = "@ClearSupport";
+      public static final String REMOVE_SUPPORT = "@RemoveSupport";
+      public static final String SETUP_SUPPORT = "@SetupSupport";
       public static final BuilderCodec<PrefabSavePage.PageData> CODEC = BuilderCodec.builder(PrefabSavePage.PageData.class, PrefabSavePage.PageData::new)
          .append(
             new KeyedCodec<>("Action", new EnumCodec<>(PrefabSavePage.Action.class, EnumCodec.EnumStyle.LEGACY)),
@@ -194,13 +332,13 @@ public class PrefabSavePage extends InteractiveCustomUIPage<PrefabSavePage.PageD
          .add()
          .append(new KeyedCodec<>("@Empty", Codec.BOOLEAN), (o, empty) -> o.empty = empty, o -> o.empty)
          .add()
-         .append(new KeyedCodec<>("@Overwrite", Codec.BOOLEAN), (o, overwrite) -> o.overwrite = overwrite, o -> o.overwrite)
-         .add()
          .append(new KeyedCodec<>("@FromClipboard", Codec.BOOLEAN), (o, fromClipboard) -> o.fromClipboard = fromClipboard, o -> o.fromClipboard)
          .add()
          .append(new KeyedCodec<>("@UsePlayerAnchor", Codec.BOOLEAN), (o, usePlayerAnchor) -> o.usePlayerAnchor = usePlayerAnchor, o -> o.usePlayerAnchor)
          .add()
-         .append(new KeyedCodec<>("@ClearSupport", Codec.BOOLEAN), (o, clearSupport) -> o.clearSupport = clearSupport, o -> o.clearSupport)
+         .append(new KeyedCodec<>("@RemoveSupport", Codec.BOOLEAN), (o, removeSupport) -> o.removeSupport = removeSupport, o -> o.removeSupport)
+         .add()
+         .append(new KeyedCodec<>("@SetupSupport", Codec.BOOLEAN), (o, setupSupport) -> o.setupSupport = setupSupport, o -> o.setupSupport)
          .add()
          .append(new KeyedCodec<>("Pack", Codec.STRING), (o, s) -> o.packBrowserData.pack = s, o -> o.packBrowserData.pack)
          .add()
@@ -227,13 +365,25 @@ public class PrefabSavePage extends InteractiveCustomUIPage<PrefabSavePage.PageD
       public String name;
       public boolean entities = true;
       public boolean empty = false;
-      public boolean overwrite = false;
       public boolean fromClipboard = false;
       public boolean usePlayerAnchor = false;
-      public boolean clearSupport = false;
+      public boolean removeSupport = false;
+      public boolean setupSupport = false;
       public final AssetPackSaveBrowserEventData packBrowserData = new AssetPackSaveBrowserEventData();
 
       public PageData() {
       }
+   }
+
+   private record PendingSave(
+      @Nonnull String name,
+      boolean entities,
+      boolean empty,
+      boolean fromClipboard,
+      @Nullable Vector3i playerAnchor,
+      @Nonnull SupportMode supportMode,
+      @Nonnull AssetPack targetPack,
+      @Nonnull Player playerComponent
+   ) {
    }
 }

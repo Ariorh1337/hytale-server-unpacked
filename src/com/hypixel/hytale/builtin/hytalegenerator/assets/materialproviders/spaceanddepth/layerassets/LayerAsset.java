@@ -19,7 +19,7 @@ public abstract class LayerAsset implements Cleanable, JsonAssetWithMap<String, 
    private static final LayerAsset[] EMPTY_INPUTS = new LayerAsset[0];
    @Nonnull
    public static final AssetCodecMapCodec<String, LayerAsset> CODEC = new AssetCodecMapCodec<>(
-      Codec.STRING, (t, k) -> t.id = k, t -> t.id, (t, data) -> t.data = data, t -> t.data
+      Codec.STRING, (asset, value) -> asset.id = value, asset -> asset.id, (asset, value) -> asset.data = value, asset -> asset.data
    );
    @Nonnull
    public static final Codec<String> CHILD_ASSET_CODEC = new ContainedAssetCodec<>(LayerAsset.class, CODEC);

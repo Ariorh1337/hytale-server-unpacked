@@ -25,7 +25,8 @@ public class DensityGradientVectorProviderAsset extends VectorProviderAsset {
       .addValidator(Validators.greaterThanOrEqual(0.0))
       .add()
       .build();
-   private DensityAsset densityAsset = new ConstantDensityAsset();
+   @Nonnull
+   private DensityAsset densityAsset = ConstantDensityAsset.ZERO_INSTANCE;
    private double sampleDistance = 1.0;
 
    @Nonnull
@@ -37,5 +38,10 @@ public class DensityGradientVectorProviderAsset extends VectorProviderAsset {
 
       Density density = this.densityAsset.build(DensityAsset.from(argument));
       return new DensityGradientVectorProvider(density, this.sampleDistance);
+   }
+
+   @Override
+   public void cleanUp() {
+      this.densityAsset.cleanUp();
    }
 }

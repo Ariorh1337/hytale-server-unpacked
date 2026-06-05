@@ -60,6 +60,7 @@ public class ExplosionUtils {
    public static void performExplosion(
       @Nonnull Damage.Source damageSource,
       @Nonnull Vector3d position,
+      @Nonnull Rotation3f rotation,
       @Nonnull ExplosionConfig config,
       @Nullable Ref<EntityStore> ignoreRef,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor,
@@ -73,7 +74,7 @@ public class ExplosionUtils {
             processTargetEntities(config, position, damageSource, ignoreRef, targetRefs, componentAccessor);
          }
 
-         performExplosionEffects(position, new Rotation3f(0.0F, 0.0F, 0.0F), config, componentAccessor);
+         performExplosionEffects(position, rotation, config, componentAccessor);
       }
    }
 
@@ -188,7 +189,7 @@ public class ExplosionUtils {
                      if (!config.damageBlocks
                         || canDamageBlock
                            && !BlockHarvestUtils.performBlockDamage(
-                              targetBlockPos, null, itemTool, damageScale, setBlockSettings, chunkReference, componentAccessor, chunkStore
+                              targetBlockPos, null, itemTool, damageScale, setBlockSettings, true, chunkReference, componentAccessor, chunkStore
                            )) {
                         avoidBlocks.add(targetBlockPos);
                      }

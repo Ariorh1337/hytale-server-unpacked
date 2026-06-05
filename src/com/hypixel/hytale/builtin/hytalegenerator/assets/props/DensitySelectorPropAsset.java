@@ -64,7 +64,7 @@ public class DensitySelectorPropAsset extends PropAsset {
    @Override
    public void cleanUp() {
       for (DensitySelectorPropAsset.DelimiterAsset delimiterAsset : this.delimiterAssets) {
-         delimiterAsset.propAsset.cleanUp();
+         delimiterAsset.cleanUp();
       }
 
       this.densityAsset.cleanUp();
@@ -76,10 +76,10 @@ public class DensitySelectorPropAsset extends PropAsset {
             DensitySelectorPropAsset.DelimiterAsset.class,
             DensitySelectorPropAsset.DelimiterAsset::new,
             Codec.STRING,
-            (asset, id) -> asset.id = id,
-            config -> config.id,
-            (config, data) -> config.data = data,
-            config -> config.data
+            (asset, value) -> asset.id = value,
+            asset -> asset.id,
+            (asset, value) -> asset.data = value,
+            asset -> asset.data
          )
          .append(new KeyedCodec<>("Range", RangeDoubleAsset.CODEC, true), (asset, value) -> asset.rangeAsset = value, asset -> asset.rangeAsset)
          .add()

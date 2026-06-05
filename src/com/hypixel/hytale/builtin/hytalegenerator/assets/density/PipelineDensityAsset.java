@@ -14,7 +14,11 @@ public class PipelineDensityAsset extends DensityAsset {
    public static final BuilderCodec<PipelineDensityAsset> CODEC = BuilderCodec.builder(
          PipelineDensityAsset.class, PipelineDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Pipeline", new ArrayCodec<>(DensityAsset.CODEC, DensityAsset[]::new)), (t, k) -> t.pipeline = k, t -> t.pipeline)
+      .append(
+         new KeyedCodec<>("Pipeline", new ArrayCodec<>(DensityAsset.CODEC, DensityAsset[]::new)),
+         (asset, value) -> asset.pipeline = value,
+         asset -> asset.pipeline
+      )
       .add()
       .build();
    private DensityAsset[] pipeline = new DensityAsset[0];

@@ -42,6 +42,10 @@ public class CraftRecipeAction extends WindowAction {
       CraftRecipeAction obj = new CraftRecipeAction();
       byte nullBits = buf.getByte(offset);
       obj.quantity = buf.getIntLE(offset + 1);
+      if (obj.quantity < 1) {
+         throw ProtocolException.valueBelowMinimum("Quantity", obj.quantity, 1.0);
+      }
+
       int pos = offset + 5;
       if ((nullBits & 1) != 0) {
          int recipeIdLen = VarInt.peek(buf, pos);
@@ -127,6 +131,10 @@ public class CraftRecipeAction extends WindowAction {
       }
 
       buf.writeByte(nullBits);
+      if (this.quantity < 1) {
+         throw ProtocolException.valueBelowMinimum("Quantity", this.quantity, 1.0);
+      }
+
       buf.writeIntLE(this.quantity);
       if (this.recipeId != null) {
          PacketIO.writeVarString(buf, this.recipeId, 4096000);
@@ -168,9 +176,14 @@ public class CraftRecipeAction extends WindowAction {
       }
 
       byte nullBits = buffer.getByte(offset);
-      int pos = offset + 5;
+      int quantityVal = buffer.getIntLE(offset + 1);
+      if (quantityVal < 1) {
+         return ValidationResult.error("Quantity value out of range");
+      }
+
+      quantityVal = offset + 5;
       if ((nullBits & 1) != 0) {
-         int recipeIdLen = VarInt.peek(buffer, pos);
+         int recipeIdLen = VarInt.peek(buffer, quantityVal);
          if (recipeIdLen < 0) {
             return ValidationResult.error("Invalid string length for RecipeId");
          }
@@ -179,9 +192,9 @@ public class CraftRecipeAction extends WindowAction {
             return ValidationResult.error("RecipeId exceeds max length 4096000");
          }
 
-         pos += VarInt.size(recipeIdLen);
-         pos += recipeIdLen;
-         if (pos > buffer.writerIndex()) {
+         quantityVal += VarInt.size(recipeIdLen);
+         quantityVal += recipeIdLen;
+         if (quantityVal > buffer.writerIndex()) {
             return ValidationResult.error("Buffer overflow reading RecipeId");
          }
       }

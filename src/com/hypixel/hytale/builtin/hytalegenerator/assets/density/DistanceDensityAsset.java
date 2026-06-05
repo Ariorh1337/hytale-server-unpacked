@@ -14,7 +14,7 @@ public class DistanceDensityAsset extends DensityAsset {
    public static final BuilderCodec<DistanceDensityAsset> CODEC = BuilderCodec.builder(
          DistanceDensityAsset.class, DistanceDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Curve", CurveAsset.CODEC, false), (t, k) -> t.densityCurveAsset = k, k -> k.densityCurveAsset)
+      .append(new KeyedCodec<>("Curve", CurveAsset.CODEC, false), (asset, value) -> asset.densityCurveAsset = value, asset -> asset.densityCurveAsset)
       .add()
       .build();
    private CurveAsset densityCurveAsset = new ConstantCurveAsset();

@@ -19,6 +19,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.ints.IntSets;
+import it.unimi.dsi.fastutil.objects.Object2LongMap;
+import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -171,7 +173,7 @@ public class VolumeEntry {
    private CooldownMode cooldownMode = CooldownMode.PER_ENTITY;
    private transient boolean pendingDestroy;
    private transient long lastGlobalActivationNanos;
-   private final transient Map<UUID, Long> lastEntityActivationNanos = new HashMap<>();
+   private final transient Object2LongOpenHashMap<UUID> lastEntityActivationNanos = new Object2LongOpenHashMap<>();
    @Nullable
    private String effectAssetRef;
    @Nullable
@@ -183,7 +185,7 @@ public class VolumeEntry {
    @Nonnull
    private IntSet expandedTagIndexes = IntSets.EMPTY_SET;
    private final Map<UUID, Ref<EntityStore>> trackedEntities = new HashMap<>();
-   private final Map<VolumeEntry.EffectEntityKey, Long> lastFireTimes = new HashMap<>();
+   private final Object2LongOpenHashMap<VolumeEntry.EffectEntityKey> lastFireTimes = new Object2LongOpenHashMap<>();
    private final Set<UUID> activatedEntities = new HashSet<>();
    private final Set<UUID> volumeTickRejectionsFired = new HashSet<>();
    private final Set<UUID> pendingVolumeActivations = new HashSet<>();
@@ -366,11 +368,11 @@ public class VolumeEntry {
 
       long cooldownNanos = (long)(this.cooldown * 1.0E9F);
       if (this.cooldownMode != CooldownMode.TOTAL) {
-         Long last = this.lastEntityActivationNanos.get(entityUuid);
-         if (last == null) {
+         long last = this.lastEntityActivationNanos.getOrDefault(entityUuid, Long.MIN_VALUE);
+         if (last == Long.MIN_VALUE) {
             return false;
          } else if (nowNanos - last >= cooldownNanos) {
-            this.lastEntityActivationNanos.remove(entityUuid);
+            this.lastEntityActivationNanos.removeLong(entityUuid);
             return false;
          } else {
             return true;
@@ -490,7 +492,7 @@ public class VolumeEntry {
    }
 
    @Nonnull
-   public Map<VolumeEntry.EffectEntityKey, Long> getLastFireTimes() {
+   public Object2LongMap<VolumeEntry.EffectEntityKey> getLastFireTimes() {
       return this.lastFireTimes;
    }
 
@@ -556,7 +558,7 @@ public class VolumeEntry {
       this.groupTickRejectionsFired.removeIf(key -> key.entityId().equals(entityUuid));
       this.pendingGroupActivations.removeIf(key -> key.entityId().equals(entityUuid));
       this.pendingDelayedEffects.removeIf(key -> key.entityId().equals(entityUuid));
-      this.lastFireTimes.entrySet().removeIf(entry -> entry.getKey().entityId().equals(entityUuid));
+      this.lastFireTimes.object2LongEntrySet().removeIf(entry -> entry.getKey().entityId().equals(entityUuid));
    }
 
    public enum EffectBucket {

@@ -8,6 +8,7 @@ import javax.annotation.Nonnull;
 public class SuggestionResult {
    private final List<String> suggestions = new ObjectArrayList<>();
    private final List<Boolean> continuations = new ObjectArrayList<>();
+   private boolean truncated;
 
    @Nonnull
    public SuggestionResult suggest(@Nonnull String suggestion) {
@@ -41,5 +42,13 @@ public class SuggestionResult {
    @Nonnull
    public List<Boolean> getContinuations() {
       return this.continuations;
+   }
+
+   public void markTruncated() {
+      this.truncated = true;
+   }
+
+   public boolean isTruncated() {
+      return this.truncated;
    }
 }

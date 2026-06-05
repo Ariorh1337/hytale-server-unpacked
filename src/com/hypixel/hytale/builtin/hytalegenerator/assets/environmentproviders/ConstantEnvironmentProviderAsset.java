@@ -13,7 +13,7 @@ public class ConstantEnvironmentProviderAsset extends EnvironmentProviderAsset {
    public static final BuilderCodec<ConstantEnvironmentProviderAsset> CODEC = BuilderCodec.builder(
          ConstantEnvironmentProviderAsset.class, ConstantEnvironmentProviderAsset::new, EnvironmentProviderAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Environment", Codec.STRING, true), (t, k) -> t.environment = k, k -> k.environment)
+      .append(new KeyedCodec<>("Environment", Codec.STRING, true), (asset, value) -> asset.environment = value, asset -> asset.environment)
       .add()
       .build();
    private String environment = "Unknown";

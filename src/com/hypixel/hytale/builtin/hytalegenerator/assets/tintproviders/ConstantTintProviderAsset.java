@@ -16,7 +16,7 @@ public class ConstantTintProviderAsset extends TintProviderAsset {
    public static final BuilderCodec<ConstantTintProviderAsset> CODEC = BuilderCodec.builder(
          ConstantTintProviderAsset.class, ConstantTintProviderAsset::new, TintProviderAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Color", ProtocolCodecs.COLOR, true), (t, k) -> t.color = k, k -> k.color)
+      .append(new KeyedCodec<>("Color", ProtocolCodecs.COLOR, true), (asset, value) -> asset.color = value, asset -> asset.color)
       .add()
       .build();
    private Color color = DEFAULT_COLOR;

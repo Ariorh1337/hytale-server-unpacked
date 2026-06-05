@@ -14,9 +14,9 @@ public class RandomDirectionalityAsset extends DirectionalityAsset {
    public static final BuilderCodec<RandomDirectionalityAsset> CODEC = BuilderCodec.builder(
          RandomDirectionalityAsset.class, RandomDirectionalityAsset::new, DirectionalityAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Seed", Codec.STRING, true), (asset, v) -> asset.seed = v, asset -> asset.seed)
+      .append(new KeyedCodec<>("Seed", Codec.STRING, true), (asset, value) -> asset.seed = value, asset -> asset.seed)
       .add()
-      .append(new KeyedCodec<>("Pattern", PatternAsset.CODEC, true), (asset, v) -> asset.patternAsset = v, asset -> asset.patternAsset)
+      .append(new KeyedCodec<>("Pattern", PatternAsset.CODEC, true), (asset, value) -> asset.patternAsset = value, asset -> asset.patternAsset)
       .add()
       .build();
    private String seed = "A";
@@ -26,5 +26,10 @@ public class RandomDirectionalityAsset extends DirectionalityAsset {
    @Override
    public Directionality build(@Nonnull DirectionalityAsset.Argument argument) {
       return new RandomDirectionality(this.patternAsset.build(PatternAsset.argumentFrom(argument)), argument.parentSeed.child(this.seed).createSupplier().get());
+   }
+
+   @Override
+   public void cleanUp() {
+      this.patternAsset.cleanUp();
    }
 }

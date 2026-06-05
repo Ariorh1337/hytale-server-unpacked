@@ -15,18 +15,22 @@ public class ColumnLinearScannerAsset extends ScannerAsset {
    public static final BuilderCodec<ColumnLinearScannerAsset> CODEC = BuilderCodec.builder(
          ColumnLinearScannerAsset.class, ColumnLinearScannerAsset::new, ScannerAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("MinY", Codec.INTEGER, true), (t, k) -> t.minY = k, k -> k.minY)
+      .append(new KeyedCodec<>("MinY", Codec.INTEGER, true), (asset, value) -> asset.minY = value, asset -> asset.minY)
       .add()
-      .append(new KeyedCodec<>("MaxY", Codec.INTEGER, true), (t, k) -> t.maxY = k, k -> k.maxY)
+      .append(new KeyedCodec<>("MaxY", Codec.INTEGER, true), (asset, value) -> asset.maxY = value, asset -> asset.maxY)
       .add()
-      .<Integer>append(new KeyedCodec<>("ResultCap", Codec.INTEGER, true), (t, k) -> t.resultCap = k, k -> k.resultCap)
+      .<Integer>append(new KeyedCodec<>("ResultCap", Codec.INTEGER, true), (asset, value) -> asset.resultCap = value, asset -> asset.resultCap)
       .addValidator(Validators.greaterThanOrEqual(0))
       .add()
-      .append(new KeyedCodec<>("TopDownOrder", Codec.BOOLEAN, false), (t, k) -> t.topDownOrder = k, k -> k.topDownOrder)
+      .append(new KeyedCodec<>("TopDownOrder", Codec.BOOLEAN, false), (asset, value) -> asset.topDownOrder = value, asset -> asset.topDownOrder)
       .add()
-      .append(new KeyedCodec<>("RelativeToPosition", Codec.BOOLEAN, false), (t, k) -> t.isRelativeToPosition = k, k -> k.isRelativeToPosition)
+      .append(
+         new KeyedCodec<>("RelativeToPosition", Codec.BOOLEAN, false),
+         (asset, value) -> asset.isRelativeToPosition = value,
+         asset -> asset.isRelativeToPosition
+      )
       .add()
-      .append(new KeyedCodec<>("BaseHeightName", Codec.STRING, false), (t, k) -> t.baseHeightName = k, k -> k.baseHeightName)
+      .append(new KeyedCodec<>("BaseHeightName", Codec.STRING, false), (asset, value) -> asset.baseHeightName = value, asset -> asset.baseHeightName)
       .add()
       .build();
    private int minY = 0;

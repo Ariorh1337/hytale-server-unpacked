@@ -176,7 +176,7 @@ public class DensityProp extends Prop {
                      position, 0.0, depthIntoFloor[i], depthIntoCeiling[i], spaceAboveFloor[i], spaceBelowCeiling[i], functionPosition -> {
                         childContext.position = Vector3iUtil.toVector3d(functionPosition);
                         return this.density.process(childContext);
-                     }, childContext.distanceToBiomeEdge
+                     }, childContext.distanceToBiomeEdge, null, null
                   );
                   Material material = this.materialProvider.getVoxelTypeAt(materialContext);
                   if (material == null) {

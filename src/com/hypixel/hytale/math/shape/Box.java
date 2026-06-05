@@ -190,45 +190,49 @@ public class Box implements Shape {
 
    @Nonnull
    public Box enclosingRotatedAABB(float pitch, float yaw, float roll) {
-      double newMinX = Double.MAX_VALUE;
-      double newMinY = Double.MAX_VALUE;
-      double newMinZ = Double.MAX_VALUE;
-      double newMaxX = -Double.MAX_VALUE;
-      double newMaxY = -Double.MAX_VALUE;
-      double newMaxZ = -Double.MAX_VALUE;
+      if (Float.isFinite(pitch) && Float.isFinite(yaw) && Float.isFinite(roll)) {
+         double newMinX = Double.MAX_VALUE;
+         double newMinY = Double.MAX_VALUE;
+         double newMinZ = Double.MAX_VALUE;
+         double newMaxX = -Double.MAX_VALUE;
+         double newMaxY = -Double.MAX_VALUE;
+         double newMaxZ = -Double.MAX_VALUE;
 
-      for (int i = 0; i < 8; i++) {
-         double cornerX = (i & 1) == 0 ? this.min.x : this.max.x;
-         double cornerY = (i & 2) == 0 ? this.min.y : this.max.y;
-         double cornerZ = (i & 4) == 0 ? this.min.z : this.max.z;
-         Vector3d corner = new Vector3d(cornerX, cornerY, cornerZ);
-         corner.rotateZ(roll).rotateY(yaw).rotateX(pitch);
-         if (corner.x < newMinX) {
-            newMinX = corner.x;
+         for (int i = 0; i < 8; i++) {
+            double cornerX = (i & 1) == 0 ? this.min.x : this.max.x;
+            double cornerY = (i & 2) == 0 ? this.min.y : this.max.y;
+            double cornerZ = (i & 4) == 0 ? this.min.z : this.max.z;
+            Vector3d corner = new Vector3d(cornerX, cornerY, cornerZ);
+            corner.rotateZ(roll).rotateY(yaw).rotateX(pitch);
+            if (corner.x < newMinX) {
+               newMinX = corner.x;
+            }
+
+            if (corner.y < newMinY) {
+               newMinY = corner.y;
+            }
+
+            if (corner.z < newMinZ) {
+               newMinZ = corner.z;
+            }
+
+            if (corner.x > newMaxX) {
+               newMaxX = corner.x;
+            }
+
+            if (corner.y > newMaxY) {
+               newMaxY = corner.y;
+            }
+
+            if (corner.z > newMaxZ) {
+               newMaxZ = corner.z;
+            }
          }
 
-         if (corner.y < newMinY) {
-            newMinY = corner.y;
-         }
-
-         if (corner.z < newMinZ) {
-            newMinZ = corner.z;
-         }
-
-         if (corner.x > newMaxX) {
-            newMaxX = corner.x;
-         }
-
-         if (corner.y > newMaxY) {
-            newMaxY = corner.y;
-         }
-
-         if (corner.z > newMaxZ) {
-            newMaxZ = corner.z;
-         }
+         return new Box(newMinX, newMinY, newMinZ, newMaxX, newMaxY, newMaxZ);
+      } else {
+         return this.clone();
       }
-
-      return new Box(newMinX, newMinY, newMinZ, newMaxX, newMaxY, newMaxZ);
    }
 
    @Nonnull

@@ -28,14 +28,16 @@ public class ClustersPositionProviderAsset extends PositionProviderAsset {
       )
       .add()
       .append(
-         new KeyedCodec<>("ClusterBounds", DecimalBounds3dAsset.CODEC, true), (asset, v) -> asset.clusterBoundsAsset = v, asset -> asset.clusterBoundsAsset
+         new KeyedCodec<>("ClusterBounds", DecimalBounds3dAsset.CODEC, true),
+         (asset, value) -> asset.clusterBoundsAsset = value,
+         asset -> asset.clusterBoundsAsset
       )
       .add()
       .build();
    @Nonnull
-   private PositionProviderAsset clusterPositionProviderAsset = new ListPositionProviderAsset();
+   private PositionProviderAsset clusterPositionProviderAsset = ListPositionProviderAsset.INSTANCE;
    @Nonnull
-   private PositionProviderAsset distributorPositionProviderAsset = new ListPositionProviderAsset();
+   private PositionProviderAsset distributorPositionProviderAsset = ListPositionProviderAsset.INSTANCE;
    @Nonnull
    private DecimalBounds3dAsset clusterBoundsAsset = new DecimalBounds3dAsset();
 

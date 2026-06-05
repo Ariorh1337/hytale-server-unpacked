@@ -15,14 +15,14 @@ public class PointInOutAsset implements JsonAssetWithMap<String, DefaultAssetMap
          PointInOutAsset.class,
          PointInOutAsset::new,
          Codec.STRING,
-         (asset, id) -> asset.id = id,
-         config -> config.id,
-         (config, data) -> config.data = data,
-         config -> config.data
+         (asset, value) -> asset.id = value,
+         asset -> asset.id,
+         (asset, value) -> asset.data = value,
+         asset -> asset.data
       )
-      .append(new KeyedCodec<>("In", Codec.DOUBLE, true), (t, y) -> t.y = y, t -> t.y)
+      .append(new KeyedCodec<>("In", Codec.DOUBLE, true), (asset, value) -> asset.y = value, asset -> asset.y)
       .add()
-      .append(new KeyedCodec<>("Out", Codec.DOUBLE, true), (t, out) -> t.out = out, t -> t.out)
+      .append(new KeyedCodec<>("Out", Codec.DOUBLE, true), (asset, value) -> asset.out = value, asset -> asset.out)
       .add()
       .build();
    private String id;

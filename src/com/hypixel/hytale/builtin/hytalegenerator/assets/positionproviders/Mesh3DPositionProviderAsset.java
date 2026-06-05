@@ -15,7 +15,9 @@ public class Mesh3DPositionProviderAsset extends PositionProviderAsset {
          Mesh3DPositionProviderAsset.class, Mesh3DPositionProviderAsset::new, PositionProviderAsset.ABSTRACT_CODEC
       )
       .append(
-         new KeyedCodec<>("PointGenerator", PointGeneratorAsset.CODEC, true), (asset, v) -> asset.pointGeneratorAsset = v, asset -> asset.pointGeneratorAsset
+         new KeyedCodec<>("PointGenerator", PointGeneratorAsset.CODEC, true),
+         (asset, value) -> asset.pointGeneratorAsset = value,
+         asset -> asset.pointGeneratorAsset
       )
       .add()
       .build();

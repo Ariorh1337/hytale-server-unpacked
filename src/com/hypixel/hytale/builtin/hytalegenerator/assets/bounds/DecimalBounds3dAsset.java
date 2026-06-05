@@ -12,19 +12,20 @@ import javax.annotation.Nonnull;
 import org.joml.Vector3d;
 
 public class DecimalBounds3dAsset implements JsonAssetWithMap<String, DefaultAssetMap<String, DecimalBounds3dAsset>> {
+   public static final DecimalBounds3dAsset ZERO_INSTANCE = new DecimalBounds3dAsset();
    @Nonnull
    public static final AssetBuilderCodec<String, DecimalBounds3dAsset> CODEC = AssetBuilderCodec.builder(
          DecimalBounds3dAsset.class,
          DecimalBounds3dAsset::new,
          Codec.STRING,
-         (asset, id) -> asset.id = id,
-         config -> config.id,
-         (config, data) -> config.data = data,
-         config -> config.data
+         (asset, value) -> asset.id = value,
+         asset -> asset.id,
+         (asset, value) -> asset.data = value,
+         asset -> asset.data
       )
-      .append(new KeyedCodec<>("PointA", Vector3dUtil.CODEC, true), (t, value) -> t.pointA = value, t -> t.pointA)
+      .append(new KeyedCodec<>("PointA", Vector3dUtil.CODEC, true), (asset, value) -> asset.pointA = value, asset -> asset.pointA)
       .add()
-      .append(new KeyedCodec<>("PointB", Vector3dUtil.CODEC, true), (t, value) -> t.pointB = value, t -> t.pointB)
+      .append(new KeyedCodec<>("PointB", Vector3dUtil.CODEC, true), (asset, value) -> asset.pointB = value, asset -> asset.pointB)
       .add()
       .build();
    private String id;

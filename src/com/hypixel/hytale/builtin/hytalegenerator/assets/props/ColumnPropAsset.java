@@ -30,17 +30,19 @@ public class ColumnPropAsset extends PropAsset {
    public static final BuilderCodec<ColumnPropAsset> CODEC = BuilderCodec.builder(ColumnPropAsset.class, ColumnPropAsset::new, PropAsset.ABSTRACT_CODEC)
       .append(
          new KeyedCodec<>("ColumnBlocks", new ArrayCodec<>(ColumnPropAsset.ColumnBlock.CODEC, ColumnPropAsset.ColumnBlock[]::new), true),
-         (asset, v) -> asset.columnBlocks = v,
+         (asset, value) -> asset.columnBlocks = value,
          asset -> asset.columnBlocks
       )
       .add()
-      .append(new KeyedCodec<>("BlockMask", BlockMaskAsset.CODEC, false), (asset, v) -> asset.blockMaskAsset = v, asset -> asset.blockMaskAsset)
+      .append(new KeyedCodec<>("BlockMask", BlockMaskAsset.CODEC, false), (asset, value) -> asset.blockMaskAsset = value, asset -> asset.blockMaskAsset)
       .add()
       .append(
-         new KeyedCodec<>("Directionality", DirectionalityAsset.CODEC, true), (asset, v) -> asset.directionalityAsset = v, asset -> asset.directionalityAsset
+         new KeyedCodec<>("Directionality", DirectionalityAsset.CODEC, true),
+         (asset, value) -> asset.directionalityAsset = value,
+         asset -> asset.directionalityAsset
       )
       .add()
-      .append(new KeyedCodec<>("Scanner", ScannerAsset.CODEC, true), (asset, v) -> asset.scannerAsset = v, asset -> asset.scannerAsset)
+      .append(new KeyedCodec<>("Scanner", ScannerAsset.CODEC, true), (asset, value) -> asset.scannerAsset = value, asset -> asset.scannerAsset)
       .add()
       .build();
    private ColumnPropAsset.ColumnBlock[] columnBlocks = new ColumnPropAsset.ColumnBlock[0];
@@ -92,12 +94,12 @@ public class ColumnPropAsset extends PropAsset {
             ColumnPropAsset.ColumnBlock.class,
             ColumnPropAsset.ColumnBlock::new,
             Codec.STRING,
-            (asset, id) -> asset.id = id,
-            config -> config.id,
-            (config, data) -> config.data = data,
-            config -> config.data
+            (asset, value) -> asset.id = value,
+            asset -> asset.id,
+            (asset, value) -> asset.data = value,
+            asset -> asset.data
          )
-         .append(new KeyedCodec<>("Y", Codec.INTEGER, true), (t, y) -> t.y = y, t -> t.y)
+         .append(new KeyedCodec<>("Y", Codec.INTEGER, true), (asset, value) -> asset.y = value, asset -> asset.y)
          .add()
          .append(new KeyedCodec<>("Material", MaterialAsset.CODEC, true), (asset, value) -> asset.materialAsset = value, asset -> asset.materialAsset)
          .add()

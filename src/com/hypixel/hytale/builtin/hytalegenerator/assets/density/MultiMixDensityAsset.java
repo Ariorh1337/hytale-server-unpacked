@@ -23,7 +23,7 @@ public class MultiMixDensityAsset extends DensityAsset {
       )
       .append(
          new KeyedCodec<>("Keys", new ArrayCodec<>(MultiMixDensityAsset.KeyAsset.CODEC, MultiMixDensityAsset.KeyAsset[]::new), true),
-         (asset, v) -> asset.keyAssets = v,
+         (asset, value) -> asset.keyAssets = value,
          asset -> asset.keyAssets
       )
       .add()
@@ -114,14 +114,14 @@ public class MultiMixDensityAsset extends DensityAsset {
             MultiMixDensityAsset.KeyAsset.class,
             MultiMixDensityAsset.KeyAsset::new,
             Codec.STRING,
-            (asset, id) -> asset.id = id,
-            config -> config.id,
-            (config, data) -> config.data = data,
-            config -> config.data
+            (asset, value) -> asset.id = value,
+            asset -> asset.id,
+            (asset, value) -> asset.data = value,
+            asset -> asset.data
          )
-         .append(new KeyedCodec<>("Value", Codec.DOUBLE, true), (t, value) -> t.value = value, t -> t.value)
+         .append(new KeyedCodec<>("Value", Codec.DOUBLE, true), (asset, value) -> asset.value = value, asset -> asset.value)
          .add()
-         .append(new KeyedCodec<>("DensityIndex", Codec.INTEGER, true), (t, value) -> t.densityIndex = value, t -> t.densityIndex)
+         .append(new KeyedCodec<>("DensityIndex", Codec.INTEGER, true), (asset, value) -> asset.densityIndex = value, asset -> asset.densityIndex)
          .add()
          .build();
       private String id;

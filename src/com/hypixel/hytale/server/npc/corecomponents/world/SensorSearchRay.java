@@ -8,9 +8,9 @@ import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
-import com.hypixel.hytale.server.core.universe.world.World;
-import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
+import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.SensorBase;
@@ -55,7 +55,6 @@ public class SensorSearchRay extends SensorBase {
          return false;
       }
 
-      World world = store.getExternalData().getWorld();
       TransformComponent transformComponent = store.getComponent(ref, TransformComponent.getComponentType());
       assert transformComponent != null;
       HeadRotation headRotationComponent = store.getComponent(ref, HeadRotation.getComponentType());
@@ -64,9 +63,14 @@ public class SensorSearchRay extends SensorBase {
       Rotation3f headRotation = headRotationComponent.getRotation();
       Vector3d cachedPosition = role.getWorldSupport().getCachedSearchRayPosition(this.id);
       if (!cachedPosition.equals(Vector3dUtil.MIN)) {
-         WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(cachedPosition.x, cachedPosition.z));
-         if (chunk != null) {
-            BlockSection section = chunk.getBlockChunk().getSectionAtBlockY(MathUtil.floor(cachedPosition.y));
+         ChunkStore chunkStore = store.getExternalData().getWorld().getChunkStore();
+         long chunkIndex = ChunkUtil.indexChunkFromBlock(cachedPosition.x, cachedPosition.z);
+         Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(chunkIndex);
+         BlockChunk blockChunkComponent = chunkRef != null && chunkRef.isValid()
+            ? chunkStore.getStore().getComponent(chunkRef, BlockChunk.getComponentType())
+            : null;
+         if (blockChunkComponent != null) {
+            BlockSection section = blockChunkComponent.getSectionAtBlockY(MathUtil.floor(cachedPosition.y));
             if (section.getLocalChangeCounter() == this.lastBlockRevision) {
                this.positionProvider.setTarget(cachedPosition);
                return true;

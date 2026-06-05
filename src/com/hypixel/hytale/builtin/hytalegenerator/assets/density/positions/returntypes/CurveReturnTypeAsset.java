@@ -17,7 +17,7 @@ public class CurveReturnTypeAsset extends ReturnTypeAsset {
    public static final BuilderCodec<CurveReturnTypeAsset> CODEC = BuilderCodec.builder(
          CurveReturnTypeAsset.class, CurveReturnTypeAsset::new, ReturnTypeAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Curve", CurveAsset.CODEC, true), (t, k) -> t.curveAsset = k, t -> t.curveAsset)
+      .append(new KeyedCodec<>("Curve", CurveAsset.CODEC, true), (asset, value) -> asset.curveAsset = value, asset -> asset.curveAsset)
       .add()
       .build();
    private CurveAsset curveAsset = new ConstantCurveAsset();

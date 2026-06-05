@@ -11,10 +11,10 @@ import javax.annotation.Nonnull;
 public class PowDensityAsset extends DensityAsset {
    @Nonnull
    public static final BuilderCodec<PowDensityAsset> CODEC = BuilderCodec.builder(PowDensityAsset.class, PowDensityAsset::new, DensityAsset.ABSTRACT_CODEC)
-      .append(new KeyedCodec<>("Exponent", Codec.DOUBLE, true), (t, k) -> t.exponent = k, t -> t.exponent)
+      .append(new KeyedCodec<>("Exponent", Codec.DOUBLE, true), (asset, value) -> asset.exponent = value, asset -> asset.exponent)
       .add()
       .build();
-   private double exponent = 1.0;
+   private double exponent = 2.0;
 
    @Nonnull
    @Override

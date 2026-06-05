@@ -151,6 +151,9 @@ public interface MotionController extends DebugSupport.DebugFlagsChangeListener 
 
    boolean translateToAccessiblePosition(Vector3d var1, Box var2, double var3, double var5, ComponentAccessor<EntityStore> var7);
 
+   @Nonnull
+   Box getCollisionBoundingBox();
+
    Vector3d getComponentSelector();
 
    Vector3d getPlanarComponentSelector();
@@ -166,6 +169,10 @@ public interface MotionController extends DebugSupport.DebugFlagsChangeListener 
    void addVelocity(@Nonnull Vector3d var1, @Nullable VelocityConfig var2);
 
    Vector3d getExternalVelocity();
+
+   double getCombinedExternalVelocityLength();
+
+   void clearExternalForces();
 
    void setVelocity(@Nonnull Vector3dc var1, @Nullable VelocityConfig var2, boolean var3);
 

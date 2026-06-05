@@ -417,101 +417,115 @@ public class MotionControllerFly extends MotionControllerBase {
          probeMoveData.addStartSegment(position, false);
       }
 
-      if (!probeOnly) {
-         this.isObstructed = false;
-         if (this.debugModeBlockCollisions) {
-            this.collisionResult.setLogger(LOGGER);
-         }
-      }
-
-      this.collisionResult.setCollisionByMaterial(canSteer ? 6 : 4);
-      CollisionModule.get();
-      CollisionModule.findCollisions(this.collisionBoundingBox, position, translation, this.collisionResult, componentAccessor);
-      if (this.debugModeBlockCollisions) {
-         this.collisionResult.setLogger(null);
-      }
-
-      if (this.debugModeCollisions) {
-         this.dumpCollisionResults();
-      }
-
-      BlockCollisionData collision = this.collisionResult.getFirstBlockCollision();
-      this.lastValidPosition.set(position);
-      double distanceFactor;
-      if (collision == null) {
-         position.add(translation);
-         distanceFactor = 1.0;
-         if (this.debugModeMove) {
-            LOGGER.at(Level.INFO)
-               .log(
-                  "%s - Fly: No collision pos=%s vel=%s onGround=%s blocked=%s ",
-                  debugPrefix,
-                  Vector3dUtil.formatShortString(position),
-                  Vector3dUtil.formatShortString(translation),
-                  this.onGround(),
-                  this.isObstructed
-               );
+      if (probeOnly && !moveProbe.probePosition(ref, this.collisionBoundingBox, position, this.collisionResult, componentAccessor)) {
+         if (saveSegments) {
+            appendProbeInvalidStartSegment(probeMoveData, position);
          }
 
-         if (this.debugModeValidatePositions && !this.isValidPosition(position, this.collisionResult, componentAccessor)) {
-            throw new IllegalStateException("Invalid position");
-         }
+         return 0.0;
       } else {
-         position.set(collision.collisionPoint);
-         distanceFactor = collision.collisionStart;
          if (!probeOnly) {
-            this.isObstructed = true;
+            this.isObstructed = false;
+            if (this.debugModeBlockCollisions) {
+               this.collisionResult.setLogger(LOGGER);
+            }
          }
 
-         if (this.debugModeMove) {
-            LOGGER.at(Level.INFO)
-               .log(
-                  "%s - Fly: Collision pos=%s collStart=%s vel=%s onGround=%s blocked=%s ",
-                  debugPrefix,
-                  Vector3dUtil.formatShortString(position),
-                  distanceFactor,
-                  Vector3dUtil.formatShortString(translation),
-                  this.onGround(),
-                  this.isObstructed
-               );
+         this.collisionResult.setCollisionByMaterial(canSteer ? 6 : 4);
+         CollisionModule.get();
+         CollisionModule.findCollisions(this.collisionBoundingBox, position, translation, this.collisionResult, componentAccessor);
+         if (this.debugModeBlockCollisions) {
+            this.collisionResult.setLogger(null);
          }
 
-         if (this.debugModeValidatePositions && !this.isValidPosition(position, this.collisionResult, componentAccessor)) {
-            throw new IllegalStateException("Invalid position");
+         if (this.debugModeCollisions) {
+            this.dumpCollisionResults();
          }
-      }
 
-      if (!moveProbe.probePosition(ref, this.collisionBoundingBox, position, this.collisionResult, componentAccessor)) {
-         double adjust = this.bisect(
-            this.lastValidPosition,
-            position,
-            this,
-            (_this, newPosition) -> _this.moveProbe.probePosition(ref, _this.collisionBoundingBox, newPosition, _this.collisionResult, componentAccessor),
-            position
-         );
-         distanceFactor *= adjust;
-         if (this.debugModeMove) {
-            LOGGER.at(Level.INFO)
-               .log("%s - Fly: Bisect step pos=%s distanceFactor=%s adjust=%s", debugPrefix, Vector3dUtil.formatShortString(position), distanceFactor, adjust);
-         }
-      }
-
-      if (!probeOnly) {
-         this.processTriggers(ref, this.collisionResult, distanceFactor, componentAccessor);
-      } else if (saveSegments) {
-         double distance = this.waypointDistance(probeMoveData.initialPosition, position);
+         BlockCollisionData collision = this.collisionResult.getFirstBlockCollision();
+         this.lastValidPosition.set(position);
+         double distanceFactor;
          if (collision == null) {
-            probeMoveData.addMoveSegment(position, false, distance);
-         } else if (this.getWorldNormal().equals(collision.collisionNormal)) {
-            probeMoveData.addHitGroundSegment(position, distance, collision.collisionNormal, collision.blockId);
+            position.add(translation);
+            distanceFactor = 1.0;
+            if (this.debugModeMove) {
+               LOGGER.at(Level.INFO)
+                  .log(
+                     "%s - Fly: No collision pos=%s vel=%s onGround=%s blocked=%s ",
+                     debugPrefix,
+                     Vector3dUtil.formatShortString(position),
+                     Vector3dUtil.formatShortString(translation),
+                     this.onGround(),
+                     this.isObstructed
+                  );
+            }
+
+            if (this.debugModeValidatePositions && !this.isValidPosition(position, this.collisionResult, componentAccessor)) {
+               throw new IllegalStateException("Invalid position");
+            }
          } else {
-            probeMoveData.addHitWallSegment(position, false, distance, collision.collisionNormal, collision.blockId);
+            position.set(collision.collisionPoint);
+            distanceFactor = collision.collisionStart;
+            if (!probeOnly) {
+               this.isObstructed = true;
+            }
+
+            if (this.debugModeMove) {
+               LOGGER.at(Level.INFO)
+                  .log(
+                     "%s - Fly: Collision pos=%s collStart=%s vel=%s onGround=%s blocked=%s ",
+                     debugPrefix,
+                     Vector3dUtil.formatShortString(position),
+                     distanceFactor,
+                     Vector3dUtil.formatShortString(translation),
+                     this.onGround(),
+                     this.isObstructed
+                  );
+            }
+
+            if (this.debugModeValidatePositions && !this.isValidPosition(position, this.collisionResult, componentAccessor)) {
+               throw new IllegalStateException("Invalid position");
+            }
          }
 
-         probeMoveData.addEndSegment(position, true, distance);
-      }
+         if (!moveProbe.probePosition(ref, this.collisionBoundingBox, position, this.collisionResult, componentAccessor)) {
+            double adjust = this.bisect(
+               this.lastValidPosition,
+               position,
+               this,
+               (_this, newPosition) -> _this.moveProbe.probePosition(ref, _this.collisionBoundingBox, newPosition, _this.collisionResult, componentAccessor),
+               position
+            );
+            distanceFactor *= adjust;
+            if (this.debugModeMove) {
+               LOGGER.at(Level.INFO)
+                  .log(
+                     "%s - Fly: Bisect step pos=%s distanceFactor=%s adjust=%s", debugPrefix, Vector3dUtil.formatShortString(position), distanceFactor, adjust
+                  );
+            }
+         }
 
-      return distanceFactor;
+         if (!probeOnly) {
+            this.processTriggers(ref, this.collisionResult, distanceFactor, componentAccessor);
+         } else if (saveSegments) {
+            double distance = this.waypointDistance(probeMoveData.initialPosition, position);
+            if (collision == null) {
+               probeMoveData.addMoveSegment(position, false, distance);
+            } else if (this.getWorldNormal().equals(collision.collisionNormal)) {
+               probeMoveData.addHitGroundSegment(position, distance, collision.collisionNormal, collision.blockId);
+            } else {
+               probeMoveData.addHitWallSegment(position, false, distance, collision.collisionNormal, collision.blockId);
+            }
+
+            probeMoveData.addEndSegment(position, false, distance);
+         }
+
+         return distanceFactor;
+      }
+   }
+
+   static void appendProbeInvalidStartSegment(@Nonnull ProbeMoveData probeMoveData, @Nonnull Vector3d position) {
+      probeMoveData.addEndSegment(position, false, 0.0);
    }
 
    @Override

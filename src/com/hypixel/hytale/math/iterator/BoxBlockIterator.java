@@ -153,12 +153,8 @@ public final class BoxBlockIterator {
       @Nonnull BoxBlockIterator.BoxIterationConsumer consumer,
       @Nonnull BoxBlockIterator.BoxIterationBuffer buffer
    ) {
-      if (minX > maxX) {
-         throw new IllegalArgumentException("minX is larger than maxX! Given: " + minX + " > " + maxX);
-      } else if (minY > maxY) {
-         throw new IllegalArgumentException("minY is larger than maxY! Given: " + minY + " > " + maxY);
-      } else if (minZ > maxZ) {
-         throw new IllegalArgumentException("minZ is larger than maxZ! Given: " + minZ + " > " + maxZ);
+      if (minX > maxX || minY > maxY || minZ > maxZ) {
+         return true;
       } else if (consumer == null) {
          throw new NullPointerException("consumer is null!");
       } else if (buffer == null) {

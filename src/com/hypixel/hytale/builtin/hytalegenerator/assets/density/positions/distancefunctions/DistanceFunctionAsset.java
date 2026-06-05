@@ -15,7 +15,7 @@ import javax.annotation.Nonnull;
 public abstract class DistanceFunctionAsset implements JsonAssetWithMap<String, DefaultAssetMap<String, DistanceFunctionAsset>> {
    @Nonnull
    public static final AssetCodecMapCodec<String, DistanceFunctionAsset> CODEC = new AssetCodecMapCodec<>(
-      Codec.STRING, (t, k) -> t.id = k, t -> t.id, (t, data) -> t.data = data, t -> t.data
+      Codec.STRING, (asset, value) -> asset.id = value, asset -> asset.id, (asset, value) -> asset.data = value, asset -> asset.data
    );
    @Nonnull
    public static final Codec<String> CHILD_ASSET_CODEC = new ContainedAssetCodec<>(DistanceFunctionAsset.class, CODEC);

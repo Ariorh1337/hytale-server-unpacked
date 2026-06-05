@@ -17,33 +17,31 @@ public class CellNoise3DDensityAsset extends DensityAsset {
    public static final BuilderCodec<CellNoise3DDensityAsset> CODEC = BuilderCodec.builder(
          CellNoise3DDensityAsset.class, CellNoise3DDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("ScaleX", Codec.DOUBLE, true), (asset, scale) -> asset.scaleX = scale, asset -> asset.scaleX)
+      .append(new KeyedCodec<>("ScaleX", Codec.DOUBLE, true), (asset, value) -> asset.scaleX = value, asset -> asset.scaleX)
       .addValidator(Validators.greaterThan(0.0))
       .add()
-      .<Double>append(new KeyedCodec<>("ScaleY", Codec.DOUBLE, true), (asset, scale) -> asset.scaleY = scale, asset -> asset.scaleY)
+      .<Double>append(new KeyedCodec<>("ScaleY", Codec.DOUBLE, true), (asset, value) -> asset.scaleY = value, asset -> asset.scaleY)
       .addValidator(Validators.greaterThan(0.0))
       .add()
-      .<Double>append(new KeyedCodec<>("ScaleZ", Codec.DOUBLE, true), (asset, scale) -> asset.scaleZ = scale, asset -> asset.scaleZ)
+      .<Double>append(new KeyedCodec<>("ScaleZ", Codec.DOUBLE, true), (asset, value) -> asset.scaleZ = value, asset -> asset.scaleZ)
       .addValidator(Validators.greaterThan(0.0))
       .add()
-      .append(new KeyedCodec<>("Jitter", Codec.DOUBLE, true), (asset, v) -> asset.jitter = v, asset -> asset.scaleZ)
+      .append(new KeyedCodec<>("Jitter", Codec.DOUBLE, true), (asset, value) -> asset.jitter = value, asset -> asset.scaleZ)
       .add()
-      .<Integer>append(new KeyedCodec<>("Octaves", Codec.INTEGER, true), (asset, octaves) -> asset.octaves = octaves, asset -> asset.octaves)
+      .<Integer>append(new KeyedCodec<>("Octaves", Codec.INTEGER, true), (asset, value) -> asset.octaves = value, asset -> asset.octaves)
       .addValidator(Validators.greaterThan(0))
       .add()
-      .append(new KeyedCodec<>("Seed", Codec.STRING, true), (asset, seed) -> asset.seedKey = seed, asset -> asset.seedKey)
+      .append(new KeyedCodec<>("Seed", Codec.STRING, true), (asset, value) -> asset.seedKey = value, asset -> asset.seedKey)
       .add()
-      .append(
-         new KeyedCodec<>("CellType", FastNoiseLite.CellularReturnType.CODEC, true), (asset, cellType) -> asset.cellType = cellType, asset -> asset.cellType
-      )
+      .append(new KeyedCodec<>("CellType", FastNoiseLite.CellularReturnType.CODEC, true), (asset, value) -> asset.cellType = value, asset -> asset.cellType)
       .add()
       .build();
-   private double scaleX = 1.0;
-   private double scaleY = 1.0;
-   private double scaleZ = 1.0;
-   private double jitter = 0.5;
+   private double scaleX = 50.0;
+   private double scaleY = 50.0;
+   private double scaleZ = 50.0;
+   private double jitter = 0.3;
    private int octaves = 1;
-   private String seedKey = "A";
+   private String seedKey = "";
    @Nonnull
    private FastNoiseLite.CellularReturnType cellType = FastNoiseLite.CellularReturnType.CellValue;
 

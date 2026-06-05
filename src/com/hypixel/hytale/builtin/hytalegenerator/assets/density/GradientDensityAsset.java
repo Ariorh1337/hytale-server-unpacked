@@ -20,7 +20,7 @@ public class GradientDensityAsset extends DensityAsset {
    public static final BuilderCodec<GradientDensityAsset> CODEC = BuilderCodec.builder(
          GradientDensityAsset.class, GradientDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Axis", Vector3dUtil.CODEC, false), (t, k) -> t.axis = k, k -> k.axis)
+      .append(new KeyedCodec<>("Axis", Vector3dUtil.CODEC, false), (asset, value) -> asset.axis = value, asset -> asset.axis)
       .addValidator(new Validator<Vector3d>() {
          public void accept(Vector3d v, ValidationResults r) {
             if (v.x == 0.0 && v.y == 0.0 && v.z == 0.0) {
@@ -33,7 +33,7 @@ public class GradientDensityAsset extends DensityAsset {
          }
       })
       .add()
-      .<Double>append(new KeyedCodec<>("SampleRange", Codec.DOUBLE, false), (t, k) -> t.sampleRange = k, t -> t.sampleRange)
+      .<Double>append(new KeyedCodec<>("SampleRange", Codec.DOUBLE, false), (asset, value) -> asset.sampleRange = value, asset -> asset.sampleRange)
       .addValidator(Validators.greaterThan(0.0))
       .add()
       .build();

@@ -24,7 +24,7 @@ import javax.annotation.Nonnull;
 public abstract class PropAsset implements Cleanable, JsonAssetWithMap<String, DefaultAssetMap<String, PropAsset>> {
    @Nonnull
    public static final AssetCodecMapCodec<String, PropAsset> CODEC = new AssetCodecMapCodec<>(
-      Codec.STRING, (t, k) -> t.id = k, t -> t.id, (t, data) -> t.data = data, t -> t.data
+      Codec.STRING, (asset, value) -> asset.id = value, asset -> asset.id, (asset, value) -> asset.data = value, asset -> asset.data
    );
    @Nonnull
    private static final Map<String, PropAsset> exportedNodes = new ConcurrentHashMap<>();
@@ -34,9 +34,9 @@ public abstract class PropAsset implements Cleanable, JsonAssetWithMap<String, D
    public static final Codec<String[]> CHILD_ASSET_CODEC_ARRAY = new ArrayCodec<>(CHILD_ASSET_CODEC, String[]::new);
    @Nonnull
    public static final BuilderCodec<PropAsset> ABSTRACT_CODEC = BuilderCodec.abstractBuilder(PropAsset.class)
-      .append(new KeyedCodec<>("Skip", Codec.BOOLEAN, false), (t, k) -> t.skip = k, t -> t.skip)
+      .append(new KeyedCodec<>("Skip", Codec.BOOLEAN, false), (asset, value) -> asset.skip = value, asset -> asset.skip)
       .add()
-      .append(new KeyedCodec<>("ExportAs", Codec.STRING, false), (t, k) -> t.exportName = k, t -> t.exportName)
+      .append(new KeyedCodec<>("ExportAs", Codec.STRING, false), (asset, value) -> asset.exportName = value, asset -> asset.exportName)
       .add()
       .afterDecode(asset -> {
          if (asset.exportName != null && !asset.exportName.isEmpty()) {
@@ -45,7 +45,7 @@ public abstract class PropAsset implements Cleanable, JsonAssetWithMap<String, D
             }
 
             exportedNodes.put(asset.exportName, asset);
-            LoggerUtil.getLogger().fine("Registered imported position provider asset with name '" + asset.exportName + "' with asset id '" + asset.id);
+            LoggerUtil.getLogger().fine("Registered imported Prop asset with name '" + asset.exportName + "' with asset id '" + asset.id);
          }
       })
       .build();

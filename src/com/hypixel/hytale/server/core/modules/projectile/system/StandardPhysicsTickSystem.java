@@ -33,6 +33,7 @@ import com.hypixel.hytale.server.core.modules.projectile.config.StandardPhysicsC
 import com.hypixel.hytale.server.core.modules.projectile.config.StandardPhysicsProvider;
 import com.hypixel.hytale.server.core.modules.time.TimeResource;
 import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.Set;
 import javax.annotation.Nonnull;
@@ -94,7 +95,8 @@ public class StandardPhysicsTickSystem extends EntityTickingSystem<EntityStore> 
          ForceProviderStandardState forceState = physicsComponent.getForceProviderStandardState();
          RestingSupport restingSupport = physicsComponent.getRestingSupport();
          if (physicsComponent.getState() == StandardPhysicsProvider.STATE.RESTING) {
-            if (forceState.externalForce.lengthSquared() == 0.0 && !restingSupport.hasChanged(world)) {
+            ChunkStore chunkStore = world.getChunkStore();
+            if (forceState.externalForce.lengthSquared() == 0.0 && !restingSupport.hasChanged(chunkStore)) {
                return;
             }
 
@@ -126,7 +128,8 @@ public class StandardPhysicsTickSystem extends EntityTickingSystem<EntityStore> 
             physicsComponent.setState(StandardPhysicsProvider.STATE.ACTIVE);
          }
 
-         if (physicsComponent.getState() == StandardPhysicsProvider.STATE.RESTING && restingSupport.hasChanged(world)) {
+         ChunkStore chunkStore = world.getChunkStore();
+         if (physicsComponent.getState() == StandardPhysicsProvider.STATE.RESTING && restingSupport.hasChanged(chunkStore)) {
             physicsComponent.setState(StandardPhysicsProvider.STATE.ACTIVE);
          }
 
@@ -267,7 +270,7 @@ public class StandardPhysicsTickSystem extends EntityTickingSystem<EntityStore> 
                   boolean hitGround = contactNormal.equals(Vector3dUtil.UP);
                   if (!allowRolling && (physicsConfig.isSticksVertically() || hitGround)) {
                      physicsComponent.setState(StandardPhysicsProvider.STATE.RESTING);
-                     restingSupport.rest(world, boundingBox, position);
+                     restingSupport.rest(chunkStore, boundingBox, position);
                      physicsComponent.setOnGround(hitGround);
                      if (physicsComponent.getImpactConsumer() != null) {
                         physicsComponent.getImpactConsumer().onImpact(selfRef, position, null, null, commandBuffer);

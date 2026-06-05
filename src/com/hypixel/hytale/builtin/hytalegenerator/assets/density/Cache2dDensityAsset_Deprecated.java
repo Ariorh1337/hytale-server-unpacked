@@ -14,7 +14,7 @@ public class Cache2dDensityAsset_Deprecated extends DensityAsset {
    public static final BuilderCodec<Cache2dDensityAsset_Deprecated> CODEC = BuilderCodec.builder(
          Cache2dDensityAsset_Deprecated.class, Cache2dDensityAsset_Deprecated::new, DensityAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Y", Codec.DOUBLE, false), (t, k) -> t.y = k, t -> t.y)
+      .append(new KeyedCodec<>("Y", Codec.DOUBLE, false), (asset, value) -> asset.y = value, asset -> asset.y)
       .add()
       .build();
    private double y = 0.0;

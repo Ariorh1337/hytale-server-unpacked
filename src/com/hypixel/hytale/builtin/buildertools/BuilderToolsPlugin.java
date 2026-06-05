@@ -59,6 +59,8 @@ import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabMarkerProvider
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabSelectionInteraction;
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.commands.PrefabEditCommand;
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.saving.PrefabSaveContributor;
+import com.hypixel.hytale.builtin.buildertools.prefabeditor.saving.PrefabSaveSupport;
+import com.hypixel.hytale.builtin.buildertools.prefabeditor.saving.SupportMode;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.BrushConfig;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.BrushConfigCommandExecutor;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.BrushConfigEditStore;
@@ -3787,6 +3789,16 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                         Material material = Material.fromPattern(pattern, BuilderState.this.random);
                         if (material.isFluid()) {
                            byte currentFluidLevel = this.currentChunk.getFluidLevel(x, y, z);
+                           if (currentBlockId != 0) {
+                              Holder<ChunkStore> holder = this.currentChunk.getBlockComponentHolder(x, y, z);
+                              int rotation = this.currentChunk.getRotationIndex(x, y, z);
+                              int supportValue = this.currentChunk.getSupportValue(x, y, z);
+                              int filler = this.currentChunk.getFiller(x, y, z);
+                              before.addBlockAtWorldPos(x, y, z, currentBlockId, rotation, filler, supportValue, holder);
+                              after.addBlockAtWorldPos(x, y, z, 0, 0, 0, 0);
+                              BuilderState.this.clearFillerBlocksIfNeeded(x, y, z, currentBlockId, rotation, accessor, before, after);
+                           }
+
                            before.addFluidAtWorldPos(x, y, z, currentFluidId, currentFluidLevel);
                            after.addFluidAtWorldPos(x, y, z, material.getFluidId(), material.getFluidLevel());
                         } else {
@@ -3874,6 +3886,16 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                            Material material = Material.fromPattern(pattern, this.random);
                            if (material.isFluid()) {
                               byte currentFluidLevel = chunk.getFluidLevel(x, y, z);
+                              if (currentBlock != 0) {
+                                 Holder<ChunkStore> holder = chunk.getBlockComponentHolder(x, y, z);
+                                 int rotation = chunk.getRotationIndex(x, y, z);
+                                 int supportValue = chunk.getSupportValue(x, y, z);
+                                 int filler = chunk.getFiller(x, y, z);
+                                 before.addBlockAtWorldPos(x, y, z, currentBlock, rotation, filler, supportValue, holder);
+                                 after.addBlockAtWorldPos(x, y, z, 0, 0, 0, 0);
+                                 this.clearFillerBlocksIfNeeded(x, y, z, currentBlock, rotation, accessor, before, after);
+                              }
+
                               before.addFluidAtWorldPos(x, y, z, currentFluid, currentFluidLevel);
                               after.addFluidAtWorldPos(x, y, z, material.getFluidId(), material.getFluidLevel());
                            } else {
@@ -3910,6 +3932,74 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                   .getLogger()
                   .at(Level.FINE)
                   .log("Took: %dns (%dms) to execute set of %d blocks", diff, TimeUnit.NANOSECONDS.toMillis(diff), counter);
+               this.sendUpdate();
+               this.sendArea();
+            }
+         }
+      }
+
+      public void submerge(@Nonnull BlockPattern pattern, ComponentAccessor<EntityStore> componentAccessor) {
+         if (!pattern.isEmpty()) {
+            if (this.selection == null) {
+               this.sendFeedback(Message.translation("server.builderTools.noSelection"), componentAccessor);
+            } else if (!this.selection.hasSelectionBounds()) {
+               this.sendFeedback(Message.translation("server.builderTools.noSelectionBounds"), componentAccessor);
+            } else {
+               long start = System.nanoTime();
+               Vector3i min = Vector3iUtil.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+               Vector3i max = Vector3iUtil.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+               int xMin = min.x();
+               int xMax = max.x();
+               int yMin = min.y();
+               int yMax = max.y();
+               int zMin = min.z();
+               int zMax = max.z();
+               int totalBlocks = (xMax - xMin + 1) * (zMax - zMin + 1) * (yMax - yMin + 1);
+               int width = xMax - xMin;
+               int depth = zMax - zMin;
+               int halfWidth = width / 2;
+               int halfDepth = depth / 2;
+               BlockSelection before = new BlockSelection(totalBlocks, 0);
+               before.setPosition(xMin + halfWidth, yMin, zMin + halfDepth);
+               before.setSelectionArea(min, max);
+               this.pushHistory(BuilderToolsPlugin.Action.SET, new BlockSelectionSnapshot(before));
+               BlockSelection after = new BlockSelection(totalBlocks, 0);
+               after.copyPropertiesFrom(before);
+               World world = componentAccessor.getExternalData().getWorld();
+               LocalCachedChunkAccessor accessor = LocalCachedChunkAccessor.atWorldCoords(world, xMin + halfWidth, zMin + halfDepth, Math.max(width, depth));
+               int counter = 0;
+
+               for (int x = xMin; x <= xMax; x++) {
+                  for (int z = zMin; z <= zMax; z++) {
+                     WorldChunk chunk = accessor.getChunk(ChunkUtil.indexChunkFromBlock(x, z));
+
+                     for (int y = yMax; y >= yMin; y--) {
+                        int currentBlock = chunk.getBlock(x, y, z);
+                        int currentFluid = chunk.getFluidId(x, y, z);
+                        if (this.globalMask != null && this.globalMask.isExcluded(accessor, x, y, z, min, max, currentBlock, currentFluid)) {
+                           counter++;
+                        } else {
+                           Material material = Material.fromPattern(pattern, this.random);
+                           if (material.isFluid()) {
+                              byte currentFluidLevel = chunk.getFluidLevel(x, y, z);
+                              before.addFluidAtWorldPos(x, y, z, currentFluid, currentFluidLevel);
+                              after.addFluidAtWorldPos(x, y, z, material.getFluidId(), material.getFluidLevel());
+                           }
+
+                           this.sendFeedback("Gather 1/2", totalBlocks, ++counter, componentAccessor);
+                        }
+                     }
+                  }
+               }
+
+               after.placeNoReturn("Submerge 2/2", this.playerRef, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
+               BuilderToolsPlugin.invalidateWorldMapForSelection(after, world);
+               long end = System.nanoTime();
+               long diff = end - start;
+               BuilderToolsPlugin.get()
+                  .getLogger()
+                  .at(Level.FINE)
+                  .log("Took: %dns (%dms) to execute submerge of %d blocks", diff, TimeUnit.NANOSECONDS.toMillis(diff), counter);
                this.sendUpdate();
                this.sendArea();
             }
@@ -5170,7 +5260,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          @Nonnull String name,
          boolean relativize,
          boolean overwrite,
-         boolean clearSupport,
+         @Nonnull SupportMode supportMode,
          @Nullable AssetPack targetPack,
          ComponentAccessor<EntityStore> componentAccessor
       ) {
@@ -5178,56 +5268,60 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             this.sendErrorFeedback(ref, Message.translation("server.builderTools.noSelection"), componentAccessor);
          } else {
             long start = System.nanoTime();
-            if (!name.endsWith(".prefab.json")) {
-               name = name + ".prefab.json";
-            }
-
-            PrefabStore prefabStore = PrefabStore.get();
-            Path basePath = prefabStore.getPrefabsPathForPack(targetPack);
-            if (!PathUtil.isChildOf(basePath, basePath.resolve(name)) && !SingleplayerModule.isOwner(this.playerRef)) {
+            name = name.trim();
+            if (name.isBlank()) {
+               this.sendErrorFeedback(ref, Message.translation("server.builderTools.prefabSave.nameRequired"), componentAccessor);
+            } else if (name.contains("..")) {
                this.sendFeedback(Message.translation("server.builderTools.attemptedToSaveOutsidePrefabsDir"), componentAccessor);
             } else {
-               try {
-                  BlockSelection postClone = relativize ? this.selection.relativize() : this.selection.cloneSelection();
-                  if (clearSupport) {
-                     postClone.clearAllSupportValues();
-                  }
-
-                  if (targetPack != null) {
-                     prefabStore.savePrefabToPack(targetPack, name, postClone, overwrite);
-                  } else {
-                     prefabStore.saveServerPrefab(name, postClone, overwrite);
-                  }
-
-                  this.sendUpdate();
-                  String savedKey = targetPack != null ? "server.builderTools.savedSelectionToPrefab.pack" : "server.builderTools.savedSelectionToPrefab";
-                  Message savedMsg = Message.translation(savedKey).param("name", name);
-                  if (targetPack != null) {
-                     savedMsg = savedMsg.param("pack", targetPack.getName());
-                  }
-
-                  this.sendFeedback(savedMsg, componentAccessor);
-               } catch (PrefabSaveException e) {
-                  switch (e.getType()) {
-                     case ERROR:
-                        BuilderToolsPlugin.get().getLogger().at(Level.WARNING).withCause(e).log("Exception saving prefab %s", name);
-                        this.sendFeedback(
-                           Message.translation("server.builderTools.errorSavingPrefab").param("name", name).param("message", e.getCause().getMessage()),
-                           componentAccessor
-                        );
-                        break;
-                     case ALREADY_EXISTS:
-                        BuilderToolsPlugin.get().getLogger().at(Level.WARNING).log("Prefab already exists %s", name);
-                        this.sendFeedback(Message.translation("server.builderTools.prefabAlreadyExists"), componentAccessor);
-                  }
+               if (!name.endsWith(".prefab.json")) {
+                  name = name + ".prefab.json";
                }
 
-               long end = System.nanoTime();
-               long diff = end - start;
-               BuilderToolsPlugin.get()
-                  .getLogger()
-                  .at(Level.FINE)
-                  .log("Took: %dns (%dms) to execute save of %d blocks", diff, TimeUnit.NANOSECONDS.toMillis(diff), this.selection.getBlockCount());
+               PrefabStore prefabStore = PrefabStore.get();
+               Path basePath = prefabStore.getPrefabsPathForPack(targetPack);
+               if (!PathUtil.isChildOf(basePath, basePath.resolve(name)) && !SingleplayerModule.isOwner(this.playerRef)) {
+                  this.sendFeedback(Message.translation("server.builderTools.attemptedToSaveOutsidePrefabsDir"), componentAccessor);
+               } else {
+                  try {
+                     BlockSelection postClone = relativize ? this.selection.relativize() : this.selection.cloneSelection();
+                     PrefabSaveSupport.apply(postClone, supportMode);
+                     if (targetPack != null) {
+                        prefabStore.savePrefabToPack(targetPack, name, postClone, overwrite);
+                     } else {
+                        prefabStore.saveServerPrefab(name, postClone, overwrite);
+                     }
+
+                     this.sendUpdate();
+                     String savedKey = targetPack != null ? "server.builderTools.savedSelectionToPrefab.pack" : "server.builderTools.savedSelectionToPrefab";
+                     Message savedMsg = Message.translation(savedKey).param("name", name);
+                     if (targetPack != null) {
+                        savedMsg = savedMsg.param("pack", targetPack.getName());
+                     }
+
+                     this.sendFeedback(savedMsg, componentAccessor);
+                  } catch (PrefabSaveException e) {
+                     switch (e.getType()) {
+                        case ERROR:
+                           BuilderToolsPlugin.get().getLogger().at(Level.WARNING).withCause(e).log("Exception saving prefab %s", name);
+                           this.sendFeedback(
+                              Message.translation("server.builderTools.errorSavingPrefab").param("name", name).param("message", e.getCause().getMessage()),
+                              componentAccessor
+                           );
+                           break;
+                        case ALREADY_EXISTS:
+                           BuilderToolsPlugin.get().getLogger().at(Level.WARNING).log("Prefab already exists %s", name);
+                           this.sendFeedback(Message.translation("server.builderTools.prefabAlreadyExists"), componentAccessor);
+                     }
+                  }
+
+                  long end = System.nanoTime();
+                  long diff = end - start;
+                  BuilderToolsPlugin.get()
+                     .getLogger()
+                     .at(Level.FINE)
+                     .log("Took: %dns (%dms) to execute save of %d blocks", diff, TimeUnit.NANOSECONDS.toMillis(diff), this.selection.getBlockCount());
+               }
             }
          }
       }
@@ -5240,7 +5334,7 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
          boolean includeEntities,
          boolean includeEmpty,
          @Nullable Vector3i playerAnchor,
-         boolean clearSupport,
+         @Nonnull SupportMode supportMode,
          @Nullable AssetPack targetPack,
          @Nonnull ComponentAccessor<EntityStore> componentAccessor
       ) {
@@ -5248,140 +5342,144 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             && (!this.selection.getSelectionMin().equals(Vector3iUtil.ZERO) || !this.selection.getSelectionMax().equals(Vector3iUtil.ZERO))) {
             World world = componentAccessor.getExternalData().getWorld();
             long start = System.nanoTime();
-            if (!name.endsWith(".prefab.json")) {
-               name = name + ".prefab.json";
-            }
-
-            PrefabStore prefabStore = PrefabStore.get();
-            Path basePath = prefabStore.getPrefabsPathForPack(targetPack);
-            if (!PathUtil.isChildOf(basePath, basePath.resolve(name)) && !SingleplayerModule.isOwner(this.playerRef)) {
+            name = name.trim();
+            if (name.isBlank()) {
+               this.sendErrorFeedback(ref, Message.translation("server.builderTools.prefabSave.nameRequired"), componentAccessor);
+            } else if (name.contains("..")) {
                this.sendFeedback(Message.translation("server.builderTools.attemptedToSaveOutsidePrefabsDir"), componentAccessor);
             } else {
-               Vector3i min = Vector3iUtil.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
-               Vector3i max = Vector3iUtil.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
-               int xMin = min.x();
-               int yMin = min.y();
-               int zMin = min.z();
-               int xMax = max.x();
-               int yMax = max.y();
-               int zMax = max.z();
-               int width = xMax - xMin;
-               int height = yMax - yMin;
-               int depth = zMax - zMin;
-               int halfWidth = width / 2;
-               int halfDepth = depth / 2;
-               LocalCachedChunkAccessor accessor = LocalCachedChunkAccessor.atWorldCoords(world, xMin + halfWidth, zMin + halfDepth, Math.max(width, depth));
-               BlockTypeAssetMap<String, BlockType> assetMap = BlockType.getAssetMap();
-               int editorBlock = assetMap.getIndex("Editor_Block");
-               int editorBlockPrefabAir = assetMap.getIndex("Editor_Empty");
-               int editorBlockPrefabAnchor = assetMap.getIndex("Editor_Anchor");
-               BlockSelection tempSelection = new BlockSelection();
-               tempSelection.setPosition(xMin + halfWidth, yMin, zMin + halfDepth);
-               tempSelection.setSelectionArea(min, max);
-               int count = 0;
-               int top = Math.max(yMin, yMax);
-               int bottom = Math.min(yMin, yMax);
+               if (!name.endsWith(".prefab.json")) {
+                  name = name + ".prefab.json";
+               }
 
-               for (int x = xMin; x <= xMax; x++) {
-                  for (int z = zMin; z <= zMax; z++) {
-                     WorldChunk chunk = accessor.getChunk(ChunkUtil.indexChunkFromBlock(x, z));
-                     Store<ChunkStore> store = chunk.getReference().getStore();
-                     ChunkColumn chunkColumn = store.getComponent(chunk.getReference(), ChunkColumn.getComponentType());
-                     int lastSection = -1;
-                     BlockPhysics blockPhysics = null;
+               PrefabStore prefabStore = PrefabStore.get();
+               Path basePath = prefabStore.getPrefabsPathForPack(targetPack);
+               if (!PathUtil.isChildOf(basePath, basePath.resolve(name)) && !SingleplayerModule.isOwner(this.playerRef)) {
+                  this.sendFeedback(Message.translation("server.builderTools.attemptedToSaveOutsidePrefabsDir"), componentAccessor);
+               } else {
+                  Vector3i min = Vector3iUtil.min(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+                  Vector3i max = Vector3iUtil.max(this.selection.getSelectionMin(), this.selection.getSelectionMax());
+                  int xMin = min.x();
+                  int yMin = min.y();
+                  int zMin = min.z();
+                  int xMax = max.x();
+                  int yMax = max.y();
+                  int zMax = max.z();
+                  int width = xMax - xMin;
+                  int height = yMax - yMin;
+                  int depth = zMax - zMin;
+                  int halfWidth = width / 2;
+                  int halfDepth = depth / 2;
+                  LocalCachedChunkAccessor accessor = LocalCachedChunkAccessor.atWorldCoords(world, xMin + halfWidth, zMin + halfDepth, Math.max(width, depth));
+                  BlockTypeAssetMap<String, BlockType> assetMap = BlockType.getAssetMap();
+                  int editorBlock = assetMap.getIndex("Editor_Block");
+                  int editorBlockPrefabAir = assetMap.getIndex("Editor_Empty");
+                  int editorBlockPrefabAnchor = assetMap.getIndex("Editor_Anchor");
+                  BlockSelection tempSelection = new BlockSelection();
+                  tempSelection.setPosition(xMin + halfWidth, yMin, zMin + halfDepth);
+                  tempSelection.setSelectionArea(min, max);
+                  int count = 0;
+                  int top = Math.max(yMin, yMax);
+                  int bottom = Math.min(yMin, yMax);
 
-                     for (int y = top; y >= bottom; y--) {
-                        int block = chunk.getBlock(x, y, z);
-                        int fluid = chunk.getFluidId(x, y, z);
-                        if (lastSection != ChunkUtil.chunkCoordinate(y)) {
-                           lastSection = ChunkUtil.chunkCoordinate(y);
-                           Ref<ChunkStore> section = chunkColumn.getSection(lastSection);
-                           if (section != null) {
-                              blockPhysics = store.getComponent(section, BlockPhysics.getComponentType());
-                           } else {
-                              blockPhysics = null;
+                  for (int x = xMin; x <= xMax; x++) {
+                     for (int z = zMin; z <= zMax; z++) {
+                        WorldChunk chunk = accessor.getChunk(ChunkUtil.indexChunkFromBlock(x, z));
+                        Store<ChunkStore> store = chunk.getReference().getStore();
+                        ChunkColumn chunkColumn = store.getComponent(chunk.getReference(), ChunkColumn.getComponentType());
+                        int lastSection = -1;
+                        BlockPhysics blockPhysics = null;
+
+                        for (int y = top; y >= bottom; y--) {
+                           int block = chunk.getBlock(x, y, z);
+                           int fluid = chunk.getFluidId(x, y, z);
+                           if (lastSection != ChunkUtil.chunkCoordinate(y)) {
+                              lastSection = ChunkUtil.chunkCoordinate(y);
+                              Ref<ChunkStore> section = chunkColumn.getSection(lastSection);
+                              if (section != null) {
+                                 blockPhysics = store.getComponent(section, BlockPhysics.getComponentType());
+                              } else {
+                                 blockPhysics = null;
+                              }
                            }
-                        }
 
-                        if (block == editorBlockPrefabAnchor && playerAnchor == null) {
-                           tempSelection.setAnchorAtWorldPos(x, y, z);
-                           int id = BuilderToolsPlugin.getNonEmptyNeighbourBlock(accessor, x, y, z);
-                           if (id > 0 && id != editorBlockPrefabAir) {
-                              tempSelection.addBlockAtWorldPos(x, y, z, id, 0, 0, 0);
+                           if (block == editorBlockPrefabAnchor && playerAnchor == null) {
+                              tempSelection.setAnchorAtWorldPos(x, y, z);
+                              int id = BuilderToolsPlugin.getNonEmptyNeighbourBlock(accessor, x, y, z);
+                              if (id > 0 && id != editorBlockPrefabAir) {
+                                 tempSelection.addBlockAtWorldPos(x, y, z, id, 0, 0, 0);
+                                 count++;
+                              } else if (id == editorBlockPrefabAir) {
+                                 tempSelection.addBlockAtWorldPos(x, y, z, 0, 0, 0, 0);
+                                 count++;
+                              }
+                           } else if ((block != 0 || fluid != 0 || includeEmpty) && block != editorBlock) {
+                              if (block == editorBlockPrefabAir) {
+                                 tempSelection.addBlockAtWorldPos(x, y, z, 0, 0, 0, 0);
+                              } else {
+                                 tempSelection.copyFromAtWorld(x, y, z, chunk, blockPhysics);
+                              }
+
                               count++;
-                           } else if (id == editorBlockPrefabAir) {
-                              tempSelection.addBlockAtWorldPos(x, y, z, 0, 0, 0, 0);
-                              count++;
                            }
-                        } else if ((block != 0 || fluid != 0 || includeEmpty) && block != editorBlock) {
-                           if (block == editorBlockPrefabAir) {
-                              tempSelection.addBlockAtWorldPos(x, y, z, 0, 0, 0, 0);
-                           } else {
-                              tempSelection.copyFromAtWorld(x, y, z, chunk, blockPhysics);
-                           }
-
-                           count++;
                         }
                      }
                   }
-               }
 
-               if (playerAnchor != null) {
-                  tempSelection.setAnchorAtWorldPos(playerAnchor.x(), playerAnchor.y(), playerAnchor.z());
-               }
-
-               if (includeEntities) {
-                  Store<EntityStore> entityStore = world.getEntityStore().getStore();
-                  BuilderToolsPlugin.forEachCopyableInSelection(world, xMin, yMin, zMin, width, height, depth, e -> {
-                     Holder<EntityStore> holder = entityStore.copyEntity(e);
-                     tempSelection.addEntityFromWorld(holder);
-                  });
-               }
-
-               for (PrefabSaveContributor contributor : BuilderToolsPlugin.get().getPrefabSaveContributors()) {
-                  contributor.contribute(tempSelection, world, new Vector3i(xMin, yMin, zMin), new Vector3i(xMax, yMax, zMax));
-               }
-
-               try {
-                  BlockSelection postClone = relativize ? tempSelection.relativize() : tempSelection.cloneSelection();
-                  if (clearSupport) {
-                     postClone.clearAllSupportValues();
+                  if (playerAnchor != null) {
+                     tempSelection.setAnchorAtWorldPos(playerAnchor.x(), playerAnchor.y(), playerAnchor.z());
                   }
 
-                  if (targetPack != null) {
-                     prefabStore.savePrefabToPack(targetPack, name, postClone, overwrite);
-                  } else {
-                     prefabStore.saveServerPrefab(name, postClone, overwrite);
+                  if (includeEntities) {
+                     Store<EntityStore> entityStore = world.getEntityStore().getStore();
+                     BuilderToolsPlugin.forEachCopyableInSelection(world, xMin, yMin, zMin, width, height, depth, e -> {
+                        Holder<EntityStore> holder = entityStore.copyEntity(e);
+                        tempSelection.addEntityFromWorld(holder);
+                     });
                   }
 
-                  String savedKey = targetPack != null ? "server.builderTools.savedSelectionToPrefab.pack" : "server.builderTools.savedSelectionToPrefab";
-                  Message savedMsg = Message.translation(savedKey).param("name", name);
-                  if (targetPack != null) {
-                     savedMsg = savedMsg.param("pack", targetPack.getName());
+                  for (PrefabSaveContributor contributor : BuilderToolsPlugin.get().getPrefabSaveContributors()) {
+                     contributor.contribute(tempSelection, world, new Vector3i(xMin, yMin, zMin), new Vector3i(xMax, yMax, zMax));
                   }
 
-                  this.sendFeedback(savedMsg, componentAccessor);
-               } catch (PrefabSaveException e) {
-                  switch (e.getType()) {
-                     case ERROR:
-                        BuilderToolsPlugin.get().getLogger().at(Level.WARNING).withCause(e).log("Exception saving prefab %s", name);
-                        this.sendFeedback(
-                           Message.translation("server.builderTools.errorSavingPrefab").param("name", name).param("message", e.getCause().getMessage()),
-                           componentAccessor
-                        );
-                        break;
-                     case ALREADY_EXISTS:
-                        BuilderToolsPlugin.get().getLogger().at(Level.WARNING).log("Prefab already exists %s", name);
-                        this.sendFeedback(Message.translation("server.builderTools.prefabAlreadyExists"), componentAccessor);
+                  try {
+                     BlockSelection postClone = relativize ? tempSelection.relativize() : tempSelection.cloneSelection();
+                     PrefabSaveSupport.apply(postClone, supportMode);
+                     if (targetPack != null) {
+                        prefabStore.savePrefabToPack(targetPack, name, postClone, overwrite);
+                     } else {
+                        prefabStore.saveServerPrefab(name, postClone, overwrite);
+                     }
+
+                     String savedKey = targetPack != null ? "server.builderTools.savedSelectionToPrefab.pack" : "server.builderTools.savedSelectionToPrefab";
+                     Message savedMsg = Message.translation(savedKey).param("name", name);
+                     if (targetPack != null) {
+                        savedMsg = savedMsg.param("pack", targetPack.getName());
+                     }
+
+                     this.sendFeedback(savedMsg, componentAccessor);
+                  } catch (PrefabSaveException e) {
+                     switch (e.getType()) {
+                        case ERROR:
+                           BuilderToolsPlugin.get().getLogger().at(Level.WARNING).withCause(e).log("Exception saving prefab %s", name);
+                           this.sendFeedback(
+                              Message.translation("server.builderTools.errorSavingPrefab").param("name", name).param("message", e.getCause().getMessage()),
+                              componentAccessor
+                           );
+                           break;
+                        case ALREADY_EXISTS:
+                           BuilderToolsPlugin.get().getLogger().at(Level.WARNING).log("Prefab already exists %s", name);
+                           this.sendFeedback(Message.translation("server.builderTools.prefabAlreadyExists"), componentAccessor);
+                     }
                   }
+
+                  long end = System.nanoTime();
+                  long diff = end - start;
+                  BuilderToolsPlugin.get()
+                     .getLogger()
+                     .at(Level.FINE)
+                     .log("Took: %dns (%dms) to execute saveFromSelection of %d blocks", diff, TimeUnit.NANOSECONDS.toMillis(diff), count);
                }
-
-               long end = System.nanoTime();
-               long diff = end - start;
-               BuilderToolsPlugin.get()
-                  .getLogger()
-                  .at(Level.FINE)
-                  .log("Took: %dns (%dms) to execute saveFromSelection of %d blocks", diff, TimeUnit.NANOSECONDS.toMillis(diff), count);
             }
          } else {
             this.sendErrorFeedback(ref, Message.translation("server.builderTools.noSelectionBounds"), componentAccessor);

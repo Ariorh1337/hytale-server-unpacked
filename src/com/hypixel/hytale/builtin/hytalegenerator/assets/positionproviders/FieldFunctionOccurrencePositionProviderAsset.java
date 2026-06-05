@@ -16,18 +16,20 @@ public class FieldFunctionOccurrencePositionProviderAsset extends PositionProvid
    public static final BuilderCodec<FieldFunctionOccurrencePositionProviderAsset> CODEC = BuilderCodec.builder(
          FieldFunctionOccurrencePositionProviderAsset.class, FieldFunctionOccurrencePositionProviderAsset::new, PositionProviderAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Seed", Codec.STRING, true), (asset, v) -> asset.seed = v, asset -> asset.seed)
+      .append(new KeyedCodec<>("Seed", Codec.STRING, true), (asset, value) -> asset.seed = value, asset -> asset.seed)
       .add()
-      .append(new KeyedCodec<>("FieldFunction", DensityAsset.CODEC, true), (asset, v) -> asset.densityAsset = v, asset -> asset.densityAsset)
+      .append(new KeyedCodec<>("FieldFunction", DensityAsset.CODEC, true), (asset, value) -> asset.densityAsset = value, asset -> asset.densityAsset)
       .add()
       .append(
-         new KeyedCodec<>("Positions", PositionProviderAsset.CODEC, true), (asset, v) -> asset.positionProviderAsset = v, asset -> asset.positionProviderAsset
+         new KeyedCodec<>("Positions", PositionProviderAsset.CODEC, true),
+         (asset, value) -> asset.positionProviderAsset = value,
+         asset -> asset.positionProviderAsset
       )
       .add()
       .build();
    private String seed = "";
    private DensityAsset densityAsset = new ConstantDensityAsset();
-   private PositionProviderAsset positionProviderAsset = new ListPositionProviderAsset();
+   private PositionProviderAsset positionProviderAsset = ListPositionProviderAsset.INSTANCE;
 
    @Nonnull
    @Override

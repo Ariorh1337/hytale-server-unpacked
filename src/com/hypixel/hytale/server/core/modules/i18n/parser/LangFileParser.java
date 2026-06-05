@@ -1,12 +1,16 @@
 package com.hypixel.hytale.server.core.modules.i18n.parser;
 
+import com.hypixel.hytale.logger.HytaleLogger;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.logging.Level;
 import javax.annotation.Nonnull;
 
 public class LangFileParser {
+   private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+
    @Nonnull
    private static String literal(@Nonnull String value) {
       String literal = value.trim();
@@ -55,9 +59,9 @@ public class LangFileParser {
                   currValue.append(value, 0, value.length() - 1);
                } else {
                   currValue.append(literal(value));
-                  String existing = translations.put(currKey, escape(currValue));
+                  String existing = translations.putIfAbsent(currKey, escape(currValue));
                   if (existing != null) {
-                     throw new LangFileParser.TranslationParseException("Duplicate key in line", lineNumber, line);
+                     LOGGER.at(Level.WARNING).log("Duplicate translation key '%s' at line %d; keeping the first definition", currKey, lineNumber);
                   }
 
                   currKey = null;
@@ -68,9 +72,9 @@ public class LangFileParser {
                String valueLine = isMultiline ? line.substring(0, line.length() - 1) : line;
                currValue.append(valueLine.trim());
                if (!isMultiline) {
-                  String existing = translations.put(currKey, escape(currValue));
+                  String existing = translations.putIfAbsent(currKey, escape(currValue));
                   if (existing != null) {
-                     throw new LangFileParser.TranslationParseException("Duplicate key in line", lineNumber, line);
+                     LOGGER.at(Level.WARNING).log("Duplicate translation key '%s' at line %d; keeping the first definition", currKey, lineNumber);
                   }
 
                   currKey = null;

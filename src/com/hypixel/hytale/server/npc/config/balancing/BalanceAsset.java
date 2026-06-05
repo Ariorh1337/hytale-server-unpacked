@@ -13,7 +13,9 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.lookup.Priority;
 import com.hypixel.hytale.codec.validation.ValidatorCache;
+import com.hypixel.hytale.common.util.ArrayUtil;
 import com.hypixel.hytale.server.core.asset.type.entityeffect.config.EntityEffect;
+import java.util.Arrays;
 import javax.annotation.Nonnull;
 
 public class BalanceAsset implements JsonAssetWithMap<String, DefaultAssetMap<String, BalanceAsset>> {
@@ -22,13 +24,13 @@ public class BalanceAsset implements JsonAssetWithMap<String, DefaultAssetMap<St
       .build();
    public static final BuilderCodec<BalanceAsset> BASE_CODEC = BuilderCodec.builder(BalanceAsset.class, BalanceAsset::new, ABSTRACT_CODEC)
       .appendInherited(
-         new KeyedCodec<>("EntityEffect", EntityEffect.CHILD_ASSET_CODEC),
-         (e, s) -> e.entityEffect = s,
-         e -> e.entityEffect,
-         (e, p) -> e.entityEffect = p.entityEffect
+         new KeyedCodec<>("EntityEffects", EntityEffect.CHILD_ASSET_CODEC_ARRAY),
+         (e, s) -> e.entityEffects = s,
+         e -> e.entityEffects,
+         (e, p) -> e.entityEffects = p.entityEffects
       )
-      .addValidator(EntityEffect.VALIDATOR_CACHE.getValidator())
-      .documentation("An entity effect to apply to the NPC at spawn time.")
+      .addValidator(EntityEffect.VALIDATOR_CACHE.getArrayValidator())
+      .documentation("A list of entity effects to apply to the NPC at spawn time.")
       .add()
       .build();
    public static final AssetCodecMapCodec<String, BalanceAsset> CODEC = new AssetCodecMapCodec<String, BalanceAsset>(
@@ -40,7 +42,7 @@ public class BalanceAsset implements JsonAssetWithMap<String, DefaultAssetMap<St
    private static AssetStore<String, BalanceAsset, DefaultAssetMap<String, BalanceAsset>> ASSET_STORE;
    private AssetExtraInfo.Data data;
    protected String id;
-   protected String entityEffect;
+   protected String[] entityEffects = ArrayUtil.EMPTY_STRING_ARRAY;
 
    public static AssetStore<String, BalanceAsset, DefaultAssetMap<String, BalanceAsset>> getAssetStore() {
       if (ASSET_STORE == null) {
@@ -61,13 +63,13 @@ public class BalanceAsset implements JsonAssetWithMap<String, DefaultAssetMap<St
       return this.id;
    }
 
-   public String getEntityEffect() {
-      return this.entityEffect;
+   public String[] getEntityEffects() {
+      return this.entityEffects;
    }
 
    @Nonnull
    @Override
    public String toString() {
-      return "BalanceAsset{data=" + this.data + ", id='" + this.id + "', entityEffect='" + this.entityEffect + "'}";
+      return "BalanceAsset{data=" + this.data + ", id='" + this.id + "', entityEffects='" + Arrays.toString(this.entityEffects) + "'}";
    }
 }

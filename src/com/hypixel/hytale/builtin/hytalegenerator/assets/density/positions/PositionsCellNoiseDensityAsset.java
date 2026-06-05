@@ -25,22 +25,24 @@ public class PositionsCellNoiseDensityAsset extends DensityAsset {
          PositionsCellNoiseDensityAsset.class, PositionsCellNoiseDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
       .append(
-         new KeyedCodec<>("Positions", PositionProviderAsset.CODEC, true), (asset, v) -> asset.positionProviderAsset = v, asset -> asset.positionProviderAsset
+         new KeyedCodec<>("Positions", PositionProviderAsset.CODEC, true),
+         (asset, value) -> asset.positionProviderAsset = value,
+         asset -> asset.positionProviderAsset
       )
       .add()
-      .append(new KeyedCodec<>("ReturnType", ReturnTypeAsset.CODEC, true), (asset, v) -> asset.returnTypeAsset = v, asset -> asset.returnTypeAsset)
+      .append(new KeyedCodec<>("ReturnType", ReturnTypeAsset.CODEC, true), (asset, value) -> asset.returnTypeAsset = value, asset -> asset.returnTypeAsset)
       .add()
       .append(
          new KeyedCodec<>("DistanceFunction", DistanceFunctionAsset.CODEC, true),
-         (asset, v) -> asset.distanceFunctionAsset = v,
+         (asset, value) -> asset.distanceFunctionAsset = value,
          asset -> asset.distanceFunctionAsset
       )
       .add()
-      .<Double>append(new KeyedCodec<>("MaxDistance", Codec.DOUBLE, true), (asset, v) -> asset.maxDistance = v, asset -> asset.maxDistance)
+      .<Double>append(new KeyedCodec<>("MaxDistance", Codec.DOUBLE, true), (asset, value) -> asset.maxDistance = value, asset -> asset.maxDistance)
       .addValidator(Validators.greaterThanOrEqual(0.0))
       .add()
       .build();
-   private PositionProviderAsset positionProviderAsset = new ListPositionProviderAsset();
+   private PositionProviderAsset positionProviderAsset = ListPositionProviderAsset.INSTANCE;
    private ReturnTypeAsset returnTypeAsset = new CurveReturnTypeAsset();
    private DistanceFunctionAsset distanceFunctionAsset = new EuclideanDistanceFunctionAsset();
    private double maxDistance = 0.0;

@@ -18,7 +18,7 @@ public class ImportedReturnTypeAsset extends ReturnTypeAsset {
    public static final BuilderCodec<ImportedReturnTypeAsset> CODEC = BuilderCodec.builder(
          ImportedReturnTypeAsset.class, ImportedReturnTypeAsset::new, ReturnTypeAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Name", Codec.STRING, true), (t, k) -> t.importedAssetName = k, k -> k.importedAssetName)
+      .append(new KeyedCodec<>("Name", Codec.STRING, true), (asset, value) -> asset.importedAssetName = value, asset -> asset.importedAssetName)
       .add()
       .build();
    private String importedAssetName = "";

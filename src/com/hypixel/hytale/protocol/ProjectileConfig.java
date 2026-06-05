@@ -16,9 +16,9 @@ import org.joml.Vector3fc;
 
 public class ProjectileConfig {
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
-   public static final int FIXED_BLOCK_SIZE = 167;
+   public static final int FIXED_BLOCK_SIZE = 169;
    public static final int VARIABLE_FIELD_COUNT = 2;
-   public static final int VARIABLE_BLOCK_START = 175;
+   public static final int VARIABLE_BLOCK_START = 177;
    public static final int MAX_SIZE = 1677721600;
    @Nullable
    public PhysicsConfig physicsConfig;
@@ -29,6 +29,8 @@ public class ProjectileConfig {
    public Vector3fc spawnOffset;
    @Nullable
    public Direction rotationOffset;
+   public boolean rotateSpawnOffsetByPitch;
+   public boolean rotateSpawnOffsetByYaw;
    @Nullable
    public Map<InteractionType, Integer> interactions;
    public int launchLocalSoundEventIndex;
@@ -44,6 +46,8 @@ public class ProjectileConfig {
       double launchForce,
       @Nullable Vector3fc spawnOffset,
       @Nullable Direction rotationOffset,
+      boolean rotateSpawnOffsetByPitch,
+      boolean rotateSpawnOffsetByYaw,
       @Nullable Map<InteractionType, Integer> interactions,
       int launchLocalSoundEventIndex,
       int launchWorldSoundEventIndex,
@@ -54,6 +58,8 @@ public class ProjectileConfig {
       this.launchForce = launchForce;
       this.spawnOffset = spawnOffset;
       this.rotationOffset = rotationOffset;
+      this.rotateSpawnOffsetByPitch = rotateSpawnOffsetByPitch;
+      this.rotateSpawnOffsetByYaw = rotateSpawnOffsetByYaw;
       this.interactions = interactions;
       this.launchLocalSoundEventIndex = launchLocalSoundEventIndex;
       this.launchWorldSoundEventIndex = launchWorldSoundEventIndex;
@@ -66,6 +72,8 @@ public class ProjectileConfig {
       this.launchForce = other.launchForce;
       this.spawnOffset = other.spawnOffset;
       this.rotationOffset = other.rotationOffset;
+      this.rotateSpawnOffsetByPitch = other.rotateSpawnOffsetByPitch;
+      this.rotateSpawnOffsetByYaw = other.rotateSpawnOffsetByYaw;
       this.interactions = other.interactions;
       this.launchLocalSoundEventIndex = other.launchLocalSoundEventIndex;
       this.launchWorldSoundEventIndex = other.launchWorldSoundEventIndex;
@@ -74,8 +82,8 @@ public class ProjectileConfig {
 
    @Nonnull
    public static ProjectileConfig deserialize(@Nonnull ByteBuf buf, int offset) {
-      if (buf.readableBytes() - offset < 175) {
-         throw ProtocolException.bufferTooSmall("ProjectileConfig", 175, buf.readableBytes() - offset);
+      if (buf.readableBytes() - offset < 177) {
+         throw ProtocolException.bufferTooSmall("ProjectileConfig", 177, buf.readableBytes() - offset);
       }
 
       ProjectileConfig obj = new ProjectileConfig();
@@ -93,26 +101,28 @@ public class ProjectileConfig {
          obj.rotationOffset = Direction.deserialize(buf, offset + 143);
       }
 
-      obj.launchLocalSoundEventIndex = buf.getIntLE(offset + 155);
-      obj.launchWorldSoundEventIndex = buf.getIntLE(offset + 159);
-      obj.projectileSoundEventIndex = buf.getIntLE(offset + 163);
+      obj.rotateSpawnOffsetByPitch = buf.getByte(offset + 155) != 0;
+      obj.rotateSpawnOffsetByYaw = buf.getByte(offset + 156) != 0;
+      obj.launchLocalSoundEventIndex = buf.getIntLE(offset + 157);
+      obj.launchWorldSoundEventIndex = buf.getIntLE(offset + 161);
+      obj.projectileSoundEventIndex = buf.getIntLE(offset + 165);
       if ((nullBits & 8) != 0) {
-         int varPosBase0 = buf.getIntLE(offset + 167);
-         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 175) {
+         int varPosBase0 = buf.getIntLE(offset + 169);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 177) {
             throw ProtocolException.invalidOffset("Model", varPosBase0, buf.readableBytes());
          }
 
-         int varPos0 = offset + 175 + varPosBase0;
+         int varPos0 = offset + 177 + varPosBase0;
          obj.model = Model.deserialize(buf, varPos0);
       }
 
       if ((nullBits & 16) != 0) {
-         int varPosBase1 = buf.getIntLE(offset + 171);
-         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 175) {
+         int varPosBase1 = buf.getIntLE(offset + 173);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 177) {
             throw ProtocolException.invalidOffset("Interactions", varPosBase1, buf.readableBytes());
          }
 
-         int varPos1 = offset + 175 + varPosBase1;
+         int varPos1 = offset + 177 + varPosBase1;
          int interactionsCount = VarInt.peek(buf, varPos1);
          if (interactionsCount < 0) {
             throw ProtocolException.invalidVarInt("Interactions");
@@ -141,14 +151,14 @@ public class ProjectileConfig {
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte nullBits = buf.getByte(offset);
-      int maxEnd = 175;
+      int maxEnd = 177;
       if ((nullBits & 8) != 0) {
-         int fieldOffset0 = buf.getIntLE(offset + 167);
-         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 175) {
+         int fieldOffset0 = buf.getIntLE(offset + 169);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 177) {
             throw ProtocolException.invalidOffset("Model", fieldOffset0, maxEnd);
          }
 
-         int pos0 = offset + 175 + fieldOffset0;
+         int pos0 = offset + 177 + fieldOffset0;
          pos0 += Model.computeBytesConsumed(buf, pos0);
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
@@ -156,12 +166,12 @@ public class ProjectileConfig {
       }
 
       if ((nullBits & 16) != 0) {
-         int fieldOffset1 = buf.getIntLE(offset + 171);
-         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 175) {
+         int fieldOffset1 = buf.getIntLE(offset + 173);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 177) {
             throw ProtocolException.invalidOffset("Interactions", fieldOffset1, maxEnd);
          }
 
-         int pos1 = offset + 175 + fieldOffset1;
+         int pos1 = offset + 177 + fieldOffset1;
          int dictLen = VarInt.peek(buf, pos1);
          pos1 += VarInt.size(dictLen);
 
@@ -178,7 +188,7 @@ public class ProjectileConfig {
    }
 
    public static boolean isBufferTooSmall(MemorySegment mem) {
-      return mem.byteSize() < 175L;
+      return mem.byteSize() < 177L;
    }
 
    @Nullable
@@ -198,7 +208,7 @@ public class ProjectileConfig {
 
    @Nullable
    public static Model getModel(MemorySegment mem, int offset) {
-      return hasModel(mem, offset) ? Model.toObject(mem, offset + getValidatedOffset(mem, offset, 167, 175, "Model")) : null;
+      return hasModel(mem, offset) ? Model.toObject(mem, offset + getValidatedOffset(mem, offset, 169, 177, "Model")) : null;
    }
 
    public static double getLaunchForce(MemorySegment mem) {
@@ -229,6 +239,22 @@ public class ProjectileConfig {
       return hasRotationOffset(mem, offset) ? Direction.toObject(mem, offset + 143) : null;
    }
 
+   public static boolean getRotateSpawnOffsetByPitch(MemorySegment mem) {
+      return getRotateSpawnOffsetByPitch(mem, 0);
+   }
+
+   public static boolean getRotateSpawnOffsetByPitch(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 155);
+   }
+
+   public static boolean getRotateSpawnOffsetByYaw(MemorySegment mem) {
+      return getRotateSpawnOffsetByYaw(mem, 0);
+   }
+
+   public static boolean getRotateSpawnOffsetByYaw(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 156);
+   }
+
    @Nullable
    public static Map<InteractionType, Integer> getInteractions(MemorySegment mem) {
       return getInteractions(mem, 0);
@@ -240,7 +266,7 @@ public class ProjectileConfig {
          return null;
       }
 
-      int off = offset + getValidatedOffset(mem, offset, 171, 175, "Interactions");
+      int off = offset + getValidatedOffset(mem, offset, 173, 177, "Interactions");
       long packed = VarInt.getWithLength(mem, off);
       int len = (int)packed;
       if (len < 0) {
@@ -271,7 +297,7 @@ public class ProjectileConfig {
    }
 
    public static int getLaunchLocalSoundEventIndex(MemorySegment mem, int offset) {
-      return mem.get(PacketIO.PROTO_INT, offset + 155);
+      return mem.get(PacketIO.PROTO_INT, offset + 157);
    }
 
    public static int getLaunchWorldSoundEventIndex(MemorySegment mem) {
@@ -279,7 +305,7 @@ public class ProjectileConfig {
    }
 
    public static int getLaunchWorldSoundEventIndex(MemorySegment mem, int offset) {
-      return mem.get(PacketIO.PROTO_INT, offset + 159);
+      return mem.get(PacketIO.PROTO_INT, offset + 161);
    }
 
    public static int getProjectileSoundEventIndex(MemorySegment mem) {
@@ -287,7 +313,7 @@ public class ProjectileConfig {
    }
 
    public static int getProjectileSoundEventIndex(MemorySegment mem, int offset) {
-      return mem.get(PacketIO.PROTO_INT, offset + 163);
+      return mem.get(PacketIO.PROTO_INT, offset + 165);
    }
 
    public static boolean hasPhysicsConfig(MemorySegment mem, int offset) {
@@ -329,13 +355,13 @@ public class ProjectileConfig {
    }
 
    public static ProjectileConfig toObject(MemorySegment mem, int offset) {
-      if (offset + 175 > mem.byteSize()) {
-         throw ProtocolException.bufferTooSmall("ProjectileConfig", offset + 175, (int)mem.byteSize());
+      if (offset + 177 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ProjectileConfig", offset + 177, (int)mem.byteSize());
       }
 
       Map<InteractionType, Integer> interactions = null;
       if (hasInteractions(mem, offset)) {
-         int off = offset + getValidatedOffset(mem, offset, 171, 175, "Interactions");
+         int off = offset + getValidatedOffset(mem, offset, 173, 177, "Interactions");
          long packed = VarInt.getWithLength(mem, off);
          int len = (int)packed;
          if (len < 0) {
@@ -361,14 +387,16 @@ public class ProjectileConfig {
 
       return new ProjectileConfig(
          hasPhysicsConfig(mem, offset) ? PhysicsConfig.toObject(mem, offset + 1) : null,
-         hasModel(mem, offset) ? Model.toObject(mem, offset + getValidatedOffset(mem, offset, 167, 175, "Model")) : null,
+         hasModel(mem, offset) ? Model.toObject(mem, offset + getValidatedOffset(mem, offset, 169, 177, "Model")) : null,
          mem.get(PacketIO.PROTO_DOUBLE, offset + 123),
          hasSpawnOffset(mem, offset) ? PacketIO.readVector3f(mem, offset + 131) : null,
          hasRotationOffset(mem, offset) ? Direction.toObject(mem, offset + 143) : null,
+         mem.get(PacketIO.PROTO_BOOL, offset + 155),
+         mem.get(PacketIO.PROTO_BOOL, offset + 156),
          interactions,
-         mem.get(PacketIO.PROTO_INT, offset + 155),
-         mem.get(PacketIO.PROTO_INT, offset + 159),
-         mem.get(PacketIO.PROTO_INT, offset + 163)
+         mem.get(PacketIO.PROTO_INT, offset + 157),
+         mem.get(PacketIO.PROTO_INT, offset + 161),
+         mem.get(PacketIO.PROTO_INT, offset + 165)
       );
    }
 
@@ -415,6 +443,8 @@ public class ProjectileConfig {
          buf.writeZero(12);
       }
 
+      buf.writeByte(this.rotateSpawnOffsetByPitch ? 1 : 0);
+      buf.writeByte(this.rotateSpawnOffsetByYaw ? 1 : 0);
       buf.writeIntLE(this.launchLocalSoundEventIndex);
       buf.writeIntLE(this.launchWorldSoundEventIndex);
       buf.writeIntLE(this.projectileSoundEventIndex);
@@ -489,19 +519,21 @@ public class ProjectileConfig {
          mem.asSlice(offset + 143, 12L).fill((byte)0);
       }
 
-      mem.set(PacketIO.PROTO_INT, offset + 155, this.launchLocalSoundEventIndex);
-      mem.set(PacketIO.PROTO_INT, offset + 159, this.launchWorldSoundEventIndex);
-      mem.set(PacketIO.PROTO_INT, offset + 163, this.projectileSoundEventIndex);
-      int varOffset = offset + 175;
+      mem.set(PacketIO.PROTO_BOOL, offset + 155, this.rotateSpawnOffsetByPitch);
+      mem.set(PacketIO.PROTO_BOOL, offset + 156, this.rotateSpawnOffsetByYaw);
+      mem.set(PacketIO.PROTO_INT, offset + 157, this.launchLocalSoundEventIndex);
+      mem.set(PacketIO.PROTO_INT, offset + 161, this.launchWorldSoundEventIndex);
+      mem.set(PacketIO.PROTO_INT, offset + 165, this.projectileSoundEventIndex);
+      int varOffset = offset + 177;
       if (this.model != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 167, varOffset - offset - 175);
+         mem.set(PacketIO.PROTO_INT, offset + 169, varOffset - offset - 177);
          varOffset += this.model.serialize(mem, varOffset);
       } else {
-         mem.set(PacketIO.PROTO_INT, offset + 167, -1);
+         mem.set(PacketIO.PROTO_INT, offset + 169, -1);
       }
 
       if (this.interactions != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 171, varOffset - offset - 175);
+         mem.set(PacketIO.PROTO_INT, offset + 173, varOffset - offset - 177);
          if (this.interactions.size() > 4096000) {
             throw ProtocolException.dictionaryTooLarge("Interactions", this.interactions.size(), 4096000);
          }
@@ -514,14 +546,14 @@ public class ProjectileConfig {
             varOffset += 4;
          }
       } else {
-         mem.set(PacketIO.PROTO_INT, offset + 171, -1);
+         mem.set(PacketIO.PROTO_INT, offset + 173, -1);
       }
 
       return varOffset - offset;
    }
 
    public int computeSize() {
-      int size = 175;
+      int size = 177;
       if (this.model != null) {
          size += this.model.computeSize();
       }
@@ -534,18 +566,18 @@ public class ProjectileConfig {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      if (buffer.readableBytes() - offset < 175) {
-         return ValidationResult.error("Buffer too small: expected at least 175 bytes");
+      if (buffer.readableBytes() - offset < 177) {
+         return ValidationResult.error("Buffer too small: expected at least 177 bytes");
       }
 
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 8) != 0) {
-         int modelOffset = buffer.getIntLE(offset + 167);
-         if (modelOffset < 0 || modelOffset > buffer.writerIndex() - offset - 175) {
+         int modelOffset = buffer.getIntLE(offset + 169);
+         if (modelOffset < 0 || modelOffset > buffer.writerIndex() - offset - 177) {
             return ValidationResult.error("Invalid offset for Model");
          }
 
-         int pos = offset + 175 + modelOffset;
+         int pos = offset + 177 + modelOffset;
          ValidationResult modelResult = Model.validateStructure(buffer, pos);
          if (!modelResult.isValid()) {
             return ValidationResult.error("Invalid Model: " + modelResult.error());
@@ -555,12 +587,12 @@ public class ProjectileConfig {
       }
 
       if ((nullBits & 16) != 0) {
-         int interactionsOffset = buffer.getIntLE(offset + 171);
-         if (interactionsOffset < 0 || interactionsOffset > buffer.writerIndex() - offset - 175) {
+         int interactionsOffset = buffer.getIntLE(offset + 173);
+         if (interactionsOffset < 0 || interactionsOffset > buffer.writerIndex() - offset - 177) {
             return ValidationResult.error("Invalid offset for Interactions");
          }
 
-         int pos = offset + 175 + interactionsOffset;
+         int pos = offset + 177 + interactionsOffset;
          int interactionsCount = VarInt.peek(buffer, pos);
          if (interactionsCount < 0) {
             return ValidationResult.error("Invalid dictionary count for Interactions");
@@ -595,6 +627,8 @@ public class ProjectileConfig {
       copy.launchForce = this.launchForce;
       copy.spawnOffset = this.spawnOffset;
       copy.rotationOffset = this.rotationOffset != null ? this.rotationOffset.clone() : null;
+      copy.rotateSpawnOffsetByPitch = this.rotateSpawnOffsetByPitch;
+      copy.rotateSpawnOffsetByYaw = this.rotateSpawnOffsetByYaw;
       copy.interactions = this.interactions != null ? new HashMap<>(this.interactions) : null;
       copy.launchLocalSoundEventIndex = this.launchLocalSoundEventIndex;
       copy.launchWorldSoundEventIndex = this.launchWorldSoundEventIndex;
@@ -614,6 +648,8 @@ public class ProjectileConfig {
                && this.launchForce == other.launchForce
                && Objects.equals(this.spawnOffset, other.spawnOffset)
                && Objects.equals(this.rotationOffset, other.rotationOffset)
+               && this.rotateSpawnOffsetByPitch == other.rotateSpawnOffsetByPitch
+               && this.rotateSpawnOffsetByYaw == other.rotateSpawnOffsetByYaw
                && Objects.equals(this.interactions, other.interactions)
                && this.launchLocalSoundEventIndex == other.launchLocalSoundEventIndex
                && this.launchWorldSoundEventIndex == other.launchWorldSoundEventIndex
@@ -629,6 +665,8 @@ public class ProjectileConfig {
          this.launchForce,
          this.spawnOffset,
          this.rotationOffset,
+         this.rotateSpawnOffsetByPitch,
+         this.rotateSpawnOffsetByYaw,
          this.interactions,
          this.launchLocalSoundEventIndex,
          this.launchWorldSoundEventIndex,

@@ -132,6 +132,7 @@ public class BlockChunk implements Component<ChunkStore> {
       return this.z;
    }
 
+   @Deprecated
    public EnvironmentChunk getEnvironmentChunk() {
       return this.environments;
    }

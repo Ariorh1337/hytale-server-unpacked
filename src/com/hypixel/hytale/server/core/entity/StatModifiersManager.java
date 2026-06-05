@@ -45,6 +45,7 @@ public class StatModifiersManager {
       @Nonnull Ref<EntityStore> ref, @Nonnull EntityStatMap statMap, @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       if (this.recalculate) {
+         this.recalculate = false;
          if (!this.statsToClear.isEmpty()) {
             IntIterator iterator = this.statsToClear.iterator();
 

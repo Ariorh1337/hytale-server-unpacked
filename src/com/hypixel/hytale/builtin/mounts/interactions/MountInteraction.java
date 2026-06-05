@@ -61,7 +61,11 @@ public class MountInteraction extends SimpleInstantInteraction {
             context.getState().state = InteractionState.Failed;
          } else if (!InteractionValidation.canPlayerInteractWithEntity(self, commandBuffer, context.getHeldItem(), target)) {
             LOGGER.at(Level.WARNING)
-               .log("Entity %d failed mount interaction distance check for target entity %d", (int)self.getIndex(), (int)target.getIndex());
+               .log(
+                  "%s failed mount interaction distance check for target entity %d",
+                  InteractionValidation.getEntityName(self, commandBuffer),
+                  target.getIndex()
+               );
             context.getState().state = InteractionState.Failed;
          } else {
             MountedByComponent mountedBy = commandBuffer.getComponent(target, MountedByComponent.getComponentType());

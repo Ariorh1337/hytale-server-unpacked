@@ -18,17 +18,17 @@ public class CylinderDensityAsset extends DensityAsset {
    public static final BuilderCodec<CylinderDensityAsset> CODEC = BuilderCodec.builder(
          CylinderDensityAsset.class, CylinderDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("RadialCurve", CurveAsset.CODEC, true), (t, k) -> t.radialCurveAsset = k, k -> k.radialCurveAsset)
+      .append(new KeyedCodec<>("RadialCurve", CurveAsset.CODEC, true), (asset, value) -> asset.radialCurveAsset = value, asset -> asset.radialCurveAsset)
       .add()
-      .append(new KeyedCodec<>("AxialCurve", CurveAsset.CODEC, true), (t, k) -> t.axialCurveAsset = k, k -> k.axialCurveAsset)
+      .append(new KeyedCodec<>("AxialCurve", CurveAsset.CODEC, true), (asset, value) -> asset.axialCurveAsset = value, asset -> asset.axialCurveAsset)
       .add()
-      .append(new KeyedCodec<>("NewYAxis", Vector3dUtil.CODEC, false), (t, k) -> {
-         if (k.length() != 0.0) {
-            t.newYAxis = k;
+      .append(new KeyedCodec<>("NewYAxis", Vector3dUtil.CODEC, false), (asset, value) -> {
+         if (value.length() != 0.0) {
+            asset.newYAxis = value;
          }
-      }, k -> k.newYAxis)
+      }, asset -> asset.newYAxis)
       .add()
-      .append(new KeyedCodec<>("Spin", Codec.DOUBLE, false), (t, k) -> t.spinAngle = k, k -> k.spinAngle)
+      .append(new KeyedCodec<>("Spin", Codec.DOUBLE, false), (asset, value) -> asset.spinAngle = value, asset -> asset.spinAngle)
       .add()
       .build();
    private CurveAsset radialCurveAsset = new ConstantCurveAsset();

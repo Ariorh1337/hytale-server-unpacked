@@ -12,7 +12,7 @@ import javax.annotation.Nonnull;
 public class CubeDensityAsset extends DensityAsset {
    @Nonnull
    public static final BuilderCodec<CubeDensityAsset> CODEC = BuilderCodec.builder(CubeDensityAsset.class, CubeDensityAsset::new, DensityAsset.ABSTRACT_CODEC)
-      .append(new KeyedCodec<>("Curve", CurveAsset.CODEC, false), (t, k) -> t.densityCurveAsset = k, k -> k.densityCurveAsset)
+      .append(new KeyedCodec<>("Curve", CurveAsset.CODEC, false), (asset, value) -> asset.densityCurveAsset = value, asset -> asset.densityCurveAsset)
       .add()
       .build();
    private CurveAsset densityCurveAsset = new ConstantCurveAsset();

@@ -98,7 +98,12 @@ public abstract class PluginBase implements CommandOwner {
          this.logger.setPropagatesSentryToParent(false);
       }
 
-      this.basePermission = (pluginManifest.getGroup() + "." + pluginName).toLowerCase();
+      this.basePermission = createBasePermission(pluginManifest);
+   }
+
+   @Nonnull
+   static String createBasePermission(@Nonnull PluginManifest pluginManifest) {
+      return (pluginManifest.getGroup() + "." + pluginManifest.getName()).toLowerCase().replace(' ', '_');
    }
 
    @Nonnull

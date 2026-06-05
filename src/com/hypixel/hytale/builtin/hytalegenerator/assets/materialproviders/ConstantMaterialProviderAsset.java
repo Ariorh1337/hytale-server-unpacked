@@ -32,4 +32,9 @@ public class ConstantMaterialProviderAsset extends MaterialProviderAsset {
       Material material = this.materialAsset.build(argument.materialCache);
       return new ConstantMaterialProvider<>(material);
    }
+
+   @Override
+   public void cleanUp() {
+      this.materialAsset.cleanUp();
+   }
 }

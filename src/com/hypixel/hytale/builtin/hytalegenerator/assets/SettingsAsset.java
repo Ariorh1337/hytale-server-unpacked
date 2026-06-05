@@ -17,14 +17,20 @@ public class SettingsAsset implements JsonAssetWithMap<String, DefaultAssetMap<S
          SettingsAsset.class,
          SettingsAsset::new,
          Codec.STRING,
-         (asset, id) -> asset.id = id,
-         config -> config.id,
-         (config, data) -> config.data = data,
-         config -> config.data
+         (asset, value) -> asset.id = value,
+         asset -> asset.id,
+         (asset, value) -> asset.data = value,
+         asset -> asset.data
       )
-      .append(new KeyedCodec<>("StatsCheckpoints", new ArrayCodec<>(Codec.INTEGER, Integer[]::new), true), (t, k) -> t.checkpoints = k, t -> t.checkpoints)
+      .append(
+         new KeyedCodec<>("StatsCheckpoints", new ArrayCodec<>(Codec.INTEGER, Integer[]::new), true),
+         (asset, value) -> asset.checkpoints = value,
+         asset -> asset.checkpoints
+      )
       .add()
-      .<Integer>append(new KeyedCodec<>("CustomConcurrency", Codec.INTEGER, true), (t, k) -> t.customConcurrency = k, t -> t.customConcurrency)
+      .<Integer>append(
+         new KeyedCodec<>("CustomConcurrency", Codec.INTEGER, true), (asset, value) -> asset.customConcurrency = value, asset -> asset.customConcurrency
+      )
       .addValidator(Validators.greaterThan(-2))
       .add()
       .<Double>append(

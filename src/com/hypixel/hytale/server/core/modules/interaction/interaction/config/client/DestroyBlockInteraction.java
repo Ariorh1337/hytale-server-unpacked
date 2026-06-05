@@ -40,8 +40,8 @@ public class DestroyBlockInteraction extends SimpleInstantInteraction {
          if (!InteractionValidation.canPlayerInteractWithBlock(ref, commandBuffer, context.getHeldItem(), blockPosition)) {
             LOGGER.at(Level.WARNING)
                .log(
-                  "Entity %d failed destroy block interaction distance check at [%d, %d, %d]",
-                  ref.getIndex(),
+                  "%s failed destroy block interaction distance check at [%d, %d, %d]",
+                  InteractionValidation.getEntityName(ref, commandBuffer),
                   blockPosition.x,
                   blockPosition.y,
                   blockPosition.z

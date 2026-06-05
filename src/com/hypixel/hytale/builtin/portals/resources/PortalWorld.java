@@ -15,7 +15,6 @@ import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
 import com.hypixel.hytale.server.core.asset.type.portalworld.PortalType;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import java.util.Collections;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -44,8 +43,8 @@ public class PortalWorld implements Resource<EntityStore> {
       this.timeLimitSeconds = timeLimitSeconds;
       this.worldRemovalCondition = removalCondition;
       this.storedGameplayConfig = gameplayConfig;
-      this.diedInWorld = Collections.newSetFromMap(new ConcurrentHashMap<>());
-      this.seesUi = Collections.newSetFromMap(new ConcurrentHashMap<>());
+      this.diedInWorld = ConcurrentHashMap.newKeySet();
+      this.seesUi = ConcurrentHashMap.newKeySet();
    }
 
    @Nullable

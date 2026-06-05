@@ -120,8 +120,8 @@ public class PlaceBlockInteraction extends SimpleInteraction {
             if (!InteractionValidation.canPlayerInteractWithBlock(ref, commandBuffer, context.getHeldItem(), targetBlockPosition)) {
                LOGGER.at(Level.WARNING)
                   .log(
-                     "Entity %d failed place block interaction distance check at [%d, %d, %d]",
-                     ref.getIndex(),
+                     "%s failed place block interaction distance check at [%d, %d, %d]",
+                     InteractionValidation.getEntityName(ref, commandBuffer),
                      targetBlockPosition.x,
                      targetBlockPosition.y,
                      targetBlockPosition.z

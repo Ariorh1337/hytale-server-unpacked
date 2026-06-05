@@ -13,7 +13,7 @@ public class AnchorDensityAsset extends DensityAsset {
    public static final BuilderCodec<AnchorDensityAsset> CODEC = BuilderCodec.builder(
          AnchorDensityAsset.class, AnchorDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Reversed", Codec.BOOLEAN, false), (t, k) -> t.isReversed = k, k -> k.isReversed)
+      .append(new KeyedCodec<>("Reversed", Codec.BOOLEAN, false), (asset, value) -> asset.isReversed = value, asset -> asset.isReversed)
       .add()
       .build();
    private boolean isReversed = false;

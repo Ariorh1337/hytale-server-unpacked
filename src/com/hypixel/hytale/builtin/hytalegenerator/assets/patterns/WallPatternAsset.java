@@ -13,16 +13,16 @@ import javax.annotation.Nonnull;
 public class WallPatternAsset extends PatternAsset {
    @Nonnull
    public static final BuilderCodec<WallPatternAsset> CODEC = BuilderCodec.builder(WallPatternAsset.class, WallPatternAsset::new, PatternAsset.ABSTRACT_CODEC)
-      .append(new KeyedCodec<>("Wall", PatternAsset.CODEC, true), (t, k) -> t.wall = k, k -> k.wall)
+      .append(new KeyedCodec<>("Wall", PatternAsset.CODEC, true), (asset, value) -> asset.wall = value, asset -> asset.wall)
       .add()
-      .append(new KeyedCodec<>("Origin", PatternAsset.CODEC, true), (t, k) -> t.origin = k, k -> k.origin)
+      .append(new KeyedCodec<>("Origin", PatternAsset.CODEC, true), (asset, value) -> asset.origin = value, asset -> asset.origin)
       .add()
-      .append(new KeyedCodec<>("RequireAllDirections", Codec.BOOLEAN, false), (t, k) -> t.matchAll = k, k -> k.matchAll)
+      .append(new KeyedCodec<>("RequireAllDirections", Codec.BOOLEAN, false), (asset, value) -> asset.matchAll = value, asset -> asset.matchAll)
       .add()
       .append(
          new KeyedCodec<>("Directions", new ArrayCodec<>(WallPattern.WallDirection.CODEC, WallPattern.WallDirection[]::new), true),
-         (t, k) -> t.directions = k,
-         k -> k.directions
+         (asset, value) -> asset.directions = value,
+         asset -> asset.directions
       )
       .add()
       .build();
@@ -34,7 +34,7 @@ public class WallPatternAsset extends PatternAsset {
    @Nonnull
    @Override
    public Pattern build(@Nonnull PatternAsset.Argument argument) {
-      if (super.isSkipped()) {
+      if (super.skip()) {
          return ConstantPattern.INSTANCE_FALSE;
       }
 

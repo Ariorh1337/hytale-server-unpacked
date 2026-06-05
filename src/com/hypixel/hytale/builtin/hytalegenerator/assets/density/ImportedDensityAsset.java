@@ -13,7 +13,7 @@ public class ImportedDensityAsset extends DensityAsset {
    public static final BuilderCodec<ImportedDensityAsset> CODEC = BuilderCodec.builder(
          ImportedDensityAsset.class, ImportedDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Name", Codec.STRING, true), (t, k) -> t.importedNodeName = k, k -> k.importedNodeName)
+      .append(new KeyedCodec<>("Name", Codec.STRING, true), (asset, value) -> asset.importedNodeName = value, asset -> asset.importedNodeName)
       .add()
       .build();
    private String importedNodeName = "";

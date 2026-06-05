@@ -189,6 +189,20 @@ public class KnockbackSimulation implements Component<EntityStore> {
    public Component<EntityStore> clone() {
       KnockbackSimulation simulation = new KnockbackSimulation();
       simulation.requestedVelocity.set(this.requestedVelocity);
+      simulation.clientLastPosition.set(this.clientLastPosition);
+      simulation.clientPosition.set(this.clientPosition);
+      simulation.relativeMovement.set(this.relativeMovement);
+      simulation.simPosition.set(this.simPosition);
+      simulation.simVelocity.set(this.simVelocity);
+      simulation.requestedVelocityChangeType = this.requestedVelocityChangeType;
+      simulation.clientMovementStates = this.clientMovementStates != null ? new MovementStates(this.clientMovementStates) : null;
+      simulation.remainingTime = this.remainingTime;
+      simulation.hadWishMovement = this.hadWishMovement;
+      simulation.clientFinished = this.clientFinished;
+      simulation.wasJumping = this.wasJumping;
+      simulation.jumpCombo = this.jumpCombo;
+      simulation.wasOnGround = this.wasOnGround;
+      simulation.tickBuffer = this.tickBuffer;
       return simulation;
    }
 }

@@ -13,11 +13,11 @@ public class SliderDensityAsset extends DensityAsset {
    public static final BuilderCodec<SliderDensityAsset> CODEC = BuilderCodec.builder(
          SliderDensityAsset.class, SliderDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("SlideX", Codec.DOUBLE, false), (t, k) -> t.slideX = k, k -> k.slideX)
+      .append(new KeyedCodec<>("SlideX", Codec.DOUBLE, false), (asset, value) -> asset.slideX = value, asset -> asset.slideX)
       .add()
-      .append(new KeyedCodec<>("SlideY", Codec.DOUBLE, false), (t, k) -> t.slideY = k, k -> k.slideY)
+      .append(new KeyedCodec<>("SlideY", Codec.DOUBLE, false), (asset, value) -> asset.slideY = value, asset -> asset.slideY)
       .add()
-      .append(new KeyedCodec<>("SlideZ", Codec.DOUBLE, false), (t, k) -> t.slideZ = k, k -> k.slideZ)
+      .append(new KeyedCodec<>("SlideZ", Codec.DOUBLE, false), (asset, value) -> asset.slideZ = value, asset -> asset.slideZ)
       .add()
       .build();
    private double slideX = 0.0;

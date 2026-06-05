@@ -46,4 +46,9 @@ public class RandomScannerAsset extends ScannerAsset {
       SeedBox seedBox = argument.parentSeed.child(this.seed);
       return new RandomScanner(this.axis, this.rangeAsset.build(), childScanner, seedBox.createSupplier().get());
    }
+
+   @Override
+   public void cleanUp() {
+      this.scannerAsset.cleanUp();
+   }
 }

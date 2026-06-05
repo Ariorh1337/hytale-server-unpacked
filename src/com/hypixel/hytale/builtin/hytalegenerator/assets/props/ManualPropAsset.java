@@ -53,10 +53,10 @@ public class ManualPropAsset extends PropAsset {
             ManualPropAsset.BlockAsset.class,
             ManualPropAsset.BlockAsset::new,
             Codec.STRING,
-            (asset, id) -> asset.id = id,
-            config -> config.id,
-            (config, data) -> config.data = data,
-            config -> config.data
+            (asset, value) -> asset.id = value,
+            asset -> asset.id,
+            (asset, value) -> asset.data = value,
+            asset -> asset.data
          )
          .append(new KeyedCodec<>("Position", Vector3iUtil.CODEC, true), (asset, value) -> asset.position = value, asset -> asset.position)
          .add()

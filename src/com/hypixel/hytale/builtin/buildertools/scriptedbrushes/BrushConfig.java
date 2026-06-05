@@ -226,7 +226,7 @@ public class BrushConfig {
    }
 
    public void setDensity(int density) {
-      this.density = MathUtil.clamp(density, 1, 100);
+      this.density = MathUtil.clamp(density, 0, 100);
    }
 
    public BrushConfig.HistoryMask getHistoryMask() {

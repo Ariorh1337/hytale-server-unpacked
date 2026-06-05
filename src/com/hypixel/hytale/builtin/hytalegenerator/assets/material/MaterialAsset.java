@@ -21,18 +21,22 @@ public class MaterialAsset implements JsonAssetWithMap<String, DefaultAssetMap<S
          MaterialAsset.class,
          MaterialAsset::new,
          Codec.STRING,
-         (asset, id) -> asset.id = id,
-         config -> config.id,
-         (config, data) -> config.data = data,
-         config -> config.data
+         (asset, value) -> asset.id = value,
+         asset -> asset.id,
+         (asset, value) -> asset.data = value,
+         asset -> asset.data
       )
-      .append(new KeyedCodec<>("Solid", Codec.STRING, true), (t, value) -> t.solidName = value, t -> t.solidName)
+      .append(new KeyedCodec<>("Solid", Codec.STRING, true), (asset, value) -> asset.solidName = value, asset -> asset.solidName)
       .add()
-      .append(new KeyedCodec<>("Fluid", Codec.STRING, true), (t, value) -> t.fluidName = value, t -> t.fluidName)
+      .append(new KeyedCodec<>("Fluid", Codec.STRING, true), (asset, value) -> asset.fluidName = value, asset -> asset.fluidName)
       .add()
-      .append(new KeyedCodec<>("SolidBottomUp", Codec.BOOLEAN, false), (t, value) -> t.isSolidBottomUp = value, t -> t.isSolidBottomUp)
+      .append(new KeyedCodec<>("SolidBottomUp", Codec.BOOLEAN, false), (asset, value) -> asset.isSolidBottomUp = value, asset -> asset.isSolidBottomUp)
       .add()
-      .append(new KeyedCodec<>("SolidRotation", OrthogonalRotationAsset.CODEC, false), (t, value) -> t.solidRotationAsset = value, t -> t.solidRotationAsset)
+      .append(
+         new KeyedCodec<>("SolidRotation", OrthogonalRotationAsset.CODEC, false),
+         (asset, value) -> asset.solidRotationAsset = value,
+         asset -> asset.solidRotationAsset
+      )
       .add()
       .build();
    private String id;

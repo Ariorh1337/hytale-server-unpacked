@@ -13,7 +13,11 @@ public class AmplitudeDensityAsset extends DensityAsset {
    public static final BuilderCodec<AmplitudeDensityAsset> CODEC = BuilderCodec.builder(
          AmplitudeDensityAsset.class, AmplitudeDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("FunctionForY", NodeFunctionYOutAsset.CODEC, true), (t, k) -> t.nodeFunctionYOutAsset = k, k -> k.nodeFunctionYOutAsset)
+      .append(
+         new KeyedCodec<>("FunctionForY", NodeFunctionYOutAsset.CODEC, true),
+         (asset, value) -> asset.nodeFunctionYOutAsset = value,
+         asset -> asset.nodeFunctionYOutAsset
+      )
       .add()
       .build();
    private NodeFunctionYOutAsset nodeFunctionYOutAsset = new NodeFunctionYOutAsset();

@@ -3,6 +3,7 @@ package com.hypixel.hytale.builtin.hytalegenerator.density;
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
 import com.hypixel.hytale.builtin.hytalegenerator.engine.TerrainDensityProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.environmentproviders.EnvironmentProvider;
+import com.hypixel.hytale.builtin.hytalegenerator.graph.GraphSpace;
 import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.MaterialProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.patterns.Pattern;
 import com.hypixel.hytale.builtin.hytalegenerator.props.Prop;
@@ -36,6 +37,8 @@ public abstract class Density {
       @Nullable
       public TerrainDensityProvider terrainDensityProvider;
       public double distanceToBiomeEdge;
+      @Nullable
+      public GraphSpace.Node graphNode;
 
       public Context() {
          this.position = new Vector3d();
@@ -45,6 +48,7 @@ public abstract class Density {
          this.distanceFromCellWall = Double.MAX_VALUE;
          this.terrainDensityProvider = null;
          this.distanceToBiomeEdge = Double.MAX_VALUE;
+         this.graphNode = null;
       }
 
       public Context(
@@ -53,7 +57,8 @@ public abstract class Density {
          int switchState,
          double distanceFromCellWall,
          @Nullable TerrainDensityProvider terrainDensityProvider,
-         double distanceToBiomeEdge
+         double distanceToBiomeEdge,
+         @Nullable GraphSpace.Node graphNode
       ) {
          this.position = position;
          this.densityAnchor = densityAnchor;
@@ -62,6 +67,7 @@ public abstract class Density {
          this.positionsAnchor = null;
          this.terrainDensityProvider = terrainDensityProvider;
          this.distanceToBiomeEdge = distanceToBiomeEdge;
+         this.graphNode = graphNode;
       }
 
       public Context(@Nonnull Density.Context other) {
@@ -72,11 +78,13 @@ public abstract class Density {
          this.positionsAnchor = other.positionsAnchor;
          this.terrainDensityProvider = other.terrainDensityProvider;
          this.distanceToBiomeEdge = other.distanceToBiomeEdge;
+         this.graphNode = other.graphNode;
       }
 
       public Context(@Nonnull VectorProvider.Context context) {
          this.position = context.position;
          this.terrainDensityProvider = context.terrainDensityProvider;
+         this.graphNode = context.graphNode;
       }
 
       public Context(@Nonnull TintProvider.Context context) {
@@ -105,6 +113,7 @@ public abstract class Density {
          this.positionsAnchor = other.positionsAnchor;
          this.terrainDensityProvider = other.terrainDensityProvider;
          this.distanceToBiomeEdge = other.distanceToBiomeEdge;
+         this.graphNode = other.graphNode;
       }
 
       public void assign(@Nonnull VectorProvider.Context context) {
@@ -116,6 +125,8 @@ public abstract class Density {
          this.position.set(context.position.x, context.position.y, context.position.z);
          this.terrainDensityProvider = context.terrainDensityProvider;
          this.distanceToBiomeEdge = context.distanceToBiomeEdge;
+         this.densityAnchor = context.anchor;
+         this.graphNode = context.graphNode;
       }
 
       public void assign(@Nonnull EnvironmentProvider.Context context) {

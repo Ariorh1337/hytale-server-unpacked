@@ -1,8 +1,10 @@
 package com.hypixel.hytale.builtin.hytalegenerator.materialproviders;
 
 import com.hypixel.hytale.builtin.hytalegenerator.engine.TerrainDensityProvider;
+import com.hypixel.hytale.builtin.hytalegenerator.graph.GraphSpace;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 import org.joml.Vector3i;
 
 public abstract class MaterialProvider<V> {
@@ -25,6 +27,10 @@ public abstract class MaterialProvider<V> {
       @Nullable
       public TerrainDensityProvider terrainDensityProvider;
       public double distanceToBiomeEdge;
+      @Nullable
+      public GraphSpace.Node graphNode;
+      @Nullable
+      public Vector3d anchor;
 
       public Context() {
          this.position = new Vector3i();
@@ -35,6 +41,8 @@ public abstract class MaterialProvider<V> {
          this.spaceBelowCeiling = 0;
          this.terrainDensityProvider = p -> 0.0;
          this.distanceToBiomeEdge = Double.MAX_VALUE;
+         this.graphNode = null;
+         this.anchor = null;
       }
 
       public Context(
@@ -45,7 +53,9 @@ public abstract class MaterialProvider<V> {
          int spaceAboveFloor,
          int spaceBelowCeiling,
          @Nullable TerrainDensityProvider terrainDensityProvider,
-         double distanceToBiomeEdge
+         double distanceToBiomeEdge,
+         @Nullable GraphSpace.Node graphNode,
+         @Nullable Vector3d anchor
       ) {
          this.position = position;
          this.density = density;
@@ -55,6 +65,8 @@ public abstract class MaterialProvider<V> {
          this.spaceBelowCeiling = spaceBelowCeiling;
          this.terrainDensityProvider = terrainDensityProvider;
          this.distanceToBiomeEdge = distanceToBiomeEdge;
+         this.graphNode = graphNode;
+         this.anchor = anchor;
       }
 
       public Context(@Nonnull MaterialProvider.Context other) {
@@ -66,6 +78,8 @@ public abstract class MaterialProvider<V> {
          this.spaceBelowCeiling = other.spaceBelowCeiling;
          this.terrainDensityProvider = other.terrainDensityProvider;
          this.distanceToBiomeEdge = other.distanceToBiomeEdge;
+         this.graphNode = other.graphNode;
+         this.anchor = other.anchor;
       }
    }
 }

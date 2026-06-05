@@ -43,4 +43,9 @@ public class LinearScannerAsset extends ScannerAsset {
       Scanner childScanner = this.scannerAsset.build(argument);
       return new LinearScanner(this.axis, this.rangeAsset.build(), childScanner, this.isAscendingOrder);
    }
+
+   @Override
+   public void cleanUp() {
+      this.scannerAsset.cleanUp();
+   }
 }

@@ -13,9 +13,9 @@ import javax.annotation.Nullable;
 
 public class AudioCategory {
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
-   public static final int FIXED_BLOCK_SIZE = 9;
-   public static final int VARIABLE_FIELD_COUNT = 2;
-   public static final int VARIABLE_BLOCK_START = 17;
+   public static final int FIXED_BLOCK_SIZE = 13;
+   public static final int VARIABLE_FIELD_COUNT = 3;
+   public static final int VARIABLE_BLOCK_START = 25;
    public static final int MAX_SIZE = 1677721600;
    @Nullable
    public String id;
@@ -23,15 +23,27 @@ public class AudioCategory {
    public int parentAudioCategoryIndex;
    @Nullable
    public StateBinding[] stateBindings;
+   @Nullable
+   public AudioCategoryDuckingRule[] duckingRules;
+   public float maxDuckingDb;
 
    public AudioCategory() {
    }
 
-   public AudioCategory(@Nullable String id, float volume, int parentAudioCategoryIndex, @Nullable StateBinding[] stateBindings) {
+   public AudioCategory(
+      @Nullable String id,
+      float volume,
+      int parentAudioCategoryIndex,
+      @Nullable StateBinding[] stateBindings,
+      @Nullable AudioCategoryDuckingRule[] duckingRules,
+      float maxDuckingDb
+   ) {
       this.id = id;
       this.volume = volume;
       this.parentAudioCategoryIndex = parentAudioCategoryIndex;
       this.stateBindings = stateBindings;
+      this.duckingRules = duckingRules;
+      this.maxDuckingDb = maxDuckingDb;
    }
 
    public AudioCategory(@Nonnull AudioCategory other) {
@@ -39,25 +51,28 @@ public class AudioCategory {
       this.volume = other.volume;
       this.parentAudioCategoryIndex = other.parentAudioCategoryIndex;
       this.stateBindings = other.stateBindings;
+      this.duckingRules = other.duckingRules;
+      this.maxDuckingDb = other.maxDuckingDb;
    }
 
    @Nonnull
    public static AudioCategory deserialize(@Nonnull ByteBuf buf, int offset) {
-      if (buf.readableBytes() - offset < 17) {
-         throw ProtocolException.bufferTooSmall("AudioCategory", 17, buf.readableBytes() - offset);
+      if (buf.readableBytes() - offset < 25) {
+         throw ProtocolException.bufferTooSmall("AudioCategory", 25, buf.readableBytes() - offset);
       }
 
       AudioCategory obj = new AudioCategory();
       byte nullBits = buf.getByte(offset);
       obj.volume = buf.getFloatLE(offset + 1);
       obj.parentAudioCategoryIndex = buf.getIntLE(offset + 5);
+      obj.maxDuckingDb = buf.getFloatLE(offset + 9);
       if ((nullBits & 1) != 0) {
-         int varPosBase0 = buf.getIntLE(offset + 9);
-         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 17) {
+         int varPosBase0 = buf.getIntLE(offset + 13);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 25) {
             throw ProtocolException.invalidOffset("Id", varPosBase0, buf.readableBytes());
          }
 
-         int varPos0 = offset + 17 + varPosBase0;
+         int varPos0 = offset + 25 + varPosBase0;
          int idLen = VarInt.peek(buf, varPos0);
          if (idLen < 0) {
             throw ProtocolException.invalidVarInt("Id");
@@ -76,12 +91,12 @@ public class AudioCategory {
       }
 
       if ((nullBits & 2) != 0) {
-         int varPosBase1 = buf.getIntLE(offset + 13);
-         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 17) {
+         int varPosBase1 = buf.getIntLE(offset + 17);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 25) {
             throw ProtocolException.invalidOffset("StateBindings", varPosBase1, buf.readableBytes());
          }
 
-         int varPos1 = offset + 17 + varPosBase1;
+         int varPos1 = offset + 25 + varPosBase1;
          int stateBindingsCount = VarInt.peek(buf, varPos1);
          if (stateBindingsCount < 0) {
             throw ProtocolException.invalidVarInt("StateBindings");
@@ -105,19 +120,49 @@ public class AudioCategory {
          }
       }
 
+      if ((nullBits & 4) != 0) {
+         int varPosBase2 = buf.getIntLE(offset + 21);
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 25) {
+            throw ProtocolException.invalidOffset("DuckingRules", varPosBase2, buf.readableBytes());
+         }
+
+         int varPos2 = offset + 25 + varPosBase2;
+         int duckingRulesCount = VarInt.peek(buf, varPos2);
+         if (duckingRulesCount < 0) {
+            throw ProtocolException.invalidVarInt("DuckingRules");
+         }
+
+         int varIntLen = VarInt.size(duckingRulesCount);
+         if (duckingRulesCount > 4096000) {
+            throw ProtocolException.arrayTooLong("DuckingRules", duckingRulesCount, 4096000);
+         }
+
+         if (varPos2 + varIntLen + duckingRulesCount * 24L > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("DuckingRules", varPos2 + varIntLen + duckingRulesCount * 24, buf.readableBytes());
+         }
+
+         obj.duckingRules = new AudioCategoryDuckingRule[duckingRulesCount];
+         int elemPos = varPos2 + varIntLen;
+
+         for (int i = 0; i < duckingRulesCount; i++) {
+            obj.duckingRules[i] = AudioCategoryDuckingRule.deserialize(buf, elemPos);
+            elemPos += AudioCategoryDuckingRule.computeBytesConsumed(buf, elemPos);
+         }
+      }
+
       return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte nullBits = buf.getByte(offset);
-      int maxEnd = 17;
+      int maxEnd = 25;
       if ((nullBits & 1) != 0) {
-         int fieldOffset0 = buf.getIntLE(offset + 9);
-         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 17) {
+         int fieldOffset0 = buf.getIntLE(offset + 13);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 25) {
             throw ProtocolException.invalidOffset("Id", fieldOffset0, maxEnd);
          }
 
-         int pos0 = offset + 17 + fieldOffset0;
+         int pos0 = offset + 25 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
          pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
@@ -126,12 +171,12 @@ public class AudioCategory {
       }
 
       if ((nullBits & 2) != 0) {
-         int fieldOffset1 = buf.getIntLE(offset + 13);
-         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 17) {
+         int fieldOffset1 = buf.getIntLE(offset + 17);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 25) {
             throw ProtocolException.invalidOffset("StateBindings", fieldOffset1, maxEnd);
          }
 
-         int pos1 = offset + 17 + fieldOffset1;
+         int pos1 = offset + 25 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
          pos1 += VarInt.size(arrLen);
 
@@ -144,11 +189,30 @@ public class AudioCategory {
          }
       }
 
+      if ((nullBits & 4) != 0) {
+         int fieldOffset2 = buf.getIntLE(offset + 21);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 25) {
+            throw ProtocolException.invalidOffset("DuckingRules", fieldOffset2, maxEnd);
+         }
+
+         int pos2 = offset + 25 + fieldOffset2;
+         int arrLen = VarInt.peek(buf, pos2);
+         pos2 += VarInt.size(arrLen);
+
+         for (int i = 0; i < arrLen; i++) {
+            pos2 += AudioCategoryDuckingRule.computeBytesConsumed(buf, pos2);
+         }
+
+         if (pos2 - offset > maxEnd) {
+            maxEnd = pos2 - offset;
+         }
+      }
+
       return maxEnd;
    }
 
    public static boolean isBufferTooSmall(MemorySegment mem) {
-      return mem.byteSize() < 17L;
+      return mem.byteSize() < 25L;
    }
 
    @Nullable
@@ -158,7 +222,7 @@ public class AudioCategory {
 
    @Nullable
    public static String getId(MemorySegment mem, int offset) {
-      return hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 9, 17, "Id"), 4096000, PacketIO.UTF8) : null;
+      return hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 13, 25, "Id"), 4096000, PacketIO.UTF8) : null;
    }
 
    public static float getVolume(MemorySegment mem) {
@@ -188,7 +252,7 @@ public class AudioCategory {
          return null;
       }
 
-      int off = offset + getValidatedOffset(mem, offset, 13, 17, "StateBindings");
+      int off = offset + getValidatedOffset(mem, offset, 17, 25, "StateBindings");
       long packed = VarInt.getWithLength(mem, off);
       int len = (int)packed;
       if (len < 0) {
@@ -215,6 +279,51 @@ public class AudioCategory {
       return data;
    }
 
+   @Nullable
+   public static AudioCategoryDuckingRule[] getDuckingRules(MemorySegment mem) {
+      return getDuckingRules(mem, 0);
+   }
+
+   @Nullable
+   public static AudioCategoryDuckingRule[] getDuckingRules(MemorySegment mem, int offset) {
+      if (!hasDuckingRules(mem, offset)) {
+         return null;
+      }
+
+      int off = offset + getValidatedOffset(mem, offset, 21, 25, "DuckingRules");
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("DuckingRules", len);
+      }
+
+      if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("DuckingRules", len, 4096000);
+      }
+
+      int lenOffset = (int)(packed >>> 32);
+      if (off + lenOffset + len * 24L > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("DuckingRules", off + lenOffset + len * 24, (int)mem.byteSize());
+      }
+
+      off += lenOffset;
+      AudioCategoryDuckingRule[] data = new AudioCategoryDuckingRule[len];
+
+      for (int i = 0; i < len; i++) {
+         data[i] = AudioCategoryDuckingRule.toObject(mem, off + i * 24);
+      }
+
+      return data;
+   }
+
+   public static float getMaxDuckingDb(MemorySegment mem) {
+      return getMaxDuckingDb(mem, 0);
+   }
+
+   public static float getMaxDuckingDb(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, offset + 9);
+   }
+
    public static boolean hasId(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
       return (b & 1) != 0;
@@ -223,6 +332,11 @@ public class AudioCategory {
    public static boolean hasStateBindings(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
       return (b & 2) != 0;
+   }
+
+   public static boolean hasDuckingRules(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 4) != 0;
    }
 
    private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
@@ -239,13 +353,13 @@ public class AudioCategory {
    }
 
    public static AudioCategory toObject(MemorySegment mem, int offset) {
-      if (offset + 17 > mem.byteSize()) {
-         throw ProtocolException.bufferTooSmall("AudioCategory", offset + 17, (int)mem.byteSize());
+      if (offset + 25 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AudioCategory", offset + 25, (int)mem.byteSize());
       }
 
       StateBinding[] stateBindings = null;
       if (hasStateBindings(mem, offset)) {
-         int off = offset + getValidatedOffset(mem, offset, 13, 17, "StateBindings");
+         int off = offset + getValidatedOffset(mem, offset, 17, 25, "StateBindings");
          long packed = VarInt.getWithLength(mem, off);
          int len = (int)packed;
          if (len < 0) {
@@ -270,11 +384,39 @@ public class AudioCategory {
          }
       }
 
+      AudioCategoryDuckingRule[] duckingRules = null;
+      if (hasDuckingRules(mem, offset)) {
+         int off = offset + getValidatedOffset(mem, offset, 21, 25, "DuckingRules");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("DuckingRules", len);
+         }
+
+         if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("DuckingRules", len, 4096000);
+         }
+
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 24L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("DuckingRules", off + lenOffset + len * 24, (int)mem.byteSize());
+         }
+
+         off += lenOffset;
+         duckingRules = new AudioCategoryDuckingRule[len];
+
+         for (int i = 0; i < len; i++) {
+            duckingRules[i] = AudioCategoryDuckingRule.toObject(mem, off + i * 24);
+         }
+      }
+
       return new AudioCategory(
-         hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 9, 17, "Id"), 4096000, PacketIO.UTF8) : null,
+         hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 13, 25, "Id"), 4096000, PacketIO.UTF8) : null,
          mem.get(PacketIO.PROTO_FLOAT, offset + 1),
          mem.get(PacketIO.PROTO_INT, offset + 5),
-         stateBindings
+         stateBindings,
+         duckingRules,
+         mem.get(PacketIO.PROTO_FLOAT, offset + 9)
       );
    }
 
@@ -289,12 +431,19 @@ public class AudioCategory {
          nullBits = (byte)(nullBits | 2);
       }
 
+      if (this.duckingRules != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
       buf.writeByte(nullBits);
       buf.writeFloatLE(this.volume);
       buf.writeIntLE(this.parentAudioCategoryIndex);
+      buf.writeFloatLE(this.maxDuckingDb);
       int idOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
       int stateBindingsOffsetSlot = buf.writerIndex();
+      buf.writeIntLE(0);
+      int duckingRulesOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
       int varBlockStart = buf.writerIndex();
       if (this.id != null) {
@@ -318,6 +467,21 @@ public class AudioCategory {
       } else {
          buf.setIntLE(stateBindingsOffsetSlot, -1);
       }
+
+      if (this.duckingRules != null) {
+         buf.setIntLE(duckingRulesOffsetSlot, buf.writerIndex() - varBlockStart);
+         if (this.duckingRules.length > 4096000) {
+            throw ProtocolException.arrayTooLong("DuckingRules", this.duckingRules.length, 4096000);
+         }
+
+         VarInt.write(buf, this.duckingRules.length);
+
+         for (AudioCategoryDuckingRule item : this.duckingRules) {
+            item.serialize(buf);
+         }
+      } else {
+         buf.setIntLE(duckingRulesOffsetSlot, -1);
+      }
    }
 
    public int serialize(@Nonnull MemorySegment mem, int offset) {
@@ -330,19 +494,24 @@ public class AudioCategory {
          nullBits = (byte)(nullBits | 2);
       }
 
+      if (this.duckingRules != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
       mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
       mem.set(PacketIO.PROTO_FLOAT, offset + 1, this.volume);
       mem.set(PacketIO.PROTO_INT, offset + 5, this.parentAudioCategoryIndex);
-      int varOffset = offset + 17;
+      mem.set(PacketIO.PROTO_FLOAT, offset + 9, this.maxDuckingDb);
+      int varOffset = offset + 25;
       if (this.id != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 9, varOffset - offset - 17);
+         mem.set(PacketIO.PROTO_INT, offset + 13, varOffset - offset - 25);
          varOffset += PacketIO.writeVarString(mem, varOffset, this.id, 4096000);
       } else {
-         mem.set(PacketIO.PROTO_INT, offset + 9, -1);
+         mem.set(PacketIO.PROTO_INT, offset + 13, -1);
       }
 
       if (this.stateBindings != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 13, varOffset - offset - 17);
+         mem.set(PacketIO.PROTO_INT, offset + 17, varOffset - offset - 25);
          if (this.stateBindings.length > 4096000) {
             throw ProtocolException.arrayTooLong("StateBindings", this.stateBindings.length, 4096000);
          }
@@ -356,14 +525,32 @@ public class AudioCategory {
 
          varOffset += stateBindingsValueOffset;
       } else {
-         mem.set(PacketIO.PROTO_INT, offset + 13, -1);
+         mem.set(PacketIO.PROTO_INT, offset + 17, -1);
+      }
+
+      if (this.duckingRules != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 21, varOffset - offset - 25);
+         if (this.duckingRules.length > 4096000) {
+            throw ProtocolException.arrayTooLong("DuckingRules", this.duckingRules.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.duckingRules.length);
+         int duckingRulesValueOffset = 0;
+
+         for (int i = 0; i < this.duckingRules.length; i++) {
+            duckingRulesValueOffset += this.duckingRules[i].serialize(mem, varOffset + duckingRulesValueOffset);
+         }
+
+         varOffset += duckingRulesValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 21, -1);
       }
 
       return varOffset - offset;
    }
 
    public int computeSize() {
-      int size = 17;
+      int size = 25;
       if (this.id != null) {
          size += PacketIO.stringSize(this.id);
       }
@@ -378,22 +565,26 @@ public class AudioCategory {
          size += VarInt.size(this.stateBindings.length) + stateBindingsSize;
       }
 
+      if (this.duckingRules != null) {
+         size += VarInt.size(this.duckingRules.length) + this.duckingRules.length * 24;
+      }
+
       return size;
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      if (buffer.readableBytes() - offset < 17) {
-         return ValidationResult.error("Buffer too small: expected at least 17 bytes");
+      if (buffer.readableBytes() - offset < 25) {
+         return ValidationResult.error("Buffer too small: expected at least 25 bytes");
       }
 
       byte nullBits = buffer.getByte(offset);
       if ((nullBits & 1) != 0) {
-         int idOffset = buffer.getIntLE(offset + 9);
-         if (idOffset < 0 || idOffset > buffer.writerIndex() - offset - 17) {
+         int idOffset = buffer.getIntLE(offset + 13);
+         if (idOffset < 0 || idOffset > buffer.writerIndex() - offset - 25) {
             return ValidationResult.error("Invalid offset for Id");
          }
 
-         int pos = offset + 17 + idOffset;
+         int pos = offset + 25 + idOffset;
          int idLen = VarInt.peek(buffer, pos);
          if (idLen < 0) {
             return ValidationResult.error("Invalid string length for Id");
@@ -411,12 +602,12 @@ public class AudioCategory {
       }
 
       if ((nullBits & 2) != 0) {
-         int stateBindingsOffset = buffer.getIntLE(offset + 13);
-         if (stateBindingsOffset < 0 || stateBindingsOffset > buffer.writerIndex() - offset - 17) {
+         int stateBindingsOffset = buffer.getIntLE(offset + 17);
+         if (stateBindingsOffset < 0 || stateBindingsOffset > buffer.writerIndex() - offset - 25) {
             return ValidationResult.error("Invalid offset for StateBindings");
          }
 
-         int pos = offset + 17 + stateBindingsOffset;
+         int pos = offset + 25 + stateBindingsOffset;
          int stateBindingsCount = VarInt.peek(buffer, pos);
          if (stateBindingsCount < 0) {
             return ValidationResult.error("Invalid array count for StateBindings");
@@ -438,6 +629,29 @@ public class AudioCategory {
          }
       }
 
+      if ((nullBits & 4) != 0) {
+         int duckingRulesOffset = buffer.getIntLE(offset + 21);
+         if (duckingRulesOffset < 0 || duckingRulesOffset > buffer.writerIndex() - offset - 25) {
+            return ValidationResult.error("Invalid offset for DuckingRules");
+         }
+
+         int pos = offset + 25 + duckingRulesOffset;
+         int duckingRulesCount = VarInt.peek(buffer, pos);
+         if (duckingRulesCount < 0) {
+            return ValidationResult.error("Invalid array count for DuckingRules");
+         }
+
+         if (duckingRulesCount > 4096000) {
+            return ValidationResult.error("DuckingRules exceeds max length 4096000");
+         }
+
+         pos += VarInt.size(duckingRulesCount);
+         pos += duckingRulesCount * 24;
+         if (pos > buffer.writerIndex()) {
+            return ValidationResult.error("Buffer overflow reading DuckingRules");
+         }
+      }
+
       return ValidationResult.OK;
    }
 
@@ -447,6 +661,8 @@ public class AudioCategory {
       copy.volume = this.volume;
       copy.parentAudioCategoryIndex = this.parentAudioCategoryIndex;
       copy.stateBindings = this.stateBindings != null ? Arrays.stream(this.stateBindings).map(e -> e.clone()).toArray(StateBinding[]::new) : null;
+      copy.duckingRules = this.duckingRules != null ? Arrays.stream(this.duckingRules).map(e -> e.clone()).toArray(AudioCategoryDuckingRule[]::new) : null;
+      copy.maxDuckingDb = this.maxDuckingDb;
       return copy;
    }
 
@@ -460,7 +676,9 @@ public class AudioCategory {
             : Objects.equals(this.id, other.id)
                && this.volume == other.volume
                && this.parentAudioCategoryIndex == other.parentAudioCategoryIndex
-               && Arrays.equals(this.stateBindings, other.stateBindings);
+               && Arrays.equals(this.stateBindings, other.stateBindings)
+               && Arrays.equals(this.duckingRules, other.duckingRules)
+               && this.maxDuckingDb == other.maxDuckingDb;
       }
    }
 
@@ -470,6 +688,8 @@ public class AudioCategory {
       result = 31 * result + Objects.hashCode(this.id);
       result = 31 * result + Float.hashCode(this.volume);
       result = 31 * result + Integer.hashCode(this.parentAudioCategoryIndex);
-      return 31 * result + Arrays.hashCode(this.stateBindings);
+      result = 31 * result + Arrays.hashCode(this.stateBindings);
+      result = 31 * result + Arrays.hashCode(this.duckingRules);
+      return 31 * result + Float.hashCode(this.maxDuckingDb);
    }
 }

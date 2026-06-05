@@ -28,15 +28,17 @@ public class DensityReturnTypeAsset extends ReturnTypeAsset {
    public static final BuilderCodec<DensityReturnTypeAsset> CODEC = BuilderCodec.builder(
          DensityReturnTypeAsset.class, DensityReturnTypeAsset::new, ReturnTypeAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("ChoiceDensity", DensityAsset.CODEC, true), (t, k) -> t.choiceDensityAsset = k, t -> t.choiceDensityAsset)
+      .append(
+         new KeyedCodec<>("ChoiceDensity", DensityAsset.CODEC, true), (asset, value) -> asset.choiceDensityAsset = value, asset -> asset.choiceDensityAsset
+      )
       .add()
       .append(
          new KeyedCodec<>("Delimiters", new ArrayCodec<>(DensityReturnTypeAsset.DelimiterAsset.CODEC, DensityReturnTypeAsset.DelimiterAsset[]::new), true),
-         (t, k) -> t.delimiterAssets = k,
-         t -> t.delimiterAssets
+         (asset, value) -> asset.delimiterAssets = value,
+         asset -> asset.delimiterAssets
       )
       .add()
-      .append(new KeyedCodec<>("DefaultValue", Codec.DOUBLE, false), (t, k) -> t.defaultValue = k, t -> t.defaultValue)
+      .append(new KeyedCodec<>("DefaultValue", Codec.DOUBLE, false), (asset, value) -> asset.defaultValue = value, asset -> asset.defaultValue)
       .add()
       .build();
    private DensityAsset choiceDensityAsset = new ConstantDensityAsset();
@@ -64,16 +66,16 @@ public class DensityReturnTypeAsset extends ReturnTypeAsset {
             DensityReturnTypeAsset.DelimiterAsset.class,
             DensityReturnTypeAsset.DelimiterAsset::new,
             Codec.STRING,
-            (asset, id) -> asset.id = id,
-            config -> config.id,
-            (config, data) -> config.data = data,
-            config -> config.data
+            (asset, value) -> asset.id = value,
+            asset -> asset.id,
+            (asset, value) -> asset.data = value,
+            asset -> asset.data
          )
-         .append(new KeyedCodec<>("From", Codec.DOUBLE, true), (t, y) -> t.from = y, t -> t.from)
+         .append(new KeyedCodec<>("From", Codec.DOUBLE, true), (asset, value) -> asset.from = value, asset -> asset.from)
          .add()
-         .append(new KeyedCodec<>("To", Codec.DOUBLE, true), (t, out) -> t.to = out, t -> t.to)
+         .append(new KeyedCodec<>("To", Codec.DOUBLE, true), (asset, value) -> asset.to = value, asset -> asset.to)
          .add()
-         .append(new KeyedCodec<>("Density", DensityAsset.CODEC, true), (t, out) -> t.densityAsset = out, t -> t.densityAsset)
+         .append(new KeyedCodec<>("Density", DensityAsset.CODEC, true), (asset, value) -> asset.densityAsset = value, asset -> asset.densityAsset)
          .add()
          .build();
       private String id;

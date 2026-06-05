@@ -7,7 +7,8 @@ import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.server.core.modules.blockset.BlockSetModule;
 import com.hypixel.hytale.server.core.universe.world.World;
-import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
+import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.SensorBase;
@@ -39,18 +40,23 @@ public class SensorBlockType extends SensorBase implements IAnnotatedComponentCo
          InfoProvider sensorInfo = this.sensor.getSensorInfo();
          if (sensorInfo == null) {
             return false;
-         } else {
-            IPositionProvider positionProvider = sensorInfo.getPositionProvider();
-            int x = MathUtil.floor(positionProvider.getX());
-            int y = MathUtil.floor(positionProvider.getY());
-            int z = MathUtil.floor(positionProvider.getZ());
-            World world = store.getExternalData().getWorld();
-            WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(x, z));
-            if (chunk == null) {
+         }
+
+         IPositionProvider positionProvider = sensorInfo.getPositionProvider();
+         int x = MathUtil.floor(positionProvider.getX());
+         int y = MathUtil.floor(positionProvider.getY());
+         int z = MathUtil.floor(positionProvider.getZ());
+         ChunkStore chunkStore = store.getExternalData().getWorld().getChunkStore();
+         long chunkIndex = ChunkUtil.indexChunkFromBlock(x, z);
+         Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(chunkIndex);
+         if (chunkRef != null && chunkRef.isValid()) {
+            Store<ChunkStore> chunkComponentStore = chunkStore.getStore();
+            BlockChunk blockChunkComponent = chunkComponentStore.getComponent(chunkRef, BlockChunk.getComponentType());
+            if (blockChunkComponent == null) {
                positionProvider.clear();
                return false;
             } else {
-               int blockId = chunk.getBlock(x, y, z);
+               int blockId = blockChunkComponent.getBlock(x, y, z);
                if (!BlockSetModule.getInstance().blockInSet(this.blockSet, blockId)) {
                   positionProvider.clear();
                   return false;
@@ -58,6 +64,9 @@ public class SensorBlockType extends SensorBase implements IAnnotatedComponentCo
                   return true;
                }
             }
+         } else {
+            positionProvider.clear();
+            return false;
          }
       } else {
          return false;

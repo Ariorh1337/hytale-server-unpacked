@@ -1,25 +1,33 @@
 package com.hypixel.hytale.server.npc.movement.controllers;
 
+import com.hypixel.hytale.logger.HytaleLogger;
 import java.util.Arrays;
+import java.util.Locale;
+import java.util.logging.Level;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 
-public final class RailPathSmoother {
+public class RailPathSmoother {
    private static final int DEFAULT_INITIAL_CAPACITY = 8;
    private static final int GROWTH_INCREMENT = 4;
    private static final double VERTICAL_EPSILON = 1.0E-6;
-   private static final double SAME_S_EPSILON = 1.0E-6;
-   private static final double OVERLAP_EPSILON = 1.0E-6;
+   private static final double MIN_WAYPOINT_OFFSET_SQ = 1.0E-12;
+   private static final double INITIAL_DIP_COLLAPSE_MAX_DISTANCE = 1.0;
+   private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
    private Vector3d[] waypoints;
+   private RailPath.SegmentCommitType[] waypointSegmentCommitTypes;
    private int waypointCount;
-   private double[] segmentS;
-   private double[] runStart;
-   private double[] runEnd;
-   private double[] runY;
-   private int runCount;
-   private final Vector3d horizDir = new Vector3d();
+   private double[] horizontalRunEndDistance;
+   private double[] horizontalRunY;
+   private RailPath.SegmentCommitType[] horizontalRunTransitionCommitTypes;
+   private int horizontalRunCount;
+   private boolean debug;
    private final Vector3d startPos = new Vector3d();
+   private final Vector3d horizDir = new Vector3d();
+   private final Vector3d waypointScratch = new Vector3d();
+   private final Vector3d projectionScratch = new Vector3d();
 
    public RailPathSmoother() {
       this(8);
@@ -36,15 +44,23 @@ public final class RailPathSmoother {
          this.waypoints[i] = new Vector3d();
       }
 
-      this.segmentS = new double[initialCapacity];
-      this.runStart = new double[initialCapacity];
-      this.runEnd = new double[initialCapacity];
-      this.runY = new double[initialCapacity];
+      this.waypointSegmentCommitTypes = new RailPath.SegmentCommitType[Math.max(1, initialCapacity - 1)];
+      Arrays.fill(this.waypointSegmentCommitTypes, RailPath.SegmentCommitType.NONE);
+      this.horizontalRunEndDistance = new double[initialCapacity];
+      this.horizontalRunY = new double[initialCapacity];
+      this.horizontalRunTransitionCommitTypes = new RailPath.SegmentCommitType[Math.max(1, initialCapacity - 1)];
+      Arrays.fill(this.horizontalRunTransitionCommitTypes, RailPath.SegmentCommitType.NONE);
    }
 
    public void reset() {
       this.waypointCount = 0;
-      this.runCount = 0;
+      this.horizontalRunCount = 0;
+      Arrays.fill(this.waypointSegmentCommitTypes, RailPath.SegmentCommitType.NONE);
+      Arrays.fill(this.horizontalRunTransitionCommitTypes, RailPath.SegmentCommitType.NONE);
+   }
+
+   public void setDebug(boolean debug) {
+      this.debug = debug;
    }
 
    @Nonnull
@@ -56,298 +72,481 @@ public final class RailPathSmoother {
       return this.waypointCount;
    }
 
-   public void smooth(@Nonnull ProbeMoveData data, @Nonnull MotionController motionController, @Nonnull RailPathSmoother.Config config) {
+   @Nonnull
+   public RailPath.SegmentCommitType[] getWaypointSegmentCommitTypes() {
+      return this.waypointSegmentCommitTypes;
+   }
+
+   public void smooth(
+      @Nonnull ProbeMoveData data,
+      @Nonnull MotionController motionController,
+      @Nonnull RailPathSmoother.Config config,
+      @Nullable RailPathSmoother.ContactContext contactContext
+   ) {
       this.reset();
       ProbeMoveData.Segment[] segments = data.segments;
       int count = data.segmentCount;
       if (segments != null && count > 0) {
          if (count == 1) {
-            this.nextWaypoint().set(segments[0].position);
+            this.emitWaypoint(segments[0].position, RailPath.SegmentCommitType.NONE);
+            this.logDebugOutput(data, motionController, contactContext);
+         } else if (!motionController.is2D()) {
+            this.emitWaypoint(segments[0].position, RailPath.SegmentCommitType.NONE);
+            this.emitWaypoint(segments[count - 1].position, RailPath.SegmentCommitType.NONE);
+            this.logDebugOutput(data, motionController, contactContext);
          } else {
-            Vector3d compSel = motionController.getComponentSelector();
-            this.horizDir
-               .set(
-                  (data.targetPosition.x - data.initialPosition.x) * compSel.x,
-                  (data.targetPosition.y - data.initialPosition.y) * compSel.y,
-                  (data.targetPosition.z - data.initialPosition.z) * compSel.z
-               );
-            double horizLen = this.horizDir.length();
-            boolean canSmooth = motionController.is2D() && horizLen > 1.0E-6 && (config.climbSlope > 0.0 || config.dropSlope > 0.0);
-            if (!canSmooth) {
-               for (int i = 0; i < count; i++) {
-                  this.nextWaypoint().set(segments[i].position);
-               }
+            double horizLength = computeProjectedDirection(data.initialPosition, data.targetPosition, motionController.getComponentSelector(), this.horizDir);
+            if (horizLength > 1.0E-6) {
+               this.horizDir.div(horizLength);
             } else {
-               this.horizDir.div(horizLen);
-               this.startPos.set(segments[0].position);
-               this.ensureSegmentCapacity(count);
+               this.horizDir.zero();
+            }
 
-               for (int i = 0; i < count; i++) {
-                  this.segmentS[i] = this.projectToPathS(segments[i].position);
-               }
+            this.startPos.set(segments[0].position);
+            this.buildHorizontalRuns(segments, count);
+            this.collapseInitialZeroDistanceDip();
+            this.skipShortDipRuns(config, contactContext);
+            this.emitWaypoint(segments[0].position, RailPath.SegmentCommitType.NONE);
+            int i = 0;
 
-               this.buildRuns(segments, count);
-               if (this.runCount <= 1) {
-                  this.nextWaypoint().set(segments[0].position);
-                  this.nextWaypoint().set(segments[count - 1].position);
-               } else {
-                  double pathLengthS = this.segmentS[count - 1];
-                  double maxClimbHeight = motionController.getMaxClimbHeight();
-                  double maxDropHeight = motionController.getMaxDropHeight();
-                  this.emitWaypoint(0.0, segments[0].position.y);
-                  int cursor = 0;
-
-                  while (cursor < this.runCount - 1) {
-                     double yFrom = this.runY[cursor];
-                     double yTo = this.runY[cursor + 1];
-                     double sEdge = this.runEnd[cursor];
-                     if (yFrom > yTo) {
-                        cursor = this.processDrop(cursor, sEdge, config, maxClimbHeight, maxDropHeight);
-                     } else {
-                        cursor = this.processClimb(cursor, sEdge, config, maxClimbHeight);
+            while (i < this.horizontalRunCount - 1) {
+               double runStartDistance = i <= 0 ? 0.0 : this.horizontalRunEndDistance[i - 1];
+               double runEndDistance = this.horizontalRunEndDistance[i];
+               double currentRunY = this.horizontalRunY[i];
+               double successorRunY = this.horizontalRunY[i + 1];
+               boolean isDrop = successorRunY < currentRunY - 1.0E-6;
+               boolean isClimb = successorRunY > currentRunY + 1.0E-6;
+               boolean handledDropClimbPair = false;
+               if (isDrop && i + 2 < this.horizontalRunCount && this.horizontalRunY[i + 2] > successorRunY + 1.0E-6) {
+                  double dropEndDistance = this.computeDropEndDistance(i, config, contactContext);
+                  double climbStartDistance = this.computeClimbStartDistance(i + 1, config, contactContext);
+                  if (dropEndDistance > climbStartDistance + 1.0E-6 && config.dropSlope > 0.0 && config.climbSlope > 0.0) {
+                     double intersectionDistance = this.computeDropClimbIntersectionDistance(i, config);
+                     double midRunStart = runEndDistance;
+                     double midRunEnd = this.horizontalRunEndDistance[i + 1];
+                     if (intersectionDistance < midRunStart) {
+                        intersectionDistance = midRunStart;
+                     } else if (intersectionDistance > midRunEnd) {
+                        intersectionDistance = midRunEnd;
                      }
-                  }
 
-                  this.emitWaypoint(pathLengthS, segments[count - 1].position.y);
-                  if (this.waypointCount > 0) {
-                     this.waypoints[0].set(segments[0].position);
-                  }
+                     if (isDistanceInsideRun(contactContext, midRunStart, midRunEnd)) {
+                        intersectionDistance = contactContext.hitDistanceS;
+                     }
 
-                  if (this.waypointCount > 1) {
-                     this.waypoints[this.waypointCount - 1].set(segments[count - 1].position);
+                     this.emitWaypoint(runEndDistance, currentRunY, RailPath.SegmentCommitType.NONE);
+                     this.emitWaypoint(intersectionDistance, successorRunY, RailPath.SegmentCommitType.SLOPE_DOWN);
+                     this.emitWaypoint(this.horizontalRunEndDistance[i + 1], this.horizontalRunY[i + 2], RailPath.SegmentCommitType.SLOPE_UP);
+                     i += 2;
+                     handledDropClimbPair = true;
                   }
                }
+
+               if (!handledDropClimbPair) {
+                  if (isClimb && config.climbSlope > 0.0) {
+                     double dy = successorRunY - currentRunY;
+                     double maxBackExtension = dy * config.climbSlope;
+                     double climbStartDistance = runEndDistance - maxBackExtension;
+                     if (climbStartDistance < runStartDistance) {
+                        climbStartDistance = runStartDistance;
+                     }
+
+                     if (isDistanceInsideRun(contactContext, runStartDistance, runEndDistance)) {
+                        climbStartDistance = Math.max(climbStartDistance, contactContext.hitDistanceS);
+                     }
+
+                     this.emitWaypoint(climbStartDistance, currentRunY, this.horizontalRunTransitionCommitTypes[i]);
+                     this.emitWaypoint(runEndDistance, successorRunY, RailPath.SegmentCommitType.SLOPE_UP);
+                  } else if (isDrop && config.dropSlope > 0.0) {
+                     double dropEndDistance = this.computeDropEndDistance(i, config, contactContext);
+                     this.emitWaypoint(runEndDistance, currentRunY, this.horizontalRunTransitionCommitTypes[i]);
+                     this.emitWaypoint(dropEndDistance, successorRunY, RailPath.SegmentCommitType.SLOPE_DOWN);
+                  } else {
+                     this.emitWaypoint(runEndDistance, currentRunY, this.horizontalRunTransitionCommitTypes[i]);
+                     this.emitWaypoint(runEndDistance, successorRunY, RailPath.SegmentCommitType.NONE);
+                  }
+
+                  i++;
+               }
+            }
+
+            RailPath.SegmentCommitType finalRunCommitType = this.horizontalRunCount == 1
+               ? this.horizontalRunTransitionCommitTypes[0]
+               : RailPath.SegmentCommitType.NONE;
+            this.emitWaypoint(this.horizontalRunEndDistance[this.horizontalRunCount - 1], this.horizontalRunY[this.horizontalRunCount - 1], finalRunCommitType);
+            this.emitWaypoint(segments[count - 1].position, RailPath.SegmentCommitType.NONE);
+            this.logDebugOutput(data, motionController, contactContext);
+         }
+      }
+   }
+
+   private void buildHorizontalRuns(@Nonnull ProbeMoveData.Segment[] segments, int count) {
+      this.ensureHorizontalRunCapacity(count);
+      this.horizontalRunCount = 0;
+      double currentRunY = segments[0].position.y;
+      double currentRunStartDistance = segments[0].distance;
+
+      for (int i = 1; i < count; i++) {
+         Vector3d previous = segments[i - 1].position;
+         Vector3d current = segments[i].position;
+         if (!(Math.abs(current.y - previous.y) <= 1.0E-6)) {
+            double currentRunEndDistance = segments[i - 1].distance;
+            boolean isInitialZeroLengthRun = this.horizontalRunCount == 0 && currentRunEndDistance == currentRunStartDistance;
+            if (currentRunEndDistance > currentRunStartDistance + 1.0E-6 || isInitialZeroLengthRun) {
+               this.addHorizontalRun(currentRunEndDistance, currentRunY);
+               currentRunStartDistance = currentRunEndDistance;
+            }
+
+            currentRunY = current.y;
+         }
+      }
+
+      double finalDistance = segments[count - 1].distance;
+      if (finalDistance > currentRunStartDistance + 1.0E-6 || this.horizontalRunCount == 0) {
+         this.addHorizontalRun(finalDistance, currentRunY);
+      }
+
+      int transitionCount = Math.max(0, this.horizontalRunCount - 1);
+      if (transitionCount > 0) {
+         Arrays.fill(this.horizontalRunTransitionCommitTypes, 0, transitionCount, RailPath.SegmentCommitType.NONE);
+      }
+   }
+
+   private void addHorizontalRun(double runEndDistance, double runY) {
+      if (this.horizontalRunCount > 0) {
+         double previousRunEndDistance = this.horizontalRunEndDistance[this.horizontalRunCount - 1];
+         assert runEndDistance >= previousRunEndDistance : "Malformed ProbeMoveData: horizontal run end distances must be non-decreasing";
+      }
+
+      this.horizontalRunEndDistance[this.horizontalRunCount] = runEndDistance;
+      this.horizontalRunY[this.horizontalRunCount] = runY;
+      this.horizontalRunCount++;
+   }
+
+   private void ensureHorizontalRunCapacity(int needed) {
+      if (this.horizontalRunEndDistance.length < needed) {
+         this.horizontalRunEndDistance = Arrays.copyOf(this.horizontalRunEndDistance, needed);
+         this.horizontalRunY = Arrays.copyOf(this.horizontalRunY, needed);
+         int transitionNeeded = Math.max(1, needed - 1);
+         int oldTransitionLength = this.horizontalRunTransitionCommitTypes.length;
+         this.horizontalRunTransitionCommitTypes = Arrays.copyOf(this.horizontalRunTransitionCommitTypes, transitionNeeded);
+         Arrays.fill(
+            this.horizontalRunTransitionCommitTypes, oldTransitionLength, this.horizontalRunTransitionCommitTypes.length, RailPath.SegmentCommitType.NONE
+         );
+      }
+   }
+
+   private void collapseInitialZeroDistanceDip() {
+      if (this.horizontalRunCount >= 3) {
+         if (!(this.horizontalRunEndDistance[0] > 1.0E-6)) {
+            double initialDipRunLength = this.horizontalRunEndDistance[1] - this.horizontalRunEndDistance[0];
+            boolean isShortInitialDip = initialDipRunLength <= 1.000001;
+            boolean isInitialDip = this.horizontalRunY[1] < this.horizontalRunY[0] - 1.0E-6 && this.horizontalRunY[2] > this.horizontalRunY[1] + 1.0E-6;
+            boolean returnsToStartHeightOrHigher = this.horizontalRunY[2] >= this.horizontalRunY[0] - 1.0E-6;
+            if (isInitialDip && isShortInitialDip && returnsToStartHeightOrHigher) {
+               for (int i = 1; i < this.horizontalRunCount - 1; i++) {
+                  this.horizontalRunEndDistance[i] = this.horizontalRunEndDistance[i + 1];
+                  this.horizontalRunY[i] = this.horizontalRunY[i + 1];
+               }
+
+               if (this.horizontalRunCount > 2) {
+                  this.horizontalRunTransitionCommitTypes[0] = mergeCommitTypes(
+                     mergeCommitTypes(this.horizontalRunTransitionCommitTypes[0], this.horizontalRunTransitionCommitTypes[1]),
+                     RailPath.SegmentCommitType.SKIP_DIP
+                  );
+                  int newTransitionCount = this.horizontalRunCount - 2;
+
+                  for (int i = 1; i < newTransitionCount; i++) {
+                     this.horizontalRunTransitionCommitTypes[i] = this.horizontalRunTransitionCommitTypes[i + 1];
+                  }
+
+                  this.horizontalRunTransitionCommitTypes[newTransitionCount] = RailPath.SegmentCommitType.NONE;
+               }
+
+               this.horizontalRunCount--;
             }
          }
       }
    }
 
-   private int processDrop(int cursor, double sEdge, RailPathSmoother.Config config, double maxClimbHeight, double maxDropHeight) {
-      double yTop = this.runY[cursor];
-      double yBot = this.runY[cursor + 1];
-      double dy = yTop - yBot;
-      if (cursor + 2 < this.runCount && this.runY[cursor + 1] < this.runY[cursor + 2] - 1.0E-6 && Math.abs(this.runY[cursor + 2] - yTop) <= 1.0E-6) {
-         double lowerRunLen = this.runEnd[cursor + 1] - this.runStart[cursor + 1];
-         if (lowerRunLen <= config.horizontalSkipGapWidth + 1.0E-6) {
-            return cursor + 2;
-         }
-      }
+   private void skipShortDipRuns(@Nonnull RailPathSmoother.Config config, @Nullable RailPathSmoother.ContactContext contactContext) {
+      if (this.horizontalRunCount >= 3) {
+         boolean hasValidHitDistance = contactContext != null && contactContext.valid && Double.isFinite(contactContext.hitDistanceS);
+         int index = 1;
 
-      int target = -1;
-      double targetS = 0.0;
-      if (config.dropSlope > 0.0) {
-         for (int k = cursor + 1; k < this.runCount; k++) {
-            double yK = this.runY[k];
-            if (yK > yTop + 1.0E-6) {
-               break;
-            }
-
-            double dyK = yTop - yK;
-            if (maxDropHeight > 0.0 && dyK > maxDropHeight + 1.0E-6) {
-               break;
-            }
-
-            double sStart = this.runStart[k];
-            double sEnd = this.runEnd[k];
-            double yTrajStart = yTop - (sStart - sEdge) / config.dropSlope;
-            double yTrajEnd = yTop - (sEnd - sEdge) / config.dropSlope;
-            if (yTrajStart < yK - 1.0E-6) {
-               break;
-            }
-
-            if (!(yTrajEnd >= yK - 1.0E-6)) {
-               target = k;
-               targetS = sEdge + dyK * config.dropSlope;
-               break;
-            }
-         }
-      }
-
-      if (target > cursor + 1) {
-         this.emitWaypoint(sEdge, yTop);
-         this.emitWaypoint(targetS, this.runY[target]);
-         return target;
-      }
-
-      boolean isPair = cursor + 2 < this.runCount && this.runY[cursor + 1] < this.runY[cursor + 2] - 1.0E-6;
-      if (!isPair) {
-         this.emitWaypoint(sEdge, yTop);
-         if (target == cursor + 1) {
-            this.emitWaypoint(targetS, yBot);
-         } else {
-            double sLanding;
-            if (config.dropSlope > 0.0) {
-               double effDy = maxDropHeight > 0.0 ? Math.min(dy, maxDropHeight) : dy;
-               sLanding = sEdge + effDy * config.dropSlope;
-               if (sLanding > this.runEnd[cursor + 1]) {
-                  sLanding = this.runEnd[cursor + 1];
-               }
+         while (index < this.horizontalRunCount - 1) {
+            double predecessorY = this.horizontalRunY[index - 1];
+            double runY = this.horizontalRunY[index];
+            double successorY = this.horizontalRunY[index + 1];
+            boolean isDip = Math.abs(predecessorY - successorY) <= 1.0E-6 && predecessorY > runY + 1.0E-6;
+            if (!isDip) {
+               index++;
             } else {
-               sLanding = sEdge;
-            }
+               double runStartDistance = this.horizontalRunEndDistance[index - 1];
+               double runEndDistance = this.horizontalRunEndDistance[index];
+               double runLength = runEndDistance - runStartDistance;
+               boolean insideContactRange = hasValidHitDistance
+                  && contactContext.hitDistanceS >= runStartDistance - 1.0E-6
+                  && contactContext.hitDistanceS <= runEndDistance + 1.0E-6;
+               if (!(runLength > config.horizontalSkipGapWidth + 1.0E-6) && !insideContactRange) {
+                  this.horizontalRunTransitionCommitTypes[index - 1] = mergeCommitTypes(
+                     mergeCommitTypes(this.horizontalRunTransitionCommitTypes[index - 1], this.horizontalRunTransitionCommitTypes[index]),
+                     RailPath.SegmentCommitType.SKIP_DIP
+                  );
+                  this.horizontalRunEndDistance[index - 1] = this.horizontalRunEndDistance[index + 1];
+                  int newCount = this.horizontalRunCount - 2;
 
-            this.emitWaypoint(sLanding, yBot);
-         }
+                  for (int i = index; i < newCount; i++) {
+                     this.horizontalRunEndDistance[i] = this.horizontalRunEndDistance[i + 2];
+                     this.horizontalRunY[i] = this.horizontalRunY[i + 2];
+                     this.horizontalRunTransitionCommitTypes[i] = this.horizontalRunTransitionCommitTypes[i + 2];
+                  }
 
-         return cursor + 1;
-      } else {
-         double yClimbTop = this.runY[cursor + 2];
-         double dyClimb = yClimbTop - yBot;
-         double sEdgeClimb = this.runEnd[cursor + 1];
-         double climbSkipDelta = yClimbTop - yTop;
-         if (climbSkipDelta > 1.0E-6 && config.climbSlope > 0.0 && (maxClimbHeight <= 0.0 || climbSkipDelta <= maxClimbHeight + 1.0E-6)) {
-            double idealHorizSpan = climbSkipDelta * config.climbSlope;
-            double dipSpan = sEdgeClimb - sEdge;
-            if (idealHorizSpan >= dipSpan - 1.0E-6) {
-               double sStartIdeal = sEdgeClimb - idealHorizSpan;
-               double sStart = Math.max(this.runStart[cursor], sStartIdeal);
-               this.emitWaypoint(sStart, yTop);
-               this.emitWaypoint(sEdgeClimb, yClimbTop);
-               return cursor + 2;
-            }
-         }
+                  this.horizontalRunCount = newCount;
+                  int transitionCount = Math.max(0, this.horizontalRunCount - 1);
+                  if (transitionCount > 0 && transitionCount < this.horizontalRunTransitionCommitTypes.length) {
+                     this.horizontalRunTransitionCommitTypes[transitionCount] = RailPath.SegmentCommitType.NONE;
+                  }
 
-         double effDyDrop = maxDropHeight > 0.0 ? Math.min(dy, maxDropHeight) : dy;
-         double effDyClimb = maxClimbHeight > 0.0 ? Math.min(dyClimb, maxClimbHeight) : dyClimb;
-         double sDropIdeal = sEdge + effDyDrop * config.dropSlope;
-         double sClimbIdeal = sEdgeClimb - effDyClimb * config.climbSlope;
-         boolean overlap = sDropIdeal > sClimbIdeal + 1.0E-6;
-         this.emitWaypoint(sEdge, yTop);
-         if (overlap) {
-            double sMid = (sDropIdeal + sClimbIdeal) * 0.5;
-            if (sMid < sEdge) {
-               sMid = sEdge;
-            }
-
-            if (sMid > sEdgeClimb) {
-               sMid = sEdgeClimb;
-            }
-
-            this.emitWaypoint(sMid, yBot);
-         } else {
-            double sDropLand = config.dropSlope > 0.0 ? sDropIdeal : sEdge;
-            if (sDropLand < sEdge) {
-               sDropLand = sEdge;
-            }
-
-            if (sDropLand > sEdgeClimb) {
-               sDropLand = sEdgeClimb;
-            }
-
-            this.emitWaypoint(sDropLand, yBot);
-            double sClimbStart = config.climbSlope > 0.0 ? sClimbIdeal : sEdgeClimb;
-            if (sClimbStart < sEdge) {
-               sClimbStart = sEdge;
-            }
-
-            if (sClimbStart > sEdgeClimb) {
-               sClimbStart = sEdgeClimb;
-            }
-
-            if (sClimbStart > sDropLand + 1.0E-6) {
-               this.emitWaypoint(sClimbStart, yBot);
+                  if (index > 1) {
+                     index--;
+                  }
+               } else {
+                  index++;
+               }
             }
          }
-
-         this.emitWaypoint(sEdgeClimb, yClimbTop);
-         return cursor + 2;
       }
    }
 
-   private int processClimb(int cursor, double sEdge, RailPathSmoother.Config config, double maxClimbHeight) {
-      double yBot = this.runY[cursor];
-      double yTop = this.runY[cursor + 1];
-      double dy = yTop - yBot;
-      double sStart;
-      if (config.climbSlope > 0.0) {
-         double effDy = maxClimbHeight > 0.0 ? Math.min(dy, maxClimbHeight) : dy;
-         sStart = sEdge - effDy * config.climbSlope;
-         if (sStart < this.runStart[cursor]) {
-            sStart = this.runStart[cursor];
+   private static boolean isDistanceInsideRun(@Nullable RailPathSmoother.ContactContext contactContext, double runStartDistance, double runEndDistance) {
+      return contactContext != null
+         && contactContext.valid
+         && Double.isFinite(contactContext.hitDistanceS)
+         && contactContext.hitDistanceS >= runStartDistance - 1.0E-6
+         && contactContext.hitDistanceS <= runEndDistance + 1.0E-6;
+   }
+
+   private double computeClimbStartDistance(int runIndex, @Nonnull RailPathSmoother.Config config, @Nullable RailPathSmoother.ContactContext contactContext) {
+      double runStartDistance = runIndex <= 0 ? 0.0 : this.horizontalRunEndDistance[runIndex - 1];
+      double runEndDistance = this.horizontalRunEndDistance[runIndex];
+      double currentRunY = this.horizontalRunY[runIndex];
+      double successorRunY = this.horizontalRunY[runIndex + 1];
+      if (config.climbSlope <= 0.0) {
+         return runEndDistance;
+      }
+
+      double dy = successorRunY - currentRunY;
+      double climbStartDistance = runEndDistance - dy * config.climbSlope;
+      if (climbStartDistance < runStartDistance) {
+         climbStartDistance = runStartDistance;
+      }
+
+      if (isDistanceInsideRun(contactContext, runStartDistance, runEndDistance)) {
+         climbStartDistance = Math.max(climbStartDistance, contactContext.hitDistanceS);
+      }
+
+      return climbStartDistance;
+   }
+
+   private double computeDropEndDistance(int runIndex, @Nonnull RailPathSmoother.Config config, @Nullable RailPathSmoother.ContactContext contactContext) {
+      double runEndDistance = this.horizontalRunEndDistance[runIndex];
+      double successorRunEndDistance = this.horizontalRunEndDistance[runIndex + 1];
+      double currentRunY = this.horizontalRunY[runIndex];
+      double successorRunY = this.horizontalRunY[runIndex + 1];
+      if (config.dropSlope <= 0.0) {
+         return runEndDistance;
+      }
+
+      double dy = currentRunY - successorRunY;
+      double dropEndDistance = runEndDistance + dy * config.dropSlope;
+      if (dropEndDistance > successorRunEndDistance) {
+         dropEndDistance = successorRunEndDistance;
+      }
+
+      if (isDistanceInsideRun(contactContext, runEndDistance, successorRunEndDistance)) {
+         dropEndDistance = Math.min(dropEndDistance, contactContext.hitDistanceS);
+      }
+
+      return dropEndDistance;
+   }
+
+   private double computeDropClimbIntersectionDistance(int dropRunIndex, @Nonnull RailPathSmoother.Config config) {
+      double dropEdgeDistance = this.horizontalRunEndDistance[dropRunIndex];
+      double dropTopY = this.horizontalRunY[dropRunIndex];
+      double climbEdgeDistance = this.horizontalRunEndDistance[dropRunIndex + 1];
+      double climbTopY = this.horizontalRunY[dropRunIndex + 2];
+      double denominator = 1.0 / config.dropSlope + 1.0 / config.climbSlope;
+      return Math.abs(denominator) <= 1.0E-6
+         ? dropEdgeDistance
+         : (dropTopY - climbTopY + dropEdgeDistance / config.dropSlope + climbEdgeDistance / config.climbSlope) / denominator;
+   }
+
+   private void emitWaypoint(double distance, double y, @Nonnull RailPath.SegmentCommitType commitType) {
+      this.waypointScratch.set(this.startPos).fma(distance, this.horizDir);
+      this.waypointScratch.y = y;
+      this.emitWaypoint(this.waypointScratch, commitType);
+   }
+
+   private void emitWaypoint(@Nonnull Vector3dc waypoint, @Nonnull RailPath.SegmentCommitType commitType) {
+      if (this.waypointCount <= 0 || !(this.waypoints[this.waypointCount - 1].distanceSquared(waypoint) <= 1.0E-12)) {
+         int segmentIndex = this.waypointCount - 1;
+         this.nextWaypoint().set(waypoint);
+         if (segmentIndex >= 0) {
+            this.ensureWaypointSegmentCommitCapacity(this.waypointCount - 1);
+            this.waypointSegmentCommitTypes[segmentIndex] = commitType;
          }
-      } else {
-         sStart = sEdge;
-      }
-
-      this.emitWaypoint(sStart, yBot);
-      this.emitWaypoint(sEdge, yTop);
-      return cursor + 1;
-   }
-
-   private void buildRuns(@Nonnull ProbeMoveData.Segment[] segments, int count) {
-      this.ensureRunCapacity(count);
-      this.runCount = 0;
-      int i = 0;
-
-      while (i < count) {
-         int firstSegmentIdx = i;
-         double yRun = segments[i].position.y;
-         int j = i + 1;
-
-         while (j < count && Math.abs(segments[j].position.y - yRun) <= 1.0E-6) {
-            j++;
-         }
-
-         int lastSegmentIdx = j - 1;
-         this.runStart[this.runCount] = this.segmentS[firstSegmentIdx];
-         this.runEnd[this.runCount] = this.segmentS[lastSegmentIdx];
-         this.runY[this.runCount] = yRun;
-         this.runCount++;
-         i = j;
-      }
-   }
-
-   private void emitWaypoint(double s, double y) {
-      Vector3d out = this.nextWaypoint();
-      out.x = this.startPos.x + s * this.horizDir.x;
-      out.y = y;
-      out.z = this.startPos.z + s * this.horizDir.z;
-   }
-
-   private double projectToPathS(@Nonnull Vector3dc pos) {
-      double dx = pos.x() - this.startPos.x;
-      double dy = pos.y() - this.startPos.y;
-      double dz = pos.z() - this.startPos.z;
-      return dx * this.horizDir.x + dy * this.horizDir.y + dz * this.horizDir.z;
-   }
-
-   private void ensureSegmentCapacity(int needed) {
-      if (this.segmentS.length < needed) {
-         this.segmentS = new double[needed];
-      }
-   }
-
-   private void ensureRunCapacity(int needed) {
-      if (this.runStart.length < needed) {
-         this.runStart = new double[needed];
-         this.runEnd = new double[needed];
-         this.runY = new double[needed];
       }
    }
 
    @Nonnull
    private Vector3d nextWaypoint() {
       if (this.waypointCount == this.waypoints.length) {
-         int oldLen = this.waypoints.length;
-         this.waypoints = Arrays.copyOf(this.waypoints, oldLen + 4);
+         int oldLength = this.waypoints.length;
+         this.waypoints = Arrays.copyOf(this.waypoints, oldLength + 4);
 
-         for (int i = oldLen; i < this.waypoints.length; i++) {
+         for (int i = oldLength; i < this.waypoints.length; i++) {
             this.waypoints[i] = new Vector3d();
          }
+
+         this.ensureWaypointSegmentCommitCapacity(this.waypoints.length - 1);
       }
 
       return this.waypoints[this.waypointCount++];
+   }
+
+   private void ensureWaypointSegmentCommitCapacity(int needed) {
+      if (needed > this.waypointSegmentCommitTypes.length) {
+         int oldLength = this.waypointSegmentCommitTypes.length;
+         this.waypointSegmentCommitTypes = Arrays.copyOf(this.waypointSegmentCommitTypes, needed);
+         Arrays.fill(this.waypointSegmentCommitTypes, oldLength, this.waypointSegmentCommitTypes.length, RailPath.SegmentCommitType.NONE);
+      }
+   }
+
+   @Nonnull
+   private static RailPath.SegmentCommitType mergeCommitTypes(@Nonnull RailPath.SegmentCommitType first, @Nonnull RailPath.SegmentCommitType second) {
+      if (first == RailPath.SegmentCommitType.SKIP_DIP || second == RailPath.SegmentCommitType.SKIP_DIP) {
+         return RailPath.SegmentCommitType.SKIP_DIP;
+      } else {
+         return first != RailPath.SegmentCommitType.NONE ? first : second;
+      }
+   }
+
+   private void logDebugOutput(
+      @Nonnull ProbeMoveData data, @Nonnull MotionController motionController, @Nullable RailPathSmoother.ContactContext contactContext
+   ) {
+      if (this.debug) {
+         ProbeMoveData.Segment[] segments = data.segments;
+         if (segments != null && data.segmentCount > 0) {
+            boolean hasValidContact = contactContext != null && contactContext.valid && Double.isFinite(contactContext.hitDistanceS);
+            double hitDistance = hasValidContact ? contactContext.hitDistanceS : Double.NaN;
+            StringBuilder segmentLog = new StringBuilder();
+            segmentLog.append("RailPathSmoother segments")
+               .append('\n')
+               .append(String.format(Locale.ROOT, "%-6s %-12s %-18s %-12s", "index", "distance", "type", "y"));
+
+            for (int i = 0; i < data.segmentCount; i++) {
+               ProbeMoveData.Segment segment = segments[i];
+               double segmentStart = i <= 0 ? 0.0 : segments[i - 1].distance;
+               double segmentEnd = segment.distance;
+               boolean overlapsHitDistance = hasValidContact
+                  && hitDistance >= Math.min(segmentStart, segmentEnd) - 1.0E-6
+                  && hitDistance <= Math.max(segmentStart, segmentEnd) + 1.0E-6;
+               segmentLog.append('\n').append(String.format(Locale.ROOT, "%-6d %-12.4f %-18s %-12.4f", i, segment.distance, segment.type, segment.position.y));
+               if (overlapsHitDistance) {
+                  segmentLog.append(String.format(Locale.ROOT, " hitDistance=%s hitSide=%s", hitDistance, contactContext.hitSide));
+               }
+            }
+
+            LOGGER.at(Level.INFO).log("%s", segmentLog);
+            StringBuilder runLog = new StringBuilder();
+            runLog.append("RailPathSmoother horizontal runs").append('\n').append(String.format(Locale.ROOT, "%-6s %-12s %-12s", "index", "endDistance", "y"));
+
+            for (int i = 0; i < this.horizontalRunCount; i++) {
+               double runStartDistance = i <= 0 ? 0.0 : this.horizontalRunEndDistance[i - 1];
+               double runEndDistance = this.horizontalRunEndDistance[i];
+               assert runEndDistance >= runStartDistance : "Malformed ProbeMoveData: run end distance cannot be smaller than run start distance";
+               boolean overlapsHitDistance = hasValidContact && hitDistance >= runStartDistance - 1.0E-6 && hitDistance <= runEndDistance + 1.0E-6;
+               runLog.append('\n').append(String.format(Locale.ROOT, "%-6d %-12.4f %-12.4f", i, this.horizontalRunEndDistance[i], this.horizontalRunY[i]));
+               if (overlapsHitDistance) {
+                  runLog.append(String.format(Locale.ROOT, " hitDistance=%s hitSide=%s", hitDistance, contactContext.hitSide));
+               }
+            }
+
+            LOGGER.at(Level.INFO).log("%s", runLog);
+            double directionLength = computeProjectedDirection(
+               segments[0].position, segments[data.segmentCount - 1].position, motionController.getComponentSelector(), this.projectionScratch
+            );
+            StringBuilder waypointLog = new StringBuilder();
+            waypointLog.append("RailPathSmoother waypoints").append('\n').append(String.format(Locale.ROOT, "%-6s %-12s %-12s", "index", "distance", "y"));
+
+            for (int i = 0; i < this.waypointCount; i++) {
+               Vector3d waypoint = this.waypoints[i];
+               double distance = directionLength <= 1.0E-6
+                  ? 0.0
+                  : computeProjectedDirection(segments[0].position, waypoint, motionController.getComponentSelector(), this.projectionScratch)
+                     / directionLength
+                     * segments[data.segmentCount - 1].distance;
+               waypointLog.append('\n').append(String.format(Locale.ROOT, "%-6d %-12.4f %-12.4f", i, distance, waypoint.y));
+            }
+
+            LOGGER.at(Level.INFO).log("%s", waypointLog);
+         }
+      }
+   }
+
+   private static double computeProjectedDirection(
+      @Nonnull Vector3dc from, @Nonnull Vector3dc to, @Nonnull Vector3dc componentSelector, @Nonnull Vector3d directionOut
+   ) {
+      directionOut.set((to.x() - from.x()) * componentSelector.x(), (to.y() - from.y()) * componentSelector.y(), (to.z() - from.z()) * componentSelector.z());
+      return directionOut.length();
    }
 
    public static final class Config {
       public double climbSlope;
       public double dropSlope;
       public double horizontalSkipGapWidth;
+      public double blockedWallEndOffset;
 
       public void reset() {
          this.climbSlope = 0.0;
          this.dropSlope = 0.0;
          this.horizontalSkipGapWidth = 0.0;
+         this.blockedWallEndOffset = 0.0;
       }
+   }
+
+   public static final class ContactContext {
+      public boolean valid;
+      public double hitDistanceS;
+      public double hitY;
+      public int hitSegmentIndex;
+      @Nonnull
+      public RailPathSmoother.HitSide hitSide = RailPathSmoother.HitSide.UNKNOWN;
+      public double contactWindowHalfWidth;
+
+      public void reset() {
+         this.valid = false;
+         this.hitDistanceS = Double.NaN;
+         this.hitY = Double.NaN;
+         this.hitSegmentIndex = -1;
+         this.hitSide = RailPathSmoother.HitSide.UNKNOWN;
+         this.contactWindowHalfWidth = Double.NaN;
+      }
+
+      public void setFrom(@Nonnull RailPathSmoother.ContactContext other) {
+         this.valid = other.valid;
+         this.hitDistanceS = other.hitDistanceS;
+         this.hitY = other.hitY;
+         this.hitSegmentIndex = other.hitSegmentIndex;
+         this.hitSide = other.hitSide;
+         this.contactWindowHalfWidth = other.contactWindowHalfWidth;
+      }
+   }
+
+   public enum HitSide {
+      BEFORE_TARGET,
+      AFTER_TARGET,
+      UNKNOWN;
    }
 }

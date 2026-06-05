@@ -95,7 +95,13 @@ public abstract class SimpleBlockInteraction extends SimpleInteraction {
             super.tick0(firstRun, time, type, context, cooldownHandler);
          } else if (!InteractionValidation.canPlayerInteractWithBlock(ref, commandBuffer, context.getHeldItem(), targetBlockPos)) {
             LOGGER.at(Level.WARNING)
-               .log("Entity %d failed block interaction distance check at [%d, %d, %d]", ref.getIndex(), targetBlockPos.x, targetBlockPos.y, targetBlockPos.z);
+               .log(
+                  "%s failed block interaction distance check at [%d, %d, %d]",
+                  InteractionValidation.getEntityName(ref, commandBuffer),
+                  targetBlockPos.x,
+                  targetBlockPos.y,
+                  targetBlockPos.z
+               );
             context.getState().state = InteractionState.Failed;
             super.tick0(firstRun, time, type, context, cooldownHandler);
          } else {

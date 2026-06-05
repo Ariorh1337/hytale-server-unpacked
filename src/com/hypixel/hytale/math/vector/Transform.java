@@ -13,6 +13,7 @@ import javax.annotation.Nullable;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.joml.Vector3i;
+import org.joml.Vector3ic;
 
 public class Transform {
    @Nonnull
@@ -109,11 +110,11 @@ public class Transform {
       this(new Vector3d(), new Rotation3f(Float.NaN, Float.NaN, Float.NaN));
    }
 
-   public Transform(@Nonnull Vector3i position) {
+   public Transform(@Nonnull Vector3ic position) {
       this(new Vector3d(position), new Rotation3f(Float.NaN, Float.NaN, Float.NaN));
    }
 
-   public Transform(@Nonnull Vector3d position) {
+   public Transform(@Nonnull Vector3dc position) {
       this(new Vector3d(position), new Rotation3f(Float.NaN, Float.NaN, Float.NaN));
    }
 
@@ -127,6 +128,10 @@ public class Transform {
 
    public Transform(@Nonnull Transform transform) {
       this(new Vector3d(transform.position), new Rotation3f(transform.rotation));
+   }
+
+   public Transform(@Nonnull Vector3dc position, @Nonnull Rotation3fc rotation) {
+      this(new Vector3d(position), new Rotation3f(rotation));
    }
 
    public Transform(@Nonnull Vector3d position, @Nonnull Rotation3f rotation) {
@@ -241,7 +246,7 @@ public class Transform {
    }
 
    public static void applyMaskedRelativeTransform(
-      @Nonnull Transform transform, byte relativeMask, @Nonnull Vector3d sourcePosition, @Nonnull Rotation3f sourceRotation, @Nonnull Vector3i blockPosition
+      @Nonnull Transform transform, byte relativeMask, @Nonnull Vector3dc sourcePosition, @Nonnull Rotation3fc sourceRotation, @Nonnull Vector3ic blockPosition
    ) {
       if (relativeMask != 0) {
          Vector3d position = transform.position;

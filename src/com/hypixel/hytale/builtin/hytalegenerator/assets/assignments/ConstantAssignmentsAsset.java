@@ -14,7 +14,7 @@ public class ConstantAssignmentsAsset extends AssignmentsAsset {
    public static final BuilderCodec<ConstantAssignmentsAsset> CODEC = BuilderCodec.builder(
          ConstantAssignmentsAsset.class, ConstantAssignmentsAsset::new, AssignmentsAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Prop", PropAsset.CODEC, true), (asset, v) -> asset.propAsset = v, asset -> asset.propAsset)
+      .append(new KeyedCodec<>("Prop", PropAsset.CODEC, true), (asset, value) -> asset.propAsset = value, asset -> asset.propAsset)
       .add()
       .build();
    private PropAsset propAsset = new EmptyPropAsset();

@@ -13,7 +13,7 @@ public class YOverrideDensityAsset extends DensityAsset {
    public static final BuilderCodec<YOverrideDensityAsset> CODEC = BuilderCodec.builder(
          YOverrideDensityAsset.class, YOverrideDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Value", Codec.DOUBLE, true), (t, k) -> t.value = k, t -> t.value)
+      .append(new KeyedCodec<>("Value", Codec.DOUBLE, true), (asset, value) -> asset.value = value, asset -> asset.value)
       .add()
       .build();
    private double value;

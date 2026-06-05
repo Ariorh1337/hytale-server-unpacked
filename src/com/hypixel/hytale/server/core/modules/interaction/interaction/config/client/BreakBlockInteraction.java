@@ -137,7 +137,7 @@ public class BreakBlockInteraction extends SimpleBlockInteraction {
                      throw new UnsupportedOperationException("GameMode is not supported");
                   case Adventure:
                      BlockHarvestUtils.performBlockDamage(
-                        ref, targetBlock, ownerHeldItem, null, this.toolId, this.matchTool, 1.0F, 0, chunkReference, commandBuffer, chunkStoreStore
+                        ref, targetBlock, ownerHeldItem, null, this.toolId, this.matchTool, 1.0F, 0, false, chunkReference, commandBuffer, chunkStoreStore
                      );
                      break;
                   case Creative:

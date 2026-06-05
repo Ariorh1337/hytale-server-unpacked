@@ -22,7 +22,9 @@ public class Jitter3dPositionProviderAsset extends PositionProviderAsset {
       .append(new KeyedCodec<>("Seed", Codec.STRING, true), (asset, value) -> asset.seed = value, asset -> asset.seed)
       .add()
       .append(
-         new KeyedCodec<>("Positions", PositionProviderAsset.CODEC, true), (asset, v) -> asset.positionProviderAsset = v, asset -> asset.positionProviderAsset
+         new KeyedCodec<>("Positions", PositionProviderAsset.CODEC, true),
+         (asset, value) -> asset.positionProviderAsset = value,
+         asset -> asset.positionProviderAsset
       )
       .add()
       .build();
@@ -30,7 +32,7 @@ public class Jitter3dPositionProviderAsset extends PositionProviderAsset {
    @Nonnull
    private String seed = "";
    @Nonnull
-   private PositionProviderAsset positionProviderAsset = new ListPositionProviderAsset();
+   private PositionProviderAsset positionProviderAsset = ListPositionProviderAsset.INSTANCE;
 
    @Nonnull
    @Override

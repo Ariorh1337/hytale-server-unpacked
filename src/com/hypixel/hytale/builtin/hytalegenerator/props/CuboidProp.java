@@ -21,7 +21,7 @@ public class CuboidProp extends Prop {
       this.bounds = bounds.clone();
       this.materialProvider = materialProvider;
       this.rIntersectingBounds = new Bounds3i();
-      this.rContext = new MaterialProvider.Context(new Vector3i(), 1.0, 0, 0, 0, 0, null, Double.MAX_VALUE);
+      this.rContext = new MaterialProvider.Context(new Vector3i(), 1.0, 0, 0, 0, 0, null, Double.MAX_VALUE, null, null);
    }
 
    @Override

@@ -14,7 +14,7 @@ public class ImportedVectorProviderAsset extends VectorProviderAsset {
    public static final BuilderCodec<ImportedVectorProviderAsset> CODEC = BuilderCodec.builder(
          ImportedVectorProviderAsset.class, ImportedVectorProviderAsset::new, VectorProviderAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Name", Codec.STRING, true), (t, k) -> t.importedNodeName = k, k -> k.importedNodeName)
+      .append(new KeyedCodec<>("Name", Codec.STRING, true), (asset, value) -> asset.importedNodeName = value, asset -> asset.importedNodeName)
       .add()
       .build();
    private String importedNodeName = "";

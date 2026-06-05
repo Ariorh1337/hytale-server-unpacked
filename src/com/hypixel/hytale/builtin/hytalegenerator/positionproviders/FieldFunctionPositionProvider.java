@@ -27,6 +27,8 @@ public class FieldFunctionPositionProvider extends PositionProvider {
       public void accept(@NonNullDecl Vector3d position, @NonNullDecl Control control) {
          FieldFunctionPositionProvider.this.rDensityContext.position = position;
          FieldFunctionPositionProvider.this.rDensityContext.positionsAnchor = FieldFunctionPositionProvider.this.rContext.anchor;
+         FieldFunctionPositionProvider.this.rDensityContext.densityAnchor = FieldFunctionPositionProvider.this.rContext.anchor;
+         FieldFunctionPositionProvider.this.rDensityContext.graphNode = FieldFunctionPositionProvider.this.rContext.graphNode;
          double value = FieldFunctionPositionProvider.this.field.process(FieldFunctionPositionProvider.this.rDensityContext);
 
          for (FieldFunctionPositionProvider.Delimiter delimiter : FieldFunctionPositionProvider.this.delimiters) {

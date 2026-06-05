@@ -44,4 +44,10 @@ public class AssignedPropDistributionAsset extends PropDistributionAsset {
       Assignments assignments = this.assignmentsAsset.build(new AssignmentsAsset.Argument(argument));
       return new AssignedPropDistribution(propDistribution, assignments, this.isOverrideAllProps);
    }
+
+   @Override
+   public void cleanUp() {
+      this.propDistributionAsset.cleanUp();
+      this.assignmentsAsset.cleanUp();
+   }
 }

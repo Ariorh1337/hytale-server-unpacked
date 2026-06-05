@@ -14,7 +14,7 @@ public class BlockSetPatternAsset extends PatternAsset {
    public static final BuilderCodec<BlockSetPatternAsset> CODEC = BuilderCodec.builder(
          BlockSetPatternAsset.class, BlockSetPatternAsset::new, PatternAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("BlockSet", MaterialSetAsset.CODEC, true), (t, k) -> t.materialSetAsset = k, k -> k.materialSetAsset)
+      .append(new KeyedCodec<>("BlockSet", MaterialSetAsset.CODEC, true), (asset, value) -> asset.materialSetAsset = value, asset -> asset.materialSetAsset)
       .add()
       .build();
    private MaterialSetAsset materialSetAsset = new MaterialSetAsset();
@@ -22,7 +22,7 @@ public class BlockSetPatternAsset extends PatternAsset {
    @Nonnull
    @Override
    public Pattern build(@Nonnull PatternAsset.Argument argument) {
-      if (super.isSkipped()) {
+      if (super.skip()) {
          return ConstantPattern.INSTANCE_FALSE;
       }
 

@@ -15,9 +15,9 @@ public class RotatorDensityAsset extends DensityAsset {
    public static final BuilderCodec<RotatorDensityAsset> CODEC = BuilderCodec.builder(
          RotatorDensityAsset.class, RotatorDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("NewYAxis", Vector3dUtil.CODEC, true), (t, k) -> t.newYAxis = k, t -> t.newYAxis)
+      .append(new KeyedCodec<>("NewYAxis", Vector3dUtil.CODEC, true), (asset, value) -> asset.newYAxis = value, asset -> asset.newYAxis)
       .add()
-      .append(new KeyedCodec<>("SpinAngle", Codec.DOUBLE, true), (t, k) -> t.spinAngle = k, t -> t.spinAngle)
+      .append(new KeyedCodec<>("SpinAngle", Codec.DOUBLE, true), (asset, value) -> asset.spinAngle = value, asset -> asset.spinAngle)
       .add()
       .build();
    private Vector3d newYAxis = new Vector3d();

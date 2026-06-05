@@ -1,8 +1,8 @@
 package com.hypixel.hytale.server.worldgen.benchmark;
 
 import com.hypixel.hytale.server.core.universe.world.worldgen.IWorldGenBenchmark;
-import java.util.SortedMap;
-import java.util.TreeMap;
+import it.unimi.dsi.fastutil.objects.Object2IntAVLTreeMap;
+import it.unimi.dsi.fastutil.objects.Object2IntSortedMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -30,7 +30,7 @@ public class ChunkWorldgenBenchmark implements IWorldGenBenchmark {
    @Nonnull
    @Override
    public CompletableFuture<String> buildReport() {
-      SortedMap<String, Integer> map = new TreeMap<>(String::compareToIgnoreCase);
+      Object2IntSortedMap<String> map = new Object2IntAVLTreeMap<>(String::compareToIgnoreCase);
       StringBuilder sb = new StringBuilder();
       sb.append("Generated prefab counts: \n");
       this.prefabCounts.forEach((key, value) -> map.put(key, value.get()));

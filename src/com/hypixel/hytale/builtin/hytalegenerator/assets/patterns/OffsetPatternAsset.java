@@ -14,9 +14,9 @@ public class OffsetPatternAsset extends PatternAsset {
    public static final BuilderCodec<OffsetPatternAsset> CODEC = BuilderCodec.builder(
          OffsetPatternAsset.class, OffsetPatternAsset::new, PatternAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Pattern", PatternAsset.CODEC, true), (t, k) -> t.patternAsset = k, k -> k.patternAsset)
+      .append(new KeyedCodec<>("Pattern", PatternAsset.CODEC, true), (asset, value) -> asset.patternAsset = value, asset -> asset.patternAsset)
       .add()
-      .append(new KeyedCodec<>("Offset", Vector3iUtil.CODEC, true), (t, k) -> t.offset = k, k -> k.offset)
+      .append(new KeyedCodec<>("Offset", Vector3iUtil.CODEC, true), (asset, value) -> asset.offset = value, asset -> asset.offset)
       .add()
       .build();
    private PatternAsset patternAsset = new ConstantPatternAsset();
@@ -25,7 +25,7 @@ public class OffsetPatternAsset extends PatternAsset {
    @Nonnull
    @Override
    public Pattern build(@Nonnull PatternAsset.Argument argument) {
-      if (super.isSkipped()) {
+      if (super.skip()) {
          return ConstantPattern.INSTANCE_FALSE;
       }
 

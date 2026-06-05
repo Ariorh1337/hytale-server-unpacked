@@ -18,9 +18,13 @@ public class NoiseThicknessAsset extends LayerAsset {
    public static final BuilderCodec<NoiseThicknessAsset> CODEC = BuilderCodec.builder(
          NoiseThicknessAsset.class, NoiseThicknessAsset::new, LayerAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("ThicknessFunctionXZ", DensityAsset.CODEC, true), (asset, k) -> asset.densityAsset = k, asset -> asset.densityAsset)
+      .append(new KeyedCodec<>("ThicknessFunctionXZ", DensityAsset.CODEC, true), (asset, value) -> asset.densityAsset = value, asset -> asset.densityAsset)
       .add()
-      .append(new KeyedCodec<>("Material", MaterialProviderAsset.CODEC, true), (t, k) -> t.materialProviderAsset = k, k -> k.materialProviderAsset)
+      .append(
+         new KeyedCodec<>("Material", MaterialProviderAsset.CODEC, true),
+         (asset, value) -> asset.materialProviderAsset = value,
+         asset -> asset.materialProviderAsset
+      )
       .add()
       .build();
    private DensityAsset densityAsset = new ConstantDensityAsset();

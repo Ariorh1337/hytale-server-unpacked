@@ -24,8 +24,8 @@ public class SwitchDensityAsset extends DensityAsset {
       )
       .append(
          new KeyedCodec<>("SwitchCases", new ArrayCodec<>(SwitchDensityAsset.SwitchCaseAsset.CODEC, SwitchDensityAsset.SwitchCaseAsset[]::new), false),
-         (t, k) -> t.switchCaseAssets = k,
-         t -> t.switchCaseAssets
+         (asset, value) -> asset.switchCaseAssets = value,
+         asset -> asset.switchCaseAssets
       )
       .add()
       .build();
@@ -77,14 +77,14 @@ public class SwitchDensityAsset extends DensityAsset {
             SwitchDensityAsset.SwitchCaseAsset.class,
             SwitchDensityAsset.SwitchCaseAsset::new,
             Codec.STRING,
-            (asset, id) -> asset.id = id,
-            config -> config.id,
-            (config, data) -> config.data = data,
-            config -> config.data
+            (asset, value) -> asset.id = value,
+            asset -> asset.id,
+            (asset, value) -> asset.data = value,
+            asset -> asset.data
          )
-         .append(new KeyedCodec<>("CaseState", Codec.STRING, true), (t, y) -> t.caseState = y, t -> t.caseState)
+         .append(new KeyedCodec<>("CaseState", Codec.STRING, true), (asset, value) -> asset.caseState = value, asset -> asset.caseState)
          .add()
-         .append(new KeyedCodec<>("Density", DensityAsset.CODEC, true), (t, out) -> t.densityAsset = out, t -> t.densityAsset)
+         .append(new KeyedCodec<>("Density", DensityAsset.CODEC, true), (asset, value) -> asset.densityAsset = value, asset -> asset.densityAsset)
          .add()
          .build();
       private String id;

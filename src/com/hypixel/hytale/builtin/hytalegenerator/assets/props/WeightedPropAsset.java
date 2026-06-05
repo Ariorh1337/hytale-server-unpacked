@@ -62,10 +62,10 @@ public class WeightedPropAsset extends PropAsset {
             WeightedPropAsset.EntryAsset.class,
             WeightedPropAsset.EntryAsset::new,
             Codec.STRING,
-            (asset, id) -> asset.id = id,
-            config -> config.id,
-            (config, data) -> config.data = data,
-            config -> config.data
+            (asset, value) -> asset.id = value,
+            asset -> asset.id,
+            (asset, value) -> asset.data = value,
+            asset -> asset.data
          )
          .append(new KeyedCodec<>("Weight", Codec.DOUBLE, true), (asset, value) -> asset.weight = value, asset -> asset.weight)
          .addValidator(Validators.greaterThan(0.0))

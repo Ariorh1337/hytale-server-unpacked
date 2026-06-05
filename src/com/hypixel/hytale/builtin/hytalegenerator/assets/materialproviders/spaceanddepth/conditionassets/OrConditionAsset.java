@@ -15,8 +15,8 @@ public class OrConditionAsset extends ConditionAsset {
    public static final BuilderCodec<OrConditionAsset> CODEC = BuilderCodec.builder(OrConditionAsset.class, OrConditionAsset::new, ConditionAsset.ABSTRACT_CODEC)
       .append(
          new KeyedCodec<>("Conditions", new ArrayCodec<>(ConditionAsset.CODEC, ConditionAsset[]::new), true),
-         (t, k) -> t.conditionAssets = k,
-         k -> k.conditionAssets
+         (asset, value) -> asset.conditionAssets = value,
+         asset -> asset.conditionAssets
       )
       .addValidator(Validators.nonNullArrayElements())
       .add()

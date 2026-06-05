@@ -16,10 +16,14 @@ public class ConstantThicknessLayerAsset extends LayerAsset {
    public static final BuilderCodec<ConstantThicknessLayerAsset> CODEC = BuilderCodec.builder(
          ConstantThicknessLayerAsset.class, ConstantThicknessLayerAsset::new, LayerAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Thickness", Codec.INTEGER, true), (t, k) -> t.thickness = k, k -> k.thickness)
+      .append(new KeyedCodec<>("Thickness", Codec.INTEGER, true), (asset, value) -> asset.thickness = value, asset -> asset.thickness)
       .addValidator(Validators.greaterThanOrEqual(0))
       .add()
-      .append(new KeyedCodec<>("Material", MaterialProviderAsset.CODEC, true), (t, k) -> t.materialProviderAsset = k, k -> k.materialProviderAsset)
+      .append(
+         new KeyedCodec<>("Material", MaterialProviderAsset.CODEC, true),
+         (asset, value) -> asset.materialProviderAsset = value,
+         asset -> asset.materialProviderAsset
+      )
       .add()
       .build();
    private int thickness;

@@ -20,9 +20,9 @@ public class CellValueReturnTypeAsset extends ReturnTypeAsset {
    public static final BuilderCodec<CellValueReturnTypeAsset> CODEC = BuilderCodec.builder(
          CellValueReturnTypeAsset.class, CellValueReturnTypeAsset::new, ReturnTypeAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Density", DensityAsset.CODEC, true), (t, k) -> t.densityAsset = k, t -> t.densityAsset)
+      .append(new KeyedCodec<>("Density", DensityAsset.CODEC, true), (asset, value) -> asset.densityAsset = value, asset -> asset.densityAsset)
       .add()
-      .append(new KeyedCodec<>("DefaultValue", Codec.DOUBLE, false), (t, k) -> t.defaultValue = k, t -> t.defaultValue)
+      .append(new KeyedCodec<>("DefaultValue", Codec.DOUBLE, false), (asset, value) -> asset.defaultValue = value, asset -> asset.defaultValue)
       .add()
       .build();
    private DensityAsset densityAsset = new ConstantDensityAsset();

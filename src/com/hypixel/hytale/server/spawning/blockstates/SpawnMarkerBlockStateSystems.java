@@ -197,9 +197,14 @@ public class SpawnMarkerBlockStateSystems {
       ) {
          SpawnMarkerBlockReference marker = archetypeChunk.getComponent(index, this.componentType);
          Vector3i pos = marker.getBlockPosition();
-         WorldChunk chunk = store.getExternalData().getWorld().getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(pos.x, pos.z));
-         if (chunk != null) {
-            Ref<ChunkStore> blockEntityRef = chunk.getBlockComponentEntity(pos.x, pos.y, pos.z);
+         ChunkStore chunkStore = store.getExternalData().getWorld().getChunkStore();
+         long chunkIndex = ChunkUtil.indexChunkFromBlock(pos.x, pos.z);
+         Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(chunkIndex);
+         WorldChunk worldChunkComponent = chunkRef != null && chunkRef.isValid()
+            ? chunkStore.getStore().getComponent(chunkRef, WorldChunk.getComponentType())
+            : null;
+         if (worldChunkComponent != null) {
+            Ref<ChunkStore> blockEntityRef = worldChunkComponent.getBlockComponentEntity(pos.x, pos.y, pos.z);
             if (blockEntityRef != null && blockEntityRef.getStore().getComponent(blockEntityRef, SpawnMarkerBlock.getComponentType()) == null) {
                Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
                commandBuffer.removeEntity(ref, RemoveReason.REMOVE);

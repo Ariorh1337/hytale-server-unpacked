@@ -15,7 +15,7 @@ public class DensityTerrainAsset extends TerrainAsset {
    public static final BuilderCodec<DensityTerrainAsset> CODEC = BuilderCodec.builder(
          DensityTerrainAsset.class, DensityTerrainAsset::new, TerrainAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Density", DensityAsset.CODEC, true), (t, k) -> t.densityAsset = k, t -> t.densityAsset)
+      .append(new KeyedCodec<>("Density", DensityAsset.CODEC, true), (asset, value) -> asset.densityAsset = value, asset -> asset.densityAsset)
       .add()
       .build();
    @Nonnull

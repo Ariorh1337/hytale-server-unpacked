@@ -13,7 +13,7 @@ import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
-import com.hypixel.hytale.server.core.universe.world.meta.state.RespawnBlock;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 import org.joml.Vector3i;
@@ -24,7 +24,7 @@ public class OverrideNearbyRespawnPointPage extends RespawnPointPage {
    @Nonnull
    private final Vector3i respawnPointPosition;
    @Nonnull
-   private final RespawnBlock respawnPointToAdd;
+   private final Ref<ChunkStore> blockRef;
    @Nonnull
    private final PlayerRespawnPointData[] nearbyRespawnPoints;
    private final int radiusLimitRespawnPoint;
@@ -33,13 +33,13 @@ public class OverrideNearbyRespawnPointPage extends RespawnPointPage {
       @Nonnull PlayerRef playerRef,
       @Nonnull InteractionType interactionType,
       @Nonnull Vector3i respawnPointPosition,
-      @Nonnull RespawnBlock respawnPointToAdd,
+      @Nonnull Ref<ChunkStore> blockRef,
       @Nonnull PlayerRespawnPointData[] nearbyRespawnPoints,
       int radiusLimitRespawnPoint
    ) {
       super(playerRef, interactionType);
       this.respawnPointPosition = respawnPointPosition;
-      this.respawnPointToAdd = respawnPointToAdd;
+      this.blockRef = blockRef;
       this.nearbyRespawnPoints = nearbyRespawnPoints;
       this.radiusLimitRespawnPoint = radiusLimitRespawnPoint;
    }
@@ -86,7 +86,7 @@ public class OverrideNearbyRespawnPointPage extends RespawnPointPage {
    public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull RespawnPointPage.RespawnPointEventData data) {
       String respawnPointName = data.getRespawnPointName();
       if (respawnPointName != null) {
-         this.setRespawnPointForPlayer(ref, store, this.respawnPointPosition, this.respawnPointToAdd, respawnPointName, this.nearbyRespawnPoints);
+         this.setRespawnPointForPlayer(ref, store, this.respawnPointPosition, this.blockRef, respawnPointName, this.nearbyRespawnPoints);
       } else if ("Cancel".equals(data.getAction())) {
          Player playerComponent = store.getComponent(ref, Player.getComponentType());
          if (playerComponent != null) {

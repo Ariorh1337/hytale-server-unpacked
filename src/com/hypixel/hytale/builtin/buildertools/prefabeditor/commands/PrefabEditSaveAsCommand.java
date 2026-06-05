@@ -8,6 +8,7 @@ import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabEditSessionMan
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabEditingMetadata;
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.saving.PrefabSaver;
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.saving.PrefabSaverSettings;
+import com.hypixel.hytale.builtin.buildertools.prefabeditor.saving.SupportMode;
 import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
@@ -38,7 +39,8 @@ public class PrefabEditSaveAsCommand extends AbstractAsyncPlayerCommand {
    private final FlagArg overwriteArg = this.withFlagArg("overwrite", "server.commands.editprefab.save.overwrite.desc");
    private final FlagArg emptyArg = this.withFlagArg("empty", "server.commands.editprefab.save.empty.desc");
    private final FlagArg noUpdateArg = this.withFlagArg("noUpdate", "server.commands.editprefab.saveAs.noUpdate.desc");
-   private final FlagArg clearSupportArg = this.withFlagArg("clearSupport", "server.commands.editprefab.save.clearSupport.desc");
+   private final FlagArg removeSupportArg = this.withFlagArg("removeSupport", "server.commands.editprefab.save.removeSupport.desc");
+   private final FlagArg setupSupportArg = this.withFlagArg("setupSupport", "server.commands.editprefab.save.setupSupport.desc");
    private final DefaultArg<String> packArg = this.withDefaultArg(
       "pack", "server.commands.editprefab.save.pack.desc", ArgTypes.STRING, "", "server.commands.editprefab.save.pack.desc"
    );
@@ -72,7 +74,14 @@ public class PrefabEditSaveAsCommand extends AbstractAsyncPlayerCommand {
       prefabSaverSettings.setEntities(!this.noEntitiesArg.provided(context));
       prefabSaverSettings.setOverwriteExisting(this.overwriteArg.get(context));
       prefabSaverSettings.setEmpty(this.emptyArg.get(context));
-      prefabSaverSettings.setClearSupportValues(this.clearSupportArg.get(context));
+      boolean removeSupport = this.removeSupportArg.get(context);
+      boolean setupSupport = this.setupSupportArg.get(context);
+      if (setupSupport) {
+         prefabSaverSettings.setSupportMode(SupportMode.CALCULATE);
+      } else if (removeSupport) {
+         prefabSaverSettings.setSupportMode(SupportMode.REMOVE);
+      }
+
       PrefabEditingMetadata selectedPrefab = prefabEditSession.getSelectedPrefab(uuid);
       String packName = this.packArg.get(context);
       Path sourcePrefabPath = selectedPrefab != null ? selectedPrefab.getPrefabPath() : null;
@@ -83,12 +92,23 @@ public class PrefabEditSaveAsCommand extends AbstractAsyncPlayerCommand {
 
       BuilderToolsUserData.get(playerComponent).setLastSavePack(targetPack.getName());
       Path prefabRootPath = PrefabStore.get().getAssetPrefabsPathForPack(targetPack);
-      if (!PathUtil.isChildOf(prefabRootPath, prefabRootPath.resolve(this.fileNameArg.get(context))) && !SingleplayerModule.isOwner(playerRef)) {
+      String fileName = this.fileNameArg.get(context).trim();
+      if (fileName.isBlank()) {
+         context.sendMessage(Message.translation("server.builderTools.prefabSave.nameRequired"));
+         return CompletableFuture.completedFuture(null);
+      }
+
+      if (fileName.contains("..")) {
          context.sendMessage(Message.translation("server.builderTools.attemptedToSaveOutsidePrefabsDir"));
          return CompletableFuture.completedFuture(null);
       }
 
-      Path prefabSavePath = prefabRootPath.resolve(this.fileNameArg.get(context));
+      if (!PathUtil.isChildOf(prefabRootPath, prefabRootPath.resolve(fileName)) && !SingleplayerModule.isOwner(playerRef)) {
+         context.sendMessage(Message.translation("server.builderTools.attemptedToSaveOutsidePrefabsDir"));
+         return CompletableFuture.completedFuture(null);
+      }
+
+      Path prefabSavePath = prefabRootPath.resolve(fileName);
       if (prefabSavePath.toString().endsWith("/")) {
          context.sendMessage(Message.translation("server.commands.editprefab.saveAs.errors.notAFile"));
          return CompletableFuture.completedFuture(null);

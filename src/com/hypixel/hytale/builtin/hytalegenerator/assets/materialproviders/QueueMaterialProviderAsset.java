@@ -15,7 +15,11 @@ public class QueueMaterialProviderAsset extends MaterialProviderAsset {
    public static final BuilderCodec<QueueMaterialProviderAsset> CODEC = BuilderCodec.builder(
          QueueMaterialProviderAsset.class, QueueMaterialProviderAsset::new, MaterialProviderAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Queue", new ArrayCodec<>(MaterialProviderAsset.CODEC, MaterialProviderAsset[]::new), true), (t, k) -> t.queue = k, k -> k.queue)
+      .append(
+         new KeyedCodec<>("Queue", new ArrayCodec<>(MaterialProviderAsset.CODEC, MaterialProviderAsset[]::new), true),
+         (asset, value) -> asset.queue = value,
+         asset -> asset.queue
+      )
       .add()
       .build();
    private MaterialProviderAsset[] queue = new MaterialProviderAsset[0];

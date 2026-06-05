@@ -5,8 +5,6 @@ import com.hypixel.hytale.assetstore.AssetKeyValidator;
 import com.hypixel.hytale.assetstore.AssetRegistry;
 import com.hypixel.hytale.assetstore.AssetStore;
 import com.hypixel.hytale.assetstore.codec.AssetBuilderCodec;
-import com.hypixel.hytale.assetstore.event.LoadedAssetsEvent;
-import com.hypixel.hytale.assetstore.event.RemovedAssetsEvent;
 import com.hypixel.hytale.assetstore.map.IndexedLookupTableAssetMap;
 import com.hypixel.hytale.assetstore.map.JsonAssetWithMap;
 import com.hypixel.hytale.codec.Codec;
@@ -16,7 +14,6 @@ import com.hypixel.hytale.codec.validation.ValidationResults;
 import com.hypixel.hytale.codec.validation.ValidatorCache;
 import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.common.util.AudioUtil;
-import com.hypixel.hytale.server.core.asset.type.audiostate.config.AudioState;
 import com.hypixel.hytale.server.core.asset.type.audiostate.config.AudioStateResolver;
 import com.hypixel.hytale.server.core.asset.type.audiostate.config.StateBindingConfig;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
@@ -69,12 +66,26 @@ public class AudioCategory
          "Subscribe this AudioCategory to one or more AudioState axes. Per-state volume deltas drive the category's volume modifier and cascade to voices in descendant categories."
       )
       .add()
-      .afterDecode(category -> AudioStateResolver.resolveBindings(category.stateBindings))
+      .<AudioCategoryDuckingRuleConfig[]>append(
+         new KeyedCodec<>("DuckingRules", AudioCategoryDuckingRuleConfig.CODEC_ARRAY),
+         (category, v) -> category.duckingRules = v,
+         category -> category.duckingRules
+      )
+      .documentation(
+         "Per-bus default duck rules. When any voice is routed through this category (or any descendant category), each rule attenuates its TargetCategory."
+      )
+      .add()
+      .<Float>append(new KeyedCodec<>("MaxDuckingDb", Codec.FLOAT), (category, f) -> category.maxDuckingDb = f, category -> category.maxDuckingDb)
+      .addValidator(Validators.range(-100.0F, 0.0F))
+      .documentation("Ceiling on how much this category can be ducked.")
+      .add()
+      .afterDecode(AudioCategory::processConfig)
       .validator((category, results) -> {
          validateParentChain(category, results);
          validateWellKnownRootHasNoParent(category, results);
          validateWellKnownRootHasUnityVolume(category, results);
          AudioStateResolver.validateBindings(category.stateBindings, "AudioCategory '" + category.id + "'", results);
+         AudioCategoryDuckingRuleConfig.validateUniqueTargets(category.duckingRules, "AudioCategory '" + category.id + "'", results);
       })
       .build();
    public static final ValidatorCache<String> VALIDATOR_CACHE = new ValidatorCache<>(new AssetKeyValidator<>(AudioCategory::getAssetStore));
@@ -84,6 +95,9 @@ public class AudioCategory
    protected float volume = AudioUtil.decibelsToLinearGain(0.0F);
    @Nullable
    protected StateBindingConfig[] stateBindings;
+   @Nullable
+   protected AudioCategoryDuckingRuleConfig[] duckingRules;
+   protected float maxDuckingDb = -100.0F;
 
    private static void validateParentChain(@Nonnull AudioCategory category, @Nonnull ValidationResults results) {
       if (category.data != null) {
@@ -156,6 +170,10 @@ public class AudioCategory
       return (IndexedLookupTableAssetMap<String, AudioCategory>)getAssetStore().getAssetMap();
    }
 
+   protected static void processConfig(@Nonnull AudioCategory category) {
+      AudioStateResolver.resolveBindings(category.stateBindings);
+   }
+
    public AudioCategory(String id) {
       this.id = id;
    }
@@ -167,30 +185,13 @@ public class AudioCategory
       return this.id;
    }
 
-   public void refreshAudioStateResolution() {
-      AudioStateResolver.resolveBindings(this.stateBindings);
-   }
-
-   public static void onAudioStateLoaded(@Nonnull LoadedAssetsEvent<String, AudioState, IndexedLookupTableAssetMap<String, AudioState>> event) {
-      if (!event.isInitial()) {
-         refreshAllAudioStateResolutions();
-      }
-   }
-
-   public static void onAudioStateRemoved(@Nonnull RemovedAssetsEvent<String, AudioState, IndexedLookupTableAssetMap<String, AudioState>> event) {
-      refreshAllAudioStateResolutions();
-   }
-
-   private static void refreshAllAudioStateResolutions() {
-      for (AudioCategory cat : getAssetMap().getAssetMap().values()) {
-         if (cat != null) {
-            cat.refreshAudioStateResolution();
-         }
-      }
-   }
-
    public float getVolume() {
       return this.volume;
+   }
+
+   @Nullable
+   public AudioCategoryDuckingRuleConfig[] getDuckingRules() {
+      return this.duckingRules;
    }
 
    @Nonnull
@@ -206,6 +207,8 @@ public class AudioCategory
       packet.volume = this.volume;
       packet.parentAudioCategoryIndex = this.resolveParentIndex();
       packet.stateBindings = AudioStateResolver.toPacketArray(this.stateBindings);
+      packet.duckingRules = AudioCategoryDuckingRuleConfig.toPacketArray(this.duckingRules);
+      packet.maxDuckingDb = this.maxDuckingDb;
       return packet;
    }
 

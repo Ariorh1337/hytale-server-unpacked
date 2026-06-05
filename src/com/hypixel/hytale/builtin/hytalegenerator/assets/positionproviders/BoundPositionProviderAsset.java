@@ -23,7 +23,7 @@ public class BoundPositionProviderAsset extends PositionProviderAsset {
       .add()
       .build();
    private DecimalBounds3dAsset bounds = new DecimalBounds3dAsset();
-   private PositionProviderAsset positionProviderAsset = new ListPositionProviderAsset();
+   private PositionProviderAsset positionProviderAsset = ListPositionProviderAsset.INSTANCE;
 
    @Nonnull
    @Override

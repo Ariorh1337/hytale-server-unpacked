@@ -11,7 +11,7 @@ public class NotConditionAsset extends ConditionAsset {
    public static final BuilderCodec<NotConditionAsset> CODEC = BuilderCodec.builder(
          NotConditionAsset.class, NotConditionAsset::new, ConditionAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Condition", ConditionAsset.CODEC, true), (t, k) -> t.conditionAsset = k, k -> k.conditionAsset)
+      .append(new KeyedCodec<>("Condition", ConditionAsset.CODEC, true), (asset, value) -> asset.conditionAsset = value, asset -> asset.conditionAsset)
       .add()
       .build();
    private ConditionAsset conditionAsset = new AlwaysTrueConditionAsset();

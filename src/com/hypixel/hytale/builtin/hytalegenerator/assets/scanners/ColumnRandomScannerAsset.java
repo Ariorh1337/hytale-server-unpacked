@@ -17,21 +17,25 @@ public class ColumnRandomScannerAsset extends ScannerAsset {
    public static final BuilderCodec<ColumnRandomScannerAsset> CODEC = BuilderCodec.builder(
          ColumnRandomScannerAsset.class, ColumnRandomScannerAsset::new, ScannerAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("MinY", Codec.INTEGER, true), (t, k) -> t.minY = k, k -> k.minY)
+      .append(new KeyedCodec<>("MinY", Codec.INTEGER, true), (asset, value) -> asset.minY = value, asset -> asset.minY)
       .add()
-      .append(new KeyedCodec<>("MaxY", Codec.INTEGER, true), (t, k) -> t.maxY = k, k -> k.maxY)
+      .append(new KeyedCodec<>("MaxY", Codec.INTEGER, true), (asset, value) -> asset.maxY = value, asset -> asset.maxY)
       .add()
-      .<Integer>append(new KeyedCodec<>("ResultCap", Codec.INTEGER, true), (t, k) -> t.resultCap = k, k -> k.resultCap)
+      .<Integer>append(new KeyedCodec<>("ResultCap", Codec.INTEGER, true), (asset, value) -> asset.resultCap = value, asset -> asset.resultCap)
       .addValidator(Validators.greaterThanOrEqual(0))
       .add()
-      .append(new KeyedCodec<>("Seed", Codec.STRING, false), (t, k) -> t.seed = k, k -> k.seed)
+      .append(new KeyedCodec<>("Seed", Codec.STRING, false), (asset, value) -> asset.seed = value, asset -> asset.seed)
       .add()
-      .<String>append(new KeyedCodec<>("Strategy", Codec.STRING, false), (t, k) -> t.strategyName = k, k -> k.strategyName)
+      .<String>append(new KeyedCodec<>("Strategy", Codec.STRING, false), (asset, value) -> asset.strategyName = value, asset -> asset.strategyName)
       .addValidator(ValidatorUtil.validEnumValue(ColumnRandomScanner.Strategy.values()))
       .add()
-      .append(new KeyedCodec<>("RelativeToPosition", Codec.BOOLEAN, false), (t, k) -> t.isRelativeToPosition = k, k -> k.isRelativeToPosition)
+      .append(
+         new KeyedCodec<>("RelativeToPosition", Codec.BOOLEAN, false),
+         (asset, value) -> asset.isRelativeToPosition = value,
+         asset -> asset.isRelativeToPosition
+      )
       .add()
-      .append(new KeyedCodec<>("BaseHeightName", Codec.STRING, false), (t, k) -> t.baseHeightName = k, k -> k.baseHeightName)
+      .append(new KeyedCodec<>("BaseHeightName", Codec.STRING, false), (asset, value) -> asset.baseHeightName = value, asset -> asset.baseHeightName)
       .add()
       .build();
    private int minY = 0;

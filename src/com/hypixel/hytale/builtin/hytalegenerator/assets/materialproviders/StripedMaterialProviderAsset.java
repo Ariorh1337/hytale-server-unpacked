@@ -22,11 +22,15 @@ public class StripedMaterialProviderAsset extends MaterialProviderAsset {
       )
       .append(
          new KeyedCodec<>("Stripes", new ArrayCodec<>(StripedMaterialProviderAsset.StripeAsset.CODEC, StripedMaterialProviderAsset.StripeAsset[]::new), true),
-         (t, k) -> t.stripeAssets = k,
-         k -> k.stripeAssets
+         (asset, value) -> asset.stripeAssets = value,
+         asset -> asset.stripeAssets
       )
       .add()
-      .append(new KeyedCodec<>("Material", MaterialProviderAsset.CODEC, true), (t, k) -> t.materialProviderAsset = k, k -> k.materialProviderAsset)
+      .append(
+         new KeyedCodec<>("Material", MaterialProviderAsset.CODEC, true),
+         (asset, value) -> asset.materialProviderAsset = value,
+         asset -> asset.materialProviderAsset
+      )
       .add()
       .build();
    private StripedMaterialProviderAsset.StripeAsset[] stripeAssets = new StripedMaterialProviderAsset.StripeAsset[0];
@@ -65,14 +69,14 @@ public class StripedMaterialProviderAsset extends MaterialProviderAsset {
             StripedMaterialProviderAsset.StripeAsset.class,
             StripedMaterialProviderAsset.StripeAsset::new,
             Codec.STRING,
-            (asset, id) -> asset.id = id,
-            config -> config.id,
-            (config, data) -> config.data = data,
-            config -> config.data
+            (asset, value) -> asset.id = value,
+            asset -> asset.id,
+            (asset, value) -> asset.data = value,
+            asset -> asset.data
          )
-         .append(new KeyedCodec<>("TopY", Codec.INTEGER, true), (t, y) -> t.topY = y, t -> t.bottomY)
+         .append(new KeyedCodec<>("TopY", Codec.INTEGER, true), (asset, value) -> asset.topY = value, asset -> asset.topY)
          .add()
-         .append(new KeyedCodec<>("BottomY", Codec.INTEGER, true), (t, y) -> t.bottomY = y, t -> t.bottomY)
+         .append(new KeyedCodec<>("BottomY", Codec.INTEGER, true), (asset, value) -> asset.bottomY = value, asset -> asset.bottomY)
          .add()
          .build();
       private String id;

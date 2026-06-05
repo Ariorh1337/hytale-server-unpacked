@@ -8,6 +8,7 @@ import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabEditSessionMan
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabEditingMetadata;
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.saving.PrefabSaver;
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.saving.PrefabSaverSettings;
+import com.hypixel.hytale.builtin.buildertools.prefabeditor.saving.SupportMode;
 import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
@@ -52,7 +53,9 @@ public class PrefabEditSaveCommand extends AbstractAsyncPlayerCommand {
    @Nonnull
    private final FlagArg confirmArg = this.withFlagArg("confirm", "server.commands.editprefab.save.confirm.desc");
    @Nonnull
-   private final FlagArg clearSupportArg = this.withFlagArg("clearSupport", "server.commands.editprefab.save.clearSupport.desc");
+   private final FlagArg removeSupportArg = this.withFlagArg("removeSupport", "server.commands.editprefab.save.removeSupport.desc");
+   @Nonnull
+   private final FlagArg setupSupportArg = this.withFlagArg("setupSupport", "server.commands.editprefab.save.setupSupport.desc");
 
    private static boolean isPathInAllowedPrefabDirectory(@Nonnull Path path) {
       PrefabStore prefabStore = PrefabStore.get();
@@ -96,7 +99,14 @@ public class PrefabEditSaveCommand extends AbstractAsyncPlayerCommand {
       prefabSaverSettings.setEntities(!this.noEntitiesArg.provided(context));
       prefabSaverSettings.setOverwriteExisting(true);
       prefabSaverSettings.setEmpty(this.emptyArg.get(context));
-      prefabSaverSettings.setClearSupportValues(this.clearSupportArg.get(context));
+      boolean removeSupport = this.removeSupportArg.get(context);
+      boolean setupSupport = this.setupSupportArg.get(context);
+      if (setupSupport) {
+         prefabSaverSettings.setSupportMode(SupportMode.CALCULATE);
+      } else if (removeSupport) {
+         prefabSaverSettings.setSupportMode(SupportMode.REMOVE);
+      }
+
       boolean confirm = this.confirmArg.provided(context);
       String packName = this.packArg.get(context);
       AssetPack targetPack = null;

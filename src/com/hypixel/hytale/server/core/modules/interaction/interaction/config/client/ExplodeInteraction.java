@@ -8,6 +8,7 @@ import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
@@ -100,6 +101,8 @@ public class ExplodeInteraction extends SimpleInstantInteraction {
       Archetype<EntityStore> archetype = commandBuffer.getArchetype(ref);
       boolean isProjectile = archetype.contains(Projectile.getComponentType()) || archetype.contains(ProjectileComponent.getComponentType());
       Damage.Source damageSource = isProjectile ? new Damage.ProjectileSource(ownerRef, ref) : DAMAGE_SOURCE_EXPLOSION;
-      ExplosionUtils.performExplosion(damageSource, position, this.config, isProjectile ? ref : null, commandBuffer, chunkStore);
+      ExplosionUtils.performExplosion(
+         damageSource, position, new Rotation3f(0.0F, 0.0F, 0.0F), this.config, isProjectile ? ref : null, commandBuffer, chunkStore
+      );
    }
 }

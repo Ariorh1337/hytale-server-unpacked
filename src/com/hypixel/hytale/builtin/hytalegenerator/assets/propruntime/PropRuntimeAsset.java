@@ -30,27 +30,35 @@ public class PropRuntimeAsset implements Cleanable, JsonAssetWithMap<String, Def
          PropRuntimeAsset.class,
          PropRuntimeAsset::new,
          Codec.STRING,
-         (asset, id) -> asset.id = id,
-         config -> config.id,
-         (config, data) -> config.data = data,
-         config -> config.data
+         (asset, value) -> asset.id = value,
+         asset -> asset.id,
+         (asset, value) -> asset.data = value,
+         asset -> asset.data
       )
-      .append(new KeyedCodec<>("Runtime", Codec.INTEGER, true), (t, k) -> t.runtime = k, t -> t.runtime)
+      .append(new KeyedCodec<>("Runtime", Codec.INTEGER, true), (asset, value) -> asset.runtime = value, asset -> asset.runtime)
       .add()
-      .append(new KeyedCodec<>("Positions", PositionProviderAsset.CODEC, true), (t, k) -> t.positionProviderAsset = k, t -> t.positionProviderAsset)
+      .append(
+         new KeyedCodec<>("Positions", PositionProviderAsset.CODEC, true),
+         (asset, value) -> asset.positionProviderAsset = value,
+         asset -> asset.positionProviderAsset
+      )
       .add()
-      .append(new KeyedCodec<>("Assignments", AssignmentsAsset.CODEC, true), (t, k) -> t.assignmentsAsset = k, t -> t.assignmentsAsset)
+      .append(new KeyedCodec<>("Assignments", AssignmentsAsset.CODEC, true), (asset, value) -> asset.assignmentsAsset = value, asset -> asset.assignmentsAsset)
       .add()
-      .append(new KeyedCodec<>("PropDistribution", PropDistributionAsset.CODEC, true), (t, k) -> t.propDistributionAsset = k, t -> t.propDistributionAsset)
+      .append(
+         new KeyedCodec<>("PropDistribution", PropDistributionAsset.CODEC, true),
+         (asset, value) -> asset.propDistributionAsset = value,
+         asset -> asset.propDistributionAsset
+      )
       .add()
-      .append(new KeyedCodec<>("Skip", Codec.BOOLEAN, false), (t, k) -> t.skip = k, t -> t.skip)
+      .append(new KeyedCodec<>("Skip", Codec.BOOLEAN, false), (asset, value) -> asset.skip = value, asset -> asset.skip)
       .add()
       .build();
    private String id;
    private AssetExtraInfo.Data data;
    private boolean skip = false;
    private int runtime = 0;
-   private PositionProviderAsset positionProviderAsset = new ListPositionProviderAsset();
+   private PositionProviderAsset positionProviderAsset = ListPositionProviderAsset.INSTANCE;
    private AssignmentsAsset assignmentsAsset = new ConstantAssignmentsAsset();
    private PropDistributionAsset propDistributionAsset = NoPropDistributionAsset.INSTANCE;
 
@@ -65,6 +73,7 @@ public class PropRuntimeAsset implements Cleanable, JsonAssetWithMap<String, Def
    public void cleanUp() {
       this.positionProviderAsset.cleanUp();
       this.assignmentsAsset.cleanUp();
+      this.propDistributionAsset.cleanUp();
    }
 
    public PositionProvider buildPositionProvider_deprecated(

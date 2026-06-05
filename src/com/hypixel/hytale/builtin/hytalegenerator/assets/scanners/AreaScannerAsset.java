@@ -12,15 +12,15 @@ import javax.annotation.Nonnull;
 public class AreaScannerAsset extends ScannerAsset {
    @Nonnull
    public static final BuilderCodec<AreaScannerAsset> CODEC = BuilderCodec.builder(AreaScannerAsset.class, AreaScannerAsset::new, ScannerAsset.ABSTRACT_CODEC)
-      .append(new KeyedCodec<>("ResultCap", Codec.INTEGER, true), (t, k) -> t.resultCap = k, k -> k.resultCap)
+      .append(new KeyedCodec<>("ResultCap", Codec.INTEGER, true), (asset, value) -> asset.resultCap = value, asset -> asset.resultCap)
       .addValidator(Validators.greaterThanOrEqual(0))
       .add()
-      .append(new KeyedCodec<>("ScanShape", AreaScanner.ScanShape.CODEC, false), (t, k) -> t.scanShape = k, t -> t.scanShape)
+      .append(new KeyedCodec<>("ScanShape", AreaScanner.ScanShape.CODEC, false), (asset, value) -> asset.scanShape = value, asset -> asset.scanShape)
       .add()
-      .<Integer>append(new KeyedCodec<>("ScanRange", Codec.INTEGER, false), (t, k) -> t.scanRange = k, t -> t.scanRange)
+      .<Integer>append(new KeyedCodec<>("ScanRange", Codec.INTEGER, false), (asset, value) -> asset.scanRange = value, asset -> asset.scanRange)
       .addValidator(Validators.greaterThan(-1))
       .add()
-      .append(new KeyedCodec<>("ChildScanner", ScannerAsset.CODEC, false), (t, k) -> t.childScannerAsset = k, t -> t.childScannerAsset)
+      .append(new KeyedCodec<>("ChildScanner", ScannerAsset.CODEC, false), (asset, value) -> asset.childScannerAsset = value, asset -> asset.childScannerAsset)
       .add()
       .build();
    private int resultCap = 1;

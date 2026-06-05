@@ -16,13 +16,14 @@ import javax.annotation.Nonnull;
 import org.joml.Vector3d;
 
 public class ListPositionProviderAsset extends PositionProviderAsset {
+   public static final ListPositionProviderAsset INSTANCE = new ListPositionProviderAsset();
    @Nonnull
    public static final BuilderCodec<ListPositionProviderAsset> CODEC = BuilderCodec.builder(
          ListPositionProviderAsset.class, ListPositionProviderAsset::new, PositionProviderAsset.ABSTRACT_CODEC
       )
       .append(
          new KeyedCodec<>("Positions", new ArrayCodec<>(ListPositionProviderAsset.PositionAsset.CODEC, ListPositionProviderAsset.PositionAsset[]::new), true),
-         (asset, v) -> asset.positions = v,
+         (asset, value) -> asset.positions = value,
          asset -> asset.positions
       )
       .add()
@@ -52,16 +53,16 @@ public class ListPositionProviderAsset extends PositionProviderAsset {
             ListPositionProviderAsset.PositionAsset.class,
             ListPositionProviderAsset.PositionAsset::new,
             Codec.STRING,
-            (asset, id) -> asset.id = id,
-            config -> config.id,
-            (config, data) -> config.data = data,
-            config -> config.data
+            (asset, value) -> asset.id = value,
+            asset -> asset.id,
+            (asset, value) -> asset.data = value,
+            asset -> asset.data
          )
-         .append(new KeyedCodec<>("X", Codec.DOUBLE, true), (t, x) -> t.x = x, t -> t.x)
+         .append(new KeyedCodec<>("X", Codec.DOUBLE, true), (asset, value) -> asset.x = value, asset -> asset.x)
          .add()
-         .append(new KeyedCodec<>("Y", Codec.DOUBLE, true), (t, y) -> t.y = y, t -> t.y)
+         .append(new KeyedCodec<>("Y", Codec.DOUBLE, true), (asset, value) -> asset.y = value, asset -> asset.y)
          .add()
-         .append(new KeyedCodec<>("Z", Codec.DOUBLE, true), (t, z) -> t.z = z, t -> t.z)
+         .append(new KeyedCodec<>("Z", Codec.DOUBLE, true), (asset, value) -> asset.z = value, asset -> asset.z)
          .add()
          .build();
       private String id;

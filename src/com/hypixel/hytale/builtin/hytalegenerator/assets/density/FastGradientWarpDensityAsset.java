@@ -14,22 +14,22 @@ public class FastGradientWarpDensityAsset extends DensityAsset {
    public static final BuilderCodec<FastGradientWarpDensityAsset> CODEC = BuilderCodec.builder(
          FastGradientWarpDensityAsset.class, FastGradientWarpDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("WarpScale", Codec.FLOAT, false), (t, k) -> t.warpScale = k, t -> t.warpScale)
+      .append(new KeyedCodec<>("WarpScale", Codec.FLOAT, false), (asset, value) -> asset.warpScale = value, asset -> asset.warpScale)
       .addValidator(Validators.greaterThan(0.0F))
       .add()
-      .<Integer>append(new KeyedCodec<>("WarpOctaves", Codec.INTEGER, false), (t, k) -> t.warpOctaves = k, t -> t.warpOctaves)
+      .<Integer>append(new KeyedCodec<>("WarpOctaves", Codec.INTEGER, false), (asset, value) -> asset.warpOctaves = value, asset -> asset.warpOctaves)
       .addValidator(Validators.greaterThan(0))
       .add()
-      .<Float>append(new KeyedCodec<>("WarpLacunarity", Codec.FLOAT, false), (t, k) -> t.warpLacunarity = k, t -> t.warpLacunarity)
+      .<Float>append(new KeyedCodec<>("WarpLacunarity", Codec.FLOAT, false), (asset, value) -> asset.warpLacunarity = value, asset -> asset.warpLacunarity)
       .addValidator(Validators.greaterThanOrEqual(0.0F))
       .add()
-      .<Float>append(new KeyedCodec<>("WarpPersistence", Codec.FLOAT, false), (t, k) -> t.warpPersistence = k, t -> t.warpPersistence)
+      .<Float>append(new KeyedCodec<>("WarpPersistence", Codec.FLOAT, false), (asset, value) -> asset.warpPersistence = value, asset -> asset.warpPersistence)
       .addValidator(Validators.greaterThanOrEqual(0.0F))
       .add()
-      .<Float>append(new KeyedCodec<>("WarpFactor", Codec.FLOAT, false), (t, k) -> t.warpFactor = k, t -> t.warpFactor)
+      .<Float>append(new KeyedCodec<>("WarpFactor", Codec.FLOAT, false), (asset, value) -> asset.warpFactor = value, asset -> asset.warpFactor)
       .addValidator(Validators.greaterThanOrEqual(0.0F))
       .add()
-      .append(new KeyedCodec<>("Seed", Codec.STRING, false), (t, k) -> t.seed = k, t -> t.seed)
+      .append(new KeyedCodec<>("Seed", Codec.STRING, false), (asset, value) -> asset.seed = value, asset -> asset.seed)
       .add()
       .build();
    private float warpLacunarity = 2.0F;

@@ -329,20 +329,43 @@ public class Rotation3f implements Rotation3fc {
    }
 
    @Nonnull
-   public static Rotation3f lookAt(@Nonnull Vector3d relative) {
+   public static Rotation3f lookAt(@Nonnull Vector3dc eye, @Nonnull Vector3dc target) {
+      return lookAt(eye, target, new Rotation3f());
+   }
+
+   @Nonnull
+   public static Rotation3f lookAt(@Nonnull Vector3dc eye, @Nonnull Vector3dc target, @Nonnull Rotation3f result) {
+      double dx = target.x() - eye.x();
+      double dy = target.y() - eye.y();
+      double dz = target.z() - eye.z();
+      return lookAt(dx, dy, dz, result);
+   }
+
+   @Nonnull
+   public static Rotation3f lookAt(@Nonnull Vector3dc relative) {
       return lookAt(relative, new Rotation3f());
    }
 
    @Nonnull
-   public static Rotation3f lookAt(@Nonnull Vector3d relative, @Nonnull Rotation3f result) {
-      if (!MathUtil.closeToZero(relative.x) || !MathUtil.closeToZero(relative.z)) {
-         float yaw = TrigMathUtil.atan2((float)(-relative.x), (float)(-relative.z));
+   public static Rotation3f lookAt(@Nonnull Vector3dc relative, @Nonnull Rotation3f result) {
+      return lookAt(relative.x(), relative.y(), relative.z(), result);
+   }
+
+   @Nonnull
+   public static Rotation3f lookAt(double dx, double dy, double dz) {
+      return lookAt(dx, dy, dz, new Rotation3f());
+   }
+
+   @Nonnull
+   public static Rotation3f lookAt(double dx, double dy, double dz, @Nonnull Rotation3f result) {
+      if (!MathUtil.closeToZero(dx) || !MathUtil.closeToZero(dz)) {
+         float yaw = TrigMathUtil.atan2((float)(-dx), (float)(-dz));
          result.y = MathUtil.wrapAngle(yaw);
       }
 
-      double length = relative.lengthSquared();
-      if (length > 0.0) {
-         float pitch = (float) (Math.PI / 2) - (float)Math.acos(relative.y / Math.sqrt(length));
+      double lengthSquared = dx * dx + dy * dy + dz * dz;
+      if (lengthSquared > 0.0) {
+         float pitch = (float) (Math.PI / 2) - (float)Math.acos(dy / Math.sqrt(lengthSquared));
          result.x = MathUtil.clamp(pitch, (float) (-Math.PI / 2) + MathUtil.PITCH_EDGE_PADDING, (float) (Math.PI / 2) - MathUtil.PITCH_EDGE_PADDING);
       }
 

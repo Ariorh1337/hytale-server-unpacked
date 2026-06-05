@@ -18,7 +18,7 @@ public class ScalerPositionProviderAsset extends PositionProviderAsset {
    public static final BuilderCodec<ScalerPositionProviderAsset> CODEC = BuilderCodec.builder(
          ScalerPositionProviderAsset.class, ScalerPositionProviderAsset::new, PositionProviderAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Scale", Vector3dUtil.CODEC, true), (asset, v) -> asset.scale = v, asset -> asset.scale)
+      .append(new KeyedCodec<>("Scale", Vector3dUtil.CODEC, true), (asset, value) -> asset.scale = value, asset -> asset.scale)
       .addValidator(new Validator<Vector3d>() {
          public void accept(Vector3d vector, ValidationResults results) {
             if (!ScalerPositionProviderAsset.isValidScale(vector)) {
@@ -33,14 +33,16 @@ public class ScalerPositionProviderAsset extends PositionProviderAsset {
       })
       .add()
       .append(
-         new KeyedCodec<>("Positions", PositionProviderAsset.CODEC, true), (asset, v) -> asset.positionProviderAsset = v, asset -> asset.positionProviderAsset
+         new KeyedCodec<>("Positions", PositionProviderAsset.CODEC, true),
+         (asset, value) -> asset.positionProviderAsset = value,
+         asset -> asset.positionProviderAsset
       )
       .add()
       .build();
    @Nonnull
    private Vector3d scale = new Vector3d();
    @Nonnull
-   private PositionProviderAsset positionProviderAsset = new ListPositionProviderAsset();
+   private PositionProviderAsset positionProviderAsset = ListPositionProviderAsset.INSTANCE;
 
    @Nonnull
    @Override

@@ -3,6 +3,7 @@ package com.hypixel.hytale.builtin.buildertools.commands;
 import com.hypixel.hytale.assetstore.AssetPack;
 import com.hypixel.hytale.builtin.buildertools.BuilderToolsPlugin;
 import com.hypixel.hytale.builtin.buildertools.BuilderToolsUserData;
+import com.hypixel.hytale.builtin.buildertools.prefabeditor.saving.SupportMode;
 import com.hypixel.hytale.builtin.buildertools.prefablist.PrefabPage;
 import com.hypixel.hytale.builtin.buildertools.prefablist.PrefabSavePage;
 import com.hypixel.hytale.builtin.buildertools.utils.RecursivePrefabLoader;
@@ -292,7 +293,9 @@ public class PrefabCommand extends AbstractCommandCollection {
       @Nonnull
       private final FlagArg playerAnchorFlag = this.withFlagArg("playerAnchor", "server.commands.prefab.save.playerAnchor.desc");
       @Nonnull
-      private final FlagArg clearSupportFlag = this.withFlagArg("clearSupport", "server.commands.editprefab.save.clearSupport.desc");
+      private final FlagArg removeSupportFlag = this.withFlagArg("removeSupport", "server.commands.editprefab.save.removeSupport.desc");
+      @Nonnull
+      private final FlagArg setupSupportFlag = this.withFlagArg("setupSupport", "server.commands.editprefab.save.setupSupport.desc");
       @Nonnull
       private final DefaultArg<String> packArg = this.withDefaultArg(
          "pack", "server.commands.prefab.save.pack.desc", ArgTypes.STRING, "", "server.commands.prefab.save.pack.desc"
@@ -312,19 +315,34 @@ public class PrefabCommand extends AbstractCommandCollection {
          AssetPack targetPack = BuilderToolsPlugin.resolveTargetPack(packName != null ? packName : "", playerComponent, context);
          if (targetPack != null) {
             BuilderToolsUserData.get(playerComponent).setLastSavePack(targetPack.getName());
-            String name = this.nameArg.get(context);
-            boolean overwrite = this.overwriteFlag.get(context);
-            boolean entities = this.entitiesFlag.get(context);
-            boolean empty = this.emptyFlag.get(context);
-            boolean clearSupport = this.clearSupportFlag.get(context);
-            Vector3i playerAnchor = this.getPlayerAnchor(ref, store, this.playerAnchorFlag.get(context));
-            BuilderToolsPlugin.addToQueue(
-               playerComponent,
-               playerRef,
-               (r, s, componentAccessor) -> s.saveFromSelection(
-                  r, name, true, overwrite, entities, empty, playerAnchor, clearSupport, targetPack, componentAccessor
-               )
-            );
+            String name = this.nameArg.get(context).trim();
+            if (name.isBlank()) {
+               context.sendMessage(Message.translation("server.builderTools.prefabSave.nameRequired"));
+            } else if (name.contains("..")) {
+               context.sendMessage(Message.translation("server.builderTools.attemptedToSaveOutsidePrefabsDir"));
+            } else {
+               boolean overwrite = this.overwriteFlag.get(context);
+               boolean entities = this.entitiesFlag.get(context);
+               boolean empty = this.emptyFlag.get(context);
+               boolean removeSupport = this.removeSupportFlag.get(context);
+               boolean setupSupport = this.setupSupportFlag.get(context);
+               SupportMode supportMode = SupportMode.KEEP_EXISTING;
+               if (setupSupport) {
+                  supportMode = SupportMode.CALCULATE;
+               } else if (removeSupport) {
+                  supportMode = SupportMode.REMOVE;
+               }
+
+               SupportMode finalSupportMode = supportMode;
+               Vector3i playerAnchor = this.getPlayerAnchor(ref, store, this.playerAnchorFlag.get(context));
+               BuilderToolsPlugin.addToQueue(
+                  playerComponent,
+                  playerRef,
+                  (r, s, componentAccessor) -> s.saveFromSelection(
+                     r, name, true, overwrite, entities, empty, playerAnchor, finalSupportMode, targetPack, componentAccessor
+                  )
+               );
+            }
          }
       }
 

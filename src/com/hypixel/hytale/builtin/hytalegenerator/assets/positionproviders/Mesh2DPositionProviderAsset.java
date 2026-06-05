@@ -16,10 +16,12 @@ public class Mesh2DPositionProviderAsset extends PositionProviderAsset {
          Mesh2DPositionProviderAsset.class, Mesh2DPositionProviderAsset::new, PositionProviderAsset.ABSTRACT_CODEC
       )
       .append(
-         new KeyedCodec<>("PointGenerator", PointGeneratorAsset.CODEC, true), (asset, v) -> asset.pointGeneratorAsset = v, asset -> asset.pointGeneratorAsset
+         new KeyedCodec<>("PointGenerator", PointGeneratorAsset.CODEC, true),
+         (asset, value) -> asset.pointGeneratorAsset = value,
+         asset -> asset.pointGeneratorAsset
       )
       .add()
-      .append(new KeyedCodec<>("PointsY", Codec.INTEGER, true), (asset, v) -> asset.y = v, asset -> asset.y)
+      .append(new KeyedCodec<>("PointsY", Codec.INTEGER, true), (asset, value) -> asset.y = value, asset -> asset.y)
       .add()
       .build();
    private PointGeneratorAsset pointGeneratorAsset = new NoPointGeneratorAsset();

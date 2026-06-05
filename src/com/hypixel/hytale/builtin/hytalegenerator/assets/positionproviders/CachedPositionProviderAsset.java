@@ -14,16 +14,16 @@ public class CachedPositionProviderAsset extends PositionProviderAsset {
    public static final BuilderCodec<CachedPositionProviderAsset> CODEC = BuilderCodec.builder(
          CachedPositionProviderAsset.class, CachedPositionProviderAsset::new, PositionProviderAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Positions", PositionProviderAsset.CODEC, true), (asset, v) -> asset.childAsset = v, asset -> asset.childAsset)
+      .append(new KeyedCodec<>("Positions", PositionProviderAsset.CODEC, true), (asset, value) -> asset.childAsset = value, asset -> asset.childAsset)
       .add()
-      .<Integer>append(new KeyedCodec<>("SectionSize", Codec.INTEGER, true), (asset, v) -> asset.sectionSize = v, asset -> asset.sectionSize)
+      .<Integer>append(new KeyedCodec<>("SectionSize", Codec.INTEGER, true), (asset, value) -> asset.sectionSize = value, asset -> asset.sectionSize)
       .addValidator(Validators.greaterThan(0))
       .add()
-      .<Integer>append(new KeyedCodec<>("CacheSize", Codec.INTEGER, true), (asset, v) -> asset.cacheSize = v, asset -> asset.cacheSize)
+      .<Integer>append(new KeyedCodec<>("CacheSize", Codec.INTEGER, true), (asset, value) -> asset.cacheSize = value, asset -> asset.cacheSize)
       .addValidator(Validators.greaterThan(-1))
       .add()
       .build();
-   private PositionProviderAsset childAsset = new ListPositionProviderAsset();
+   private PositionProviderAsset childAsset = ListPositionProviderAsset.INSTANCE;
    private int sectionSize = 32;
    private int cacheSize = 100;
 

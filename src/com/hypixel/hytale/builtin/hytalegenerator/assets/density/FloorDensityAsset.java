@@ -13,7 +13,7 @@ public class FloorDensityAsset extends DensityAsset {
    public static final BuilderCodec<FloorDensityAsset> CODEC = BuilderCodec.builder(
          FloorDensityAsset.class, FloorDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Limit", Codec.DOUBLE, true), (t, k) -> t.limit = k, k -> k.limit)
+      .append(new KeyedCodec<>("Limit", Codec.DOUBLE, true), (asset, value) -> asset.limit = value, asset -> asset.limit)
       .add()
       .build();
    private double limit = 0.0;

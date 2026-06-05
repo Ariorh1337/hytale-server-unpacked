@@ -89,10 +89,15 @@ public class NPCSystems {
             String balanceAssetId = role.getBalanceAsset();
             if (balanceAssetId != null) {
                BalanceAsset balanceAsset = BalanceAsset.getAssetMap().getAsset(balanceAssetId);
-               String entityEffectId = balanceAsset.getEntityEffect();
-               if (entityEffectId != null) {
-                  EntityEffect entityEffect = EntityEffect.getAssetMap().getAsset(entityEffectId);
-                  effectController.addEffect(ref, entityEffect, commandBuffer);
+               if (balanceAsset != null) {
+                  String[] entityEffectIds = balanceAsset.getEntityEffects();
+
+                  for (String entityEffectId : entityEffectIds) {
+                     EntityEffect entityEffect = EntityEffect.getAssetMap().getAsset(entityEffectId);
+                     if (entityEffect != null) {
+                        effectController.addEffect(ref, entityEffect, commandBuffer);
+                     }
+                  }
                }
             }
          }

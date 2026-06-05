@@ -13,7 +13,9 @@ public class OrPatternAsset extends PatternAsset {
    @Nonnull
    public static final BuilderCodec<OrPatternAsset> CODEC = BuilderCodec.builder(OrPatternAsset.class, OrPatternAsset::new, PatternAsset.ABSTRACT_CODEC)
       .append(
-         new KeyedCodec<>("Patterns", new ArrayCodec<>(PatternAsset.CODEC, PatternAsset[]::new), true), (t, k) -> t.patternAssets = k, k -> k.patternAssets
+         new KeyedCodec<>("Patterns", new ArrayCodec<>(PatternAsset.CODEC, PatternAsset[]::new), true),
+         (asset, value) -> asset.patternAssets = value,
+         asset -> asset.patternAssets
       )
       .add()
       .build();
@@ -22,14 +24,14 @@ public class OrPatternAsset extends PatternAsset {
    @Nonnull
    @Override
    public Pattern build(@Nonnull PatternAsset.Argument argument) {
-      if (super.isSkipped()) {
+      if (super.skip()) {
          return ConstantPattern.INSTANCE_FALSE;
       }
 
       ArrayList<Pattern> patterns = new ArrayList<>(this.patternAssets.length);
 
       for (PatternAsset asset : this.patternAssets) {
-         if (!asset.isSkipped()) {
+         if (!asset.skip()) {
             patterns.add(asset.build(argument));
          }
       }

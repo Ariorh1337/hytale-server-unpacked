@@ -138,7 +138,7 @@ public class HytaleGenerator extends JavaPlugin {
                } else {
                   positions.add(position);
                }
-            }, null);
+            }, null, null);
             spawnPositionProvider.generate(context);
             return positions;
          }
@@ -190,7 +190,7 @@ public class HytaleGenerator extends JavaPlugin {
    }
 
    @Nonnull
-   public StagedChunkGenerator createStagedChunkGenerator(
+   public ChunkGenerator createStagedChunkGenerator(
       @Nonnull ChunkRequest.GeneratorProfile generatorProfile, @Nonnull WorldStructureAsset worldStructureAsset, @Nonnull SettingsAsset settingsAsset
    ) {
       WorkerIndexer workerIndexer = new WorkerIndexer(this.concurrency);
@@ -199,6 +199,7 @@ public class HytaleGenerator extends JavaPlugin {
       WorkerIndexer.Session workerSession = workerIndexer.createSession();
       WorkerIndexer.Data<WorldStructure> worldStructure_workerData = new WorkerIndexer.Data<>(workerIndexer.getWorkerCount(), () -> null);
       TimeInstrument.Probe assetLoad_timeProbe = new TimeInstrument.Probe("Assets Loading").start();
+      boolean[] errorFlag = new boolean[]{false};
       List<CompletableFuture<Void>> futures = new ArrayList<>();
 
       while (workerSession.hasNext()) {
@@ -211,10 +212,15 @@ public class HytaleGenerator extends JavaPlugin {
                return (Void)r;
             }
 
+            errorFlag[0] |= true;
             LoggerUtil.logException("during async initialization of world-gen logic from assets", e);
             return null;
          });
          futures.add(future);
+      }
+
+      if (errorFlag[0]) {
+         return FallbackGenerator.INSTANCE;
       }
 
       FutureUtils.allOf(futures).join();
@@ -400,8 +406,9 @@ public class HytaleGenerator extends JavaPlugin {
             }
          }
 
+         int[] threadId = new int[]{0};
          this.concurrentExecutor = new ThreadPoolExecutor(this.concurrency, this.concurrency, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(), r -> {
-            Thread t = new Thread(r, "HytaleGenerator-Worker");
+            Thread t = new Thread(r, "HytaleGenerator-Worker-" + threadId[0]++);
             t.setPriority(1);
             t.setDaemon(true);
             return t;

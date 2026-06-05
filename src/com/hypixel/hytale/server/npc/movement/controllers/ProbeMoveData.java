@@ -175,6 +175,60 @@ public class ProbeMoveData {
       }
    }
 
+   public boolean locateSegmentAtDistance(double distance, @Nonnull ProbeMoveData.SegmentLocation result) {
+      result.reset();
+      if (this.segmentCount <= 0 || this.segments == null) {
+         return false;
+      }
+
+      if (distance <= 0.0) {
+         result.segmentIndex = 0;
+         result.previousSegmentIndex = -1;
+         result.lambda = 0.0;
+         result.segmentType = this.segments[0].type;
+         return true;
+      }
+
+      int index = 1;
+      ProbeMoveData.Segment segment = this.segments[0];
+      ProbeMoveData.Segment prevSegment = null;
+
+      while (index < this.segmentCount) {
+         prevSegment = segment;
+         segment = this.segments[index];
+         if (segment.distance >= distance) {
+            break;
+         }
+
+         index++;
+      }
+
+      if (index >= this.segmentCount) {
+         result.segmentIndex = this.segmentCount - 1;
+         result.previousSegmentIndex = Math.max(0, this.segmentCount - 2);
+         result.lambda = 1.0;
+         result.segmentType = this.segments[result.segmentIndex].type;
+         return true;
+      }
+
+      result.segmentIndex = index;
+      result.previousSegmentIndex = index - 1;
+      result.segmentType = segment.type;
+      if (!(segment.distance <= distance) && prevSegment != null) {
+         double den = segment.distance - prevSegment.distance;
+         if (Math.abs(den) <= 1.0E-6) {
+            result.lambda = 1.0;
+            return true;
+         } else {
+            result.lambda = (distance - prevSegment.distance) / den;
+            return true;
+         }
+      } else {
+         result.lambda = 1.0;
+         return true;
+      }
+   }
+
    public boolean startProbing() {
       this.edgeBlocked = false;
       if (this.isSavingSegments) {
@@ -446,6 +500,21 @@ public class ProbeMoveData {
             this.isBlocked = isBlocked;
             this.canInterpolate = canInterpolate;
          }
+      }
+   }
+
+   public static class SegmentLocation {
+      public int segmentIndex = -1;
+      public int previousSegmentIndex = -1;
+      public double lambda;
+      @Nullable
+      public ProbeMoveData.Segment.Type segmentType;
+
+      public void reset() {
+         this.segmentIndex = -1;
+         this.previousSegmentIndex = -1;
+         this.lambda = 0.0;
+         this.segmentType = null;
       }
    }
 }

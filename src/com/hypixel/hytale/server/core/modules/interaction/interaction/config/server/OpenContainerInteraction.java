@@ -27,6 +27,7 @@ import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -148,7 +149,11 @@ public class OpenContainerInteraction extends SimpleBlockInteraction {
                BlockType currentBlockType = worldChunkComponent.getBlockType(pos);
                if (currentBlockType != null) {
                   if (windows.isEmpty()) {
-                     world.setBlockInteractionState(pos, currentBlockType, "CloseWindow");
+                     String defBase = Objects.requireNonNullElse(blockType.getDefaultStateKey(), blockType.getId());
+                     String currentBase = Objects.requireNonNullElse(currentBlockType.getDefaultStateKey(), currentBlockType.getId());
+                     if (Objects.equals(currentBase, defBase)) {
+                        world.setBlockInteractionState(pos, currentBlockType, "CloseWindow");
+                     }
                   }
 
                   BlockType interactionState = currentBlockType.getBlockForState("CloseWindow");

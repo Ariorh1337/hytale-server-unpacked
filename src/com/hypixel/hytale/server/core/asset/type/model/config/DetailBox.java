@@ -34,7 +34,7 @@ public class DetailBox implements NetworkSerializable<com.hypixel.hytale.protoco
 
    public DetailBox(DetailBox other) {
       this.offset.set(other.offset);
-      this.box.assign(other.box);
+      this.box = new Box(other.box);
    }
 
    public Vector3d getOffset() {

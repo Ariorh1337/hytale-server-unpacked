@@ -15,17 +15,17 @@ public class SmoothClampDensityAsset extends DensityAsset {
    public static final BuilderCodec<SmoothClampDensityAsset> CODEC = BuilderCodec.builder(
          SmoothClampDensityAsset.class, SmoothClampDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("WallA", Codec.DOUBLE, true), (t, k) -> t.wallA = k, k -> k.wallA)
+      .append(new KeyedCodec<>("WallA", Codec.DOUBLE, true), (asset, value) -> asset.wallA = value, asset -> asset.wallA)
       .add()
-      .append(new KeyedCodec<>("WallB", Codec.DOUBLE, true), (t, k) -> t.wallB = k, k -> k.wallB)
+      .append(new KeyedCodec<>("WallB", Codec.DOUBLE, true), (asset, value) -> asset.wallB = value, asset -> asset.wallB)
       .add()
-      .<Double>append(new KeyedCodec<>("Range", Codec.DOUBLE, true), (t, k) -> t.range = k, k -> k.range)
+      .<Double>append(new KeyedCodec<>("Range", Codec.DOUBLE, true), (asset, value) -> asset.range = value, asset -> asset.range)
       .addValidator(Validators.greaterThanOrEqual(0.0))
       .add()
       .build();
    private double wallA = -1.0;
    private double wallB = 1.0;
-   private double range = 0.01;
+   private double range = 0.2;
 
    @Nonnull
    @Override

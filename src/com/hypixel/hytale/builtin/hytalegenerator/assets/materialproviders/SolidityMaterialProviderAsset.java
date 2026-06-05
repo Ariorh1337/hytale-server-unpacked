@@ -12,9 +12,17 @@ public class SolidityMaterialProviderAsset extends MaterialProviderAsset {
    public static final BuilderCodec<SolidityMaterialProviderAsset> CODEC = BuilderCodec.builder(
          SolidityMaterialProviderAsset.class, SolidityMaterialProviderAsset::new, MaterialProviderAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Solid", MaterialProviderAsset.CODEC, true), (t, k) -> t.solidMaterialProvider = k, k -> k.solidMaterialProvider)
+      .append(
+         new KeyedCodec<>("Solid", MaterialProviderAsset.CODEC, true),
+         (asset, value) -> asset.solidMaterialProvider = value,
+         asset -> asset.solidMaterialProvider
+      )
       .add()
-      .append(new KeyedCodec<>("Empty", MaterialProviderAsset.CODEC, true), (t, k) -> t.emptyMaterialProvider = k, k -> k.emptyMaterialProvider)
+      .append(
+         new KeyedCodec<>("Empty", MaterialProviderAsset.CODEC, true),
+         (asset, value) -> asset.emptyMaterialProvider = value,
+         asset -> asset.emptyMaterialProvider
+      )
       .add()
       .build();
    private MaterialProviderAsset solidMaterialProvider = new ConstantMaterialProviderAsset();

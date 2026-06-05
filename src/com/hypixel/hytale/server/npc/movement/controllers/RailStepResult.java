@@ -7,6 +7,7 @@ public final class RailStepResult {
    private static final BlockHit[] BLOCK_HITS = new BlockHit[0];
    private static final EntityHit[] ENTITY_HITS = new EntityHit[0];
    public boolean obstructed;
+   public boolean hitEntity;
    public double appliedFraction;
    @Nonnull
    private BlockHit[] passThroughBlocks = BLOCK_HITS;
@@ -17,6 +18,7 @@ public final class RailStepResult {
 
    public void reset() {
       this.obstructed = false;
+      this.hitEntity = false;
       this.appliedFraction = 0.0;
 
       for (int i = 0; i < this.entityHitCount; i++) {

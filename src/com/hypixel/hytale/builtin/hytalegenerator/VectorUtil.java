@@ -12,8 +12,34 @@ import org.joml.Vector2i;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.joml.Vector3i;
+import org.joml.Vector3ic;
 
 public class VectorUtil {
+   public static void orthogonalVector(@Nonnull Vector3d vec, @Nonnull Vector3d dest) {
+      if (isZero(vec)) {
+         dest.set(0.0);
+      } else {
+         double ax = Math.abs(vec.x);
+         double ay = Math.abs(vec.y);
+         double az = Math.abs(vec.z);
+         if (ax >= ay && ax >= az) {
+            dest.set(vec.y, -vec.x, 0.0);
+         } else if (ay >= ax && ay >= az) {
+            dest.set(0.0, vec.z, -vec.y);
+         } else {
+            dest.set(-vec.z, 0.0, vec.x);
+         }
+      }
+   }
+
+   public static boolean isZero(@Nonnull Vector3dc vec) {
+      return vec.x() == 0.0 && vec.y() == 0.0 && vec.z() == 0.0;
+   }
+
+   public static boolean isZero(@Nonnull Vector3ic vec) {
+      return vec.x() == 0 && vec.y() == 0 && vec.z() == 0;
+   }
+
    public static void assignFloored(@Nonnull Vector3i to, @Nonnull Vector3d from) {
       to.x = (int)Math.floor(from.x);
       to.y = (int)Math.floor(from.y);
@@ -24,7 +50,7 @@ public class VectorUtil {
       return isAnyGreater(maxA, minB) && isAnySmaller(minA, maxB);
    }
 
-   public static double distanceToSegment3d(@Nonnull Vector3d point, @Nonnull Vector3d p0, @Nonnull Vector3d p1) {
+   public static double distanceToSegment3d(@Nonnull Vector3dc point, @Nonnull Vector3dc p0, @Nonnull Vector3dc p1) {
       Vector3d lineVec = new Vector3d(p1).fma(-1.0, p0);
       Vector3d pointVec = new Vector3d(point).fma(-1.0, p0);
       double lineLength = lineVec.length();

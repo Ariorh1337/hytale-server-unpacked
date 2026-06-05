@@ -605,24 +605,29 @@ public class MotionControllerWalk extends MotionControllerBase {
          boolean different = !this.footingBlocksValid;
          int blockIndex = 0;
          this.footingBlocksValid = true;
+         ChunkStore chunkStore = world.getChunkStore();
+         Store<ChunkStore> chunkComponentStore = chunkStore.getStore();
 
-         label270:
+         label279:
          for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
             for (int chunkZ = minChunkZ; chunkZ <= maxChunkZ; chunkZ++) {
-               WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunk(chunkX, chunkZ));
-               if (chunk == null) {
+               Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(ChunkUtil.indexChunk(chunkX, chunkZ));
+               BlockChunk blockChunkComponent = chunkRef != null && chunkRef.isValid()
+                  ? chunkComponentStore.getComponent(chunkRef, BlockChunk.getComponentType())
+                  : null;
+               if (blockChunkComponent == null) {
                   this.footingBlocksValid = false;
                   this.belowBlockType = null;
                   this.belowBlockTypeId = 0;
                   this.onGround = false;
-                  break label270;
+                  break label279;
                }
 
                int minX = chunkX == minChunkX ? ChunkUtil.localCoordinate(minBlockX) : 0;
                int maxX = chunkX == maxChunkX ? ChunkUtil.localCoordinate(maxBlockX) : 31;
                int minZ = chunkZ == minChunkZ ? ChunkUtil.localCoordinate(minBlockZ) : 0;
                int maxZ = chunkZ == maxChunkZ ? ChunkUtil.localCoordinate(maxBlockZ) : 31;
-               BlockSection chunkSection = chunk.getBlockChunk().getSectionAtBlockY(blockY);
+               BlockSection chunkSection = blockChunkComponent.getSectionAtBlockY(blockY);
 
                for (int x = minX; x <= maxX; x++) {
                   for (int z = minZ; z <= maxZ; z++) {
@@ -658,7 +663,7 @@ public class MotionControllerWalk extends MotionControllerBase {
 
             blockIndex = 0;
 
-            label237:
+            label241:
             for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
                int chunkMinBlockX = ChunkUtil.minBlock(chunkX);
 
@@ -698,14 +703,14 @@ public class MotionControllerWalk extends MotionControllerBase {
                                           this.belowBlockType = blockType;
                                           this.belowBlockTypeId = blockId;
                                           this.onGround = true;
-                                          break label237;
+                                          break label241;
                                        }
                                     }
                                  } else if (boxBlockIntersectionEvaluator.isOnGround() && (code & horizontalOverlapMask) == horizontalOverlapMask) {
                                     this.belowBlockType = blockType;
                                     this.belowBlockTypeId = blockId;
                                     this.onGround = true;
-                                    break label237;
+                                    break label241;
                                  }
                               }
                            }
@@ -780,7 +785,7 @@ public class MotionControllerWalk extends MotionControllerBase {
       }
 
       if (boundingBox == null) {
-         return this.translateToAccessiblePosition(position, minYValue, maxYValue, componentAccessor) > 0;
+         return translateToAccessiblePosition(position, minYValue, maxYValue, componentAccessor) > 0;
       }
 
       int minX = MathUtil.floor(boundingBox.min.x + position.x);
@@ -792,7 +797,7 @@ public class MotionControllerWalk extends MotionControllerBase {
       double resultY = -1.0;
       if (maxX - minX > 2 || maxZ - minZ > 2) {
          position.y = y;
-         int retCode = this.translateToAccessiblePosition(position, minYValue, maxYValue, componentAccessor);
+         int retCode = translateToAccessiblePosition(position, minYValue, maxYValue, componentAccessor);
          if (retCode < 0) {
             position.y = originalY;
             return false;
@@ -810,7 +815,7 @@ public class MotionControllerWalk extends MotionControllerBase {
       for (int x = minX; x <= maxX; x++) {
          for (int z = minZ; z <= maxZ; z++) {
             position.y = y;
-            int retCode = this.translateToAccessiblePosition(position, minYValue, maxYValue, componentAccessor);
+            int retCode = translateToAccessiblePosition(position, minYValue, maxYValue, componentAccessor);
             if (retCode < 0) {
                position.y = originalY;
                return false;
@@ -835,7 +840,7 @@ public class MotionControllerWalk extends MotionControllerBase {
       }
    }
 
-   public int translateToAccessiblePosition(
+   public static int translateToAccessiblePosition(
       @Nonnull Vector3d position, double minYValue, double maxYValue, @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       if (position.y() < 0.0) {
@@ -844,93 +849,112 @@ public class MotionControllerWalk extends MotionControllerBase {
 
       World world = componentAccessor.getExternalData().getWorld();
       long chunkIndex = ChunkUtil.indexChunkFromBlock(position.x(), position.z());
-      WorldChunk chunk = world.getChunkIfInMemory(chunkIndex);
-      if (chunk == null) {
-         return -1;
-      }
-
-      BlockChunk blockChunk = chunk.getBlockChunk();
-      BlockTypeAssetMap<String, BlockType> assetMap = BlockType.getAssetMap();
-      int x = MathUtil.floor(position.x());
-      int y = MathUtil.floor(position.y());
-      int z = MathUtil.floor(position.z());
-      if (y < 320) {
-         int blockId = chunk.getBlock(x, y, z);
-         if (blockId != 0) {
-            BlockType blockType = assetMap.getAsset(blockId);
-            int filler = chunk.getFiller(x, y, z);
-            boolean isFiller = filler != 0;
-            if (isFiller || blockType.getMaterial() == BlockMaterial.Solid) {
-               int maxY;
-               for (maxY = MathUtil.ceil(maxYValue); y < maxY; y++) {
-                  blockId = chunk.getBlock(x, y, z);
-                  if (blockId == 0) {
-                     break;
-                  }
-
-                  blockType = assetMap.getAsset(blockId);
-                  filler = chunk.getFiller(x, y, z);
-                  if (blockType.getMaterial() != BlockMaterial.Solid) {
-                     break;
-                  }
-               }
-
-               if (y == maxY) {
-                  return 0;
-               }
-
-               blockType = chunk.getBlockType(x, --y, z);
-               int rotation = chunk.getRotationIndex(x, y, z);
-               BlockBoundingBoxes boxesAsset = BlockBoundingBoxes.getAssetMap().getAsset(blockType.getHitboxTypeIndex());
-               BlockBoundingBoxes.RotatedVariantBoxes rotatedBoxes = boxesAsset.get(rotation);
-               double top;
-               if (filler != 0) {
-                  top = y - FillerBlockUtil.unpackY(filler) + rotatedBoxes.getBoundingBox().max.y;
-               } else {
-                  top = y + rotatedBoxes.getBoundingBox().max.y;
-               }
-
-               if (top > maxYValue) {
-                  return 0;
-               }
-
-               position.y = top;
-               return 1;
-            }
+      ChunkStore chunkStore = world.getChunkStore();
+      Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(chunkIndex);
+      if (chunkRef != null && chunkRef.isValid()) {
+         Store<ChunkStore> chunkComponentStore = chunkStore.getStore();
+         WorldChunk worldChunkComponent = chunkComponentStore.getComponent(chunkRef, WorldChunk.getComponentType());
+         if (worldChunkComponent == null) {
+            return -1;
          }
-      } else {
-         y = 319;
-      }
 
-      int indexSection = ChunkUtil.indexSection(y);
+         BlockChunk blockChunkComponent = chunkComponentStore.getComponent(chunkRef, BlockChunk.getComponentType());
+         if (blockChunkComponent == null) {
+            return -1;
+         }
 
-      while (indexSection >= 0) {
-         BlockSection chunkSection = blockChunk.getSectionAtIndex(indexSection);
-         if (chunkSection.isSolidAir()) {
-            y = 32 * indexSection - 1;
-            if (y < minYValue) {
-               return 0;
+         BlockTypeAssetMap<String, BlockType> assetMap = BlockType.getAssetMap();
+         int x = MathUtil.floor(position.x());
+         int y = MathUtil.floor(position.y());
+         int z = MathUtil.floor(position.z());
+         if (y < 320) {
+            int blockId = blockChunkComponent.getBlock(x, y, z);
+            if (blockId != 0) {
+               BlockType blockType = assetMap.getAsset(blockId);
+               int filler = worldChunkComponent.getFiller(x, y, z);
+               boolean isFiller = filler != 0;
+               if (isFiller || blockType.getMaterial() == BlockMaterial.Solid) {
+                  int maxY;
+                  for (maxY = MathUtil.ceil(maxYValue); y < maxY; y++) {
+                     blockId = blockChunkComponent.getBlock(x, y, z);
+                     if (blockId == 0) {
+                        break;
+                     }
+
+                     blockType = assetMap.getAsset(blockId);
+                     filler = worldChunkComponent.getFiller(x, y, z);
+                     if (blockType.getMaterial() != BlockMaterial.Solid) {
+                        break;
+                     }
+                  }
+
+                  if (y == maxY) {
+                     return 0;
+                  }
+
+                  blockType = worldChunkComponent.getBlockType(x, --y, z);
+                  int rotation = worldChunkComponent.getRotationIndex(x, y, z);
+                  BlockBoundingBoxes boxesAsset = BlockBoundingBoxes.getAssetMap().getAsset(blockType.getHitboxTypeIndex());
+                  BlockBoundingBoxes.RotatedVariantBoxes rotatedBoxes = boxesAsset.get(rotation);
+                  double top;
+                  if (filler != 0) {
+                     top = y - FillerBlockUtil.unpackY(filler) + rotatedBoxes.getBoundingBox().max.y;
+                  } else {
+                     top = y + rotatedBoxes.getBoundingBox().max.y;
+                  }
+
+                  if (top > maxYValue) {
+                     return 0;
+                  }
+
+                  position.y = top;
+                  return 1;
+               }
             }
-
-            indexSection--;
          } else {
-            int yBottom = 32 * indexSection--;
+            y = 319;
+         }
 
-            while (y >= yBottom) {
+         int indexSection = ChunkUtil.indexSection(y);
+
+         while (indexSection >= 0) {
+            BlockSection chunkSection = blockChunkComponent.getSectionAtIndex(indexSection);
+            if (chunkSection.isSolidAir()) {
+               y = 32 * indexSection - 1;
                if (y < minYValue) {
                   return 0;
                }
 
-               int rotation = chunkSection.getRotationIndex(x, y, z);
-               int filler = chunkSection.getFiller(x, y, z);
-               int blockId = chunkSection.get(x, y--, z);
-               if (blockId != 0) {
-                  BlockType blockType = assetMap.getAsset(blockId);
-                  if (filler != 0) {
-                     if (blockType.getMaterial() == BlockMaterial.Solid) {
+               indexSection--;
+            } else {
+               int yBottom = 32 * indexSection--;
+
+               while (y >= yBottom) {
+                  if (y < minYValue) {
+                     return 0;
+                  }
+
+                  int rotation = chunkSection.getRotationIndex(x, y, z);
+                  int filler = chunkSection.getFiller(x, y, z);
+                  int blockId = chunkSection.get(x, y--, z);
+                  if (blockId != 0) {
+                     BlockType blockType = assetMap.getAsset(blockId);
+                     if (filler != 0) {
+                        if (blockType.getMaterial() == BlockMaterial.Solid) {
+                           BlockBoundingBoxes boundingBoxes = BlockBoundingBoxes.getAssetMap().getAsset(blockType.getHitboxTypeIndex());
+                           BlockBoundingBoxes.RotatedVariantBoxes rotatedBoxes = boundingBoxes.get(rotation);
+                           double top = y + 1 - FillerBlockUtil.unpackY(filler) + rotatedBoxes.getBoundingBox().max.y;
+                           if (top < minYValue) {
+                              return 0;
+                           }
+
+                           position.y = top;
+                           return 1;
+                        }
+                     } else if (blockType.getMaterial() == BlockMaterial.Solid) {
                         BlockBoundingBoxes boundingBoxes = BlockBoundingBoxes.getAssetMap().getAsset(blockType.getHitboxTypeIndex());
                         BlockBoundingBoxes.RotatedVariantBoxes rotatedBoxes = boundingBoxes.get(rotation);
-                        double top = y + 1 - FillerBlockUtil.unpackY(filler) + rotatedBoxes.getBoundingBox().max.y;
+                        double top = y + 1 + rotatedBoxes.getBoundingBox().max.y;
                         if (top < minYValue) {
                            return 0;
                         }
@@ -938,23 +962,15 @@ public class MotionControllerWalk extends MotionControllerBase {
                         position.y = top;
                         return 1;
                      }
-                  } else if (blockType.getMaterial() == BlockMaterial.Solid) {
-                     BlockBoundingBoxes boundingBoxes = BlockBoundingBoxes.getAssetMap().getAsset(blockType.getHitboxTypeIndex());
-                     BlockBoundingBoxes.RotatedVariantBoxes rotatedBoxes = boundingBoxes.get(rotation);
-                     double top = y + 1 + rotatedBoxes.getBoundingBox().max.y;
-                     if (top < minYValue) {
-                        return 0;
-                     }
-
-                     position.y = top;
-                     return 1;
                   }
                }
             }
          }
-      }
 
-      return 0;
+         return 0;
+      } else {
+         return -1;
+      }
    }
 
    @Override
@@ -2345,7 +2361,7 @@ public class MotionControllerWalk extends MotionControllerBase {
                String.format(
                   "Walk - Translation invalid path=%s %s, moveSpeed=%s, fallSpeed=%s, pos=%s",
                   kind,
-                  translation.toString(),
+                  translation,
                   this.moveSpeed,
                   this.fallSpeed,
                   Vector3dUtil.formatShortString(this.position)
@@ -2529,7 +2545,6 @@ public class MotionControllerWalk extends MotionControllerBase {
       this.tmpClimbMovement.set(worldNormal).mul(height);
       boolean saveComputeOverlaps = this.tmpResults.isComputeOverlaps();
       this.tmpResults.setComputeOverlaps(true);
-      CollisionModule.get();
       CollisionModule.findCollisions(this.collisionBoundingBox, this.tmpClimbPosition, this.tmpClimbMovement, false, this.tmpResults, componentAccessor);
       this.tmpResults.setComputeOverlaps(saveComputeOverlaps);
       BlockCollisionData collisionData = this.tmpResults.getFirstBlockCollision();
@@ -2648,7 +2663,6 @@ public class MotionControllerWalk extends MotionControllerBase {
    ) {
       this.tmpResults.setCollisionByMaterial(4);
       this.tmpClimbMovement.set(this.getWorldAntiNormal()).mul(maxTestDistance);
-      CollisionModule.get();
       CollisionModule.findCollisions(this.collisionBoundingBox, position, this.tmpClimbMovement, this.tmpResults, componentAccessor);
       BlockCollisionData collision = this.tmpResults.getFirstBlockCollision();
       if (this.debugModeMove) {
@@ -2725,12 +2739,10 @@ public class MotionControllerWalk extends MotionControllerBase {
          long packed = WorldUtil.getPackedMaterialAndFluidAtPosition(chunkRef, chunkStore, x, y + this.constraintDepth, z);
          BlockMaterial material = BlockMaterial.VALUES[MathUtil.unpackLeft(packed)];
          int fluidId = MathUtil.unpackRight(packed);
-         if (!this.role.couldBreathe(material, fluidId)) {
-            return false;
-         }
+         return this.role.couldBreathe(material, fluidId);
+      } else {
+         return true;
       }
-
-      return true;
    }
 
    private boolean isValidWalkPosition(@Nonnull ChunkStore chunkStore, double x, double y, double z, @Nonnull EnumSet<RelaxedConstraint> constraints) {
@@ -2745,7 +2757,6 @@ public class MotionControllerWalk extends MotionControllerBase {
       @Nonnull EnumSet<RelaxedConstraint> constraints,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
-      CollisionModule.get();
       CollisionModule.findCollisions(this.collisionBoundingBox, position, velocity, this.tmpResults, componentAccessor);
       BlockCollisionData collision;
       if (velocity.y != 0.0) {

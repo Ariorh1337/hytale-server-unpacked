@@ -30,6 +30,7 @@ import com.hypixel.hytale.server.core.modules.physics.util.PhysicsBodyStateUpdat
 import com.hypixel.hytale.server.core.modules.physics.util.PhysicsMath;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.UUID;
 import java.util.function.BiConsumer;
@@ -259,7 +260,8 @@ public class SimplePhysicsProvider implements IBlockCollisionConsumer {
       }
 
       if (this.state == SimplePhysicsProvider.STATE.Resting) {
-         if (this.forceProviderStandardState.externalForce.lengthSquared() == 0.0 && !this.restingSupport.hasChanged(entityWorld)) {
+         ChunkStore chunkStore = entityWorld.getChunkStore();
+         if (this.forceProviderStandardState.externalForce.lengthSquared() == 0.0 && !this.restingSupport.hasChanged(chunkStore)) {
             return null;
          }
 
@@ -278,7 +280,8 @@ public class SimplePhysicsProvider implements IBlockCollisionConsumer {
          this.state = SimplePhysicsProvider.STATE.Active;
       }
 
-      if (this.state == SimplePhysicsProvider.STATE.Resting && this.restingSupport.hasChanged(entityWorld)) {
+      ChunkStore chunkStore = entityWorld.getChunkStore();
+      if (this.state == SimplePhysicsProvider.STATE.Resting && this.restingSupport.hasChanged(chunkStore)) {
          this.state = SimplePhysicsProvider.STATE.Active;
       }
 
@@ -381,7 +384,7 @@ public class SimplePhysicsProvider implements IBlockCollisionConsumer {
                boolean hitGround = this.contactNormal.equals(Vector3dUtil.UP);
                if (this.sticksVertically || hitGround) {
                   this.state = SimplePhysicsProvider.STATE.Resting;
-                  this.restingSupport.rest(entityWorld, this.boundingBox.getBoundingBox(), this.position);
+                  this.restingSupport.rest(chunkStore, this.boundingBox.getBoundingBox(), this.position);
                   this.onGround = hitGround;
                   if (this.impactConsumer != null) {
                      this.impactConsumer.accept(selfRef, this.position, null, componentAccessor);

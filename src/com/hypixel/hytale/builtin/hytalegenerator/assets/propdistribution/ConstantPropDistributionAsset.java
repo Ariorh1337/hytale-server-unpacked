@@ -14,16 +14,21 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import javax.annotation.Nonnull;
 
 public class ConstantPropDistributionAsset extends PropDistributionAsset {
+   public static final ConstantPropDistributionAsset INSTANCE = new ConstantPropDistributionAsset();
    @Nonnull
    public static final BuilderCodec<ConstantPropDistributionAsset> CODEC = BuilderCodec.builder(
          ConstantPropDistributionAsset.class, ConstantPropDistributionAsset::new, PropDistributionAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Positions", PositionProviderAsset.CODEC, true), (t, k) -> t.positionProviderAsset = k, k -> k.positionProviderAsset)
+      .append(
+         new KeyedCodec<>("Positions", PositionProviderAsset.CODEC, true),
+         (asset, value) -> asset.positionProviderAsset = value,
+         asset -> asset.positionProviderAsset
+      )
       .add()
-      .append(new KeyedCodec<>("Prop", PropAsset.CODEC, true), (t, k) -> t.propAsset = k, k -> k.propAsset)
+      .append(new KeyedCodec<>("Prop", PropAsset.CODEC, true), (asset, value) -> asset.propAsset = value, asset -> asset.propAsset)
       .add()
       .build();
-   private PositionProviderAsset positionProviderAsset = new ListPositionProviderAsset();
+   private PositionProviderAsset positionProviderAsset = ListPositionProviderAsset.INSTANCE;
    private PropAsset propAsset = new EmptyPropAsset();
 
    @Nonnull
@@ -36,5 +41,11 @@ public class ConstantPropDistributionAsset extends PropDistributionAsset {
       PositionProvider positionProvider = this.positionProviderAsset.build(new PositionProviderAsset.Argument(argument));
       Prop prop = this.propAsset.build(new PropAsset.Argument(argument));
       return new ConstantPropDistribution(positionProvider, prop);
+   }
+
+   @Override
+   public void cleanUp() {
+      this.propAsset.cleanUp();
+      this.positionProviderAsset.cleanUp();
    }
 }

@@ -13,19 +13,21 @@ public class DistanceSCurveAsset extends CurveAsset {
    public static final BuilderCodec<DistanceSCurveAsset> CODEC = BuilderCodec.builder(
          DistanceSCurveAsset.class, DistanceSCurveAsset::new, CurveAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("ExponentA", Codec.DOUBLE, true), (t, k) -> t.exponentA = k, k -> k.exponentA)
+      .append(new KeyedCodec<>("ExponentA", Codec.DOUBLE, true), (asset, value) -> asset.exponentA = value, asset -> asset.exponentA)
       .addValidator(Validators.greaterThanOrEqual(0.0))
       .add()
-      .<Double>append(new KeyedCodec<>("ExponentB", Codec.DOUBLE, true), (t, k) -> t.exponentB = k, k -> k.exponentB)
+      .<Double>append(new KeyedCodec<>("ExponentB", Codec.DOUBLE, true), (asset, value) -> asset.exponentB = value, asset -> asset.exponentB)
       .addValidator(Validators.greaterThanOrEqual(0.0))
       .add()
-      .<Double>append(new KeyedCodec<>("Transition", Codec.DOUBLE, false), (t, k) -> t.transition = k, k -> k.transition)
+      .<Double>append(new KeyedCodec<>("Transition", Codec.DOUBLE, false), (asset, value) -> asset.transition = value, asset -> asset.transition)
       .addValidator(Validators.range(0.0, 1.0))
       .add()
-      .<Double>append(new KeyedCodec<>("Range", Codec.DOUBLE, true), (t, k) -> t.range = k, k -> k.range)
+      .<Double>append(new KeyedCodec<>("Range", Codec.DOUBLE, true), (asset, value) -> asset.range = value, asset -> asset.range)
       .addValidator(Validators.greaterThanOrEqual(0.0))
       .add()
-      .<Double>append(new KeyedCodec<>("TransitionSmooth", Codec.DOUBLE, false), (t, k) -> t.transitionSmooth = k, k -> k.transitionSmooth)
+      .<Double>append(
+         new KeyedCodec<>("TransitionSmooth", Codec.DOUBLE, false), (asset, value) -> asset.transitionSmooth = value, asset -> asset.transitionSmooth
+      )
       .addValidator(Validators.range(0.0, 1.0))
       .add()
       .build();

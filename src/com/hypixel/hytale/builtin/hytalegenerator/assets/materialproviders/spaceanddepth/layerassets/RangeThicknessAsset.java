@@ -16,13 +16,17 @@ public class RangeThicknessAsset extends LayerAsset {
    public static final BuilderCodec<RangeThicknessAsset> CODEC = BuilderCodec.builder(
          RangeThicknessAsset.class, RangeThicknessAsset::new, LayerAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("RangeMin", Codec.INTEGER, true), (t, k) -> t.rangeMin = k, k -> k.rangeMin)
+      .append(new KeyedCodec<>("RangeMin", Codec.INTEGER, true), (asset, value) -> asset.rangeMin = value, asset -> asset.rangeMin)
       .add()
-      .append(new KeyedCodec<>("RangeMax", Codec.INTEGER, true), (t, k) -> t.rangeMax = k, k -> k.rangeMax)
+      .append(new KeyedCodec<>("RangeMax", Codec.INTEGER, true), (asset, value) -> asset.rangeMax = value, asset -> asset.rangeMax)
       .add()
-      .append(new KeyedCodec<>("Material", MaterialProviderAsset.CODEC, true), (t, k) -> t.materialProviderAsset = k, k -> k.materialProviderAsset)
+      .append(
+         new KeyedCodec<>("Material", MaterialProviderAsset.CODEC, true),
+         (asset, value) -> asset.materialProviderAsset = value,
+         asset -> asset.materialProviderAsset
+      )
       .add()
-      .append(new KeyedCodec<>("Seed", Codec.STRING, true), (t, k) -> t.seed = k, k -> k.seed)
+      .append(new KeyedCodec<>("Seed", Codec.STRING, true), (asset, value) -> asset.seed = value, asset -> asset.seed)
       .add()
       .afterDecode(asset -> asset.rangeMax = Math.max(asset.rangeMin, asset.rangeMax))
       .build();

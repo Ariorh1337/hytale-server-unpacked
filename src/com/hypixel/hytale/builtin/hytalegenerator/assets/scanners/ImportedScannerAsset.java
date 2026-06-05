@@ -13,7 +13,7 @@ public class ImportedScannerAsset extends ScannerAsset {
    public static final BuilderCodec<ImportedScannerAsset> CODEC = BuilderCodec.builder(
          ImportedScannerAsset.class, ImportedScannerAsset::new, ScannerAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Name", Codec.STRING, false), (t, k) -> t.name = k, k -> k.name)
+      .append(new KeyedCodec<>("Name", Codec.STRING, false), (asset, value) -> asset.name = value, asset -> asset.name)
       .add()
       .build();
    private String name = "";

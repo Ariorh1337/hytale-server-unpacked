@@ -32,22 +32,22 @@ import org.joml.Vector3i;
 public class ClusterPropAsset extends PropAsset {
    @Nonnull
    public static final BuilderCodec<ClusterPropAsset> CODEC = BuilderCodec.builder(ClusterPropAsset.class, ClusterPropAsset::new, PropAsset.ABSTRACT_CODEC)
-      .append(new KeyedCodec<>("Range", Codec.INTEGER, false), (asset, v) -> asset.range = v, asset -> asset.range)
+      .append(new KeyedCodec<>("Range", Codec.INTEGER, false), (asset, value) -> asset.range = value, asset -> asset.range)
       .addValidator(Validators.greaterThanOrEqual(0))
       .add()
-      .append(new KeyedCodec<>("DistanceCurve", CurveAsset.CODEC, true), (asset, v) -> asset.distanceCurve = v, asset -> asset.distanceCurve)
+      .append(new KeyedCodec<>("DistanceCurve", CurveAsset.CODEC, true), (asset, value) -> asset.distanceCurve = value, asset -> asset.distanceCurve)
       .add()
-      .append(new KeyedCodec<>("Seed", Codec.STRING, false), (asset, v) -> asset.seed = v, asset -> asset.seed)
+      .append(new KeyedCodec<>("Seed", Codec.STRING, false), (asset, value) -> asset.seed = value, asset -> asset.seed)
       .add()
       .append(
          new KeyedCodec<>("WeightedProps", new ArrayCodec<>(ClusterPropAsset.WeightedEntryAsset.CODEC, ClusterPropAsset.WeightedEntryAsset[]::new), true),
-         (asset, v) -> asset.weightedEntryAssets = v,
+         (asset, value) -> asset.weightedEntryAssets = value,
          asset -> asset.weightedEntryAssets
       )
       .add()
-      .append(new KeyedCodec<>("Pattern", PatternAsset.CODEC, false), (asset, v) -> asset.patternAsset = v, asset -> asset.patternAsset)
+      .append(new KeyedCodec<>("Pattern", PatternAsset.CODEC, false), (asset, value) -> asset.patternAsset = value, asset -> asset.patternAsset)
       .add()
-      .append(new KeyedCodec<>("Scanner", ScannerAsset.CODEC, false), (asset, v) -> asset.scannerAsset = v, asset -> asset.scannerAsset)
+      .append(new KeyedCodec<>("Scanner", ScannerAsset.CODEC, false), (asset, value) -> asset.scannerAsset = value, asset -> asset.scannerAsset)
       .add()
       .build();
    private int range = 0;
@@ -103,15 +103,15 @@ public class ClusterPropAsset extends PropAsset {
             ClusterPropAsset.WeightedEntryAsset.class,
             ClusterPropAsset.WeightedEntryAsset::new,
             Codec.STRING,
-            (asset, id) -> asset.id = id,
-            config -> config.id,
-            (config, data) -> config.data = data,
-            config -> config.data
+            (asset, value) -> asset.id = value,
+            asset -> asset.id,
+            (asset, value) -> asset.data = value,
+            asset -> asset.data
          )
-         .append(new KeyedCodec<>("Weight", Codec.DOUBLE, true), (t, w) -> t.weight = w, t -> t.weight)
+         .append(new KeyedCodec<>("Weight", Codec.DOUBLE, true), (asset, value) -> asset.weight = value, asset -> asset.weight)
          .addValidator(Validators.greaterThan(0.0))
          .add()
-         .append(new KeyedCodec<>("ColumnProp", PropAsset.CODEC, true), (t, out) -> t.propAsset = out, t -> t.propAsset)
+         .append(new KeyedCodec<>("ColumnProp", PropAsset.CODEC, true), (asset, value) -> asset.propAsset = value, asset -> asset.propAsset)
          .add()
          .build();
       private String id;

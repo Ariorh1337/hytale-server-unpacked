@@ -8,6 +8,7 @@ import com.hypixel.hytale.codec.codecs.map.Float2ObjectMapCodec;
 import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.protocol.ChargingDelay;
 import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionSyncData;
@@ -27,6 +28,7 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.dat
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.data.StringTag;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.operation.Label;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.operation.OperationsBuilder;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.util.InteractionValidation;
 import com.hypixel.hytale.server.core.modules.time.TimeResource;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.floats.Float2IntOpenHashMap;
@@ -38,10 +40,12 @@ import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class ChargingInteraction extends Interaction {
+   private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
    @Nonnull
    public static final BuilderCodec<ChargingDelay> DELAY_CODEC = BuilderCodec.<ChargingDelay>builder(ChargingDelay.class, ChargingDelay::new)
       .documentation(
@@ -182,8 +186,10 @@ public class ChargingInteraction extends Interaction {
       .build();
    private static final MetaKey<Object2IntMap<InteractionType>> FORK_COUNTS = Interaction.META_REGISTRY.registerMetaObject(i -> new Object2IntOpenHashMap<>());
    private static final MetaKey<InteractionChain> FORKED_CHAIN = Interaction.META_REGISTRY.registerMetaObject(i -> null);
+   private static final MetaKey<Long> CHARGE_START_NANOS = Interaction.META_REGISTRY.registerMetaObject(i -> 0L);
    private static final float CHARGING_HELD = -1.0F;
    private static final float CHARGING_CANCELED = -2.0F;
+   private static final float CHARGE_GRACE_SECONDS = 0.25F;
    private static final StringTag TAG_FAILED = StringTag.of("Failed");
    protected boolean allowIndefiniteHold;
    protected boolean displayProgress = true;
@@ -216,6 +222,10 @@ public class ChargingInteraction extends Interaction {
          context.getState().state = InteractionState.Failed;
          context.jump(context.getLabel(this.next != null ? this.next.size() : 0));
       } else {
+         if (firstRun) {
+            context.getInstanceStore().putMetaObject(CHARGE_START_NANOS, System.nanoTime());
+         }
+
          if (clientData.forkCounts != null && this.forks != null) {
             Object2IntMap<InteractionType> serverForkCounts = context.getInstanceStore().getMetaObject(FORK_COUNTS);
             InteractionChain forked = context.getInstanceStore().getMetaObject(FORKED_CHAIN);
@@ -245,12 +255,14 @@ public class ChargingInteraction extends Interaction {
          }
 
          if (clientData.chargeValue == -1.0F) {
+            this.validateHoldDuration(context);
             context.getState().state = InteractionState.NotFinished;
          } else if (clientData.chargeValue == -2.0F) {
             context.getState().state = InteractionState.Finished;
          } else {
             context.getState().state = InteractionState.Finished;
             float chargeValue = clientData.chargeValue;
+            this.validateChargeValue(chargeValue, context);
             if (this.next != null) {
                this.jumpToChargeValue(context, chargeValue);
                CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
@@ -424,6 +436,55 @@ public class ChargingInteraction extends Interaction {
          + this.failOnDamage
          + "} "
          + super.toString();
+   }
+
+   private void validateChargeValue(float chargeValue, @Nonnull InteractionContext context) {
+      Long startNanos = context.getInstanceStore().getMetaObject(CHARGE_START_NANOS);
+      if (startNanos != 0L) {
+         CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
+         assert commandBuffer != null;
+         float wallClockSeconds = (float)(System.nanoTime() - startNanos) / 1.0E9F;
+         float timeDilation = commandBuffer.getResource(TimeResource.getResourceType()).getTimeDilationModifier();
+         float maxAllowed = wallClockSeconds * timeDilation + 0.25F;
+         if (!this.allowIndefiniteHold && this.highestChargeValue > 0.0F) {
+            maxAllowed = Math.min(maxAllowed, this.highestChargeValue);
+         }
+
+         if (chargeValue > maxAllowed) {
+            LOGGER.at(Level.WARNING)
+               .log(
+                  "%s charge value %.3f exceeds max allowed %.3f (wall: %.3f, dilation: %.2f)",
+                  InteractionValidation.getEntityName(context.getEntity(), commandBuffer),
+                  chargeValue,
+                  maxAllowed,
+                  wallClockSeconds,
+                  timeDilation
+               );
+         }
+      }
+   }
+
+   private void validateHoldDuration(@Nonnull InteractionContext context) {
+      if (!this.allowIndefiniteHold && !(this.highestChargeValue <= 0.0F)) {
+         Long startNanos = context.getInstanceStore().getMetaObject(CHARGE_START_NANOS);
+         if (startNanos != 0L) {
+            CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
+            assert commandBuffer != null;
+            float wallClockSeconds = (float)(System.nanoTime() - startNanos) / 1.0E9F;
+            float timeDilation = commandBuffer.getResource(TimeResource.getResourceType()).getTimeDilationModifier();
+            if (wallClockSeconds * timeDilation > this.highestChargeValue + 0.25F) {
+               LOGGER.at(Level.WARNING)
+                  .log(
+                     "%s held charge %.3fs beyond max %.3f (wall: %.3f, dilation: %.2f)",
+                     InteractionValidation.getEntityName(context.getEntity(), commandBuffer),
+                     wallClockSeconds * timeDilation,
+                     this.highestChargeValue,
+                     wallClockSeconds,
+                     timeDilation
+                  );
+            }
+         }
+      }
    }
 
    public static final class ChargingTag implements CollectorTag {

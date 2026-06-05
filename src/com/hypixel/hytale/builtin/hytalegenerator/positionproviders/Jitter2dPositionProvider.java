@@ -10,6 +10,7 @@ import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 import org.joml.Vector3d;
 
 public class Jitter2dPositionProvider extends PositionProvider {
+   private static final float PI = (float) Math.PI;
    private static final double SEED_GENERATOR_RESOLUTION = 10.0;
    private final double magnitude;
    @Nonnull

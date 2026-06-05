@@ -7,6 +7,7 @@ import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
 import com.hypixel.hytale.assetstore.map.JsonAssetWithMap;
 import com.hypixel.hytale.builtin.hytalegenerator.LoggerUtil;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.Cleanable;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.GraphGeneratorAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.propdistribution.PropDistributionAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.PositionProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.referencebundle.ReferenceBundle;
@@ -23,7 +24,7 @@ import javax.annotation.Nonnull;
 public abstract class PositionProviderAsset implements Cleanable, JsonAssetWithMap<String, DefaultAssetMap<String, PositionProviderAsset>> {
    @Nonnull
    public static final AssetCodecMapCodec<String, PositionProviderAsset> CODEC = new AssetCodecMapCodec<>(
-      Codec.STRING, (t, k) -> t.id = k, t -> t.id, (t, data) -> t.data = data, t -> t.data
+      Codec.STRING, (asset, value) -> asset.id = value, asset -> asset.id, (asset, value) -> asset.data = value, asset -> asset.data
    );
    @Nonnull
    private static final Map<String, PositionProviderAsset> exportedNodes = new ConcurrentHashMap<>();
@@ -33,9 +34,9 @@ public abstract class PositionProviderAsset implements Cleanable, JsonAssetWithM
    public static final Codec<String[]> CHILD_ASSET_CODEC_ARRAY = new ArrayCodec<>(CHILD_ASSET_CODEC, String[]::new);
    @Nonnull
    public static final BuilderCodec<PositionProviderAsset> ABSTRACT_CODEC = BuilderCodec.abstractBuilder(PositionProviderAsset.class)
-      .append(new KeyedCodec<>("Skip", Codec.BOOLEAN, false), (t, k) -> t.skip = k, t -> t.skip)
+      .append(new KeyedCodec<>("Skip", Codec.BOOLEAN, false), (asset, value) -> asset.skip = value, asset -> asset.skip)
       .add()
-      .append(new KeyedCodec<>("ExportAs", Codec.STRING, false), (t, k) -> t.exportName = k, t -> t.exportName)
+      .append(new KeyedCodec<>("ExportAs", Codec.STRING, false), (asset, value) -> asset.exportName = value, asset -> asset.exportName)
       .add()
       .afterDecode(asset -> {
          if (asset.exportName != null && !asset.exportName.isEmpty()) {
@@ -92,6 +93,12 @@ public abstract class PositionProviderAsset implements Cleanable, JsonAssetWithM
       }
 
       public Argument(@Nonnull PropDistributionAsset.Argument argument) {
+         this.parentSeed = argument.parentSeed;
+         this.referenceBundle = argument.referenceBundle;
+         this.workerId = argument.workerId;
+      }
+
+      public Argument(@Nonnull GraphGeneratorAsset.Argument argument) {
          this.parentSeed = argument.parentSeed;
          this.referenceBundle = argument.referenceBundle;
          this.workerId = argument.workerId;

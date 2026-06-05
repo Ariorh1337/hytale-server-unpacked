@@ -165,11 +165,14 @@ public class BlockHarvestUtils {
       @Nullable ItemTool tool,
       float damageScale,
       int setBlockSettings,
+      boolean isExplosion,
       @Nonnull Ref<ChunkStore> chunkReference,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor,
       @Nonnull ComponentAccessor<ChunkStore> chunkStore
    ) {
-      return performBlockDamage(null, targetBlock, itemStack, tool, null, false, damageScale, setBlockSettings, chunkReference, componentAccessor, chunkStore);
+      return performBlockDamage(
+         null, targetBlock, itemStack, tool, null, false, damageScale, setBlockSettings, isExplosion, chunkReference, componentAccessor, chunkStore
+      );
    }
 
    public static boolean performBlockDamage(
@@ -181,6 +184,7 @@ public class BlockHarvestUtils {
       boolean matchTool,
       float damageScale,
       int setBlockSettings,
+      boolean isExplosion,
       @Nonnull Ref<ChunkStore> chunkReference,
       @Nonnull ComponentAccessor<EntityStore> entityStore,
       @Nonnull ComponentAccessor<ChunkStore> chunkStore
@@ -246,6 +250,10 @@ public class BlockHarvestUtils {
                return false;
             }
          }
+      }
+
+      if (isExplosion && handleExplosionReactionState(targetBlockType, targetBlockPos, world)) {
+         return true;
       }
 
       Item heldItem = itemStack != null ? itemStack.getItem() : null;
@@ -855,5 +863,28 @@ public class BlockHarvestUtils {
       }
 
       return randomItemDrops;
+   }
+
+   protected static boolean handleExplosionReactionState(BlockType targetBlockType, Vector3i targetBlockPos, World world) {
+      String explosionReactionState = targetBlockType.getExplosionReactionState();
+      if (explosionReactionState == null) {
+         return false;
+      }
+
+      BlockType newBlockType = targetBlockType.getBlockForState(explosionReactionState);
+      if (newBlockType == null) {
+         return false;
+      }
+
+      int newBlockId = BlockType.getAssetMap().getIndex(newBlockType.getId());
+      if (newBlockId == Integer.MIN_VALUE) {
+         return false;
+      }
+
+      WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(targetBlockPos.x, targetBlockPos.z));
+      int settings = 260;
+      int rotation = chunk.getRotationIndex(targetBlockPos.x, targetBlockPos.y, targetBlockPos.z);
+      chunk.setBlock(targetBlockPos.x(), targetBlockPos.y(), targetBlockPos.z(), newBlockId, newBlockType, rotation, 0, 260);
+      return true;
    }
 }

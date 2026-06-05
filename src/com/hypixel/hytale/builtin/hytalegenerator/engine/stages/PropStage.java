@@ -205,11 +205,11 @@ public class PropStage implements Stage {
             biome.getRuntimesWithIndex(this.runtimeIndex, propRuntimex -> propRuntimeBiomeMap.add(Pair.of(propRuntimex, biome)));
          }
 
-         Prop.Context propContext = new Prop.Context(new Vector3i(), materialInputSpace, materialOutputSpace, entityOutputSpace, Double.MAX_VALUE);
+         Prop.Context propContext = new Prop.Context(new Vector3i(), materialInputSpace, materialOutputSpace, entityOutputSpace, Double.MAX_VALUE, null, null);
          Bounds3i propReadBounds_voxelGrid = new Bounds3i();
          Bounds3i propWriteBounds_voxelGrid = new Bounds3i();
          Vector3i position2d_voxelGrid = new Vector3i();
-         PropDistribution.Context distributionContext = new PropDistribution.Context(new Bounds3d(), Pipe.getEmptyTwo(), Double.MAX_VALUE);
+         PropDistribution.Context distributionContext = new PropDistribution.Context(new Bounds3d(), Pipe.getEmptyTwo(), Double.MAX_VALUE, null, null);
 
          for (Pair<PropRuntime, Biome> entry : propRuntimeBiomeMap) {
             PropRuntime propRuntime = entry.left();

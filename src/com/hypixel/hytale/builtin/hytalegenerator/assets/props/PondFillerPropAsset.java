@@ -29,21 +29,21 @@ public class PondFillerPropAsset extends PropAsset {
       )
       .append(
          new KeyedCodec<>("FillMaterial", MaterialProviderAsset.CODEC, true),
-         (asset, v) -> asset.fluidMaterialProviderAsset = v,
+         (asset, value) -> asset.fluidMaterialProviderAsset = value,
          asset -> asset.fluidMaterialProviderAsset
       )
       .add()
-      .append(new KeyedCodec<>("BarrierBlockSet", MaterialSetAsset.CODEC, true), (asset, v) -> asset.solidSetAsset = v, asset -> asset.solidSetAsset)
+      .append(new KeyedCodec<>("BarrierBlockSet", MaterialSetAsset.CODEC, true), (asset, value) -> asset.solidSetAsset = value, asset -> asset.solidSetAsset)
       .add()
-      .append(new KeyedCodec<>("Bounds", IntegerBounds3dAsset.CODEC, true), (asset, v) -> asset.boundsAsset = v, asset -> asset.boundsAsset)
+      .append(new KeyedCodec<>("Bounds", IntegerBounds3dAsset.CODEC, true), (asset, value) -> asset.boundsAsset = value, asset -> asset.boundsAsset)
       .add()
-      .append(new KeyedCodec<>("BoundingMin", Vector3iUtil.CODEC, true), (asset, v) -> asset.boundingMin = v, asset -> asset.boundingMin)
+      .append(new KeyedCodec<>("BoundingMin", Vector3iUtil.CODEC, true), (asset, value) -> asset.boundingMin = value, asset -> asset.boundingMin)
       .add()
-      .append(new KeyedCodec<>("BoundingMax", Vector3iUtil.CODEC, true), (asset, v) -> asset.boundingMax = v, asset -> asset.boundingMax)
+      .append(new KeyedCodec<>("BoundingMax", Vector3iUtil.CODEC, true), (asset, value) -> asset.boundingMax = value, asset -> asset.boundingMax)
       .add()
-      .append(new KeyedCodec<>("Pattern", PatternAsset.CODEC, true), (asset, v) -> asset.patternAsset = v, asset -> asset.patternAsset)
+      .append(new KeyedCodec<>("Pattern", PatternAsset.CODEC, true), (asset, value) -> asset.patternAsset = value, asset -> asset.patternAsset)
       .add()
-      .append(new KeyedCodec<>("Scanner", ScannerAsset.CODEC, true), (asset, v) -> asset.scannerAsset = v, asset -> asset.scannerAsset)
+      .append(new KeyedCodec<>("Scanner", ScannerAsset.CODEC, true), (asset, value) -> asset.scannerAsset = value, asset -> asset.scannerAsset)
       .add()
       .build();
    private static final PatternAsset DEFAULT_PATTERN_ASSET = new ConstantPatternAsset();

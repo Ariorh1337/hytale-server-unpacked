@@ -111,16 +111,14 @@ public class BedInteraction extends SimpleBlockInteraction {
                                  pageManager.openCustomPage(
                                     ref,
                                     store,
-                                    new OverrideNearbyRespawnPointPage(
-                                       playerRefComponent, type, pos, respawnBlockComponent, nearbyRespawnPoints, radiusLimitRespawnPoint
-                                    )
+                                    new OverrideNearbyRespawnPointPage(playerRefComponent, type, pos, blockRef, nearbyRespawnPoints, radiusLimitRespawnPoint)
                                  );
                               } else if (respawnPoints != null && respawnPoints.length >= respawnConfig.getMaxRespawnPointsPerPlayer()) {
                                  pageManager.openCustomPage(
-                                    ref, store, new SelectOverrideRespawnPointPage(playerRefComponent, type, pos, respawnBlockComponent, respawnPoints)
+                                    ref, store, new SelectOverrideRespawnPointPage(playerRefComponent, type, pos, blockRef, respawnPoints)
                                  );
                               } else {
-                                 pageManager.openCustomPage(ref, store, new SetNameRespawnPointPage(playerRefComponent, type, pos, respawnBlockComponent));
+                                 pageManager.openCustomPage(ref, store, new SetNameRespawnPointPage(playerRefComponent, type, pos, blockRef));
                               }
                            }
                         }

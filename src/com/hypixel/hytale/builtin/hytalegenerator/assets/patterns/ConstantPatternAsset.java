@@ -12,7 +12,7 @@ public class ConstantPatternAsset extends PatternAsset {
    public static final BuilderCodec<ConstantPatternAsset> CODEC = BuilderCodec.builder(
          ConstantPatternAsset.class, ConstantPatternAsset::new, PatternAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Value", Codec.BOOLEAN, true), (asset, value) -> asset.value = value, value -> value.value)
+      .append(new KeyedCodec<>("Value", Codec.BOOLEAN, true), (asset, value) -> asset.value = value, asset -> asset.value)
       .add()
       .build();
    private boolean value = false;
@@ -20,7 +20,7 @@ public class ConstantPatternAsset extends PatternAsset {
    @Nonnull
    @Override
    public Pattern build(@Nonnull PatternAsset.Argument argument) {
-      if (super.isSkipped()) {
+      if (super.skip()) {
          return ConstantPattern.INSTANCE_FALSE;
       } else {
          return this.value ? ConstantPattern.INSTANCE_TRUE : ConstantPattern.INSTANCE_FALSE;

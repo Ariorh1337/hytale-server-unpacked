@@ -24,16 +24,18 @@ public class Positions3DDensityAsset extends DensityAsset {
          Positions3DDensityAsset.class, Positions3DDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
       .append(
-         new KeyedCodec<>("Positions", PositionProviderAsset.CODEC, true), (asset, v) -> asset.positionProviderAsset = v, asset -> asset.positionProviderAsset
+         new KeyedCodec<>("Positions", PositionProviderAsset.CODEC, true),
+         (asset, value) -> asset.positionProviderAsset = value,
+         asset -> asset.positionProviderAsset
       )
       .add()
-      .append(new KeyedCodec<>("DistanceCurve", CurveAsset.CODEC, true), (asset, v) -> asset.curveAsset = v, asset -> asset.curveAsset)
+      .append(new KeyedCodec<>("DistanceCurve", CurveAsset.CODEC, true), (asset, value) -> asset.curveAsset = value, asset -> asset.curveAsset)
       .add()
-      .<Double>append(new KeyedCodec<>("MaxDistance", Codec.DOUBLE, false), (asset, v) -> asset.maxDistance = v, asset -> asset.maxDistance)
+      .<Double>append(new KeyedCodec<>("MaxDistance", Codec.DOUBLE, false), (asset, value) -> asset.maxDistance = value, asset -> asset.maxDistance)
       .addValidator(Validators.greaterThanOrEqual(0.0))
       .add()
       .build();
-   private PositionProviderAsset positionProviderAsset = new ListPositionProviderAsset();
+   private PositionProviderAsset positionProviderAsset = ListPositionProviderAsset.INSTANCE;
    private CurveAsset curveAsset = new ConstantCurveAsset();
    private double maxDistance = 0.0;
 

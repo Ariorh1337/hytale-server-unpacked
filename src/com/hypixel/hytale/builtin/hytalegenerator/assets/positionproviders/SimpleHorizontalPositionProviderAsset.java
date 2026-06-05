@@ -16,12 +16,14 @@ public class SimpleHorizontalPositionProviderAsset extends PositionProviderAsset
       .append(new KeyedCodec<>("RangeY", RangeDoubleAsset.CODEC, true), (asset, value) -> asset.rangeYAsset = value, asset -> asset.rangeYAsset)
       .add()
       .append(
-         new KeyedCodec<>("Positions", PositionProviderAsset.CODEC, true), (asset, v) -> asset.positionProviderAsset = v, asset -> asset.positionProviderAsset
+         new KeyedCodec<>("Positions", PositionProviderAsset.CODEC, true),
+         (asset, value) -> asset.positionProviderAsset = value,
+         asset -> asset.positionProviderAsset
       )
       .add()
       .build();
    private RangeDoubleAsset rangeYAsset = new RangeDoubleAsset();
-   private PositionProviderAsset positionProviderAsset = new ListPositionProviderAsset();
+   private PositionProviderAsset positionProviderAsset = ListPositionProviderAsset.INSTANCE;
 
    @Nonnull
    @Override

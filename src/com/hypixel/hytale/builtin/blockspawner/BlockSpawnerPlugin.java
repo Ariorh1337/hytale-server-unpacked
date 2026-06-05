@@ -134,7 +134,7 @@ public class BlockSpawnerPlugin extends JavaPlugin {
          @Nonnull Ref<ChunkStore> ref, @Nonnull AddReason reason, @Nonnull Store<ChunkStore> store, @Nonnull CommandBuffer<ChunkStore> commandBuffer
       ) {
          WorldConfig worldConfig = store.getExternalData().getWorld().getWorldConfig();
-         if (worldConfig.isBlockSpawnersEnabled()) {
+         if (worldConfig.isBlockSpawnersResolved()) {
             BlockSpawner blockSpawnerComponent = commandBuffer.getComponent(ref, COMPONENT_TYPE);
             assert blockSpawnerComponent != null;
             BlockModule.BlockStateInfo blockStateInfoComponent = commandBuffer.getComponent(ref, BLOCK_INFO_COMPONENT_TYPE);

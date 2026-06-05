@@ -16,7 +16,7 @@ public class UnionPositionProviderAsset extends PositionProviderAsset {
       )
       .append(
          new KeyedCodec<>("Positions", new ArrayCodec<>(PositionProviderAsset.CODEC, PositionProviderAsset[]::new), true),
-         (asset, v) -> asset.positionProviderAssets = v,
+         (asset, value) -> asset.positionProviderAssets = value,
          asset -> asset.positionProviderAssets
       )
       .add()

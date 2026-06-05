@@ -25,24 +25,32 @@ public class BlockMaskAsset implements JsonAssetWithMap<String, DefaultAssetMap<
          BlockMaskAsset.class,
          BlockMaskAsset::new,
          Codec.STRING,
-         (asset, id) -> asset.id = id,
-         config -> config.id,
-         (config, data) -> config.data = data,
-         config -> config.data
+         (asset, value) -> asset.id = value,
+         asset -> asset.id,
+         (asset, value) -> asset.data = value,
+         asset -> asset.data
       )
-      .append(new KeyedCodec<>("DontPlace", MaterialSetAsset.CODEC, false), (t, k) -> t.dontPlaceMaterialSetAsset = k, t -> t.dontPlaceMaterialSetAsset)
+      .append(
+         new KeyedCodec<>("DontPlace", MaterialSetAsset.CODEC, false),
+         (asset, value) -> asset.dontPlaceMaterialSetAsset = value,
+         asset -> asset.dontPlaceMaterialSetAsset
+      )
       .add()
-      .append(new KeyedCodec<>("DontReplace", MaterialSetAsset.CODEC, false), (t, k) -> t.dontReplaceMaterialSetAsset = k, t -> t.dontReplaceMaterialSetAsset)
+      .append(
+         new KeyedCodec<>("DontReplace", MaterialSetAsset.CODEC, false),
+         (asset, value) -> asset.dontReplaceMaterialSetAsset = value,
+         asset -> asset.dontReplaceMaterialSetAsset
+      )
       .add()
       .append(
          new KeyedCodec<>("Advanced", new ArrayCodec<>(BlockMaskEntryAsset.CODEC, BlockMaskEntryAsset[]::new), false),
-         (t, k) -> t.blockMaskEntries = k,
-         t -> t.blockMaskEntries
+         (asset, value) -> asset.blockMaskEntries = value,
+         asset -> asset.blockMaskEntries
       )
       .add()
-      .append(new KeyedCodec<>("ExportAs", Codec.STRING, false), (t, k) -> t.exportName = k, t -> t.exportName)
+      .append(new KeyedCodec<>("ExportAs", Codec.STRING, false), (asset, value) -> asset.exportName = value, asset -> asset.exportName)
       .add()
-      .append(new KeyedCodec<>("Import", Codec.STRING, false), (t, k) -> t.importName = k, t -> t.importName)
+      .append(new KeyedCodec<>("Import", Codec.STRING, false), (asset, value) -> asset.importName = value, asset -> asset.importName)
       .add()
       .afterDecode(asset -> {
          if (asset.exportName != null && !asset.exportName.isEmpty()) {

@@ -14,11 +14,11 @@ public class CuboidPatternAsset extends PatternAsset {
    public static final BuilderCodec<CuboidPatternAsset> CODEC = BuilderCodec.builder(
          CuboidPatternAsset.class, CuboidPatternAsset::new, PatternAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("SubPattern", PatternAsset.CODEC, true), (t, k) -> t.subPatternAsset = k, k -> k.subPatternAsset)
+      .append(new KeyedCodec<>("SubPattern", PatternAsset.CODEC, true), (asset, value) -> asset.subPatternAsset = value, asset -> asset.subPatternAsset)
       .add()
-      .append(new KeyedCodec<>("Min", Vector3iUtil.CODEC, true), (t, k) -> t.min = k, k -> k.min)
+      .append(new KeyedCodec<>("Min", Vector3iUtil.CODEC, true), (asset, value) -> asset.min = value, asset -> asset.min)
       .add()
-      .append(new KeyedCodec<>("Max", Vector3iUtil.CODEC, true), (t, k) -> t.max = k, k -> k.max)
+      .append(new KeyedCodec<>("Max", Vector3iUtil.CODEC, true), (asset, value) -> asset.max = value, asset -> asset.max)
       .add()
       .build();
    private PatternAsset subPatternAsset = new ConstantPatternAsset();
@@ -28,7 +28,7 @@ public class CuboidPatternAsset extends PatternAsset {
    @Nonnull
    @Override
    public Pattern build(@Nonnull PatternAsset.Argument argument) {
-      if (super.isSkipped()) {
+      if (super.skip()) {
          return ConstantPattern.INSTANCE_FALSE;
       }
 

@@ -15,14 +15,14 @@ public class RangeIntAsset implements JsonAssetWithMap<String, DefaultAssetMap<S
          RangeIntAsset.class,
          RangeIntAsset::new,
          Codec.STRING,
-         (asset, id) -> asset.id = id,
-         config -> config.id,
-         (config, data) -> config.data = data,
-         config -> config.data
+         (asset, value) -> asset.id = value,
+         asset -> asset.id,
+         (asset, value) -> asset.data = value,
+         asset -> asset.data
       )
-      .append(new KeyedCodec<>("MinInclusive", Codec.INTEGER, true), (t, value) -> t.minInclusive = value, t -> t.minInclusive)
+      .append(new KeyedCodec<>("MinInclusive", Codec.INTEGER, true), (asset, value) -> asset.minInclusive = value, asset -> asset.minInclusive)
       .add()
-      .append(new KeyedCodec<>("MaxExclusive", Codec.INTEGER, true), (t, value) -> t.maxExclusive = value, t -> t.maxExclusive)
+      .append(new KeyedCodec<>("MaxExclusive", Codec.INTEGER, true), (asset, value) -> asset.maxExclusive = value, asset -> asset.maxExclusive)
       .add()
       .build();
    private String id;

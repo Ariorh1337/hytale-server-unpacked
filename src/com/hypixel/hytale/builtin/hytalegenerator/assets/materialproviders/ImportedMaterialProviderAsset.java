@@ -13,7 +13,7 @@ public class ImportedMaterialProviderAsset extends MaterialProviderAsset {
    public static final BuilderCodec<ImportedMaterialProviderAsset> CODEC = BuilderCodec.builder(
          ImportedMaterialProviderAsset.class, ImportedMaterialProviderAsset::new, MaterialProviderAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Name", Codec.STRING, true), (t, k) -> t.name = k, k -> k.name)
+      .append(new KeyedCodec<>("Name", Codec.STRING, true), (asset, value) -> asset.name = value, asset -> asset.name)
       .add()
       .build();
    private String name = "";

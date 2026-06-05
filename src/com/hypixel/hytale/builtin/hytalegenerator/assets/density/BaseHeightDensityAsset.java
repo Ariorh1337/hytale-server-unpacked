@@ -14,13 +14,13 @@ public class BaseHeightDensityAsset extends DensityAsset {
    public static final BuilderCodec<BaseHeightDensityAsset> CODEC = BuilderCodec.builder(
          BaseHeightDensityAsset.class, BaseHeightDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("BaseHeightName", Codec.STRING, false), (t, k) -> t.baseHeightName = k, t -> t.baseHeightName)
+      .append(new KeyedCodec<>("BaseHeightName", Codec.STRING, false), (asset, value) -> asset.baseHeightName = value, asset -> asset.baseHeightName)
       .add()
-      .append(new KeyedCodec<>("Distance", Codec.BOOLEAN, false), (t, k) -> t.isDistance = k, t -> t.isDistance)
+      .append(new KeyedCodec<>("Distance", Codec.BOOLEAN, false), (asset, value) -> asset.isDistance = value, asset -> asset.isDistance)
       .add()
       .build();
    private String baseHeightName = "";
-   private boolean isDistance = false;
+   private boolean isDistance = true;
 
    @Nonnull
    @Override

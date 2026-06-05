@@ -13,7 +13,11 @@ import org.joml.Vector2d;
 public class ManualCurveAsset extends CurveAsset {
    @Nonnull
    public static final BuilderCodec<ManualCurveAsset> CODEC = BuilderCodec.builder(ManualCurveAsset.class, ManualCurveAsset::new, CurveAsset.ABSTRACT_CODEC)
-      .append(new KeyedCodec<>("Points", new ArrayCodec<>(PointInOutAsset.CODEC, PointInOutAsset[]::new), true), (t, k) -> t.nodes = k, t -> t.nodes)
+      .append(
+         new KeyedCodec<>("Points", new ArrayCodec<>(PointInOutAsset.CODEC, PointInOutAsset[]::new), true),
+         (asset, value) -> asset.nodes = value,
+         asset -> asset.nodes
+      )
       .addValidator((v, r) -> {
          DoubleOpenHashSet ySet = new DoubleOpenHashSet(v.length);
 

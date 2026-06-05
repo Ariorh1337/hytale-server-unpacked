@@ -1,5 +1,6 @@
 package com.hypixel.hytale.builtin.audio.commands;
 
+import com.hypixel.hytale.assetstore.map.IndexedAssetMap;
 import com.hypixel.hytale.builtin.audio.components.ForcedMusicTracker;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
@@ -11,10 +12,13 @@ import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractTargetPlayersCommand;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import javax.annotation.Nonnull;
 
 public class AudioMusicForceCommand extends AbstractTargetPlayersCommand {
+   private static final int MAX_RECURSION_DEPTH = 16;
    @Nonnull
    private final RequiredArg<MusicContainer> musicContainerArg = this.withRequiredArg(
       "musicContainerId", "server.commands.audio.music.force.arg.musiccontainerid.desc", ArgTypes.MUSIC_CONTAINER_ASSET
@@ -27,17 +31,49 @@ public class AudioMusicForceCommand extends AbstractTargetPlayersCommand {
    @Override
    protected void execute(@Nonnull CommandContext context, @Nonnull World world, @Nonnull Store<EntityStore> store, @Nonnull List<Ref<EntityStore>> targets) {
       MusicContainer musicContainer = this.musicContainerArg.get(context);
-      int containerIndex = MusicContainer.getAssetMap().getIndex(musicContainer.getId());
-      int affected = 0;
+      ArrayList<String> unresolved = new ArrayList<>();
+      collectUnresolvedRefs(musicContainer, unresolved, new HashSet<>(), 0);
+      if (!unresolved.isEmpty()) {
+         context.sendMessage(
+            Message.translation("server.commands.audio.music.force.unresolved")
+               .param("music", musicContainer.getId())
+               .param("refs", String.join(", ", unresolved))
+         );
+      } else {
+         int containerIndex = MusicContainer.getAssetMap().getIndex(musicContainer.getId());
+         int affected = 0;
 
-      for (Ref<EntityStore> ref : targets) {
-         ForcedMusicTracker tracker = store.getComponent(ref, ForcedMusicTracker.getComponentType());
-         if (tracker != null) {
-            tracker.setCurrentContainerIndex(containerIndex);
-            affected++;
+         for (Ref<EntityStore> ref : targets) {
+            ForcedMusicTracker tracker = store.getComponent(ref, ForcedMusicTracker.getComponentType());
+            if (tracker != null) {
+               tracker.setCurrentContainerIndex(containerIndex);
+               affected++;
+            }
+         }
+
+         context.sendMessage(Message.translation("server.commands.audio.music.force.success").param("music", musicContainer.getId()).param("count", affected));
+      }
+   }
+
+   private static void collectUnresolvedRefs(@Nonnull MusicContainer mc, @Nonnull List<String> out, @Nonnull HashSet<String> visited, int depth) {
+      if (depth <= 16) {
+         if (visited.add(mc.getId())) {
+            IndexedAssetMap<String, MusicContainer> assetMap = MusicContainer.getAssetMap();
+
+            for (String childId : mc.getChildIds()) {
+               if (childId != null) {
+                  int idx = assetMap.getIndex(childId);
+                  if (idx == Integer.MIN_VALUE) {
+                     out.add(childId);
+                  } else {
+                     MusicContainer child = assetMap.getAsset(childId);
+                     if (child != null) {
+                        collectUnresolvedRefs(child, out, visited, depth + 1);
+                     }
+                  }
+               }
+            }
          }
       }
-
-      context.sendMessage(Message.translation("server.commands.audio.music.force.success").param("music", musicContainer.getId()).param("count", affected));
    }
 }

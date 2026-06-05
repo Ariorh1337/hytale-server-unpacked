@@ -23,11 +23,11 @@ public class DensityPatternAsset extends PatternAsset {
       )
       .append(
          new KeyedCodec<>("Delimiters", new ArrayCodec<>(DensityPatternAsset.DelimiterAsset.CODEC, DensityPatternAsset.DelimiterAsset[]::new), true),
-         (t, k) -> t.delimiterAssets = k,
-         k -> k.delimiterAssets
+         (asset, value) -> asset.delimiterAssets = value,
+         asset -> asset.delimiterAssets
       )
       .add()
-      .append(new KeyedCodec<>("FieldFunction", DensityAsset.CODEC, true), (t, k) -> t.densityAsset = k, k -> k.densityAsset)
+      .append(new KeyedCodec<>("FieldFunction", DensityAsset.CODEC, true), (asset, value) -> asset.densityAsset = value, asset -> asset.densityAsset)
       .add()
       .build();
    private DensityPatternAsset.DelimiterAsset[] delimiterAssets = new DensityPatternAsset.DelimiterAsset[0];
@@ -36,7 +36,7 @@ public class DensityPatternAsset extends PatternAsset {
    @Nonnull
    @Override
    public Pattern build(@Nonnull PatternAsset.Argument argument) {
-      if (super.isSkipped()) {
+      if (super.skip()) {
          return ConstantPattern.INSTANCE_FALSE;
       }
 
@@ -61,14 +61,14 @@ public class DensityPatternAsset extends PatternAsset {
             DensityPatternAsset.DelimiterAsset.class,
             DensityPatternAsset.DelimiterAsset::new,
             Codec.STRING,
-            (asset, id) -> asset.id = id,
-            config -> config.id,
-            (config, data) -> config.data = data,
-            config -> config.data
+            (asset, value) -> asset.id = value,
+            asset -> asset.id,
+            (asset, value) -> asset.data = value,
+            asset -> asset.data
          )
-         .append(new KeyedCodec<>("Min", Codec.DOUBLE, true), (t, v) -> t.min = v, t -> t.min)
+         .append(new KeyedCodec<>("Min", Codec.DOUBLE, true), (asset, value) -> asset.min = value, asset -> asset.min)
          .add()
-         .append(new KeyedCodec<>("Max", Codec.DOUBLE, true), (t, v) -> t.max = v, t -> t.max)
+         .append(new KeyedCodec<>("Max", Codec.DOUBLE, true), (asset, value) -> asset.max = value, asset -> asset.max)
          .add()
          .build();
       private String id;

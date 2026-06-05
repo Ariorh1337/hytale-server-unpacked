@@ -1,6 +1,7 @@
 package com.hypixel.hytale.builtin.hytalegenerator.bounds;
 
 import com.hypixel.hytale.builtin.hytalegenerator.engine.performanceinstruments.MemInstrument;
+import com.hypixel.hytale.builtin.hytalegenerator.math.Calculator;
 import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
 import javax.annotation.Nonnull;
@@ -18,6 +19,11 @@ public class Bounds3i implements MemInstrument {
 
    public Bounds3i() {
       this(Vector3iUtil.ZERO, Vector3iUtil.ZERO);
+   }
+
+   public Bounds3i(@Nonnull Bounds3i other) {
+      this.min = new Vector3i(other.min);
+      this.max = new Vector3i(other.max);
    }
 
    public Bounds3i(@Nonnull Vector3ic min, @Nonnull Vector3ic max) {
@@ -77,6 +83,10 @@ public class Bounds3i implements MemInstrument {
    @Nonnull
    public Vector3i getSize() {
       return new Vector3i(this.max).sub(this.min);
+   }
+
+   public double maxRangeOrthogonal() {
+      return Calculator.max(Math.abs(this.min.x), Math.abs(this.min.y), Math.abs(this.min.z), Math.abs(this.max.x), Math.abs(this.max.y), Math.abs(this.max.z));
    }
 
    @Nonnull
@@ -164,6 +174,29 @@ public class Bounds3i implements MemInstrument {
       } else {
          return this;
       }
+   }
+
+   @Nonnull
+   public Bounds3i stackOrAssign(@Nonnull Bounds3i other) {
+      if (this.isZeroVolume()) {
+         this.assign(other);
+      } else {
+         this.stack(other);
+      }
+
+      return this;
+   }
+
+   @Nonnull
+   public Bounds3i expand(int distance) {
+      this.correct();
+      this.min.add(-distance, -distance, -distance);
+      this.max.add(distance, distance, distance);
+      if (distance < 0) {
+         this.correct();
+      }
+
+      return this;
    }
 
    @Nonnull

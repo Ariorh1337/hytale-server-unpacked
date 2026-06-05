@@ -27,13 +27,13 @@ public class WeightedMaterialProviderAsset extends MaterialProviderAsset {
             new ArrayCodec<>(WeightedMaterialProviderAsset.WeightedMaterialAsset.CODEC, WeightedMaterialProviderAsset.WeightedMaterialAsset[]::new),
             true
          ),
-         (t, k) -> t.weighedMapEntries = k,
-         k -> k.weighedMapEntries
+         (asset, value) -> asset.weighedMapEntries = value,
+         asset -> asset.weighedMapEntries
       )
       .add()
-      .append(new KeyedCodec<>("SkipChance", Codec.DOUBLE, true), (t, k) -> t.skipChance = k, k -> k.skipChance)
+      .append(new KeyedCodec<>("SkipChance", Codec.DOUBLE, true), (asset, value) -> asset.skipChance = value, asset -> asset.skipChance)
       .add()
-      .append(new KeyedCodec<>("Seed", Codec.STRING, true), (t, k) -> t.seed = k, k -> k.seed)
+      .append(new KeyedCodec<>("Seed", Codec.STRING, true), (asset, value) -> asset.seed = value, asset -> asset.seed)
       .add()
       .build();
    private WeightedMaterialProviderAsset.WeightedMaterialAsset[] weighedMapEntries = new WeightedMaterialProviderAsset.WeightedMaterialAsset[0];
@@ -71,21 +71,25 @@ public class WeightedMaterialProviderAsset extends MaterialProviderAsset {
             WeightedMaterialProviderAsset.WeightedMaterialAsset.class,
             WeightedMaterialProviderAsset.WeightedMaterialAsset::new,
             Codec.STRING,
-            (asset, id) -> asset.id = id,
-            config -> config.id,
-            (config, data) -> config.data = data,
-            config -> config.data
+            (asset, value) -> asset.id = value,
+            asset -> asset.id,
+            (asset, value) -> asset.data = value,
+            asset -> asset.data
          )
-         .append(new KeyedCodec<>("Weight", Codec.DOUBLE, true), (t, y) -> t.weight = y, t -> t.weight)
+         .append(new KeyedCodec<>("Weight", Codec.DOUBLE, true), (asset, value) -> asset.weight = value, asset -> asset.weight)
          .addValidator(Validators.greaterThanOrEqual(0.0))
          .add()
-         .append(new KeyedCodec<>("Material", MaterialProviderAsset.CODEC, true), (t, out) -> t.materialProviderAsset = out, t -> t.materialProviderAsset)
+         .append(
+            new KeyedCodec<>("Material", MaterialProviderAsset.CODEC, true),
+            (asset, value) -> asset.materialProviderAsset = value,
+            asset -> asset.materialProviderAsset
+         )
          .add()
          .build();
       private String id;
       private AssetExtraInfo.Data data;
       private double weight = 1.0;
-      private MaterialProviderAsset materialProviderAsset;
+      private MaterialProviderAsset materialProviderAsset = new ConstantMaterialProviderAsset();
 
       public String getId() {
          return this.id;

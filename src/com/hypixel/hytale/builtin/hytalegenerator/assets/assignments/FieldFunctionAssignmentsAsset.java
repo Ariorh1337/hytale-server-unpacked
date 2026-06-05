@@ -26,11 +26,11 @@ public class FieldFunctionAssignmentsAsset extends AssignmentsAsset {
          new KeyedCodec<>(
             "Delimiters", new ArrayCodec<>(FieldFunctionAssignmentsAsset.DelimiterAsset.CODEC, FieldFunctionAssignmentsAsset.DelimiterAsset[]::new), true
          ),
-         (asset, v) -> asset.delimiterAssets = v,
+         (asset, value) -> asset.delimiterAssets = value,
          asset -> asset.delimiterAssets
       )
       .add()
-      .append(new KeyedCodec<>("FieldFunction", DensityAsset.CODEC, true), (asset, v) -> asset.densityAsset = v, asset -> asset.densityAsset)
+      .append(new KeyedCodec<>("FieldFunction", DensityAsset.CODEC, true), (asset, value) -> asset.densityAsset = value, asset -> asset.densityAsset)
       .add()
       .build();
    private FieldFunctionAssignmentsAsset.DelimiterAsset[] delimiterAssets = new FieldFunctionAssignmentsAsset.DelimiterAsset[0];
@@ -58,6 +58,10 @@ public class FieldFunctionAssignmentsAsset extends AssignmentsAsset {
    @Override
    public void cleanUp() {
       this.densityAsset.cleanUp();
+
+      for (FieldFunctionAssignmentsAsset.DelimiterAsset delimiterAsset : this.delimiterAssets) {
+         delimiterAsset.cleanUp();
+      }
    }
 
    public static class DelimiterAsset implements Cleanable, JsonAssetWithMap<String, DefaultAssetMap<String, FieldFunctionAssignmentsAsset.DelimiterAsset>> {
@@ -66,16 +70,18 @@ public class FieldFunctionAssignmentsAsset extends AssignmentsAsset {
             FieldFunctionAssignmentsAsset.DelimiterAsset.class,
             FieldFunctionAssignmentsAsset.DelimiterAsset::new,
             Codec.STRING,
-            (asset, id) -> asset.id = id,
-            config -> config.id,
-            (config, data) -> config.data = data,
-            config -> config.data
+            (asset, value) -> asset.id = value,
+            asset -> asset.id,
+            (asset, value) -> asset.data = value,
+            asset -> asset.data
          )
-         .append(new KeyedCodec<>("Assignments", AssignmentsAsset.CODEC, true), (t, v) -> t.assignmentsAsset = v, t -> t.assignmentsAsset)
+         .append(
+            new KeyedCodec<>("Assignments", AssignmentsAsset.CODEC, true), (asset, value) -> asset.assignmentsAsset = value, asset -> asset.assignmentsAsset
+         )
          .add()
-         .append(new KeyedCodec<>("Min", Codec.DOUBLE, true), (t, v) -> t.min = v, t -> t.min)
+         .append(new KeyedCodec<>("Min", Codec.DOUBLE, true), (asset, value) -> asset.min = value, asset -> asset.min)
          .add()
-         .append(new KeyedCodec<>("Max", Codec.DOUBLE, true), (t, v) -> t.max = v, t -> t.max)
+         .append(new KeyedCodec<>("Max", Codec.DOUBLE, true), (asset, value) -> asset.max = value, asset -> asset.max)
          .add()
          .build();
       private String id;

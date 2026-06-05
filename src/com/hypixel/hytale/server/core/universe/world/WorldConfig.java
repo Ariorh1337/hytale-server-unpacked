@@ -151,7 +151,7 @@ public class WorldConfig {
       .<Boolean>append(new KeyedCodec<>("IsSpawningNPC", Codec.BOOLEAN), (o, i) -> o.isSpawningNPC = i, o -> o.isSpawningNPC)
       .documentation("Whether NPCs can spawn in this world or not.")
       .add()
-      .<Boolean>append(new KeyedCodec<>("IsBlockSpawnersEnabled", Codec.BOOLEAN), (o, i) -> o.isBlockSpawnersEnabled = i, o -> o.isBlockSpawnersEnabled)
+      .<Boolean>append(new KeyedCodec<>("IsBlockSpawnersEnabled", Codec.BOOLEAN), (o, i) -> o.isBlockSpawnersResolved = i, o -> o.isBlockSpawnersResolved)
       .documentation("Whether block spawners resolve into their target blocks in this world.")
       .add()
       .<Boolean>append(new KeyedCodec<>("IsSpawnMarkersEnabled", Codec.BOOLEAN), (o, i) -> o.isSpawnMarkersEnabled = i, o -> o.isSpawnMarkersEnabled)
@@ -269,7 +269,7 @@ public class WorldConfig {
    @Nullable
    private String defaultPermissionGroup;
    private boolean isSpawningNPC = true;
-   private boolean isBlockSpawnersEnabled = true;
+   private boolean isBlockSpawnersResolved = true;
    private boolean isSpawnMarkersEnabled = true;
    private boolean isAllNPCFrozen = false;
    private String gameplayConfig = "Default";
@@ -512,12 +512,12 @@ public class WorldConfig {
       this.isSpawningNPC = spawningNPC;
    }
 
-   public boolean isBlockSpawnersEnabled() {
-      return this.isBlockSpawnersEnabled;
+   public boolean isBlockSpawnersResolved() {
+      return this.isBlockSpawnersResolved;
    }
 
-   public void setBlockSpawnersEnabled(boolean blockSpawnersEnabled) {
-      this.isBlockSpawnersEnabled = blockSpawnersEnabled;
+   public void setBlockSpawnersResolved(boolean blockSpawnersResolved) {
+      this.isBlockSpawnersResolved = blockSpawnersResolved;
    }
 
    public boolean isSpawnMarkersEnabled() {

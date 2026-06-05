@@ -60,22 +60,26 @@ public class DurabilityConditionInteraction extends SimpleInstantInteraction {
 
    protected boolean matches(@Nonnull InteractionContext context) {
       ItemStack item = context.getHeldItem();
-      if (item != null && !item.isUnbreakable()) {
-         double maxDurability = item.getMaxDurability();
-         double rawDurability = item.getDurability();
-         double value = this.valueType == ValueType.Absolute ? rawDurability : (maxDurability > 0.0 ? rawDurability / maxDurability * 100.0 : 0.0);
-
-         return switch (this.operator) {
-            case LessThan -> value < this.threshold;
-            case LessOrEqual -> value <= this.threshold;
-            case GreaterThan -> value > this.threshold;
-            case GreaterOrEqual -> value >= this.threshold;
-            case Equal -> value == this.threshold;
-            case NotEqual -> value != this.threshold;
-         };
-      } else {
+      if (item == null) {
          return false;
       }
+
+      if (item.isUnbreakable()) {
+         return true;
+      }
+
+      double maxDurability = item.getMaxDurability();
+      double rawDurability = item.getDurability();
+      double value = this.valueType == ValueType.Absolute ? rawDurability : (maxDurability > 0.0 ? rawDurability / maxDurability * 100.0 : 0.0);
+
+      return switch (this.operator) {
+         case LessThan -> value < this.threshold;
+         case LessOrEqual -> value <= this.threshold;
+         case GreaterThan -> value > this.threshold;
+         case GreaterOrEqual -> value >= this.threshold;
+         case Equal -> value == this.threshold;
+         case NotEqual -> value != this.threshold;
+      };
    }
 
    @Nonnull

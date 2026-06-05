@@ -15,9 +15,9 @@ public class VectorWarpDensityAsset extends DensityAsset {
    public static final BuilderCodec<VectorWarpDensityAsset> CODEC = BuilderCodec.builder(
          VectorWarpDensityAsset.class, VectorWarpDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("WarpFactor", Codec.DOUBLE, true), (t, k) -> t.warpFactor = k, t -> t.warpFactor)
+      .append(new KeyedCodec<>("WarpFactor", Codec.DOUBLE, true), (asset, value) -> asset.warpFactor = value, asset -> asset.warpFactor)
       .add()
-      .append(new KeyedCodec<>("WarpVector", Vector3dUtil.CODEC, true), (t, k) -> t.warpVector = k, t -> t.warpVector)
+      .append(new KeyedCodec<>("WarpVector", Vector3dUtil.CODEC, true), (asset, value) -> asset.warpVector = value, asset -> asset.warpVector)
       .add()
       .build();
    private double warpFactor = 1.0;

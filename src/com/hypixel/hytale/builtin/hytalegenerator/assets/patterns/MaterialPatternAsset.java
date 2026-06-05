@@ -14,7 +14,7 @@ public class MaterialPatternAsset extends PatternAsset {
    public static final BuilderCodec<MaterialPatternAsset> CODEC = BuilderCodec.builder(
          MaterialPatternAsset.class, MaterialPatternAsset::new, PatternAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Material", MaterialAsset.CODEC, true), (asset, value) -> asset.materialAsset = value, value -> value.materialAsset)
+      .append(new KeyedCodec<>("Material", MaterialAsset.CODEC, true), (asset, value) -> asset.materialAsset = value, asset -> asset.materialAsset)
       .add()
       .build();
    private MaterialAsset materialAsset = new MaterialAsset();
@@ -22,11 +22,16 @@ public class MaterialPatternAsset extends PatternAsset {
    @Nonnull
    @Override
    public Pattern build(@Nonnull PatternAsset.Argument argument) {
-      if (super.isSkipped()) {
+      if (super.skip()) {
          return ConstantPattern.INSTANCE_FALSE;
       }
 
       Material material = this.materialAsset.build(argument.materialCache);
       return new MaterialPattern(material);
+   }
+
+   @Override
+   public void cleanUp() {
+      this.materialAsset.cleanUp();
    }
 }

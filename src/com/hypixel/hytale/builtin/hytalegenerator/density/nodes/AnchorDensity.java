@@ -29,10 +29,10 @@ public class AnchorDensity extends Density {
 
       if (this.isReversed) {
          this.rChildPosition
-            .set(context.position.x + context.densityAnchor.x, context.position.y + context.densityAnchor.y, context.position.z + context.densityAnchor.z);
+            .set(context.position.x + context.densityAnchor.x(), context.position.y + context.densityAnchor.y(), context.position.z + context.densityAnchor.z());
       } else {
          this.rChildPosition
-            .set(context.position.x - context.densityAnchor.x, context.position.y - context.densityAnchor.y, context.position.z - context.densityAnchor.z);
+            .set(context.position.x - context.densityAnchor.x(), context.position.y - context.densityAnchor.y(), context.position.z - context.densityAnchor.z());
       }
 
       this.rChildContext.assign(context);

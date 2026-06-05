@@ -10,7 +10,9 @@ import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.command.system.CommandUtil;
 import com.hypixel.hytale.server.core.command.system.ParseResult;
 import com.hypixel.hytale.server.core.command.system.suggestion.SuggestionResult;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.awt.Color;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -64,28 +66,56 @@ public abstract class AbstractAssetArgumentType<DataType extends JsonAssetWithMa
    @Override
    public void suggest(@Nonnull CommandSender sender, @Nonnull String textAlreadyEntered, int numParametersTyped, @Nonnull SuggestionResult result) {
       Set<AssetKeyType> keys = this.getAssetMap().getAssetMap().keySet();
-      int maxSuggestions = 20;
-      if (textAlreadyEntered.isEmpty()) {
+      int maxSuggestions = 150;
+      if (!textAlreadyEntered.isEmpty()) {
+         String lowerEntered = textAlreadyEntered.toLowerCase(Locale.ENGLISH);
+         int minScore = textAlreadyEntered.length();
+         List<String> prefixMatches = new ObjectArrayList<>();
+         List<String> fuzzyMatches = new ObjectArrayList<>();
+
+         for (AssetKeyType key : keys) {
+            String keyString = key.toString();
+            if (keyString.toLowerCase(Locale.ENGLISH).startsWith(lowerEntered)) {
+               prefixMatches.add(keyString);
+            } else if (StringCompareUtil.getFuzzyDistance(keyString, textAlreadyEntered, Locale.ENGLISH) >= minScore) {
+               fuzzyMatches.add(keyString);
+            }
+         }
+
+         prefixMatches.sort(Comparator.comparingInt(String::length).thenComparing(Comparator.naturalOrder()));
+         fuzzyMatches.sort(Comparator.<String>comparingInt(keyx -> StringCompareUtil.getFuzzyDistance(keyx, textAlreadyEntered, Locale.ENGLISH)).reversed());
+         int count = 0;
+
+         for (String keyString : prefixMatches) {
+            result.suggest(keyString);
+            if (++count >= 150) {
+               if (prefixMatches.size() + fuzzyMatches.size() > 150) {
+                  result.markTruncated();
+               }
+
+               return;
+            }
+         }
+
+         for (String keyString : fuzzyMatches) {
+            result.suggest(keyString);
+            if (++count >= 150) {
+               if (prefixMatches.size() + fuzzyMatches.size() > 150) {
+                  result.markTruncated();
+               }
+
+               return;
+            }
+         }
+      } else {
          int count = 0;
 
          for (AssetKeyType key : keys) {
             result.suggest(key.toString());
-            if (++count >= 20) {
-               break;
-            }
-         }
-      } else {
-         int minScore = textAlreadyEntered.length();
-         List<AssetKeyType> sorted = StringUtil.sortByFuzzyDistance(textAlreadyEntered, keys);
-         int count = 0;
-
-         for (AssetKeyType key : sorted) {
-            if (StringCompareUtil.getFuzzyDistance(key.toString(), textAlreadyEntered, Locale.ENGLISH) < minScore) {
-               break;
-            }
-
-            result.suggest(key.toString());
-            if (++count >= 20) {
+            if (++count >= 150) {
+               if (keys.size() > 150) {
+                  result.markTruncated();
+               }
                break;
             }
          }

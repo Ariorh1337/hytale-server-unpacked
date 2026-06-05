@@ -5,6 +5,7 @@ import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
 import it.unimi.dsi.fastutil.doubles.Double2DoubleFunction;
 import javax.annotation.Nonnull;
 import org.joml.Vector3d;
+import org.joml.Vector3dc;
 
 public class AxisDensity extends Density {
    public static final double ZERO_DELTA = 1.0E-9;
@@ -59,7 +60,7 @@ public class AxisDensity extends Density {
          return 0.0;
       }
 
-      Vector3d anchor = context.densityAnchor;
+      Vector3dc anchor = context.densityAnchor;
       if (anchor == null) {
          return 0.0;
       }

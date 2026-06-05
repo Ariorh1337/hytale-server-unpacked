@@ -14,15 +14,15 @@ public class SelectorDensityAsset extends DensityAsset {
    public static final BuilderCodec<SelectorDensityAsset> CODEC = BuilderCodec.builder(
          SelectorDensityAsset.class, SelectorDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("FromMin", Codec.DOUBLE, true), (t, k) -> t.fromMin = k, k -> k.fromMin)
+      .append(new KeyedCodec<>("FromMin", Codec.DOUBLE, true), (asset, value) -> asset.fromMin = value, asset -> asset.fromMin)
       .add()
-      .append(new KeyedCodec<>("FromMax", Codec.DOUBLE, true), (t, k) -> t.fromMax = k, k -> k.fromMax)
+      .append(new KeyedCodec<>("FromMax", Codec.DOUBLE, true), (asset, value) -> asset.fromMax = value, asset -> asset.fromMax)
       .add()
-      .append(new KeyedCodec<>("ToMin", Codec.DOUBLE, true), (t, k) -> t.toMin = k, k -> k.toMin)
+      .append(new KeyedCodec<>("ToMin", Codec.DOUBLE, true), (asset, value) -> asset.toMin = value, asset -> asset.toMin)
       .add()
-      .append(new KeyedCodec<>("ToMax", Codec.DOUBLE, true), (t, k) -> t.toMax = k, k -> k.toMax)
+      .append(new KeyedCodec<>("ToMax", Codec.DOUBLE, true), (asset, value) -> asset.toMax = value, asset -> asset.toMax)
       .add()
-      .<Double>append(new KeyedCodec<>("SmoothRange", Codec.DOUBLE, true), (t, k) -> t.smoothRange = k, k -> k.smoothRange)
+      .<Double>append(new KeyedCodec<>("SmoothRange", Codec.DOUBLE, true), (asset, value) -> asset.smoothRange = value, asset -> asset.smoothRange)
       .addValidator(Validators.greaterThanOrEqual(0.0))
       .add()
       .build();

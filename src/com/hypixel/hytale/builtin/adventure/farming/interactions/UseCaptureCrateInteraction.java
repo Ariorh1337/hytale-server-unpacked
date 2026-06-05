@@ -135,9 +135,9 @@ public class UseCaptureCrateInteraction extends SimpleBlockInteraction {
                            } else if (!InteractionValidation.canPlayerInteractWithEntity(ref, commandBuffer, context.getHeldItem(), targetEntity)) {
                               LOGGER.at(Level.WARNING)
                                  .log(
-                                    "Entity %d failed capture crate interaction distance check for target entity %d",
-                                    (int)ref.getIndex(),
-                                    (int)targetEntity.getIndex()
+                                    "%s failed capture crate interaction distance check for target entity %d",
+                                    InteractionValidation.getEntityName(ref, commandBuffer),
+                                    targetEntity.getIndex()
                                  );
                               context.getState().state = InteractionState.Failed;
                               super.tick0(firstRun, time, type, context, cooldownHandler);

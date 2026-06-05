@@ -1233,6 +1233,7 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
          }
 
          newRecipe.primaryOutput = primaryOutput;
+         newRecipe.applyOutputExclusions();
          newRecipe.id = CraftingRecipe.generateIdFromItemRecipe(this, 0);
          this.recipeToGenerate = newRecipe;
       }

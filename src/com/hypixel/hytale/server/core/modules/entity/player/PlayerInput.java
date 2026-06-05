@@ -49,7 +49,12 @@ public class PlayerInput implements Component<EntityStore> {
    @Override
    public Component<EntityStore> clone() {
       PlayerInput playerInput = new PlayerInput();
-      playerInput.inputUpdateQueue.addAll(this.inputUpdateQueue);
+
+      for (PlayerInput.InputUpdate inputUpdate : this.inputUpdateQueue) {
+         playerInput.inputUpdateQueue.add(inputUpdate.clone());
+      }
+
+      playerInput.mountId = this.mountId;
       return playerInput;
    }
 
@@ -95,10 +100,17 @@ public class PlayerInput implements Component<EntityStore> {
          assert playerComponent != null;
          playerComponent.moveTo(playerRef, this.x, this.y, this.z, commandBuffer);
       }
+
+      @Override
+      public PlayerInput.InputUpdate clone() {
+         return new PlayerInput.AbsoluteMovement(this.x, this.y, this.z);
+      }
    }
 
    public interface InputUpdate {
       void apply(CommandBuffer<EntityStore> var1, ArchetypeChunk<EntityStore> var2, int var3);
+
+      PlayerInput.InputUpdate clone();
    }
 
    public static class RelativeMovement implements PlayerInput.InputUpdate {
@@ -146,6 +158,11 @@ public class PlayerInput implements Component<EntityStore> {
          Vector3d position = transformComponent.getPosition();
          playerComponent.moveTo(ref, position.x + this.x, position.y + this.y, position.z + this.z, commandBuffer);
       }
+
+      @Override
+      public PlayerInput.InputUpdate clone() {
+         return new PlayerInput.RelativeMovement(this.x, this.y, this.z);
+      }
    }
 
    public record SetBody(Direction direction) implements PlayerInput.InputUpdate {
@@ -156,6 +173,11 @@ public class PlayerInput implements Component<EntityStore> {
             transformComponent.getRotation().set(this.direction.pitch, this.direction.yaw, this.direction.roll);
          }
       }
+
+      @Override
+      public PlayerInput.InputUpdate clone() {
+         return new PlayerInput.SetBody(this.direction.clone());
+      }
    }
 
    public static class SetClientVelocity implements PlayerInput.InputUpdate {
@@ -163,6 +185,10 @@ public class PlayerInput implements Component<EntityStore> {
 
       public SetClientVelocity(com.hypixel.hytale.protocol.Vector3d velocity) {
          this.velocity = new Vector3d(velocity.x, velocity.y, velocity.z);
+      }
+
+      public SetClientVelocity(Vector3d velocity) {
+         this.velocity = velocity;
       }
 
       public Vector3d getVelocity() {
@@ -176,6 +202,11 @@ public class PlayerInput implements Component<EntityStore> {
             velocityComponent.setClient(this.velocity);
          }
       }
+
+      @Override
+      public PlayerInput.InputUpdate clone() {
+         return new PlayerInput.SetClientVelocity(new Vector3d(this.velocity));
+      }
    }
 
    public record SetHead(Direction direction) implements PlayerInput.InputUpdate {
@@ -185,6 +216,11 @@ public class PlayerInput implements Component<EntityStore> {
          if (headRotationComponent != null) {
             headRotationComponent.getRotation().set(this.direction.pitch, this.direction.yaw, this.direction.roll);
          }
+      }
+
+      @Override
+      public PlayerInput.InputUpdate clone() {
+         return new PlayerInput.SetHead(this.direction.clone());
       }
    }
 
@@ -196,11 +232,21 @@ public class PlayerInput implements Component<EntityStore> {
             movementStatesComponent.setMovementStates(this.movementStates);
          }
       }
+
+      @Override
+      public PlayerInput.InputUpdate clone() {
+         return new PlayerInput.SetMovementStates(this.movementStates.clone());
+      }
    }
 
    public record SetRiderMovementStates(MovementStates movementStates) implements PlayerInput.InputUpdate {
       @Override
       public void apply(CommandBuffer<EntityStore> commandBuffer, ArchetypeChunk<EntityStore> archetypeChunk, int index) {
+      }
+
+      @Override
+      public PlayerInput.InputUpdate clone() {
+         return new PlayerInput.SetRiderMovementStates(this.movementStates.clone());
       }
    }
 
@@ -241,6 +287,11 @@ public class PlayerInput implements Component<EntityStore> {
 
       @Override
       public void apply(CommandBuffer<EntityStore> commandBuffer, ArchetypeChunk<EntityStore> archetypeChunk, int index) {
+      }
+
+      @Override
+      public PlayerInput.InputUpdate clone() {
+         return new PlayerInput.WishMovement(this.x, this.y, this.z);
       }
    }
 }

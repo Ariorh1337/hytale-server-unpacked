@@ -52,6 +52,7 @@ public enum RoleDebugFlags implements Supplier<String> {
    VisFlock("Visualize flock member connections"),
    VisPath("Visualize pathfinding waypoints"),
    VisChargePath("Visualize BodyMotionCharge rail step targets"),
+   VisChargeProbe("Visualize BodyMotionCharge target probing"),
    VisChargeCollisions("Visualize BodyMotionCharge collision hits"),
    VisChargeEntityHits("Visualize BodyMotionCharge entity hits (overrides VisChargeCollisions entity coloring)"),
    BeaconMessages("Enable debugging of beacon message sending and receiving");

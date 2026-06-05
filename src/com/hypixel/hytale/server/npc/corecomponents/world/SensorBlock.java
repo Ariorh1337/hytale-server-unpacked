@@ -7,10 +7,10 @@ import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
-import com.hypixel.hytale.server.core.universe.world.World;
-import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
+import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.blockpositions.IBlockPositionData;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.blackboard.Blackboard;
@@ -52,7 +52,6 @@ public class SensorBlock extends SensorBase {
          return false;
       }
 
-      World world = store.getExternalData().getWorld();
       TransformComponent transformComponent = store.getComponent(ref, TransformComponent.getComponentType());
       assert transformComponent != null;
       Vector3d entityPos = transformComponent.getPosition();
@@ -61,9 +60,14 @@ public class SensorBlock extends SensorBase {
       BlockTarget target = role.getWorldSupport().getCachedBlockTarget(this.blockSet);
       Vector3d position = target.getPosition();
       if (!position.equals(Vector3dUtil.MIN)) {
-         WorldChunk targetChunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(position.x, position.z));
-         if (targetChunk != null) {
-            BlockSection section = targetChunk.getBlockChunk().getSectionAtBlockY(MathUtil.floor(position.y));
+         ChunkStore chunkStore = store.getExternalData().getWorld().getChunkStore();
+         long chunkIndex = ChunkUtil.indexChunkFromBlock(position.x, position.z);
+         Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(chunkIndex);
+         BlockChunk blockChunkComponent = chunkRef != null && chunkRef.isValid()
+            ? chunkStore.getStore().getComponent(chunkRef, BlockChunk.getComponentType())
+            : null;
+         if (blockChunkComponent != null) {
+            BlockSection section = blockChunkComponent.getSectionAtBlockY(MathUtil.floor(position.y));
             if (section.getLocalChangeCounter() == target.getChunkChangeRevision()
                || section.get(MathUtil.floor(position.x), MathUtil.floor(position.y), MathUtil.floor(position.z)) == target.getFoundBlockType()) {
                if (!(Math.abs(entityPos.y - position.y) > this.yRange) && !(entityPos.distanceSquared(position) > this.range * this.range)) {

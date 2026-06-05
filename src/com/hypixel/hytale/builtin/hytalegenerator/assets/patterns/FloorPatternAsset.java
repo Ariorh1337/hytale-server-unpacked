@@ -12,9 +12,9 @@ public class FloorPatternAsset extends PatternAsset {
    public static final BuilderCodec<FloorPatternAsset> CODEC = BuilderCodec.builder(
          FloorPatternAsset.class, FloorPatternAsset::new, PatternAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Floor", PatternAsset.CODEC, true), (t, k) -> t.floor = k, k -> k.floor)
+      .append(new KeyedCodec<>("Floor", PatternAsset.CODEC, true), (asset, value) -> asset.floor = value, asset -> asset.floor)
       .add()
-      .append(new KeyedCodec<>("Origin", PatternAsset.CODEC, true), (t, k) -> t.origin = k, k -> k.origin)
+      .append(new KeyedCodec<>("Origin", PatternAsset.CODEC, true), (asset, value) -> asset.origin = value, asset -> asset.origin)
       .add()
       .build();
    private PatternAsset floor = new ConstantPatternAsset();
@@ -23,7 +23,7 @@ public class FloorPatternAsset extends PatternAsset {
    @Nonnull
    @Override
    public Pattern build(@Nonnull PatternAsset.Argument argument) {
-      if (super.isSkipped()) {
+      if (super.skip()) {
          return ConstantPattern.INSTANCE_FALSE;
       }
 

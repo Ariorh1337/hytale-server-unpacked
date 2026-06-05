@@ -26,8 +26,8 @@ public class TerrainDensityMaterialProviderAsset extends MaterialProviderAsset {
             new ArrayCodec<>(TerrainDensityMaterialProviderAsset.DelimiterAsset.CODEC, TerrainDensityMaterialProviderAsset.DelimiterAsset[]::new),
             true
          ),
-         (t, k) -> t.delimiterAssets = k,
-         k -> k.delimiterAssets
+         (asset, value) -> asset.delimiterAssets = value,
+         asset -> asset.delimiterAssets
       )
       .add()
       .build();
@@ -68,16 +68,20 @@ public class TerrainDensityMaterialProviderAsset extends MaterialProviderAsset {
             TerrainDensityMaterialProviderAsset.DelimiterAsset.class,
             TerrainDensityMaterialProviderAsset.DelimiterAsset::new,
             Codec.STRING,
-            (asset, id) -> asset.id = id,
-            config -> config.id,
-            (config, data) -> config.data = data,
-            config -> config.data
+            (asset, value) -> asset.id = value,
+            asset -> asset.id,
+            (asset, value) -> asset.data = value,
+            asset -> asset.data
          )
-         .append(new KeyedCodec<>("From", Codec.DOUBLE, true), (t, y) -> t.from = y, t -> t.from)
+         .append(new KeyedCodec<>("From", Codec.DOUBLE, true), (asset, value) -> asset.from = value, asset -> asset.from)
          .add()
-         .append(new KeyedCodec<>("To", Codec.DOUBLE, true), (t, out) -> t.to = out, t -> t.to)
+         .append(new KeyedCodec<>("To", Codec.DOUBLE, true), (asset, value) -> asset.to = value, asset -> asset.to)
          .add()
-         .append(new KeyedCodec<>("Material", MaterialProviderAsset.CODEC, true), (t, out) -> t.materialProviderAsset = out, t -> t.materialProviderAsset)
+         .append(
+            new KeyedCodec<>("Material", MaterialProviderAsset.CODEC, true),
+            (asset, value) -> asset.materialProviderAsset = value,
+            asset -> asset.materialProviderAsset
+         )
          .add()
          .build();
       private String id;

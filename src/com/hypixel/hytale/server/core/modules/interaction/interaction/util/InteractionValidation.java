@@ -5,8 +5,11 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.GameMode;
+import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.core.modules.entity.component.DisplayNameComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.player.PlayerSettings;
@@ -120,5 +123,22 @@ public class InteractionValidation {
       @Nonnull BlockPosition blockPosition
    ) {
       return canPlayerInteractWithBlock(ref, componentAccessor, heldItem, blockPosition.x, blockPosition.y, blockPosition.z);
+   }
+
+   @Nonnull
+   public static String getEntityName(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      DisplayNameComponent displayNameComponent = componentAccessor.getComponent(ref, DisplayNameComponent.getComponentType());
+      if (displayNameComponent != null) {
+         Message displayName = displayNameComponent.getDisplayName();
+         if (displayName != null) {
+            String rawText = displayName.getRawText();
+            if (rawText != null) {
+               return rawText;
+            }
+         }
+      }
+
+      UUIDComponent uuidComponent = componentAccessor.getComponent(ref, UUIDComponent.getComponentType());
+      return uuidComponent != null ? uuidComponent.getUuid().toString() : "Entity(ref=" + ref.getIndex() + ")";
    }
 }

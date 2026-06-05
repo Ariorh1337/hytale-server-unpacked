@@ -1,32 +1,45 @@
 package com.hypixel.hytale.server.npc.util;
 
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.universe.world.World;
-import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
+import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
+import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import javax.annotation.Nonnull;
 
 public class BlockPlacementHelper {
    public static boolean canPlaceUnitBlock(@Nonnull World world, BlockType placedBlockType, boolean allowEmptyMaterials, int x, int y, int z) {
-      WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(x, z));
-      if (chunk == null) {
+      ChunkStore chunkStore = world.getChunkStore();
+      long chunkIndex = ChunkUtil.indexChunkFromBlock(x, z);
+      Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(chunkIndex);
+      if (chunkRef != null && chunkRef.isValid()) {
+         Store<ChunkStore> chunkComponentStore = chunkStore.getStore();
+         BlockChunk blockChunkComponent = chunkComponentStore.getComponent(chunkRef, BlockChunk.getComponentType());
+         if (blockChunkComponent == null) {
+            return false;
+         }
+
+         int target = blockChunkComponent.getBlock(x, y, z);
+         BlockType targetBlockType = BlockType.getAssetMap().getAsset(target);
+         if (!testBlock(placedBlockType, targetBlockType, allowEmptyMaterials)) {
+            return false;
+         }
+
+         target = blockChunkComponent.getBlock(x, y - 1, z);
+         targetBlockType = BlockType.getAssetMap().getAsset(target);
+         BlockSection section = blockChunkComponent.getSectionAtBlockY(y - 1);
+         int filler = section.getFiller(x, y - 1, z);
+         int rotation = section.getRotationIndex(x, y - 1, z);
+         return testSupportingBlock(targetBlockType, rotation, filler);
+      } else {
          return false;
       }
-
-      int target = chunk.getBlock(x, y, z);
-      BlockType targetBlockType = BlockType.getAssetMap().getAsset(target);
-      if (!testBlock(placedBlockType, targetBlockType, allowEmptyMaterials)) {
-         return false;
-      }
-
-      target = chunk.getBlock(x, y - 1, z);
-      targetBlockType = BlockType.getAssetMap().getAsset(target);
-      int filler = chunk.getFiller(x, y - 1, z);
-      int rotation = chunk.getRotationIndex(x, y - 1, z);
-      return testSupportingBlock(targetBlockType, rotation, filler);
    }
 
    public static boolean canPlaceBlock(

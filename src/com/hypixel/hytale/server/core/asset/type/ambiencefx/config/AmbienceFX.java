@@ -5,10 +5,7 @@ import com.hypixel.hytale.assetstore.AssetKeyValidator;
 import com.hypixel.hytale.assetstore.AssetRegistry;
 import com.hypixel.hytale.assetstore.AssetStore;
 import com.hypixel.hytale.assetstore.codec.AssetBuilderCodec;
-import com.hypixel.hytale.assetstore.event.LoadedAssetsEvent;
-import com.hypixel.hytale.assetstore.event.RemovedAssetsEvent;
 import com.hypixel.hytale.assetstore.map.IndexedAssetMap;
-import com.hypixel.hytale.assetstore.map.IndexedLookupTableAssetMap;
 import com.hypixel.hytale.assetstore.map.JsonAssetWithMap;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
@@ -21,7 +18,6 @@ import com.hypixel.hytale.common.util.ArrayUtil;
 import com.hypixel.hytale.protocol.AmbienceStateWrite;
 import com.hypixel.hytale.server.core.asset.type.audiocategory.config.AudioCategory;
 import com.hypixel.hytale.server.core.asset.type.audiostate.config.AmbienceStateWriteConfig;
-import com.hypixel.hytale.server.core.asset.type.audiostate.config.AudioState;
 import com.hypixel.hytale.server.core.asset.type.audiostate.config.AudioStateResolver;
 import com.hypixel.hytale.server.core.asset.type.musiccontainer.config.MusicContainer;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
@@ -247,41 +243,6 @@ public class AmbienceFX implements JsonAssetWithMap<String, IndexedAssetMap<Stri
 
    public String getId() {
       return this.id;
-   }
-
-   public void refreshAudioStateResolution() {
-      if (this.ambientBed != null) {
-         AudioStateResolver.resolveBindings(this.ambientBed.stateBindings);
-      }
-
-      if (this.sounds != null) {
-         for (AmbienceFXSound sound : this.sounds) {
-            if (sound != null) {
-               AudioStateResolver.resolveBindings(sound.stateBindings);
-            }
-         }
-      }
-
-      AudioStateResolver.resolveSetStates(this.setStates);
-      this.cachedPacket = null;
-   }
-
-   public static void onAudioStateLoaded(@Nonnull LoadedAssetsEvent<String, AudioState, IndexedLookupTableAssetMap<String, AudioState>> event) {
-      if (!event.isInitial()) {
-         refreshAllAudioStateResolutions();
-      }
-   }
-
-   public static void onAudioStateRemoved(@Nonnull RemovedAssetsEvent<String, AudioState, IndexedLookupTableAssetMap<String, AudioState>> event) {
-      refreshAllAudioStateResolutions();
-   }
-
-   private static void refreshAllAudioStateResolutions() {
-      for (AmbienceFX ambFX : getAssetMap().getAssetMap().values()) {
-         if (ambFX != null) {
-            ambFX.refreshAudioStateResolution();
-         }
-      }
    }
 
    public AmbienceFXConditions getConditions() {

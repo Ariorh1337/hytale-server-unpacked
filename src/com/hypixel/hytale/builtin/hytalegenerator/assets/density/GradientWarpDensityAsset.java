@@ -14,14 +14,14 @@ public class GradientWarpDensityAsset extends DensityAsset {
    public static final BuilderCodec<GradientWarpDensityAsset> CODEC = BuilderCodec.builder(
          GradientWarpDensityAsset.class, GradientWarpDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("SampleRange", Codec.DOUBLE, false), (t, k) -> t.sampleRange = k, t -> t.sampleRange)
+      .append(new KeyedCodec<>("SampleRange", Codec.DOUBLE, false), (asset, value) -> asset.sampleRange = value, asset -> asset.sampleRange)
       .addValidator(Validators.greaterThan(0.0))
       .add()
-      .append(new KeyedCodec<>("WarpFactor", Codec.DOUBLE, false), (t, k) -> t.warpFactor = k, t -> t.warpFactor)
+      .append(new KeyedCodec<>("WarpFactor", Codec.DOUBLE, false), (asset, value) -> asset.warpFactor = value, asset -> asset.warpFactor)
       .add()
-      .append(new KeyedCodec<>("2D", Codec.BOOLEAN, false), (t, k) -> t.is2d = k, t -> t.is2d)
+      .append(new KeyedCodec<>("2D", Codec.BOOLEAN, false), (asset, value) -> asset.is2d = value, asset -> asset.is2d)
       .add()
-      .append(new KeyedCodec<>("YFor2D", Codec.DOUBLE, false), (t, k) -> t.y2d = k, t -> t.y2d)
+      .append(new KeyedCodec<>("YFor2D", Codec.DOUBLE, false), (asset, value) -> asset.y2d = value, asset -> asset.y2d)
       .add()
       .build();
    private double sampleRange = 1.0;

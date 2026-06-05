@@ -630,15 +630,34 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
    }
 
    public void clearAllSupportValues() {
+      this.setAllSupportValues(0);
+   }
+
+   public void setAllSupportValues(int supportValue) {
       this.blocksLock.writeLock().lock();
 
       try {
          this.blocks
             .replaceAll(
-               (k, b) -> (BlockSelection.BlockHolder)(b.supportValue() == 0
+               (k, b) -> (BlockSelection.BlockHolder)(b.supportValue() == supportValue
                   ? b
-                  : new BlockSelection.BlockHolder(b.blockId(), b.rotation(), b.filler(), 0, b.holder()))
+                  : new BlockSelection.BlockHolder(b.blockId(), b.rotation(), b.filler(), supportValue, b.holder()))
             );
+      } finally {
+         this.blocksLock.writeLock().unlock();
+      }
+   }
+
+   public void setSupportValueAtLocalPos(int x, int y, int z, int supportValue) {
+      this.blocksLock.writeLock().lock();
+
+      try {
+         long key = BlockUtil.pack(x, y, z);
+         BlockSelection.BlockHolder block = this.blocks.get(key);
+         if (block != null && block.supportValue() != supportValue) {
+            this.blocks.put(key, new BlockSelection.BlockHolder(block.blockId(), block.rotation(), block.filler(), supportValue, block.holder()));
+            return;
+         }
       } finally {
          this.blocksLock.writeLock().unlock();
       }

@@ -47,29 +47,39 @@ public class PrefabPropAsset extends PropAsset {
    public static final BuilderCodec<PrefabPropAsset> CODEC = BuilderCodec.builder(PrefabPropAsset.class, PrefabPropAsset::new, PropAsset.ABSTRACT_CODEC)
       .append(
          new KeyedCodec<>("WeightedPrefabPaths", new ArrayCodec<>(PrefabPropAsset.WeightedPathAsset.CODEC, PrefabPropAsset.WeightedPathAsset[]::new), true),
-         (asset, v) -> asset.weightedPrefabPathAssets = v,
+         (asset, value) -> asset.weightedPrefabPathAssets = value,
          asset -> asset.weightedPrefabPathAssets
       )
       .add()
-      .append(new KeyedCodec<>("LegacyPath", Codec.BOOLEAN, false), (asset, v) -> asset.legacyPath = v, asset -> asset.legacyPath)
+      .append(new KeyedCodec<>("LegacyPath", Codec.BOOLEAN, false), (asset, value) -> asset.legacyPath = value, asset -> asset.legacyPath)
       .add()
       .append(
-         new KeyedCodec<>("Directionality", DirectionalityAsset.CODEC, true), (asset, v) -> asset.directionalityAsset = v, asset -> asset.directionalityAsset
+         new KeyedCodec<>("Directionality", DirectionalityAsset.CODEC, true),
+         (asset, value) -> asset.directionalityAsset = value,
+         asset -> asset.directionalityAsset
       )
       .add()
-      .append(new KeyedCodec<>("Scanner", ScannerAsset.CODEC, true), (asset, v) -> asset.scannerAsset = v, asset -> asset.scannerAsset)
+      .append(new KeyedCodec<>("Scanner", ScannerAsset.CODEC, true), (asset, value) -> asset.scannerAsset = value, asset -> asset.scannerAsset)
       .add()
-      .append(new KeyedCodec<>("BlockMask", BlockMaskAsset.CODEC, false), (asset, v) -> asset.blockMaskAsset = v, asset -> asset.blockMaskAsset)
+      .append(new KeyedCodec<>("BlockMask", BlockMaskAsset.CODEC, false), (asset, value) -> asset.blockMaskAsset = value, asset -> asset.blockMaskAsset)
       .add()
-      .append(new KeyedCodec<>("MoldingDirection", MoldingDirection.CODEC, false), (t, k) -> t.moldingDirectionName = k, k -> k.moldingDirectionName)
+      .append(
+         new KeyedCodec<>("MoldingDirection", MoldingDirection.CODEC, false),
+         (asset, value) -> asset.moldingDirectionName = value,
+         asset -> asset.moldingDirectionName
+      )
       .add()
-      .append(new KeyedCodec<>("MoldingPattern", PatternAsset.CODEC, false), (asset, v) -> asset.moldingPatternAsset = v, asset -> asset.moldingPatternAsset)
+      .append(
+         new KeyedCodec<>("MoldingPattern", PatternAsset.CODEC, false), (asset, value) -> asset.moldingPatternAsset = value, asset -> asset.moldingPatternAsset
+      )
       .add()
-      .append(new KeyedCodec<>("MoldingScanner", ScannerAsset.CODEC, false), (asset, v) -> asset.moldingScannerAsset = v, asset -> asset.moldingScannerAsset)
+      .append(
+         new KeyedCodec<>("MoldingScanner", ScannerAsset.CODEC, false), (asset, value) -> asset.moldingScannerAsset = value, asset -> asset.moldingScannerAsset
+      )
       .add()
-      .append(new KeyedCodec<>("MoldingChildren", Codec.BOOLEAN, false), (asset, v) -> asset.moldChildren = v, asset -> asset.moldChildren)
+      .append(new KeyedCodec<>("MoldingChildren", Codec.BOOLEAN, false), (asset, value) -> asset.moldChildren = value, asset -> asset.moldChildren)
       .add()
-      .append(new KeyedCodec<>("LoadEntities", Codec.BOOLEAN, false), (asset, v) -> asset.loadEntities = v, asset -> asset.loadEntities)
+      .append(new KeyedCodec<>("LoadEntities", Codec.BOOLEAN, false), (asset, value) -> asset.loadEntities = value, asset -> asset.loadEntities)
       .add()
       .build();
    private PrefabPropAsset.WeightedPathAsset[] weightedPrefabPathAssets = new PrefabPropAsset.WeightedPathAsset[0];
@@ -198,15 +208,15 @@ public class PrefabPropAsset extends PropAsset {
             PrefabPropAsset.WeightedPathAsset.class,
             PrefabPropAsset.WeightedPathAsset::new,
             Codec.STRING,
-            (asset, id) -> asset.id = id,
-            config -> config.id,
-            (config, data) -> config.data = data,
-            config -> config.data
+            (asset, value) -> asset.id = value,
+            asset -> asset.id,
+            (asset, value) -> asset.data = value,
+            asset -> asset.data
          )
-         .append(new KeyedCodec<>("Weight", Codec.DOUBLE, true), (t, y) -> t.weight = y, t -> t.weight)
+         .append(new KeyedCodec<>("Weight", Codec.DOUBLE, true), (asset, value) -> asset.weight = value, asset -> asset.weight)
          .addValidator(Validators.greaterThanOrEqual(0.0))
          .add()
-         .append(new KeyedCodec<>("Path", Codec.STRING, true), (t, out) -> t.path = out, t -> t.path)
+         .append(new KeyedCodec<>("Path", Codec.STRING, true), (asset, value) -> asset.path = value, asset -> asset.path)
          .add()
          .build();
       private String id;

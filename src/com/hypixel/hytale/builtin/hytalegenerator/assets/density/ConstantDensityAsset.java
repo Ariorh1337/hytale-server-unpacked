@@ -8,11 +8,12 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import javax.annotation.Nonnull;
 
 public class ConstantDensityAsset extends DensityAsset {
+   public static final ConstantDensityAsset ZERO_INSTANCE = new ConstantDensityAsset();
    @Nonnull
    public static final BuilderCodec<ConstantDensityAsset> CODEC = BuilderCodec.builder(
          ConstantDensityAsset.class, ConstantDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Value", Codec.DOUBLE, true), (t, k) -> t.value = k, k -> k.value)
+      .append(new KeyedCodec<>("Value", Codec.DOUBLE, true), (asset, value) -> asset.value = value, asset -> asset.value)
       .add()
       .build();
    private double value;

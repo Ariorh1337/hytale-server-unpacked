@@ -82,5 +82,7 @@ public class OrienterPropAsset extends PropAsset {
    @Override
    public void cleanUp() {
       this.propAsset.cleanUp();
+      this.patternAsset.cleanUp();
+      this.scannerAsset.cleanUp();
    }
 }

@@ -59,7 +59,11 @@ public class ContextualUseNPCInteraction extends SimpleInstantInteraction {
             context.getState().state = InteractionState.Failed;
          } else if (!InteractionValidation.canPlayerInteractWithEntity(context.getEntity(), commandBuffer, context.getHeldItem(), targetRef)) {
             LOGGER.at(Level.WARNING)
-               .log("Entity %d failed use NPC interaction distance check for target entity %d", (int)context.getEntity().getIndex(), (int)targetRef.getIndex());
+               .log(
+                  "%s failed use NPC interaction distance check for target entity %d",
+                  InteractionValidation.getEntityName(context.getEntity(), commandBuffer),
+                  targetRef.getIndex()
+               );
             context.getState().state = InteractionState.Failed;
          } else {
             NPCEntity npcComponent = commandBuffer.getComponent(targetRef, NPCEntity.getComponentType());

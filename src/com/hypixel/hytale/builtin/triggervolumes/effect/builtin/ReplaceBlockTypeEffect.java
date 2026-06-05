@@ -18,8 +18,10 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.fluid.Fluid;
 import com.hypixel.hytale.server.core.prefab.selection.mask.BlockFilter;
 import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.ChunkColumn;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
+import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.FluidSection;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import it.unimi.dsi.fastutil.ints.IntIterator;
@@ -32,11 +34,12 @@ import org.joml.Vector3d;
 public class ReplaceBlockTypeEffect extends TriggerEffect {
    @Nonnull
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+   private static final String[] STRINGS = new String[0];
    @Nonnull
    public static final BuilderCodec<ReplaceBlockTypeEffect> CODEC = BuilderCodec.builder(ReplaceBlockTypeEffect.class, ReplaceBlockTypeEffect::new, BASE_CODEC)
       .append(
          new KeyedCodec<>("FromBlockTypes", Codec.STRING_ARRAY),
-         (effect, fromBlockTypes) -> effect.fromBlockTypes = fromBlockTypes != null ? fromBlockTypes : new String[0],
+         (effect, fromBlockTypes) -> effect.fromBlockTypes = fromBlockTypes != null ? fromBlockTypes : STRINGS,
          effect -> effect.fromBlockTypes.length == 0 ? null : effect.fromBlockTypes
       )
       .add()
@@ -62,7 +65,7 @@ public class ReplaceBlockTypeEffect extends TriggerEffect {
       .add()
       .build();
    @Nonnull
-   private String[] fromBlockTypes = new String[0];
+   private String[] fromBlockTypes = STRINGS;
    @Nullable
    private String toBlockType;
    @Nonnull
@@ -77,44 +80,57 @@ public class ReplaceBlockTypeEffect extends TriggerEffect {
    public void execute(@Nonnull TriggerContext context) {
       if (this.fromBlockTypes.length != 0 && this.toBlockType != null && !this.toBlockType.isBlank()) {
          World world = context.getStore().getExternalData().getWorld();
-         if (world != null) {
-            ReplaceBlockTypeEffect.TargetType toTarget = this.resolveToTarget();
-            if (toTarget != null) {
-               BlockFilter.BlocksAndFluids fromTypes = BlockFilter.parseBlocksAndFluids(this.fromBlockTypes);
-               IntSet fromFluids = fromTypes.fluids();
-               if (!fromTypes.blocks().isEmpty() || fromFluids != null && !fromFluids.isEmpty()) {
-                  Vector3d min = new Vector3d();
-                  Vector3d max = new Vector3d();
-                  Vector3d blockCenter = new Vector3d();
+         ReplaceBlockTypeEffect.TargetType toTarget = this.resolveToTarget();
+         if (toTarget != null) {
+            BlockFilter.BlocksAndFluids fromTypes = BlockFilter.parseBlocksAndFluids(this.fromBlockTypes);
+            IntSet fromFluids = fromTypes.fluids();
+            if (!fromTypes.blocks().isEmpty() || fromFluids != null && !fromFluids.isEmpty()) {
+               ChunkStore chunkStore = world.getChunkStore();
+               Store<ChunkStore> chunkComponentStore = chunkStore.getStore();
+               Vector3d min = new Vector3d();
+               Vector3d max = new Vector3d();
+               Vector3d blockCenter = new Vector3d();
 
-                  for (VolumeEntry volume : context.getSpatialVolumes()) {
-                     TriggerVolumeShape shape = volume.getShape();
-                     Vector3d origin = volume.getPosition();
-                     if (this.bounds == ReplaceBlockTypeEffect.Bounds.AABB) {
-                        this.getConfiguredAABB(origin, min, max);
-                     } else {
-                        shape.getWorldAABB(origin, min, max);
-                     }
+               for (VolumeEntry volume : context.getSpatialVolumes()) {
+                  TriggerVolumeShape shape = volume.getShape();
+                  Vector3d origin = volume.getPosition();
+                  if (this.bounds == ReplaceBlockTypeEffect.Bounds.AABB) {
+                     this.getConfiguredAABB(origin, min, max);
+                  } else {
+                     shape.getWorldAABB(origin, min, max);
+                  }
 
-                     int minBlockX = MathUtil.floor(min.x());
-                     int minBlockY = MathUtil.floor(min.y());
-                     int minBlockZ = MathUtil.floor(min.z());
-                     int maxBlockX = MathUtil.floor(max.x());
-                     int maxBlockY = MathUtil.floor(max.y());
-                     int maxBlockZ = MathUtil.floor(max.z());
+                  int minBlockX = MathUtil.floor(min.x());
+                  int minBlockY = MathUtil.floor(min.y());
+                  int minBlockZ = MathUtil.floor(min.z());
+                  int maxBlockX = MathUtil.floor(max.x());
+                  int maxBlockY = MathUtil.floor(max.y());
+                  int maxBlockZ = MathUtil.floor(max.z());
 
-                     for (int blockX = minBlockX; blockX <= maxBlockX; blockX++) {
-                        for (int blockY = minBlockY; blockY <= maxBlockY; blockY++) {
+                  for (int blockX = minBlockX; blockX <= maxBlockX; blockX++) {
+                     for (int blockY = minBlockY; blockY <= maxBlockY; blockY++) {
+                        if (blockY >= 0 && blockY < 320) {
                            for (int blockZ = minBlockZ; blockZ <= maxBlockZ; blockZ++) {
                               if (this.containsBlock(shape, origin, min, max, blockCenter, blockX, blockY, blockZ)) {
-                                 WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(blockX, blockZ));
-                                 if (chunk != null) {
-                                    int currentBlockId = chunk.getBlock(blockX, blockY, blockZ);
-                                    int currentFluidId = chunk.getFluidId(blockX, blockY, blockZ);
-                                    boolean fluidMatched = fromFluids != null && fromFluids.contains(currentFluidId);
-                                    if ((chunk.getFiller(blockX, blockY, blockZ) == 0 || fluidMatched)
-                                       && (fromTypes.blocks().contains(currentBlockId) || fluidMatched)) {
-                                       this.replaceMatchedCell(world, chunk, blockX, blockY, blockZ, toTarget);
+                                 Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(ChunkUtil.indexChunkFromBlock(blockX, blockZ));
+                                 if (chunkRef != null && chunkRef.isValid()) {
+                                    BlockChunk blockChunkComponent = chunkComponentStore.getComponent(chunkRef, BlockChunk.getComponentType());
+                                    if (blockChunkComponent != null) {
+                                       BlockSection blockSection = blockChunkComponent.getSectionAtBlockY(blockY);
+                                       int currentBlockId = blockChunkComponent.getBlock(blockX, blockY, blockZ);
+                                       int currentFiller = blockSection.getFiller(blockX, blockY, blockZ);
+                                       boolean fluidMatched = fromFluids != null
+                                          && !fromFluids.isEmpty()
+                                          && matchesFluid(chunkComponentStore, chunkRef, fromFluids, blockX, blockY, blockZ);
+                                       if ((currentFiller == 0 || fluidMatched) && (fromTypes.blocks().contains(currentBlockId) || fluidMatched)) {
+                                          WorldChunk worldChunkComponent = chunkComponentStore.getComponent(chunkRef, WorldChunk.getComponentType());
+                                          if (worldChunkComponent != null) {
+                                             boolean isFiller = currentFiller != 0;
+                                             replaceMatchedCell(
+                                                chunkStore, chunkRef, worldChunkComponent, blockSection, isFiller, blockX, blockY, blockZ, toTarget
+                                             );
+                                          }
+                                       }
                                     }
                                  }
                               }
@@ -150,49 +166,84 @@ public class ReplaceBlockTypeEffect extends TriggerEffect {
       }
    }
 
-   private void replaceMatchedCell(
-      @Nonnull World world, @Nonnull WorldChunk chunk, int blockX, int blockY, int blockZ, @Nonnull ReplaceBlockTypeEffect.TargetType toTarget
+   private static boolean matchesFluid(
+      @Nonnull Store<ChunkStore> chunkComponentStore, @Nonnull Ref<ChunkStore> chunkRef, @Nonnull IntSet fromFluids, int blockX, int blockY, int blockZ
    ) {
-      boolean isFiller = chunk.getFiller(blockX, blockY, blockZ) != 0;
-      if (toTarget.fluidId() != 0) {
-         if (!isFiller) {
-            chunk.setBlock(blockX, blockY, blockZ, 0, BlockType.EMPTY, 0, 0, 256);
+      ChunkColumn chunkColumnComponent = chunkComponentStore.getComponent(chunkRef, ChunkColumn.getComponentType());
+      if (chunkColumnComponent == null) {
+         return false;
+      }
+
+      Ref<ChunkStore> sectionRef = chunkColumnComponent.getSection(ChunkUtil.chunkCoordinate(blockY));
+      if (sectionRef != null && sectionRef.isValid()) {
+         FluidSection fluidSectionComponent = chunkComponentStore.getComponent(sectionRef, FluidSection.getComponentType());
+         if (fluidSectionComponent == null) {
+            return false;
          }
 
-         setFluid(world, chunk, blockX, blockY, blockZ, toTarget.fluidId());
+         int fluidId = fluidSectionComponent.getFluidId(blockX, blockY, blockZ);
+         return fromFluids.contains(fluidId);
       } else {
-         clearFluid(world, chunk, blockX, blockY, blockZ);
+         return false;
+      }
+   }
+
+   private static void replaceMatchedCell(
+      @Nonnull ChunkStore chunkStore,
+      @Nonnull Ref<ChunkStore> chunkRef,
+      @Nonnull WorldChunk worldChunkComponent,
+      @Nonnull BlockSection blockSection,
+      boolean isFiller,
+      int blockX,
+      int blockY,
+      int blockZ,
+      @Nonnull ReplaceBlockTypeEffect.TargetType toTarget
+   ) {
+      if (toTarget.fluidId() != 0) {
+         if (!isFiller) {
+            worldChunkComponent.setBlock(blockX, blockY, blockZ, 0, BlockType.EMPTY, 0, 0, 256);
+         }
+
+         setFluid(chunkStore, chunkRef, blockX, blockY, blockZ, toTarget.fluidId());
+      } else {
+         clearFluid(chunkStore, chunkRef, blockX, blockY, blockZ);
          if (!isFiller) {
             BlockType toBlockTypeAsset = BlockType.getAssetMap().getAsset(toTarget.blockId());
             if (toBlockTypeAsset != null) {
-               int rotation = chunk.getRotationIndex(blockX, blockY, blockZ);
-               chunk.setBlock(blockX, blockY, blockZ, toTarget.blockId(), toBlockTypeAsset, rotation, 0, 256);
+               int rotation = blockSection.getRotationIndex(blockX, blockY, blockZ);
+               worldChunkComponent.setBlock(blockX, blockY, blockZ, toTarget.blockId(), toBlockTypeAsset, rotation, 0, 256);
             }
          }
       }
    }
 
-   private static void setFluid(@Nonnull World world, @Nonnull WorldChunk chunk, int blockX, int blockY, int blockZ, int fluidId) {
-      Fluid fluid = Fluid.getAssetMap().getAsset(fluidId);
-      if (fluid != null) {
-         Store<ChunkStore> chunkStore = world.getChunkStore().getStore();
-         ChunkColumn column = chunkStore.getComponent(chunk.getReference(), ChunkColumn.getComponentType());
-         if (column != null) {
-            Ref<ChunkStore> section = column.getSection(ChunkUtil.chunkCoordinate(blockY));
-            FluidSection fluidSection = chunkStore.ensureAndGetComponent(section, FluidSection.getComponentType());
-            fluidSection.setFluid(blockX, blockY, blockZ, fluidId, (byte)fluid.getMaxFluidLevel());
+   private static void setFluid(@Nonnull ChunkStore chunkStore, @Nonnull Ref<ChunkStore> chunkRef, int blockX, int blockY, int blockZ, int fluidId) {
+      Fluid fluidAsset = Fluid.getAssetMap().getAsset(fluidId);
+      if (fluidAsset != null) {
+         Store<ChunkStore> chunkComponentStore = chunkStore.getStore();
+         ChunkColumn chunkColumnComponent = chunkComponentStore.getComponent(chunkRef, ChunkColumn.getComponentType());
+         if (chunkColumnComponent != null) {
+            Ref<ChunkStore> sectionRef = chunkColumnComponent.getSection(ChunkUtil.chunkCoordinate(blockY));
+            if (sectionRef != null && sectionRef.isValid()) {
+               FluidSection fluidSection = chunkComponentStore.ensureAndGetComponent(sectionRef, FluidSection.getComponentType());
+               fluidSection.setFluid(blockX, blockY, blockZ, fluidId, (byte)fluidAsset.getMaxFluidLevel());
+            }
          }
       }
    }
 
-   private static void clearFluid(@Nonnull World world, @Nonnull WorldChunk chunk, int blockX, int blockY, int blockZ) {
-      if (chunk.getFluidId(blockX, blockY, blockZ) != 0) {
-         Store<ChunkStore> chunkStore = world.getChunkStore().getStore();
-         ChunkColumn column = chunkStore.getComponent(chunk.getReference(), ChunkColumn.getComponentType());
-         if (column != null) {
-            Ref<ChunkStore> section = column.getSection(ChunkUtil.chunkCoordinate(blockY));
-            FluidSection fluidSection = chunkStore.ensureAndGetComponent(section, FluidSection.getComponentType());
-            fluidSection.setFluid(blockX, blockY, blockZ, 0, (byte)0);
+   private static void clearFluid(@Nonnull ChunkStore chunkStore, @Nonnull Ref<ChunkStore> chunkRef, int blockX, int blockY, int blockZ) {
+      Store<ChunkStore> chunkComponentStore = chunkStore.getStore();
+      ChunkColumn chunkColumnComponent = chunkComponentStore.getComponent(chunkRef, ChunkColumn.getComponentType());
+      if (chunkColumnComponent != null) {
+         Ref<ChunkStore> sectionRef = chunkColumnComponent.getSection(ChunkUtil.chunkCoordinate(blockY));
+         if (sectionRef != null && sectionRef.isValid()) {
+            FluidSection fluidSectionComponent = chunkComponentStore.getComponent(sectionRef, FluidSection.getComponentType());
+            if (fluidSectionComponent != null) {
+               if (fluidSectionComponent.getFluidId(blockX, blockY, blockZ) != 0) {
+                  fluidSectionComponent.setFluid(blockX, blockY, blockZ, 0, (byte)0);
+               }
+            }
          }
       }
    }

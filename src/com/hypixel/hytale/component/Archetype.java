@@ -16,6 +16,7 @@ public class Archetype<ECS_TYPE> implements Query<ECS_TYPE> {
    private final ComponentType<ECS_TYPE, ?>[] componentTypes;
    @Nullable
    private ExactArchetypeQuery<ECS_TYPE> exactQuery;
+   private final int hashCode;
 
    public static <ECS_TYPE> Archetype<ECS_TYPE> empty() {
       return EMPTY;
@@ -25,6 +26,7 @@ public class Archetype<ECS_TYPE> implements Query<ECS_TYPE> {
       this.minIndex = minIndex;
       this.count = count;
       this.componentTypes = componentTypes;
+      this.hashCode = Arrays.hashCode(componentTypes);
    }
 
    public int getMinIndex() {
@@ -325,7 +327,7 @@ public class Archetype<ECS_TYPE> implements Query<ECS_TYPE> {
 
    @Override
    public int hashCode() {
-      return Arrays.hashCode(this.componentTypes);
+      return this.hashCode;
    }
 
    @Nonnull

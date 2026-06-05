@@ -28,14 +28,18 @@ public class WeightedThicknessLayerAsset extends LayerAsset {
             new ArrayCodec<>(WeightedThicknessLayerAsset.WeightedThicknessAsset.CODEC, WeightedThicknessLayerAsset.WeightedThicknessAsset[]::new),
             true
          ),
-         (t, k) -> t.possibleThicknessAssets = k,
-         k -> k.possibleThicknessAssets
+         (asset, value) -> asset.possibleThicknessAssets = value,
+         asset -> asset.possibleThicknessAssets
       )
       .addValidator(Validators.nonNullArrayElements())
       .add()
-      .append(new KeyedCodec<>("Material", MaterialProviderAsset.CODEC, true), (t, k) -> t.materialProviderAsset = k, k -> k.materialProviderAsset)
+      .append(
+         new KeyedCodec<>("Material", MaterialProviderAsset.CODEC, true),
+         (asset, value) -> asset.materialProviderAsset = value,
+         asset -> asset.materialProviderAsset
+      )
       .add()
-      .append(new KeyedCodec<>("Seed", Codec.STRING, true), (t, k) -> t.seed = k, k -> k.seed)
+      .append(new KeyedCodec<>("Seed", Codec.STRING, true), (asset, value) -> asset.seed = value, asset -> asset.seed)
       .add()
       .build();
    private MaterialProviderAsset materialProviderAsset = new ConstantMaterialProviderAsset();
@@ -65,14 +69,14 @@ public class WeightedThicknessLayerAsset extends LayerAsset {
             WeightedThicknessLayerAsset.WeightedThicknessAsset.class,
             WeightedThicknessLayerAsset.WeightedThicknessAsset::new,
             Codec.STRING,
-            (asset, id) -> asset.id = id,
-            config -> config.id,
-            (config, data) -> config.data = data,
-            config -> config.data
+            (asset, value) -> asset.id = value,
+            asset -> asset.id,
+            (asset, value) -> asset.data = value,
+            asset -> asset.data
          )
-         .append(new KeyedCodec<>("Weight", Codec.DOUBLE, true), (t, y) -> t.weight = y, t -> t.weight)
+         .append(new KeyedCodec<>("Weight", Codec.DOUBLE, true), (asset, value) -> asset.weight = value, asset -> asset.weight)
          .add()
-         .append(new KeyedCodec<>("Thickness", Codec.INTEGER, true), (t, out) -> t.thickness = out, t -> t.thickness)
+         .append(new KeyedCodec<>("Thickness", Codec.INTEGER, true), (asset, value) -> asset.thickness = value, asset -> asset.thickness)
          .add()
          .build();
       private String id;

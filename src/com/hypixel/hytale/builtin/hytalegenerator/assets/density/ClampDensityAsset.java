@@ -13,13 +13,13 @@ public class ClampDensityAsset extends DensityAsset {
    public static final BuilderCodec<ClampDensityAsset> CODEC = BuilderCodec.builder(
          ClampDensityAsset.class, ClampDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("WallA", Codec.DOUBLE, true), (t, k) -> t.wallA = k, k -> k.wallA)
+      .append(new KeyedCodec<>("WallA", Codec.DOUBLE, true), (asset, value) -> asset.wallA = value, asset -> asset.wallA)
       .add()
-      .append(new KeyedCodec<>("WallB", Codec.DOUBLE, true), (t, k) -> t.wallB = k, k -> k.wallB)
+      .append(new KeyedCodec<>("WallB", Codec.DOUBLE, true), (asset, value) -> asset.wallB = value, asset -> asset.wallB)
       .add()
       .build();
-   private double wallA;
-   private double wallB;
+   private double wallA = -1.0;
+   private double wallB = 1.0;
 
    @Nonnull
    @Override

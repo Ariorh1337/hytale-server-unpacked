@@ -11,7 +11,6 @@ import com.hypixel.hytale.server.core.modules.blockset.BlockSetModule;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
-import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.blockpositions.BlockPositionProvider;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.blockpositions.IBlockPositionData;
@@ -194,104 +193,113 @@ public class BlockTypeView extends BlockRegionView<BlockTypeView> {
       int minY = MathUtil.clamp(entityY - yRange & -32, 0, 320);
       int maxY = MathUtil.clamp(entityY + yRange, 0, 320);
       BitSet clonedBitSet = null;
-      ChunkStore chunkStore = componentAccessor.getExternalData().getWorld().getChunkStore();
-      Store<ChunkStore> chunkStoreStore = chunkStore.getStore();
+      ChunkStore chunkStore = world.getChunkStore();
+      Store<ChunkStore> chunkComponentStore = chunkStore.getStore();
 
       for (int x = entityX - maxRange & -32; x < entityX + maxRange; x += 32) {
          for (int z = entityZ - maxRange & -32; z < entityZ + maxRange; z += 32) {
-            WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(x, z));
-            if (chunk != null) {
-               long chunkIndex = chunk.getIndex();
-               BlockChunk blockChunk = chunk.getBlockChunk();
+            long chunkIndex = ChunkUtil.indexChunkFromBlock(x, z);
+            Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(chunkIndex);
+            if (chunkRef != null && chunkRef.isValid()) {
+               BlockChunk blockChunkComponent = chunkComponentStore.getComponent(chunkRef, BlockChunk.getComponentType());
+               if (blockChunkComponent != null) {
+                  for (int y = minY; y < maxY; y += 32) {
+                     int sectionIndex = ChunkUtil.indexSection(y);
+                     BlockSection section = blockChunkComponent.getSectionAtIndex(sectionIndex);
+                     Ref<ChunkStore> sectionRef = chunkStore.getChunkSectionReference(ChunkUtil.chunkCoordinate(x), sectionIndex, ChunkUtil.chunkCoordinate(z));
+                     if (sectionRef != null && sectionRef.isValid()) {
+                        BlockPositionProvider entry = chunkComponentStore.getComponent(sectionRef, BlockPositionProvider.getComponentType());
+                        if (entry == null || entry.isStale(blockSet, section)) {
+                           short changeCounter = section.getLocalChangeCounter();
+                           if (indexViewFromChunkCoordinates(x, z) == this.index) {
+                              if (this.aggregateNeedsRebuild) {
+                                 HytaleLogger.Api context = Blackboard.LOGGER.at(Level.FINEST);
+                                 if (context.isEnabled()) {
+                                    context.log(
+                                       "Rebuilding blocktype aggregate in partial blackboard view %s, %s with %s blocksets",
+                                       xOfViewIndex(this.index),
+                                       zOfViewIndex(this.index),
+                                       this.allBlockSets.cardinality()
+                                    );
+                                 }
 
-               for (int y = minY; y < maxY; y += 32) {
-                  int sectionIndex = ChunkUtil.indexSection(y);
-                  BlockSection section = blockChunk.getSectionAtIndex(sectionIndex);
-                  Ref<ChunkStore> sectionRef = chunkStore.getChunkSectionReference(ChunkUtil.chunkCoordinate(x), sectionIndex, ChunkUtil.chunkCoordinate(z));
-                  if (sectionRef != null) {
-                     BlockPositionProvider entry = chunkStoreStore.getComponent(sectionRef, BlockPositionProvider.getComponentType());
-                     if (entry == null || entry.isStale(blockSet, section)) {
-                        short changeCounter = section.getLocalChangeCounter();
-                        if (indexViewFromChunkCoordinates(x, z) == this.index) {
-                           if (this.aggregateNeedsRebuild) {
+                                 this.aggregateNeedsRebuild = false;
+                                 rebuildBlockTypeAggregate(this.blockSetAggregate, this.allBlockSets);
+                              }
+
                               HytaleLogger.Api context = Blackboard.LOGGER.at(Level.FINEST);
                               if (context.isEnabled()) {
                                  context.log(
-                                    "Rebuilding blocktype aggregate in partial blackboard view %s, %s with %s blocksets",
+                                    "Entity %s (reference:%s) generating new entry for chunk %s section %s in view %s, %s",
+                                    roleName,
+                                    ref,
+                                    chunkIndex,
+                                    sectionIndex,
                                     xOfViewIndex(this.index),
-                                    zOfViewIndex(this.index),
-                                    this.allBlockSets.cardinality()
+                                    zOfViewIndex(this.index)
                                  );
                               }
 
-                              this.aggregateNeedsRebuild = false;
-                              rebuildBlockTypeAggregate(this.blockSetAggregate, this.allBlockSets);
-                           }
-
-                           HytaleLogger.Api context = Blackboard.LOGGER.at(Level.FINEST);
-                           if (context.isEnabled()) {
-                              context.log(
-                                 "Entity %s (reference:%s) generating new entry for chunk %s section %s in view %s, %s",
-                                 roleName,
-                                 ref,
-                                 chunkIndex,
-                                 sectionIndex,
-                                 xOfViewIndex(this.index),
-                                 zOfViewIndex(this.index)
-                              );
-                           }
-
-                           if (clonedBitSet == null) {
-                              clonedBitSet = (BitSet)this.allBlockSets.clone();
-                           }
-
-                           entry = this.generator.generate(changeCounter, sectionIndex, blockChunk, this.blockSetAggregate, clonedBitSet);
-                        } else {
-                           HytaleLogger.Api context = Blackboard.LOGGER.at(Level.FINEST);
-                           BitSet combinedClonedBlockSets;
-                           if (entry != null) {
-                              if (context.isEnabled()) {
-                                 context.log(
-                                    "Entity %s (reference:%s) generating new entry for chunk %s section %s across border using existing entry",
-                                    roleName,
-                                    ref,
-                                    chunkIndex,
-                                    sectionIndex
-                                 );
+                              if (clonedBitSet == null) {
+                                 clonedBitSet = (BitSet)this.allBlockSets.clone();
                               }
 
-                              combinedClonedBlockSets = entry.getSearchedBlockSets();
+                              entry = this.generator.generate(changeCounter, sectionIndex, blockChunkComponent, this.blockSetAggregate, clonedBitSet);
                            } else {
-                              if (context.isEnabled()) {
-                                 context.log(
-                                    "Entity %s (reference:%s) generating new entry for chunk %s section %s across border",
-                                    roleName,
-                                    ref,
-                                    chunkIndex,
-                                    sectionIndex
-                                 );
+                              HytaleLogger.Api context = Blackboard.LOGGER.at(Level.FINEST);
+                              BitSet combinedClonedBlockSets;
+                              if (entry != null) {
+                                 if (context.isEnabled()) {
+                                    context.log(
+                                       "Entity %s (reference:%s) generating new entry for chunk %s section %s across border using existing entry",
+                                       roleName,
+                                       ref,
+                                       chunkIndex,
+                                       sectionIndex
+                                    );
+                                 }
+
+                                 combinedClonedBlockSets = entry.getSearchedBlockSets();
+                              } else {
+                                 if (context.isEnabled()) {
+                                    context.log(
+                                       "Entity %s (reference:%s) generating new entry for chunk %s section %s across border",
+                                       roleName,
+                                       ref,
+                                       chunkIndex,
+                                       sectionIndex
+                                    );
+                                 }
+
+                                 BlockTypeView otherView = this.blackboard.getView(BlockTypeView.class, x, z);
+                                 if (otherView != null) {
+                                    combinedClonedBlockSets = (BitSet)otherView.allBlockSets.clone();
+                                 } else {
+                                    combinedClonedBlockSets = new BitSet();
+                                 }
                               }
 
-                              BlockTypeView otherView = this.blackboard.getView(BlockTypeView.class, x, z);
-                              if (otherView != null) {
-                                 combinedClonedBlockSets = (BitSet)otherView.allBlockSets.clone();
-                              } else {
-                                 combinedClonedBlockSets = new BitSet();
-                              }
+                              combinedClonedBlockSets.or(this.allBlockSets);
+                              rebuildBlockTypeAggregate(this.crossViewBlockSetAggregate, combinedClonedBlockSets);
+                              entry = this.generator
+                                 .generate(changeCounter, sectionIndex, blockChunkComponent, this.crossViewBlockSetAggregate, combinedClonedBlockSets);
                            }
 
-                           combinedClonedBlockSets.or(this.allBlockSets);
-                           rebuildBlockTypeAggregate(this.crossViewBlockSetAggregate, combinedClonedBlockSets);
-                           entry = this.generator.generate(changeCounter, sectionIndex, blockChunk, this.crossViewBlockSetAggregate, combinedClonedBlockSets);
+                           chunkComponentStore.putComponent(sectionRef, BlockPositionProvider.getComponentType(), entry);
                         }
 
-                        chunkStoreStore.putComponent(sectionRef, BlockPositionProvider.getComponentType(), entry);
+                        ResourceView resourceView = this.blackboard.getIfExists(ResourceView.class, indexViewFromChunkCoordinates(x, z));
+                        entry.findBlocks(
+                           this.foundBlocks,
+                           blockSet,
+                           range,
+                           yRange,
+                           ref,
+                           resourceView != null ? this.reservedBlockFilter : null,
+                           resourceView,
+                           componentAccessor
+                        );
                      }
-
-                     ResourceView resourceView = this.blackboard.getIfExists(ResourceView.class, indexViewFromChunkCoordinates(x, z));
-                     entry.findBlocks(
-                        this.foundBlocks, blockSet, range, yRange, ref, resourceView != null ? this.reservedBlockFilter : null, resourceView, componentAccessor
-                     );
                   }
                }
             }

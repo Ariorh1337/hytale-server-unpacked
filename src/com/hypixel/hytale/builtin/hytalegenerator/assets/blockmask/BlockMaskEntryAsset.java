@@ -18,14 +18,14 @@ public class BlockMaskEntryAsset implements JsonAssetWithMap<String, DefaultAsse
          BlockMaskEntryAsset.class,
          BlockMaskEntryAsset::new,
          Codec.STRING,
-         (asset, id) -> asset.id = id,
-         config -> config.id,
-         (config, data) -> config.data = data,
-         config -> config.data
+         (asset, value) -> asset.id = value,
+         asset -> asset.id,
+         (asset, value) -> asset.data = value,
+         asset -> asset.data
       )
-      .append(new KeyedCodec<>("Source", MaterialSetAsset.CODEC, true), (t, k) -> t.propBlockSet = k, t -> t.propBlockSet)
+      .append(new KeyedCodec<>("Source", MaterialSetAsset.CODEC, true), (asset, value) -> asset.propBlockSet = value, asset -> asset.propBlockSet)
       .add()
-      .append(new KeyedCodec<>("CanReplace", MaterialSetAsset.CODEC, true), (t, k) -> t.replacesBlockSet = k, t -> t.replacesBlockSet)
+      .append(new KeyedCodec<>("CanReplace", MaterialSetAsset.CODEC, true), (asset, value) -> asset.replacesBlockSet = value, asset -> asset.replacesBlockSet)
       .add()
       .build();
    private String id;
