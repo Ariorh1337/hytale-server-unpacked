@@ -502,7 +502,9 @@ public class SpawningPlugin extends JavaPlugin {
             WorldEnvironmentSpawnData environmentSpawnData = worldSpawnData.getWorldEnvironmentSpawnData(environment);
             if (environmentSpawnData != null) {
                WorldNPCSpawnStat npcSpawnData = environmentSpawnData.getNpcStatMap().get(npcComponent.getRoleIndex());
-               if (npcSpawnData != null && npcSpawnData.getActual() > npcSpawnData.getExpected() * 1.25 + 4.0) {
+               if (npcSpawnData != null
+                  && !(npcSpawnData instanceof WorldNPCSpawnStat.CountOnly)
+                  && npcSpawnData.getActual() > npcSpawnData.getExpected() * 1.25 + 4.0) {
                   get()
                      .getLogger()
                      .at(Level.WARNING)

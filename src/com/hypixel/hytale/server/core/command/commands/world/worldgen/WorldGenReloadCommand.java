@@ -1,16 +1,19 @@
 package com.hypixel.hytale.server.core.command.commands.world.worldgen;
 
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.event.IEventDispatcher;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.logger.sentry.SkipSentryException;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
+import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.FlagArg;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractAsyncWorldCommand;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.WorldConfig;
+import com.hypixel.hytale.server.core.universe.world.events.WorldGenChunksClearedEvent;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.IChunkSaver;
 import com.hypixel.hytale.server.core.universe.world.storage.component.ChunkSavingSystems;
@@ -159,19 +162,29 @@ public class WorldGenReloadCommand extends AbstractAsyncWorldCommand {
                },
                world
             )
-            .thenComposeAsync(aVoid -> {
-               context.sendMessage(MESSAGE_COMMANDS_WORLD_GEN_RELOAD_REGENERATING_LOADED_CHUNKS);
-               LongSet chunkIndexes = chunkComponentStore.getChunkIndexes();
-               ObjectArrayList<CompletableFuture<?>> regenerateFutures = new ObjectArrayList<>();
-               LongIterator chunkIterator = chunkIndexes.iterator();
+            .thenComposeAsync(
+               aVoid -> {
+                  context.sendMessage(MESSAGE_COMMANDS_WORLD_GEN_RELOAD_REGENERATING_LOADED_CHUNKS);
+                  IEventDispatcher<WorldGenChunksClearedEvent, WorldGenChunksClearedEvent> clearedDispatcher = HytaleServer.get()
+                     .getEventBus()
+                     .dispatchFor(WorldGenChunksClearedEvent.class, world.getName());
+                  if (clearedDispatcher.hasListener()) {
+                     clearedDispatcher.dispatch(new WorldGenChunksClearedEvent(world));
+                  }
 
-               while (chunkIterator.hasNext()) {
-                  long index = chunkIterator.nextLong();
-                  regenerateFutures.add(chunkComponentStore.getChunkReferenceAsync(index, 9));
-               }
+                  LongSet chunkIndexes = chunkComponentStore.getChunkIndexes();
+                  ObjectArrayList<CompletableFuture<?>> regenerateFutures = new ObjectArrayList<>();
+                  LongIterator chunkIterator = chunkIndexes.iterator();
 
-               return CompletableFuture.allOf(regenerateFutures.toArray(CompletableFuture[]::new));
-            }, world)
+                  while (chunkIterator.hasNext()) {
+                     long index = chunkIterator.nextLong();
+                     regenerateFutures.add(chunkComponentStore.getChunkReferenceAsync(index, 9));
+                  }
+
+                  return CompletableFuture.allOf(regenerateFutures.toArray(CompletableFuture[]::new));
+               },
+               world
+            )
             .thenRunAsync(() -> {
                world.unlockSaving();
                context.sendMessage(MESSAGE_COMMANDS_WORLD_GEN_RELOAD_CHUNK_SAVING_ENABLED);

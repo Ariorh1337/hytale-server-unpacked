@@ -17,6 +17,7 @@ public class ActionRole extends ActionBase {
    protected final int roleIndex;
    protected final String kind;
    protected final boolean changeAppearance;
+   protected final boolean detachFromSpawning;
    @Nullable
    protected final String state;
    @Nullable
@@ -27,6 +28,7 @@ public class ActionRole extends ActionBase {
       this.kind = builder.getRole(builderSupport);
       this.roleIndex = NPCPlugin.get().getIndex(this.kind);
       this.changeAppearance = builder.getChangeAppearance(builderSupport);
+      this.detachFromSpawning = builder.getDetachFromSpawning(builderSupport);
       String stateString = builder.getState(builderSupport);
       if (stateString != null) {
          String[] split = stateString.split("\\.");
@@ -50,7 +52,7 @@ public class ActionRole extends ActionBase {
          return false;
       }
 
-      RoleChangeSystem.requestRoleChange(ref, role, this.roleIndex, this.changeAppearance, this.state, this.subState, store);
+      RoleChangeSystem.requestRoleChange(ref, role, this.roleIndex, this.changeAppearance, this.state, this.subState, this.detachFromSpawning, store);
       role.setReachedTerminalAction(true);
       return true;
    }

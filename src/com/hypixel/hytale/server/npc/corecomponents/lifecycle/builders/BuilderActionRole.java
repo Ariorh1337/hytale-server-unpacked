@@ -18,6 +18,7 @@ public class BuilderActionRole extends BuilderActionBase {
    protected final DeferEvaluateAssetHolder role = new DeferEvaluateAssetHolder();
    protected final BooleanHolder changeAppearance = new BooleanHolder();
    protected final StringHolder state = new StringHolder();
+   protected final BooleanHolder detachFromSpawning = new BooleanHolder();
 
    @Nonnull
    @Override
@@ -50,6 +51,15 @@ public class BuilderActionRole extends BuilderActionBase {
          data, "ChangeAppearance", this.changeAppearance, true, BuilderDescriptorState.Stable, "Whether the appearance of the new Role should be used", null
       );
       this.getString(data, "State", this.state, null, StateStringValidator.requireMainStateOrNull(), BuilderDescriptorState.Stable, "State name to set", null);
+      this.getBoolean(
+         data,
+         "DetachFromSpawning",
+         this.detachFromSpawning,
+         false,
+         BuilderDescriptorState.Stable,
+         "Whether the NPC should be removed from world-spawn population tracking and despawning after the role change",
+         null
+      );
       return this;
    }
 
@@ -63,5 +73,9 @@ public class BuilderActionRole extends BuilderActionBase {
 
    public String getState(@Nonnull BuilderSupport support) {
       return this.state.get(support.getExecutionContext());
+   }
+
+   public boolean getDetachFromSpawning(@Nonnull BuilderSupport support) {
+      return this.detachFromSpawning.get(support.getExecutionContext());
    }
 }

@@ -117,6 +117,11 @@ public class RoleChangeSystem extends TickingSystem<EntityStore> {
                holder.tryRemoveComponent(Repulsion.getComponentType());
                npcComponent.setRoleName(NPCPlugin.get().getName(request.roleIndex));
                npcComponent.setRoleIndex(request.roleIndex);
+               if (request.detachFromSpawning) {
+                  npcComponent.setSpawnConfiguration(Integer.MIN_VALUE);
+                  npcComponent.setEnvironment(Integer.MIN_VALUE);
+                  npcComponent.setSpawnRoleIndex(Integer.MIN_VALUE);
+               }
 
                try {
                   npcEntityReference = store.addEntity(holder, AddReason.LOAD);
@@ -160,9 +165,22 @@ public class RoleChangeSystem extends TickingSystem<EntityStore> {
       @Nullable String subState,
       @Nonnull ComponentAccessor<EntityStore> store
    ) {
+      requestRoleChange(ref, role, roleIndex, changeAppearance, state, subState, false, store);
+   }
+
+   public static void requestRoleChange(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull Role role,
+      int roleIndex,
+      boolean changeAppearance,
+      @Nullable String state,
+      @Nullable String subState,
+      boolean detachFromSpawning,
+      @Nonnull ComponentAccessor<EntityStore> store
+   ) {
       RoleChangeSystem.RoleChangeQueue roleChangeResource = store.getResource(RoleChangeSystem.RoleChangeQueue.getResourceType());
       Deque<RoleChangeSystem.RoleChangeRequest> queue = roleChangeResource.requests;
-      queue.add(new RoleChangeSystem.RoleChangeRequest(ref, roleIndex, changeAppearance, state, subState));
+      queue.add(new RoleChangeSystem.RoleChangeRequest(ref, roleIndex, changeAppearance, state, subState, detachFromSpawning));
       role.setRoleChangeRequested();
    }
 
@@ -193,13 +211,22 @@ public class RoleChangeSystem extends TickingSystem<EntityStore> {
       private final String state;
       @Nullable
       private final String subState;
+      private final boolean detachFromSpawning;
 
-      private RoleChangeRequest(@Nonnull Ref<EntityStore> reference, int roleIndex, boolean changeAppearance, @Nullable String state, @Nullable String subState) {
+      private RoleChangeRequest(
+         @Nonnull Ref<EntityStore> reference,
+         int roleIndex,
+         boolean changeAppearance,
+         @Nullable String state,
+         @Nullable String subState,
+         boolean detachFromSpawning
+      ) {
          this.reference = reference;
          this.roleIndex = roleIndex;
          this.changeAppearance = changeAppearance;
          this.state = state;
          this.subState = subState;
+         this.detachFromSpawning = detachFromSpawning;
       }
    }
 }

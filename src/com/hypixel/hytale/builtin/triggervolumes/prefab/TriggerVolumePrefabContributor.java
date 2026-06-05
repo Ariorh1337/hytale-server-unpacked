@@ -45,6 +45,7 @@ public class TriggerVolumePrefabContributor implements PrefabSaveContributor {
          Collection<PrefabEditingMetadata> allMetadata = getAllPrefabMetadata(store);
          HashMap<String, String> groupLinkIds = new HashMap<>();
          HashSet<String> emittedGroups = new HashSet<>();
+         int volumeIndex = 0;
 
          for (VolumeEntry entry : manager.getVolumes()) {
             entry.getShape().getWorldAABB(entry.getPosition(), this.tempMin, this.tempMax);
@@ -55,6 +56,7 @@ public class TriggerVolumePrefabContributor implements PrefabSaveContributor {
                Holder<EntityStore> holder = EntityStore.REGISTRY.newHolder();
                holder.addComponent(TransformComponent.getComponentType(), new TransformComponent(position, Rotation3f.IDENTITY));
                TriggerVolume tv = TriggerVolume.fromVolumeEntry(entry);
+               tv.setPrefabIndex(volumeIndex++);
                if (entry.getGroupId() != null) {
                   String groupId = entry.getGroupId();
                   String groupLinkId = groupLinkIds.computeIfAbsent(groupId, k -> UUID.randomUUID().toString());

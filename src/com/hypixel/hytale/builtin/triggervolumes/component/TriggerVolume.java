@@ -109,6 +109,8 @@ public class TriggerVolume implements Component<EntityStore> {
       .add()
       .append(new KeyedCodec<>("GroupLinkId", Codec.STRING, false), (c, v) -> c.groupLinkId = v, c -> c.groupLinkId)
       .add()
+      .append(new KeyedCodec<>("PrefabIndex", Codec.INTEGER, false), (c, v) -> c.prefabIndex = v, c -> c.prefabIndex >= 0 ? c.prefabIndex : null)
+      .add()
       .build();
    @Nullable
    private TriggerVolumeShape shape;
@@ -141,6 +143,7 @@ public class TriggerVolume implements Component<EntityStore> {
    private CooldownMode cooldownMode = CooldownMode.PER_ENTITY;
    @Nullable
    private String groupLinkId;
+   private int prefabIndex = -1;
 
    @Nonnull
    public static TriggerVolume fromVolumeEntry(@Nonnull VolumeEntry entry) {
@@ -236,6 +239,14 @@ public class TriggerVolume implements Component<EntityStore> {
       this.groupLinkId = groupLinkId;
    }
 
+   public int getPrefabIndex() {
+      return this.prefabIndex;
+   }
+
+   public void setPrefabIndex(int prefabIndex) {
+      this.prefabIndex = prefabIndex;
+   }
+
    @Nonnull
    @Override
    public Component<EntityStore> clone() {
@@ -258,6 +269,7 @@ public class TriggerVolume implements Component<EntityStore> {
       clone.cooldown = this.cooldown;
       clone.cooldownMode = this.cooldownMode;
       clone.groupLinkId = this.groupLinkId;
+      clone.prefabIndex = this.prefabIndex;
       return clone;
    }
 

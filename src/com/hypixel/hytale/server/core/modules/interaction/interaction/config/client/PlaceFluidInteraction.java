@@ -99,6 +99,7 @@ public class PlaceFluidInteraction extends SimpleBlockInteraction {
                Player playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
                PlayerRef playerRefComponent = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
                if ((playerRefComponent == null || playerComponent != null && playerComponent.getGameMode() == GameMode.Adventure)
+                  && itemInHand != null
                   && itemInHand.getQuantity() == 1
                   && this.removeItemInHand) {
                   context.setHeldItem(null);
