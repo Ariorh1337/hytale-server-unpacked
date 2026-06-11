@@ -18,6 +18,7 @@ import com.hypixel.hytale.server.npc.blackboard.Blackboard;
 import com.hypixel.hytale.server.npc.blackboard.view.interaction.InteractionView;
 import com.hypixel.hytale.server.npc.blackboard.view.interaction.ReservationStatus;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.role.support.StateSupport;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 
@@ -63,7 +64,7 @@ public class UseNPCInteraction extends SimpleInstantInteraction {
             if (npcComponent == null) {
                HytaleLogger.getLogger().at(Level.INFO).log("UseNPCInteraction requires a target NPCEntity but was used for: %s", targetRef);
                context.getState().state = InteractionState.Failed;
-            } else if (!npcComponent.getRole().getStateSupport().willInteractWith(ref)) {
+            } else if (!StateSupport.get(targetRef, commandBuffer).willInteractWith(ref)) {
                context.getState().state = InteractionState.Failed;
             } else {
                InteractionView interactionView = commandBuffer.getResource(Blackboard.getResourceType()).getView(InteractionView.class, 0L);
@@ -71,7 +72,7 @@ public class UseNPCInteraction extends SimpleInstantInteraction {
                   playerRefComponent.sendMessage(Message.translation("server.npc.npc.isBusy").param("roleName", npcComponent.getRoleName()));
                   context.getState().state = InteractionState.Failed;
                } else {
-                  npcComponent.getRole().getStateSupport().addInteraction(playerRefComponent.getReference());
+                  StateSupport.get(targetRef, commandBuffer).addInteraction(playerRefComponent.getReference());
                }
             }
          }

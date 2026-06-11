@@ -6,12 +6,11 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
-import com.hypixel.hytale.server.npc.role.Role;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public interface RoleStateChange {
-   default void registerWithSupport(Role role) {
+   default void registerWithSupport(ExecutionSupport executionSupport) {
    }
 
    default void motionControllerChanged(
@@ -22,18 +21,18 @@ public interface RoleStateChange {
    ) {
    }
 
-   default void loaded(Role role) {
+   default void loaded(ExecutionSupport executionSupport) {
    }
 
-   default void spawned(Role role) {
+   default void spawned(ExecutionSupport executionSupport) {
    }
 
-   default void unloaded(Role role) {
+   default void unloaded(ExecutionSupport executionSupport) {
    }
 
-   default void removed(Role role) {
+   default void removed(ExecutionSupport executionSupport) {
    }
 
-   default void teleported(Role role, World from, World to) {
+   default void teleported(ExecutionSupport executionSupport, World from, World to) {
    }
 }

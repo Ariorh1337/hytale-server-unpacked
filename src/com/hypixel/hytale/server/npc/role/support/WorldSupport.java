@@ -4,7 +4,9 @@ import com.hypixel.hytale.assetstore.map.IndexedLookupTableAssetMap;
 import com.hypixel.hytale.builtin.tagset.TagSetPlugin;
 import com.hypixel.hytale.builtin.tagset.config.NPCGroup;
 import com.hypixel.hytale.builtin.weather.resources.WeatherResource;
+import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentAccessor;
+import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.ResourceType;
 import com.hypixel.hytale.component.Store;
@@ -20,12 +22,12 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderManager;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
+import com.hypixel.hytale.server.npc.asset.builder.SupportConfigBuilder;
 import com.hypixel.hytale.server.npc.blackboard.Blackboard;
 import com.hypixel.hytale.server.npc.blackboard.view.attitude.AttitudeView;
 import com.hypixel.hytale.server.npc.blackboard.view.attitude.ItemAttitudeMap;
 import com.hypixel.hytale.server.npc.corecomponents.BlockTarget;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
-import com.hypixel.hytale.server.npc.role.builders.BuilderRole;
 import com.hypixel.hytale.server.npc.util.AttitudeMemoryEntry;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
@@ -36,10 +38,9 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.joml.Vector3d;
 
-public class WorldSupport {
+public class WorldSupport implements Component<EntityStore> {
    public static final double ATTITUDE_CACHE_CLEAR_FREQUENCY = 0.1;
    protected static final ResourceType<EntityStore, Blackboard> BLACKBOARD_RESOURCE_TYPE = Blackboard.getResourceType();
-   protected final NPCEntity parent;
    protected Int2ObjectMap<BlockTarget> blockSensorCachedTargets;
    @Nullable
    protected Vector3d[] searchRayCachedPositions;
@@ -59,8 +60,19 @@ public class WorldSupport {
    protected int weatherChangeCount;
    protected int cachedWeatherIndex;
 
-   public WorldSupport(NPCEntity parent, @Nonnull BuilderRole builder, @Nonnull BuilderSupport support) {
-      this.parent = parent;
+   @Nonnull
+   public static ComponentType<EntityStore, WorldSupport> getComponentType() {
+      return NPCPlugin.get().getWorldSupportComponentType();
+   }
+
+   @Nonnull
+   public static WorldSupport get(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> accessor) {
+      WorldSupport support = accessor.getComponent(ref, getComponentType());
+      assert support != null : "Missing WorldSupport on entity " + ref;
+      return support;
+   }
+
+   public WorldSupport(@Nonnull SupportConfigBuilder<?> builder, @Nonnull BuilderSupport support) {
       this.defaultPlayerAttitude = builder.getDefaultPlayerAttitude(support);
       this.defaultNPCAttitude = builder.getDefaultNPCAttitude(support);
       this.attitudeGroup = builder.getAttitudeGroup(support);
@@ -99,7 +111,6 @@ public class WorldSupport {
 
          cachedTargets.trim();
          this.blockSensorCachedTargets = Int2ObjectMaps.unmodifiable(cachedTargets);
-         this.parent.addBlackboardBlockTypeSets(blackboardBlockSets);
       }
 
       if (support.requiresAttitudeOverrideMemory()) {
@@ -113,17 +124,17 @@ public class WorldSupport {
       return this.blockSensorCachedTargets.get(blockSet);
    }
 
-   public void resetBlockSensorFoundBlock(int blockSet) {
-      this.blockSensorCachedTargets.get(blockSet).reset(this.parent);
+   public void resetBlockSensorFoundBlock(@Nonnull Ref<EntityStore> selfRef, int blockSet) {
+      this.blockSensorCachedTargets.get(blockSet).reset(selfRef);
    }
 
-   public void resetAllBlockSensors() {
+   public void resetAllBlockSensors(@Nonnull Ref<EntityStore> selfRef) {
       if (this.blockSensorCachedTargets != null) {
          ObjectIterator<Int2ObjectMap.Entry<BlockTarget>> it = Int2ObjectMaps.fastIterator(this.blockSensorCachedTargets);
 
          while (it.hasNext()) {
             Int2ObjectMap.Entry<BlockTarget> next = it.next();
-            next.getValue().reset(this.parent);
+            next.getValue().reset(selfRef);
          }
       }
    }
@@ -174,12 +185,14 @@ public class WorldSupport {
       }
 
       if (this.attitudeView == null) {
-         this.attitudeView = componentAccessor.getResource(BLACKBOARD_RESOURCE_TYPE).getView(AttitudeView.class, this.parent.getReference(), componentAccessor);
+         this.attitudeView = componentAccessor.getResource(BLACKBOARD_RESOURCE_TYPE).getView(AttitudeView.class, ref, componentAccessor);
       } else {
-         this.attitudeView = this.attitudeView.getUpdatedView(this.parent.getReference(), componentAccessor);
+         this.attitudeView = this.attitudeView.getUpdatedView(ref, componentAccessor);
       }
 
-      attitude = this.attitudeView.getAttitude(ref, this.parent.getRole(), targetRef, componentAccessor);
+      NPCEntity npcComponent = componentAccessor.getComponent(ref, NPCEntity.getComponentType());
+      int sourceRoleIndex = npcComponent != null ? npcComponent.getRoleIndex() : -1;
+      attitude = this.attitudeView.getAttitude(ref, sourceRoleIndex, targetRef, componentAccessor);
       this.attitudeCache.put(targetRef.getIndex(), attitude);
       return attitude;
    }
@@ -187,7 +200,7 @@ public class WorldSupport {
    @Nullable
    public Attitude getItemAttitude(@Nullable ItemStack item) {
       ItemAttitudeMap attitudeMap = NPCPlugin.get().getItemAttitudeMap();
-      return attitudeMap.getAttitude(this.parent, item);
+      return attitudeMap.getAttitude(this.itemAttitudeGroup, item);
    }
 
    public void overrideAttitude(Ref<EntityStore> target, Attitude attitude, double duration) {
@@ -227,10 +240,10 @@ public class WorldSupport {
       return requested;
    }
 
-   public int getEnvironmentId(@Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+   public int getEnvironmentId(@Nonnull Ref<EntityStore> selfRef, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       if (this.environmentIdChangeCount != this.changeCount) {
          this.environmentIdChangeCount = this.changeCount;
-         TransformComponent transformComponent = componentAccessor.getComponent(this.parent.getReference(), TransformComponent.getComponentType());
+         TransformComponent transformComponent = componentAccessor.getComponent(selfRef, TransformComponent.getComponentType());
          assert transformComponent != null;
          Ref<ChunkStore> chunkRef = transformComponent.getChunkRef();
          if (chunkRef == null || !chunkRef.isValid()) {
@@ -247,7 +260,7 @@ public class WorldSupport {
       return this.cachedEnvironmentId;
    }
 
-   public int getCurrentWeatherIndex(@Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+   public int getCurrentWeatherIndex(@Nonnull Ref<EntityStore> selfRef, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       if (this.weatherChangeCount != this.changeCount) {
          this.weatherChangeCount = this.changeCount;
          WeatherResource weatherResource = componentAccessor.getResource(WeatherResource.getResourceType());
@@ -256,7 +269,7 @@ public class WorldSupport {
             return this.cachedWeatherIndex;
          }
 
-         int environmentId = this.getEnvironmentId(componentAccessor);
+         int environmentId = this.getEnvironmentId(selfRef, componentAccessor);
          if (environmentId == Integer.MIN_VALUE) {
             return this.cachedWeatherIndex = 0;
          }
@@ -330,8 +343,8 @@ public class WorldSupport {
       return groups;
    }
 
-   public void unloaded() {
-      this.resetAllBlockSensors();
+   public void unloaded(@Nonnull Ref<EntityStore> selfRef) {
+      this.resetAllBlockSensors(selfRef);
       if (this.searchRayCachedPositions != null) {
          for (int i = 0; i < this.searchRayCachedPositions.length; i++) {
             this.resetCachedSearchRayPosition(i);
@@ -341,5 +354,10 @@ public class WorldSupport {
       if (this.attitudeOverrideMemory != null) {
          this.attitudeOverrideMemory.clear();
       }
+   }
+
+   @Override
+   public Component<EntityStore> clone() {
+      return this;
    }
 }

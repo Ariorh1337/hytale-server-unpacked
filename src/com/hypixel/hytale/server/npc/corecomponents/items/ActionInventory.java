@@ -13,7 +13,7 @@ import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.ActionBase;
 import com.hypixel.hytale.server.npc.corecomponents.items.builders.BuilderActionInventory;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.IPositionProvider;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.util.InventoryHelper;
@@ -47,16 +47,28 @@ public class ActionInventory extends ActionBase {
    }
 
    @Override
-   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      return !super.canExecute(ref, role, sensorInfo, dt, store)
+   public boolean canExecute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
+      return !super.canExecute(ref, executionSupport, sensorInfo, dt, store)
          ? false
          : (!this.useTarget || sensorInfo != null && sensorInfo.hasPosition())
             && (ITEM_FREE_OPERATIONS.contains(this.operation) || this.item != null && !this.item.isEmpty());
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      super.execute(ref, role, sensorInfo, dt, store);
+   public boolean execute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
+      super.execute(ref, executionSupport, sensorInfo, dt, store);
       IPositionProvider positionProvider = sensorInfo != null ? sensorInfo.getPositionProvider() : null;
       Ref<EntityStore> targetRef = this.useTarget ? (positionProvider != null ? positionProvider.getTarget() : null) : ref;
       if (targetRef == null) {

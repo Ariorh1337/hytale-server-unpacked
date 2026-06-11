@@ -174,9 +174,18 @@ public class RailPathSmoother {
                ? this.horizontalRunTransitionCommitTypes[0]
                : RailPath.SegmentCommitType.NONE;
             this.emitWaypoint(this.horizontalRunEndDistance[this.horizontalRunCount - 1], this.horizontalRunY[this.horizontalRunCount - 1], finalRunCommitType);
-            this.emitWaypoint(segments[count - 1].position, RailPath.SegmentCommitType.NONE);
+            this.emitFinalWaypoint(segments[count - 1], config);
             this.logDebugOutput(data, motionController, contactContext);
          }
+      }
+   }
+
+   private void emitFinalWaypoint(@Nonnull ProbeMoveData.Segment finalSegment, @Nonnull RailPathSmoother.Config config) {
+      if (finalSegment.type == ProbeMoveData.Segment.Type.BLOCKED_WALL && !(config.blockedWallEndOffset <= 0.0)) {
+         this.waypointScratch.set(finalSegment.position).fma(config.blockedWallEndOffset, this.horizDir);
+         this.emitWaypoint(this.waypointScratch, RailPath.SegmentCommitType.NONE);
+      } else {
+         this.emitWaypoint(finalSegment.position, RailPath.SegmentCommitType.NONE);
       }
    }
 

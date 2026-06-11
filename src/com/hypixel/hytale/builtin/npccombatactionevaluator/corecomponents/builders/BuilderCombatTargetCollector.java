@@ -1,9 +1,12 @@
 package com.hypixel.hytale.builtin.npccombatactionevaluator.corecomponents.builders;
 
+import com.google.gson.JsonElement;
 import com.hypixel.hytale.builtin.npccombatactionevaluator.corecomponents.CombatTargetCollector;
+import com.hypixel.hytale.server.npc.asset.builder.Builder;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderBase;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.corecomponents.ISensorEntityCollector;
 import com.hypixel.hytale.server.npc.util.expression.ExecutionContext;
 import javax.annotation.Nonnull;
@@ -41,5 +44,12 @@ public class BuilderCombatTargetCollector extends BuilderBase<ISensorEntityColle
    @Override
    public BuilderDescriptorState getBuilderDescriptorState() {
       return BuilderDescriptorState.Stable;
+   }
+
+   @Nonnull
+   @Override
+   public Builder<ISensorEntityCollector> readConfig(@Nonnull JsonElement data) {
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
+      return this;
    }
 }

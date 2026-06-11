@@ -5,6 +5,7 @@ import com.hypixel.hytale.server.flock.corecomponents.ActionFlockJoin;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.asset.builder.Feature;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderActionBase;
 import javax.annotation.Nonnull;
 
@@ -46,6 +47,7 @@ public class BuilderActionFlockJoin extends BuilderActionBase {
          "Disables checking flock join conditions test and forces joining flock."
       );
       this.requireFeature(Feature.LiveEntity);
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
       return this;
    }
 

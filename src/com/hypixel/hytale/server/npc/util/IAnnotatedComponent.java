@@ -1,11 +1,11 @@
 package com.hypixel.hytale.server.npc.util;
 
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public interface IAnnotatedComponent {
-   void getInfo(Role var1, ComponentInfo var2);
+   void getInfo(ExecutionSupport var1, ComponentInfo var2);
 
    void setContext(IAnnotatedComponent var1, int var2);
 

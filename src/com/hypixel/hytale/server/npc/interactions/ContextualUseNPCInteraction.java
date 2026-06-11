@@ -16,6 +16,7 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Sim
 import com.hypixel.hytale.server.core.modules.interaction.interaction.util.InteractionValidation;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.role.support.StateSupport;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 
@@ -70,10 +71,10 @@ public class ContextualUseNPCInteraction extends SimpleInstantInteraction {
             if (npcComponent == null) {
                HytaleLogger.getLogger().at(Level.INFO).log("UseNPCInteraction requires a target NPC");
                context.getState().state = InteractionState.Failed;
-            } else if (!npcComponent.getRole().getStateSupport().willInteractWith(ref)) {
+            } else if (!StateSupport.get(targetRef, commandBuffer).willInteractWith(ref)) {
                context.getState().state = InteractionState.Failed;
             } else {
-               npcComponent.getRole().getStateSupport().addContextualInteraction(ref, this.context);
+               StateSupport.get(targetRef, commandBuffer).addContextualInteraction(ref, this.context);
             }
          }
       }

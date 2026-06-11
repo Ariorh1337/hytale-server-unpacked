@@ -10,9 +10,9 @@ import com.hypixel.hytale.server.flock.FlockMembership;
 import com.hypixel.hytale.server.flock.FlockMembershipSystems;
 import com.hypixel.hytale.server.flock.corecomponents.builders.BuilderEntityFilterFlock;
 import com.hypixel.hytale.server.npc.corecomponents.EntityFilterBase;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.movement.FlockMembershipType;
 import com.hypixel.hytale.server.npc.movement.FlockPlayerMembership;
-import com.hypixel.hytale.server.npc.role.Role;
 import javax.annotation.Nonnull;
 
 public class EntityFilterFlock extends EntityFilterBase {
@@ -33,7 +33,9 @@ public class EntityFilterFlock extends EntityFilterBase {
    }
 
    @Override
-   public boolean matchesEntity(@Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull Role role, @Nonnull Store<EntityStore> store) {
+   public boolean matchesEntity(
+      @Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull ExecutionSupport executionSupport, @Nonnull Store<EntityStore> store
+   ) {
       FlockMembership membership = store.getComponent(targetRef, FLOCK_MEMBERSHIP_COMPONENT_TYPE);
       switch (this.flockMembership) {
          case Leader:

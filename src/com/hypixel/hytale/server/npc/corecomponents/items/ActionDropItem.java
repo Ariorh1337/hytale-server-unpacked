@@ -17,7 +17,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.ActionWithDelay;
 import com.hypixel.hytale.server.npc.corecomponents.items.builders.BuilderActionDropItem;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.util.AimingHelper;
 import com.hypixel.hytale.server.npc.util.InventoryHelper;
@@ -57,15 +57,27 @@ public class ActionDropItem extends ActionWithDelay {
    }
 
    @Override
-   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      return super.canExecute(ref, role, sensorInfo, dt, store) && !this.isDelaying();
+   public boolean canExecute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
+      return super.canExecute(ref, executionSupport, sensorInfo, dt, store) && !this.isDelaying();
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      super.execute(ref, role, sensorInfo, dt, store);
+   public boolean execute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
+      super.execute(ref, executionSupport, sensorInfo, dt, store);
       this.prepareDelay();
-      this.startDelay(role.getEntitySupport());
+      this.startDelay(executionSupport.getEntitySupport());
       ModelComponent modelComponent = store.getComponent(ref, ModelComponent.getComponentType());
       float eyeHeight = modelComponent != null ? modelComponent.getModel().getEyeHeight(ref, store) : 0.0F;
       float height = -eyeHeight;

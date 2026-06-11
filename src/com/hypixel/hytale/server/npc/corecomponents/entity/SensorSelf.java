@@ -8,7 +8,7 @@ import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.asset.builder.ComponentContext;
 import com.hypixel.hytale.server.npc.corecomponents.SensorWithEntityFilters;
 import com.hypixel.hytale.server.npc.corecomponents.entity.builders.BuilderSensorSelf;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.sensorinfo.PositionProvider;
 import javax.annotation.Nonnull;
@@ -21,8 +21,8 @@ public class SensorSelf extends SensorWithEntityFilters {
    }
 
    @Override
-   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, double dt, @Nonnull Store<EntityStore> store) {
-      if (super.matches(ref, role, dt, store) && this.matchesFilters(ref, ref, role, store)) {
+   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, double dt, @Nonnull Store<EntityStore> store) {
+      if (super.matches(ref, executionSupport, dt, store) && this.matchesFilters(ref, ref, executionSupport, store)) {
          this.positionProvider.setTarget(store.getComponent(ref, TransformComponent.getComponentType()).getPosition());
          return true;
       } else {

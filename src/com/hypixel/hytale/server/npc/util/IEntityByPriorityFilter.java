@@ -4,11 +4,11 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.function.predicate.TriPredicate;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import javax.annotation.Nullable;
 
 public interface IEntityByPriorityFilter extends TriPredicate<Ref<EntityStore>, Ref<EntityStore>, ComponentAccessor<EntityStore>> {
-   void init(Role var1);
+   void init(ExecutionSupport var1);
 
    @Nullable
    Ref<EntityStore> getHighestPriorityTarget();

@@ -5,6 +5,7 @@ import com.hypixel.hytale.server.npc.asset.builder.Builder;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.asset.builder.Feature;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.asset.builder.holder.AssetHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.BooleanHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.EnumHolder;
@@ -87,6 +88,7 @@ public class BuilderActionInventory extends BuilderActionBase {
          "The hotbar or off-hand to effect. Only valid for Hotbar/OffHand Set/Equip operations"
       );
       this.requireFeatureIf(this.useTarget, true, Feature.LiveEntity);
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
       return this;
    }
 

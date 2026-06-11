@@ -30,7 +30,7 @@ public class NPCAttackCommand extends AbstractCommandCollection {
       protected void execute(
          @Nonnull CommandContext context, @Nonnull NPCEntity npc, @Nonnull World world, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref
       ) {
-         npc.getRole().getCombatSupport().clearAttackOverrides();
+         CombatSupport.get(ref, store).clearAttackOverrides();
       }
    }
 
@@ -50,7 +50,7 @@ public class NPCAttackCommand extends AbstractCommandCollection {
       ) {
          if (this.attackArg.provided(context)) {
             List<Interaction> sequences = this.attackArg.get(context);
-            CombatSupport combatSupport = npc.getRole().getCombatSupport();
+            CombatSupport combatSupport = CombatSupport.get(ref, store);
             combatSupport.clearAttackOverrides();
 
             for (Interaction sequence : sequences) {

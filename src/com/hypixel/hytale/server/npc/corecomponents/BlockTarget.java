@@ -1,9 +1,10 @@
 package com.hypixel.hytale.server.npc.corecomponents;
 
+import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.vector.Vector3dUtil;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.blackboard.Blackboard;
 import com.hypixel.hytale.server.npc.blackboard.view.resource.ResourceView;
-import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -41,10 +42,10 @@ public class BlockTarget {
       this.reservationHolder = resourceView;
    }
 
-   public void reset(@Nonnull NPCEntity parent) {
+   public void reset(@Nonnull Ref<EntityStore> selfRef) {
       if (this.reservationHolder != null) {
-         this.reservationHolder.clearReservation(parent.getReference());
-         Blackboard.LOGGER.at(Level.FINE).log("Entity %s cleared reservation at %s", parent.getRoleName(), this.position);
+         this.reservationHolder.clearReservation(selfRef);
+         Blackboard.LOGGER.at(Level.FINE).log("Entity %d cleared reservation at %s", selfRef.getIndex(), this.position);
       }
 
       this.reservationHolder = null;

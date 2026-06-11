@@ -12,11 +12,11 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.BodyMotionBase;
 import com.hypixel.hytale.server.npc.corecomponents.world.builders.BuilderBodyMotionPath;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.movement.Steering;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
 import com.hypixel.hytale.server.npc.movement.steeringforces.SteeringForcePursue;
 import com.hypixel.hytale.server.npc.movement.steeringforces.SteeringForceRotate;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.role.support.WorldSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.IPathProvider;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
@@ -100,12 +100,12 @@ public class BodyMotionPath extends BodyMotionBase {
    }
 
    @Override
-   public void activate(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+   public void activate(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       this.reset();
    }
 
    @Override
-   public void loaded(Role role) {
+   public void loaded(ExecutionSupport executionSupport) {
       this.invalidateWaypoint();
       this.reset();
    }
@@ -113,14 +113,14 @@ public class BodyMotionPath extends BodyMotionBase {
    @Override
    public boolean computeSteering(
       @Nonnull Ref<EntityStore> ref,
-      @Nonnull Role role,
+      @Nonnull ExecutionSupport executionSupport,
       @Nullable InfoProvider sensorInfo,
       double dt,
       @Nonnull Steering desiredSteering,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       desiredSteering.clear();
-      if (!role.getActiveMotionController().canSteer(ref, componentAccessor)) {
+      if (!executionSupport.getMotionContextSupport().getActiveMotionController().canSteer(ref, componentAccessor)) {
          return true;
       }
 
@@ -144,7 +144,7 @@ public class BodyMotionPath extends BodyMotionBase {
          assert transformComponent != null;
          Vector3d position = transformComponent.getPosition();
          if (this.currentWaypointIndex == -1) {
-            if (!this.getFirstWaypoint(ref, role, path, position, componentAccessor)) {
+            if (!this.getFirstWaypoint(ref, executionSupport, path, position, componentAccessor)) {
                return false;
             }
 
@@ -171,9 +171,9 @@ public class BodyMotionPath extends BodyMotionBase {
 
             return true;
          } else {
-            MotionController activeMotionController = role.getActiveMotionController();
+            MotionController activeMotionController = executionSupport.getMotionContextSupport().getActiveMotionController();
             Vector3d componentSelector = activeMotionController.getComponentSelector();
-            WorldSupport worldSupport = role.getWorldSupport();
+            WorldSupport worldSupport = executionSupport.getWorldSupport();
             this.currentPosition.set(position.x(), position.y(), position.z());
             int lastIndex = this.currentWaypointIndex;
             this.lastWaypointPosition.set(this.currentWaypointPosition);
@@ -416,7 +416,7 @@ public class BodyMotionPath extends BodyMotionBase {
 
    protected boolean getFirstWaypoint(
       @Nonnull Ref<EntityStore> ref,
-      @Nonnull Role role,
+      @Nonnull ExecutionSupport executionSupport,
       @Nullable IPath<?> path,
       @Nonnull Vector3d lastPos,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
@@ -429,7 +429,7 @@ public class BodyMotionPath extends BodyMotionBase {
             TransformComponent transformComponent = componentAccessor.getComponent(ref, TransformComponent.getComponentType());
             assert transformComponent != null;
             Vector3d pos = transformComponent.getPosition();
-            MotionController activeMotionController = role.getActiveMotionController();
+            MotionController activeMotionController = executionSupport.getMotionContextSupport().getActiveMotionController();
 
             for (int i = 0; i < path.length(); i++) {
                IPathWaypoint pathWaypoint = path.get(i);

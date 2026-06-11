@@ -32,20 +32,20 @@ public class GraphGenerator {
    @Nonnull
    private final String statsLabel;
    private final boolean printStats;
-   private final int sampleCountTarget;
+   private final int statsPrintInterval;
 
    private GraphGenerator() {
       this(List.of(), false, 0, "");
    }
 
-   public GraphGenerator(@Nonnull List<GraphPass> passes, boolean printStats, int sampleCountTarget, @Nonnull String statsLabel) {
-      assert sampleCountTarget >= 0;
+   public GraphGenerator(@Nonnull List<GraphPass> passes, boolean printStats, int statsPrintInterval, @Nonnull String statsLabel) {
+      assert statsPrintInterval >= 0;
       this.densityRadius = new Int2DoubleOpenHashMap();
       this.materialRadius = new Int2DoubleOpenHashMap();
       this.propDistributionRadius = new Int2DoubleOpenHashMap();
       this.positionsRadius = new Int2DoubleOpenHashMap();
       this.printStats = printStats;
-      this.sampleCountTarget = sampleCountTarget;
+      this.statsPrintInterval = statsPrintInterval;
       this.statsLabel = statsLabel;
       this.timeInstrument = new PreciseTimeInstrument(passes.size() + 1);
       this.timeInstrument.setProbeLabel(0, "Total");
@@ -89,22 +89,22 @@ public class GraphGenerator {
             pass.viewAllPossibleContent(content -> {
                for (GraphSpace.ContentEntry<GraphSpace.DensityContent> entry : content.getDensityContent().getAll()) {
                   double currentRadius = this.densityRadius.getOrDefault(entry.id(), 0.0);
-                  this.densityRadius.put(entry.id(), Calculator.max(entry.content().range, currentRadius, longestConnection[finalPassIndex]));
+                  this.densityRadius.put(entry.id(), Calculator.max(entry.content().range, currentRadius));
                }
 
                for (GraphSpace.ContentEntry<GraphSpace.MaterialContent> entry : content.getMaterialContent().getAll()) {
                   double currentRadius = this.materialRadius.getOrDefault(entry.id(), 0.0);
-                  this.materialRadius.put(entry.id(), Calculator.max(entry.content().range, currentRadius, longestConnection[finalPassIndex]));
+                  this.materialRadius.put(entry.id(), Calculator.max(entry.content().range, currentRadius));
                }
 
                for (GraphSpace.ContentEntry<GraphSpace.PropDistributionContent> entry : content.getPropDistributionContent().getAll()) {
                   double currentRadius = this.propDistributionRadius.getOrDefault(entry.id(), 0.0);
-                  this.propDistributionRadius.put(entry.id(), Calculator.max(entry.content().range, currentRadius, longestConnection[finalPassIndex]));
+                  this.propDistributionRadius.put(entry.id(), Calculator.max(entry.content().range, currentRadius));
                }
 
                for (GraphSpace.ContentEntry<GraphSpace.PositionsContent> entry : content.getPositionsContent().getAll()) {
                   double currentRadius = this.positionsRadius.getOrDefault(entry.id(), 0.0);
-                  this.positionsRadius.put(entry.id(), Calculator.max(entry.content().range, currentRadius, longestConnection[finalPassIndex]));
+                  this.positionsRadius.put(entry.id(), Calculator.max(entry.content().range, currentRadius));
                }
             });
          }
@@ -137,12 +137,14 @@ public class GraphGenerator {
          if (this.printStats) {
             this.timeInstrument.stop(0);
             this.timeInstrument.save();
-            if (this.timeInstrument.getSampleCount() >= this.sampleCountTarget) {
+            if (this.timeInstrument.getSampleCount() >= this.statsPrintInterval) {
                Thread thread = Thread.currentThread();
                String label = "[" + thread.getName() + "] GraphGenerator " + this.statsLabel + " Performance Report";
                String msg = this.timeInstrument.toString(label);
                this.timeInstrument.clear();
                msg = msg + "\nPass Work Bounds Frame (Blocks) :";
+               Vector3d outputSize = resultBounds.getSize();
+               msg = msg + "\n\tOutput Bounds : {x=" + outputSize.x + ", y=" + outputSize.y + ", z=" + outputSize.z + "}";
 
                for (int i = 0; i < this.passWorkBoundsFrame.length; i++) {
                   Vector3d size = this.passWorkBoundsFrame[i].getSize().div(2.0);

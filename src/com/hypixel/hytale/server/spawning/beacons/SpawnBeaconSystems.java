@@ -39,6 +39,8 @@ import com.hypixel.hytale.server.flock.FlockPlugin;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.role.support.MarkedEntitySupport;
+import com.hypixel.hytale.server.npc.role.support.StateSupport;
 import com.hypixel.hytale.server.spawning.SpawningContext;
 import com.hypixel.hytale.server.spawning.SpawningPlugin;
 import com.hypixel.hytale.server.spawning.assets.spawns.config.BeaconNPCSpawn;
@@ -128,7 +130,7 @@ public class SpawnBeaconSystems {
             Ref<EntityStore> ref = spawnedEntities.get(i);
             if (ref.isValid()) {
                NPCEntity npc = commandBuffer.getComponent(ref, this.npcComponentType);
-               if (npc != null && !npc.getRole().getStateSupport().isInBusyState() && !npc.isDespawning()) {
+               if (npc != null && !StateSupport.get(ref, commandBuffer).isInBusyState() && !npc.isDespawning()) {
                   npc.setToDespawn();
                }
             }
@@ -225,13 +227,14 @@ public class SpawnBeaconSystems {
                      if (spawnedEntityNpcComponent != null && !spawnedEntityNpcComponent.isDespawning()) {
                         Role role = spawnedEntityNpcComponent.getRole();
                         if (role != null) {
-                           boolean hasTarget = role.getMarkedEntitySupport()
+                           boolean hasTarget = MarkedEntitySupport.get(spawnedEntityReference, commandBuffer)
                               .hasMarkedEntityInSlot(legacySpawnBeaconComponent.getSpawnWrapper().getSpawn().getTargetSlot());
                            TransformComponent spawnedEntityTransformComponent = commandBuffer.getComponent(spawnedEntityReference, this.transformComponentType);
                            assert spawnedEntityTransformComponent != null;
                            Vector3d npcPosition = spawnedEntityTransformComponent.getPosition();
                            double beaconDistance = npcPosition.distanceSquared(position);
-                           if ((despawnNPCsIfIdle && !hasTarget || beaconDistance > beaconRadiusSquared) && !role.getStateSupport().isInBusyState()) {
+                           if ((despawnNPCsIfIdle && !hasTarget || beaconDistance > beaconRadiusSquared)
+                              && !StateSupport.get(spawnedEntityReference, commandBuffer).isInBusyState()) {
                               double timeout = entityTimeoutCounter.mergeDouble(spawnedEntityReference, dt, Double::sum);
                               if (timeout >= despawnNPCAfterTimeout) {
                                  spawnedEntityNpcComponent.setToDespawn();
@@ -315,7 +318,7 @@ public class SpawnBeaconSystems {
                         NPCEntity npc = validatedEntityList.get(i);
                         Role role = npc.getRole();
                         if (role != null) {
-                           Ref<EntityStore> lockedTargetRef = role.getMarkedEntitySupport()
+                           Ref<EntityStore> lockedTargetRef = MarkedEntitySupport.get(npc.getReference(), commandBuffer)
                               .getMarkedEntityRef(legacySpawnBeaconComponent.getSpawnWrapper().getSpawn().getTargetSlot());
                            if (lockedTargetRef != null) {
                               UUIDComponent lockedTargetUuidComponent = commandBuffer.getComponent(lockedTargetRef, this.uuidComponentType);

@@ -16,7 +16,7 @@ public class AdderVectorProviderAsset extends VectorProviderAsset {
          AdderVectorProviderAsset.class, AdderVectorProviderAsset::new, VectorProviderAsset.ABSTRACT_CODEC
       )
       .append(
-         new KeyedCodec<>("Inputs", new ArrayCodec<>(VectorProviderAsset.CODEC, VectorProviderAsset[]::new), true),
+         new KeyedCodec<>("Vectors", new ArrayCodec<>(VectorProviderAsset.CODEC, VectorProviderAsset[]::new), true),
          (asset, value) -> asset.vectorProviderAssets = value,
          asset -> asset.vectorProviderAssets
       )

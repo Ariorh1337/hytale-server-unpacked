@@ -9,7 +9,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.SensorBase;
 import com.hypixel.hytale.server.npc.corecomponents.world.builders.BuilderSensorEvent;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.role.support.MarkedEntitySupport;
 import com.hypixel.hytale.server.npc.sensorinfo.EntityPositionProvider;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
@@ -34,8 +34,8 @@ public abstract class SensorEvent extends SensorBase {
    }
 
    @Override
-   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, double dt, @Nonnull Store<EntityStore> store) {
-      if (!super.matches(ref, role, dt, store)) {
+   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, double dt, @Nonnull Store<EntityStore> store) {
+      if (!super.matches(ref, executionSupport, dt, store)) {
          this.positionProvider.clear();
          return false;
       }
@@ -47,18 +47,18 @@ public abstract class SensorEvent extends SensorBase {
                playerFirstTarget = this.getNpcTarget(ref, store);
             }
 
-            return this.setTarget(role.getMarkedEntitySupport(), playerFirstTarget, store);
+            return this.setTarget(executionSupport.getMarkedEntitySupport(), playerFirstTarget, store);
          case PlayerOnly:
-            return this.setTarget(role.getMarkedEntitySupport(), this.getPlayerTarget(ref, store), store);
+            return this.setTarget(executionSupport.getMarkedEntitySupport(), this.getPlayerTarget(ref, store), store);
          case NpcFirst:
             Ref<EntityStore> npcFirstTarget = this.getNpcTarget(ref, store);
             if (npcFirstTarget == null) {
                npcFirstTarget = this.getPlayerTarget(ref, store);
             }
 
-            return this.setTarget(role.getMarkedEntitySupport(), npcFirstTarget, store);
+            return this.setTarget(executionSupport.getMarkedEntitySupport(), npcFirstTarget, store);
          case NpcOnly:
-            return this.setTarget(role.getMarkedEntitySupport(), this.getNpcTarget(ref, store), store);
+            return this.setTarget(executionSupport.getMarkedEntitySupport(), this.getNpcTarget(ref, store), store);
          default:
             return false;
       }

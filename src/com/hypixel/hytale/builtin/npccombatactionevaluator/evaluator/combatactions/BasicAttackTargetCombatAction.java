@@ -12,7 +12,7 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.decisionmaker.core.Option;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.util.InventoryHelper;
 import com.hypixel.hytale.server.npc.valuestore.ValueStore;
 import java.util.logging.Level;
@@ -51,7 +51,7 @@ public class BasicAttackTargetCombatAction extends CombatActionOption {
       int index,
       @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
       CommandBuffer<EntityStore> commandBuffer,
-      Role role,
+      ExecutionSupport executionSupport,
       @Nonnull CombatActionEvaluator evaluator,
       @Nonnull ValueStore valueStore
    ) {

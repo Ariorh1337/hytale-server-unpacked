@@ -9,7 +9,7 @@ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponen
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.corecomponents.EntityFilterBase;
 import com.hypixel.hytale.server.npc.corecomponents.entity.filters.builders.BuilderEntityFilterSpotsMe;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.util.NPCPhysicsMath;
 import com.hypixel.hytale.server.npc.util.ViewTest;
 import javax.annotation.Nonnull;
@@ -30,8 +30,11 @@ public class EntityFilterSpotsMe extends EntityFilterBase {
    }
 
    @Override
-   public boolean matchesEntity(@Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull Role role, @Nonnull Store<EntityStore> store) {
-      return this.inViewTest(targetRef, ref, store) && (!this.testLineOfSight || role.getPositionCache().hasInverseLineOfSight(ref, targetRef, store));
+   public boolean matchesEntity(
+      @Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull ExecutionSupport executionSupport, @Nonnull Store<EntityStore> store
+   ) {
+      return this.inViewTest(targetRef, ref, store)
+         && (!this.testLineOfSight || executionSupport.getPositionCache().hasInverseLineOfSight(ref, targetRef, store));
    }
 
    @Override

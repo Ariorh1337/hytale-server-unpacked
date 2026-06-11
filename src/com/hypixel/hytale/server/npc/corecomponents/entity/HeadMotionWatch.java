@@ -11,8 +11,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.HeadMotionBase;
 import com.hypixel.hytale.server.npc.corecomponents.entity.builders.BuilderHeadMotionWatch;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.movement.Steering;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.IPositionProvider;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import javax.annotation.Nonnull;
@@ -32,7 +32,7 @@ public class HeadMotionWatch extends HeadMotionBase {
    @Override
    public boolean computeSteering(
       @Nonnull Ref<EntityStore> ref,
-      @Nonnull Role role,
+      @Nonnull ExecutionSupport executionSupport,
       @Nullable InfoProvider sensorInfo,
       double dt,
       @Nonnull Steering desiredSteering,

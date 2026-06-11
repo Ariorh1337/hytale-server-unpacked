@@ -3,6 +3,7 @@ package com.hypixel.hytale.server.npc.corecomponents.lifecycle.builders;
 import com.google.gson.JsonElement;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.asset.builder.validators.DoubleSingleValidator;
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderActionBase;
 import com.hypixel.hytale.server.npc.corecomponents.lifecycle.ActionDelayDespawn;
@@ -47,6 +48,7 @@ public class BuilderActionDelayDespawn extends BuilderActionBase {
          "Set the delay to either the current delay or the given time. Whatever is smaller.",
          null
       );
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
       return this;
    }
 

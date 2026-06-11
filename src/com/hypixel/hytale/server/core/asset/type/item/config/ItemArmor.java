@@ -120,6 +120,12 @@ public class ItemArmor implements NetworkSerializable<com.hypixel.hytale.protoco
          item -> item.cosmeticsToHide
       )
       .add()
+      .append(
+         new KeyedCodec<>("MovementSettings", ItemMovementSettings.CODEC),
+         (itemArmor, itemMovementSettings) -> itemArmor.movementSettings = itemMovementSettings,
+         itemArmor -> itemArmor.movementSettings
+      )
+      .add()
       .afterDecode(item -> processConfig(item))
       .build();
    @Nonnull
@@ -156,6 +162,8 @@ public class ItemArmor implements NetworkSerializable<com.hypixel.hytale.protoco
    protected Map<String, Int2ObjectMap<StaticModifier>> interactionModifiers;
    @Nonnull
    protected Map<DamageClass, StaticModifier[]> damageClassEnhancement = Collections.emptyMap();
+   @Nullable
+   protected ItemMovementSettings movementSettings;
 
    public ItemArmor(ItemArmorSlot armorSlot, double baseDamageResistance, @Nullable Int2ObjectMap<StaticModifier[]> statModifiers, Cosmetic[] cosmeticsToHide) {
       this.armorSlot = armorSlot;
@@ -228,6 +236,10 @@ public class ItemArmor implements NetworkSerializable<com.hypixel.hytale.protoco
          }
 
          packet.damageEnhancement = damageEnhancementMap.isEmpty() ? null : damageEnhancementMap;
+      }
+
+      if (this.movementSettings != null) {
+         packet.movementSettings = this.movementSettings.toPacket();
       }
 
       return packet;

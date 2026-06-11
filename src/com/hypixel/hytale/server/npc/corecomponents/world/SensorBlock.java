@@ -20,7 +20,7 @@ import com.hypixel.hytale.server.npc.corecomponents.BlockTarget;
 import com.hypixel.hytale.server.npc.corecomponents.SensorBase;
 import com.hypixel.hytale.server.npc.corecomponents.world.builders.BuilderSensorBlock;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.sensorinfo.PositionProvider;
 import java.util.logging.Level;
@@ -46,8 +46,8 @@ public class SensorBlock extends SensorBase {
    }
 
    @Override
-   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, double dt, @Nonnull Store<EntityStore> store) {
-      if (!super.matches(ref, role, dt, store)) {
+   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, double dt, @Nonnull Store<EntityStore> store) {
+      if (!super.matches(ref, executionSupport, dt, store)) {
          this.positionProvider.clear();
          return false;
       }
@@ -57,7 +57,7 @@ public class SensorBlock extends SensorBase {
       Vector3d entityPos = transformComponent.getPosition();
       NPCEntity npcComponent = store.getComponent(ref, NPCEntity.getComponentType());
       assert npcComponent != null;
-      BlockTarget target = role.getWorldSupport().getCachedBlockTarget(this.blockSet);
+      BlockTarget target = executionSupport.getWorldSupport().getCachedBlockTarget(this.blockSet);
       Vector3d position = target.getPosition();
       if (!position.equals(Vector3dUtil.MIN)) {
          ChunkStore chunkStore = store.getExternalData().getWorld().getChunkStore();
@@ -82,7 +82,7 @@ public class SensorBlock extends SensorBase {
       }
 
       if (target.isActive()) {
-         target.reset(npcComponent);
+         target.reset(ref);
       }
 
       BlockTypeView blackboard = npcComponent.getBlockTypeBlackboardView(ref, store);

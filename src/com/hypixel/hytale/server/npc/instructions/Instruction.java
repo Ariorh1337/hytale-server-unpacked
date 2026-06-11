@@ -13,7 +13,6 @@ import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.instructions.builders.BuilderInstruction;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.role.support.DebugSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.util.ComponentInfo;
@@ -144,22 +143,22 @@ public class Instruction implements RoleStateChange, IAnnotatedComponentCollecti
    }
 
    @Override
-   public void registerWithSupport(Role role) {
-      this.sensor.registerWithSupport(role);
+   public void registerWithSupport(ExecutionSupport executionSupport) {
+      this.sensor.registerWithSupport(executionSupport);
 
       for (Instruction instruction : this.instructionList) {
-         instruction.registerWithSupport(role);
+         instruction.registerWithSupport(executionSupport);
       }
 
       if (this.bodyMotion != null) {
-         this.bodyMotion.registerWithSupport(role);
+         this.bodyMotion.registerWithSupport(executionSupport);
       }
 
       if (this.headMotion != null) {
-         this.headMotion.registerWithSupport(role);
+         this.headMotion.registerWithSupport(executionSupport);
       }
 
-      this.actions.registerWithSupport(role);
+      this.actions.registerWithSupport(executionSupport);
    }
 
    @Override
@@ -185,78 +184,78 @@ public class Instruction implements RoleStateChange, IAnnotatedComponentCollecti
    }
 
    @Override
-   public void loaded(Role role) {
-      this.sensor.loaded(role);
-      this.forEachInstruction(Instruction::loaded, role);
+   public void loaded(ExecutionSupport executionSupport) {
+      this.sensor.loaded(executionSupport);
+      this.forEachInstruction(Instruction::loaded, executionSupport);
       if (this.bodyMotion != null) {
-         this.bodyMotion.loaded(role);
+         this.bodyMotion.loaded(executionSupport);
       }
 
       if (this.headMotion != null) {
-         this.headMotion.loaded(role);
+         this.headMotion.loaded(executionSupport);
       }
 
-      this.actions.loaded(role);
+      this.actions.loaded(executionSupport);
    }
 
    @Override
-   public void spawned(Role role) {
-      this.sensor.spawned(role);
-      this.forEachInstruction(Instruction::spawned, role);
+   public void spawned(ExecutionSupport executionSupport) {
+      this.sensor.spawned(executionSupport);
+      this.forEachInstruction(Instruction::spawned, executionSupport);
       if (this.bodyMotion != null) {
-         this.bodyMotion.spawned(role);
+         this.bodyMotion.spawned(executionSupport);
       }
 
       if (this.headMotion != null) {
-         this.headMotion.spawned(role);
+         this.headMotion.spawned(executionSupport);
       }
 
-      this.actions.spawned(role);
+      this.actions.spawned(executionSupport);
    }
 
    @Override
-   public void unloaded(Role role) {
-      this.sensor.unloaded(role);
-      this.forEachInstruction(Instruction::unloaded, role);
+   public void unloaded(ExecutionSupport executionSupport) {
+      this.sensor.unloaded(executionSupport);
+      this.forEachInstruction(Instruction::unloaded, executionSupport);
       if (this.bodyMotion != null) {
-         this.bodyMotion.unloaded(role);
+         this.bodyMotion.unloaded(executionSupport);
       }
 
       if (this.headMotion != null) {
-         this.headMotion.unloaded(role);
+         this.headMotion.unloaded(executionSupport);
       }
 
-      this.actions.unloaded(role);
+      this.actions.unloaded(executionSupport);
    }
 
    @Override
-   public void removed(Role role) {
-      this.sensor.removed(role);
-      this.forEachInstruction(Instruction::removed, role);
+   public void removed(ExecutionSupport executionSupport) {
+      this.sensor.removed(executionSupport);
+      this.forEachInstruction(Instruction::removed, executionSupport);
       if (this.bodyMotion != null) {
-         this.bodyMotion.removed(role);
+         this.bodyMotion.removed(executionSupport);
       }
 
       if (this.headMotion != null) {
-         this.headMotion.removed(role);
+         this.headMotion.removed(executionSupport);
       }
 
-      this.actions.removed(role);
+      this.actions.removed(executionSupport);
    }
 
    @Override
-   public void teleported(Role role, World from, World to) {
-      this.sensor.teleported(role, from, to);
-      this.forEachInstruction(Instruction::teleported, role, from, to);
+   public void teleported(ExecutionSupport executionSupport, World from, World to) {
+      this.sensor.teleported(executionSupport, from, to);
+      this.forEachInstruction(Instruction::teleported, executionSupport, from, to);
       if (this.bodyMotion != null) {
-         this.bodyMotion.teleported(role, from, to);
+         this.bodyMotion.teleported(executionSupport, from, to);
       }
 
       if (this.headMotion != null) {
-         this.headMotion.teleported(role, from, to);
+         this.headMotion.teleported(executionSupport, from, to);
       }
 
-      this.actions.teleported(role, from, to);
+      this.actions.teleported(executionSupport, from, to);
    }
 
    @Override
@@ -297,7 +296,7 @@ public class Instruction implements RoleStateChange, IAnnotatedComponentCollecti
    }
 
    @Override
-   public void getInfo(Role role, @Nonnull ComponentInfo holder) {
+   public void getInfo(ExecutionSupport executionSupport, @Nonnull ComponentInfo holder) {
       if (this.name != null && !this.name.isEmpty()) {
          holder.addField("Name: " + this.name);
       }
@@ -344,16 +343,16 @@ public class Instruction implements RoleStateChange, IAnnotatedComponentCollecti
       }
    }
 
-   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, double dt, @Nonnull Store<EntityStore> store) {
-      DebugSupport debugSupport = role.getDebugSupport();
+   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, double dt, @Nonnull Store<EntityStore> store) {
+      DebugSupport debugSupport = executionSupport.getDebugSupport();
       boolean traceSensorFails = debugSupport.isTraceSensorFails();
       if (traceSensorFails) {
          debugSupport.setLastFailingSensor(this.sensor);
       }
 
-      if (this.sensor.matches(ref, role, dt, store)) {
+      if (this.sensor.matches(ref, executionSupport, dt, store)) {
          if (!this.treeMode && !this.continueAfter && !this.invertTreeModeResult) {
-            role.notifySensorMatch();
+            executionSupport.notifySensorMatch();
          }
 
          if (traceSensorFails) {
@@ -377,40 +376,42 @@ public class Instruction implements RoleStateChange, IAnnotatedComponentCollecti
       }
    }
 
-   public void executeActions(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      if (this.actions.canExecute(ref, role, sensorInfo, dt, store)) {
-         this.actions.execute(ref, role, sensorInfo, dt, store);
+   public void executeActions(
+      @Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store
+   ) {
+      if (this.actions.canExecute(ref, executionSupport, sensorInfo, dt, store)) {
+         this.actions.execute(ref, executionSupport, sensorInfo, dt, store);
       }
    }
 
-   public void execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, double dt, @Nonnull Store<EntityStore> store) {
+   public void execute(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, double dt, @Nonnull Store<EntityStore> store) {
       if (this.instructionList.length <= 0) {
          InfoProvider sensorInfo = this.sensor.getSensorInfo();
-         if (this.headMotion != null && role.getEntitySupport().setNextHeadMotionStep(this)) {
-            this.headMotion.preComputeSteering(ref, role, sensorInfo, store);
+         if (this.headMotion != null && executionSupport.getMotionContextSupport().setNextHeadMotionStep(this)) {
+            this.headMotion.preComputeSteering(ref, executionSupport, sensorInfo, store);
          }
 
-         if (this.bodyMotion != null && role.getEntitySupport().setNextBodyMotionStep(this)) {
-            this.bodyMotion.preComputeSteering(ref, role, sensorInfo, store);
+         if (this.bodyMotion != null && executionSupport.getMotionContextSupport().setNextBodyMotionStep(this)) {
+            this.bodyMotion.preComputeSteering(ref, executionSupport, sensorInfo, store);
          }
 
-         this.executeActions(ref, role, sensorInfo, dt, store);
+         this.executeActions(ref, executionSupport, sensorInfo, dt, store);
          if (this.headMotion == null && this.bodyMotion == null) {
             this.sensor.setOnce();
             this.sensor.done();
          }
 
-         if (role.getDebugSupport().isTraceSuccess()) {
+         if (executionSupport.getDebugSupport().isTraceSuccess()) {
             UUIDComponent uuidComponent = store.getComponent(ref, UUIDComponent.getComponentType());
             assert uuidComponent != null;
             LOGGER.at(Level.INFO).log("Instruction SUCC uuid=%d, debug=%s", uuidComponent.getUuid(), this.getBreadCrumbs());
          }
       } else {
          for (Instruction instruction : this.instructionList) {
-            if (instruction.matches(ref, role, dt, store)) {
-               instruction.onMatched(role);
-               instruction.execute(ref, role, dt, store);
-               instruction.onCompleted(role);
+            if (instruction.matches(ref, executionSupport, dt, store)) {
+               instruction.onMatched(executionSupport);
+               instruction.execute(ref, executionSupport, dt, store);
+               instruction.onCompleted(executionSupport);
                if (!instruction.isContinueAfter()) {
                   break;
                }
@@ -432,18 +433,18 @@ public class Instruction implements RoleStateChange, IAnnotatedComponentCollecti
       this.actions.onEndMotion();
    }
 
-   public void onMatched(@Nonnull Role role) {
+   public void onMatched(@Nonnull ExecutionSupport executionSupport) {
       if (this.treeMode || this.invertTreeModeResult) {
-         this.parentTreeModeStep = role.swapTreeModeSteps(this);
+         this.parentTreeModeStep = executionSupport.swapTreeModeSteps(this);
          if (this.treeMode) {
             this.continueAfter = true;
          }
       }
    }
 
-   public void onCompleted(@Nonnull Role role) {
+   public void onCompleted(@Nonnull ExecutionSupport executionSupport) {
       if (this.treeMode || this.invertTreeModeResult) {
-         role.swapTreeModeSteps(this.parentTreeModeStep);
+         executionSupport.swapTreeModeSteps(this.parentTreeModeStep);
          if (this.parentTreeModeStep != null) {
             if (this.continueAfter == this.invertTreeModeResult) {
                this.parentTreeModeStep.notifyChildSensorMatch();

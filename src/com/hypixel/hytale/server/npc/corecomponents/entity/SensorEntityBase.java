@@ -19,8 +19,8 @@ import com.hypixel.hytale.server.npc.corecomponents.ISensorEntityPrioritiser;
 import com.hypixel.hytale.server.npc.corecomponents.SensorWithEntityFilters;
 import com.hypixel.hytale.server.npc.corecomponents.entity.builders.BuilderSensorEntityBase;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.role.support.DebugSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.EntityPositionProvider;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
@@ -70,8 +70,8 @@ public abstract class SensorEntityBase extends SensorWithEntityFilters {
    }
 
    @Override
-   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, double dt, @Nonnull Store<EntityStore> store) {
-      if (!super.matches(ref, role, dt, store)) {
+   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, double dt, @Nonnull Store<EntityStore> store) {
+      if (!super.matches(ref, executionSupport, dt, store)) {
          this.positionProvider.clear();
          this.currentVisSensorColorIndex = -1;
          return false;
@@ -80,8 +80,8 @@ public abstract class SensorEntityBase extends SensorWithEntityFilters {
       TransformComponent transformComponent = store.getComponent(ref, TRANSFORM_COMPONENT_TYPE);
       assert transformComponent != null;
       Vector3d position = transformComponent.getPosition();
-      this.ownRole = role.getRoleIndex();
-      DebugSupport debugSupport = role.getDebugSupport();
+      this.ownRole = executionSupport.getRoleIndex();
+      DebugSupport debugSupport = executionSupport.getDebugSupport();
       if (debugSupport.isVisSensorRanges()) {
          this.currentVisSensorColorIndex = debugSupport.recordSensorRange(this.range, this.minRange, this.visViewAngle);
       } else {
@@ -89,11 +89,11 @@ public abstract class SensorEntityBase extends SensorWithEntityFilters {
       }
 
       if (this.ignoredTargetSlot == Integer.MIN_VALUE || this.ignoredTargetSlot != this.lockedTargetSlot) {
-         Ref<EntityStore> targetRef = this.filterLockedEntity(ref, position, role, store);
+         Ref<EntityStore> targetRef = this.filterLockedEntity(ref, position, executionSupport, store);
          if (targetRef != null) {
-            this.collector.init(ref, role, store);
+            this.collector.init(ref, executionSupport, store);
             if (!this.collector.terminateOnFirstMatch()) {
-               this.findPlayerOrEntity(ref, position, role, store);
+               this.findPlayerOrEntity(ref, position, executionSupport, store);
             }
 
             this.collector.cleanup();
@@ -106,8 +106,8 @@ public abstract class SensorEntityBase extends SensorWithEntityFilters {
          return false;
       }
 
-      this.collector.init(ref, role, store);
-      Ref<EntityStore> targetRef = this.findPlayerOrEntity(ref, position, role, store);
+      this.collector.init(ref, executionSupport, store);
+      Ref<EntityStore> targetRef = this.findPlayerOrEntity(ref, position, executionSupport, store);
       this.collector.cleanup();
       if (targetRef == null) {
          this.positionProvider.clear();
@@ -116,7 +116,7 @@ public abstract class SensorEntityBase extends SensorWithEntityFilters {
 
       this.positionProvider.setTarget(targetRef, store);
       if (this.lockOnTarget) {
-         role.getMarkedEntitySupport().setMarkedEntity(this.lockedTargetSlot, targetRef);
+         executionSupport.getMarkedEntitySupport().setMarkedEntity(this.lockedTargetSlot, targetRef);
       }
 
       return true;
@@ -133,18 +133,18 @@ public abstract class SensorEntityBase extends SensorWithEntityFilters {
    }
 
    @Override
-   public void registerWithSupport(@Nonnull Role role) {
-      super.registerWithSupport(role);
+   public void registerWithSupport(@Nonnull ExecutionSupport executionSupport) {
+      super.registerWithSupport(executionSupport);
       if (this.isGetPlayers()) {
-         role.getPositionCache().requirePlayerDistanceSorted(this.range);
+         executionSupport.getPositionCache().requirePlayerDistanceSorted(this.range);
       }
 
       if (this.isGetNPCs()) {
-         role.getPositionCache().requireEntityDistanceSorted(this.range);
+         executionSupport.getPositionCache().requireEntityDistanceSorted(this.range);
       }
 
-      this.prioritiser.registerWithSupport(role);
-      this.collector.registerWithSupport(role);
+      this.prioritiser.registerWithSupport(executionSupport);
+      this.collector.registerWithSupport(executionSupport);
    }
 
    @Override
@@ -160,38 +160,38 @@ public abstract class SensorEntityBase extends SensorWithEntityFilters {
    }
 
    @Override
-   public void loaded(Role role) {
-      super.loaded(role);
-      this.prioritiser.loaded(role);
-      this.collector.loaded(role);
+   public void loaded(ExecutionSupport executionSupport) {
+      super.loaded(executionSupport);
+      this.prioritiser.loaded(executionSupport);
+      this.collector.loaded(executionSupport);
    }
 
    @Override
-   public void spawned(Role role) {
-      super.spawned(role);
-      this.prioritiser.spawned(role);
-      this.collector.spawned(role);
+   public void spawned(ExecutionSupport executionSupport) {
+      super.spawned(executionSupport);
+      this.prioritiser.spawned(executionSupport);
+      this.collector.spawned(executionSupport);
    }
 
    @Override
-   public void unloaded(Role role) {
-      super.unloaded(role);
-      this.prioritiser.unloaded(role);
-      this.collector.unloaded(role);
+   public void unloaded(ExecutionSupport executionSupport) {
+      super.unloaded(executionSupport);
+      this.prioritiser.unloaded(executionSupport);
+      this.collector.unloaded(executionSupport);
    }
 
    @Override
-   public void removed(Role role) {
-      super.removed(role);
-      this.prioritiser.removed(role);
-      this.collector.removed(role);
+   public void removed(ExecutionSupport executionSupport) {
+      super.removed(executionSupport);
+      this.prioritiser.removed(executionSupport);
+      this.collector.removed(executionSupport);
    }
 
    @Override
-   public void teleported(Role role, World from, World to) {
-      super.teleported(role, from, to);
-      this.prioritiser.teleported(role, from, to);
-      this.collector.teleported(role, from, to);
+   public void teleported(ExecutionSupport executionSupport, World from, World to) {
+      super.teleported(executionSupport, from, to);
+      this.prioritiser.teleported(executionSupport, from, to);
+      this.collector.teleported(executionSupport, from, to);
    }
 
    protected void initialisePrioritiser() {
@@ -209,26 +209,30 @@ public abstract class SensorEntityBase extends SensorWithEntityFilters {
 
    @Nullable
    protected Ref<EntityStore> filterLockedEntity(
-      @Nonnull Ref<EntityStore> ref, @Nonnull Vector3d position, @Nonnull Role role, @Nonnull Store<EntityStore> store
+      @Nonnull Ref<EntityStore> ref, @Nonnull Vector3d position, @Nonnull ExecutionSupport executionSupport, @Nonnull Store<EntityStore> store
    ) {
-      Ref<EntityStore> target = this.lockedTargetSlot >= 0 ? role.getMarkedEntitySupport().getMarkedEntityRef(this.lockedTargetSlot) : null;
+      Ref<EntityStore> target = this.lockedTargetSlot >= 0 ? executionSupport.getMarkedEntitySupport().getMarkedEntityRef(this.lockedTargetSlot) : null;
       if (target == null) {
          return null;
       }
 
-      if (this.filterEntityWithRange(ref, target, position, role, store)) {
+      if (this.filterEntityWithRange(ref, target, position, executionSupport, store)) {
          return target;
       }
 
       if (this.autoUnlockTarget) {
-         role.getMarkedEntitySupport().clearMarkedEntity(this.lockedTargetSlot);
+         executionSupport.getMarkedEntitySupport().clearMarkedEntity(this.lockedTargetSlot);
       }
 
       return null;
    }
 
    protected boolean filterEntityWithRange(
-      @Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull Vector3d position, @Nonnull Role role, @Nonnull Store<EntityStore> store
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull Ref<EntityStore> targetRef,
+      @Nonnull Vector3d position,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nonnull Store<EntityStore> store
    ) {
       Player playerComponent = store.getComponent(targetRef, Player.getComponentType());
       if (playerComponent != null) {
@@ -257,13 +261,17 @@ public abstract class SensorEntityBase extends SensorWithEntityFilters {
       TransformComponent targetTransformComponent = store.getComponent(targetRef, TRANSFORM_COMPONENT_TYPE);
       assert targetTransformComponent != null;
       Vector3d pos = targetTransformComponent.getPosition();
-      double squaredDistance = role.getActiveMotionController().getSquaredDistance(position, pos, this.useProjectedDistance);
+      double squaredDistance = this.useProjectedDistance
+         ? executionSupport.getMotionContextSupport().getActiveMotionController().getSquaredDistance(position, pos, true)
+         : position.distanceSquared(pos);
       return !(squaredDistance < this.minRange * this.minRange) && !(squaredDistance > this.range * this.range)
-         ? this.filterEntity(ref, targetRef, role, store)
+         ? this.filterEntity(ref, targetRef, executionSupport, store)
          : false;
    }
 
-   protected boolean filterEntity(@Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull Role role, @Nonnull Store<EntityStore> store) {
+   protected boolean filterEntity(
+      @Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull ExecutionSupport executionSupport, @Nonnull Store<EntityStore> store
+   ) {
       if (store.getArchetype(targetRef).contains(DEATH_COMPONENT_TYPE)) {
          return false;
       }
@@ -271,32 +279,32 @@ public abstract class SensorEntityBase extends SensorWithEntityFilters {
       NPCEntity npcComponent = store.getComponent(targetRef, NPC_COMPONENT_TYPE);
       return this.isExcludingOwnType() && npcComponent != null && this.ownRole == npcComponent.getRoleIndex()
          ? false
-         : this.matchesFilters(ref, targetRef, role, store);
+         : this.matchesFilters(ref, targetRef, executionSupport, store);
    }
 
    protected boolean filterPrioritisedPlayer(
-      @Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull Role role, @Nonnull Store<EntityStore> store
+      @Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull ExecutionSupport executionSupport, @Nonnull Store<EntityStore> store
    ) {
-      return this.filterPrioritisedEntity(ref, targetRef, role, store, this.playerPrioritiser);
+      return this.filterPrioritisedEntity(ref, targetRef, executionSupport, store, this.playerPrioritiser);
    }
 
    protected boolean filterPrioritisedNPC(
-      @Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull Role role, @Nonnull Store<EntityStore> store
+      @Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull ExecutionSupport executionSupport, @Nonnull Store<EntityStore> store
    ) {
-      return this.filterPrioritisedEntity(ref, targetRef, role, store, this.npcPrioritiser);
+      return this.filterPrioritisedEntity(ref, targetRef, executionSupport, store, this.npcPrioritiser);
    }
 
    protected boolean filterPrioritisedEntity(
       @Nonnull Ref<EntityStore> ref,
       @Nonnull Ref<EntityStore> targetRef,
-      @Nonnull Role role,
+      @Nonnull ExecutionSupport executionSupport,
       @Nonnull Store<EntityStore> store,
       @Nonnull IEntityByPriorityFilter entityPrioritiser
    ) {
-      boolean filterMatch = this.filterEntity(ref, targetRef, role, store);
+      boolean filterMatch = this.filterEntity(ref, targetRef, executionSupport, store);
       if (!filterMatch) {
          this.collector.collectNonMatching(targetRef, store);
-         this.recordEntityVisData(targetRef, role, false);
+         this.recordEntityVisData(targetRef, executionSupport, false);
          return false;
       }
 
@@ -307,34 +315,36 @@ public abstract class SensorEntityBase extends SensorWithEntityFilters {
          this.collector.collectNonMatching(targetRef, store);
       }
 
-      this.recordEntityVisData(targetRef, role, match);
+      this.recordEntityVisData(targetRef, executionSupport, match);
       return this.collector.terminateOnFirstMatch() && match;
    }
 
-   private void recordEntityVisData(@Nonnull Ref<EntityStore> targetRef, @Nonnull Role role, boolean matched) {
+   private void recordEntityVisData(@Nonnull Ref<EntityStore> targetRef, @Nonnull ExecutionSupport executionSupport, boolean matched) {
       if (this.currentVisSensorColorIndex >= 0) {
-         role.getDebugSupport().recordEntityCheck(targetRef, this.currentVisSensorColorIndex, matched);
+         executionSupport.getDebugSupport().recordEntityCheck(targetRef, this.currentVisSensorColorIndex, matched);
       }
    }
 
    @Nullable
    protected Ref<EntityStore> findPlayerOrEntity(
-      @Nonnull Ref<EntityStore> ref, @Nonnull Vector3d position, @Nonnull Role role, @Nonnull Store<EntityStore> store
+      @Nonnull Ref<EntityStore> ref, @Nonnull Vector3d position, @Nonnull ExecutionSupport executionSupport, @Nonnull Store<EntityStore> store
    ) {
       Ref<EntityStore> player = null;
       Ref<EntityStore> npc = null;
-      Ref<EntityStore> ignoredEntity = this.ignoredTargetSlot >= 0 ? role.getMarkedEntitySupport().getMarkedEntityRef(this.ignoredTargetSlot) : null;
+      Ref<EntityStore> ignoredEntity = this.ignoredTargetSlot >= 0
+         ? executionSupport.getMarkedEntitySupport().getMarkedEntityRef(this.ignoredTargetSlot)
+         : null;
       if (this.isGetPlayers()) {
-         this.playerPrioritiser.init(role);
-         role.getPositionCache()
+         this.playerPrioritiser.init(executionSupport);
+         executionSupport.getPositionCache()
             .processPlayersInRange(
                ref,
                this.minRange,
                this.range,
                this.useProjectedDistance,
                ignoredEntity,
-               role,
-               (sensorEntityBase, targetRef, role1, ref1) -> sensorEntityBase.filterPrioritisedPlayer(ref1, targetRef, role1, ref1.getStore()),
+               executionSupport,
+               (sensorEntityBase, targetRef, es1, ref1) -> sensorEntityBase.filterPrioritisedPlayer(ref1, targetRef, es1, ref1.getStore()),
                this,
                ref,
                store
@@ -344,16 +354,16 @@ public abstract class SensorEntityBase extends SensorWithEntityFilters {
       }
 
       if (this.isGetNPCs()) {
-         this.npcPrioritiser.init(role);
-         role.getPositionCache()
+         this.npcPrioritiser.init(executionSupport);
+         executionSupport.getPositionCache()
             .processNPCsInRange(
                ref,
                this.minRange,
                this.range,
                this.useProjectedDistance,
                ignoredEntity,
-               role,
-               (sensorEntityBase, targetRef, role1, ref1) -> sensorEntityBase.filterPrioritisedNPC(ref1, targetRef, role1, ref1.getStore()),
+               executionSupport,
+               (sensorEntityBase, targetRef, es1, ref1) -> sensorEntityBase.filterPrioritisedNPC(ref1, targetRef, es1, ref1.getStore()),
                this,
                ref,
                store
@@ -368,7 +378,7 @@ public abstract class SensorEntityBase extends SensorWithEntityFilters {
       } else if (player == null) {
          target = npc;
       } else {
-         target = this.prioritiser.pickTarget(ref, role, position, player, npc, this.useProjectedDistance, store);
+         target = this.prioritiser.pickTarget(ref, executionSupport, position, player, npc, this.useProjectedDistance, store);
       }
 
       return target;

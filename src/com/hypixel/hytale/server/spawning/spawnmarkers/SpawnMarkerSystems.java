@@ -46,6 +46,7 @@ import com.hypixel.hytale.server.flock.StoredFlock;
 import com.hypixel.hytale.server.npc.components.SpawnMarkerReference;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.role.support.StateSupport;
 import com.hypixel.hytale.server.spawning.assets.spawnmarker.config.SpawnMarker;
 import it.unimi.dsi.fastutil.Pair;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -373,7 +374,7 @@ public class SpawnMarkerSystems {
                               assert npcComponent != null;
                               tempStorageList.add(Pair.of(npcRef, npcComponent));
                               boolean isDead = commandBuffer.getArchetype(npcRef).contains(DeathComponent.getComponentType());
-                              if (isDead || npcComponent.getRole().getStateSupport().isInBusyState()) {
+                              if (isDead || StateSupport.get(npcRef, commandBuffer).isInBusyState()) {
                                  spawnMarkerEntityComponent.setTimeToDeactivation(cachedMarker.getDeactivationTime());
                                  tempStorageList.clear();
                                  return;

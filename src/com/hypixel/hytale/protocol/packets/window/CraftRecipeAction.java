@@ -99,7 +99,12 @@ public class CraftRecipeAction extends WindowAction {
    }
 
    public static int getQuantity(MemorySegment mem, int offset) {
-      return mem.get(PacketIO.PROTO_INT, offset + 1);
+      int value = mem.get(PacketIO.PROTO_INT, offset + 1);
+      if (value < 1) {
+         throw ProtocolException.valueBelowMinimum("Quantity", value, 1.0);
+      } else {
+         return value;
+      }
    }
 
    public static boolean hasRecipeId(MemorySegment mem, int offset) {
@@ -115,10 +120,14 @@ public class CraftRecipeAction extends WindowAction {
       if (offset + 5 > mem.byteSize()) {
          throw ProtocolException.bufferTooSmall("CraftRecipeAction", offset + 5, (int)mem.byteSize());
       } else {
-         return new CraftRecipeAction(
-            hasRecipeId(mem, offset) ? PacketIO.readVarString("RecipeId", mem, offset + 5, 4096000, PacketIO.UTF8) : null,
-            mem.get(PacketIO.PROTO_INT, offset + 1)
-         );
+         int quantity = mem.get(PacketIO.PROTO_INT, offset + 1);
+         if (quantity < 1) {
+            throw ProtocolException.valueBelowMinimum("Quantity", quantity, 1.0);
+         } else {
+            return new CraftRecipeAction(
+               hasRecipeId(mem, offset) ? PacketIO.readVarString("RecipeId", mem, offset + 5, 4096000, PacketIO.UTF8) : null, quantity
+            );
+         }
       }
    }
 

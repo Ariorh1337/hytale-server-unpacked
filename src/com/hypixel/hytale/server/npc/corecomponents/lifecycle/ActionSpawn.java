@@ -18,8 +18,10 @@ import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.ActionBase;
 import com.hypixel.hytale.server.npc.corecomponents.lifecycle.builders.BuilderActionSpawn;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionControllerFly;
 import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.role.support.StateSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.systems.NewSpawnStartTickingSystem;
 import com.hypixel.hytale.server.npc.util.AimingHelper;
@@ -91,13 +93,19 @@ public class ActionSpawn extends ActionBase {
    }
 
    @Override
-   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      if (super.canExecute(ref, role, sensorInfo, dt, store) && this.roleIndex >= 0 && this.spawnsLeft <= 0) {
+   public boolean canExecute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
+      if (super.canExecute(ref, executionSupport, sensorInfo, dt, store) && this.roleIndex >= 0 && this.spawnsLeft <= 0) {
          if (NPCPlugin.get().tryGetCachedValidRole(this.roleIndex) == null) {
             NPCPlugin.get()
                .getLogger()
                .at(Level.SEVERE)
-               .log("NPC of type '%s': Unable to spawn NPC of type '%s' from Action Spawn", role.getRoleName(), this.kind);
+               .log("Entity '%s': Unable to spawn NPC of type '%s' from Action Spawn", executionSupport.getName(), this.kind);
             this.setOnce();
             this.once = true;
             return false;
@@ -110,8 +118,10 @@ public class ActionSpawn extends ActionBase {
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      super.execute(ref, role, sensorInfo, dt, store);
+   public boolean execute(
+      @Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, @Nonnull InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store
+   ) {
+      super.execute(ref, executionSupport, sensorInfo, dt, store);
       this.spawnsLeft = RandomExtra.randomRange(this.minCount, this.maxCount);
       if (this.spawnsLeft == 0) {
          return true;
@@ -155,7 +165,7 @@ public class ActionSpawn extends ActionBase {
          }
 
          this.spawnDelay = RandomExtra.randomRange(this.minDelay, this.maxDelay);
-         role.addDeferredAction(this::deferredSpawning);
+         executionSupport.getEntitySupport().addDeferredAction(this::deferredSpawning);
          return true;
       } else {
          this.spawnsLeft = 0;
@@ -209,28 +219,31 @@ public class ActionSpawn extends ActionBase {
 
    protected void postSpawn(@Nonnull NPCEntity npcComponent, @Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
       NPCEntity parentNpcComponent = store.getComponent(this.parent, NPCEntity.getComponentType());
-      assert parentNpcComponent != null;
-      this.joinFlock(ref, store);
-      this.launchAtTarget(ref, store);
-      if (this.spawnState != null) {
-         npcComponent.getRole().getStateSupport().setState(ref, this.spawnState, this.spawnSubState, store);
+      if (parentNpcComponent != null) {
+         this.joinFlock(ref, store);
+         npcComponent.setSpawnConfiguration(parentNpcComponent.getSpawnConfiguration());
       }
 
-      npcComponent.setSpawnConfiguration(parentNpcComponent.getSpawnConfiguration());
+      this.launchAtTarget(ref, store);
+      if (this.spawnState != null) {
+         StateSupport.get(ref, store).setState(ref, this.spawnState, this.spawnSubState, store);
+      }
+
       NewSpawnStartTickingSystem.queueNewSpawn(ref, store);
    }
 
    protected void joinFlock(@Nonnull Ref<EntityStore> targetRef, @Nonnull Store<EntityStore> store) {
       if (this.joinFlock) {
          NPCEntity parentNpcComponent = store.getComponent(this.parent, NPCEntity.getComponentType());
-         assert parentNpcComponent != null;
-         Ref<EntityStore> flockReference = FlockPlugin.getFlockReference(this.parent, store);
-         if (flockReference == null) {
-            flockReference = FlockPlugin.createFlock(store, parentNpcComponent.getRole());
-            FlockMembershipSystems.join(this.parent, flockReference, store);
-         }
+         if (parentNpcComponent != null) {
+            Ref<EntityStore> flockReference = FlockPlugin.getFlockReference(this.parent, store);
+            if (flockReference == null) {
+               flockReference = FlockPlugin.createFlock(store, parentNpcComponent.getRole());
+               FlockMembershipSystems.join(this.parent, flockReference, store);
+            }
 
-         FlockMembershipSystems.join(targetRef, flockReference, store);
+            FlockMembershipSystems.join(targetRef, flockReference, store);
+         }
       }
    }
 
@@ -277,7 +290,7 @@ public class ActionSpawn extends ActionBase {
       }
    }
 
-   protected boolean deferredSpawning(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, double dt, @Nonnull Store<EntityStore> store) {
+   protected boolean deferredSpawning(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, double dt, @Nonnull Store<EntityStore> store) {
       this.spawnDelay -= dt;
       if (this.spawnDelay > 0.0) {
          return false;

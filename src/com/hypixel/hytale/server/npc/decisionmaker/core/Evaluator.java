@@ -8,7 +8,7 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -29,9 +29,9 @@ public abstract class Evaluator<OptionType extends Option> {
       }
    }
 
-   public void setupNPC(Role role) {
+   public void setupNPC(ExecutionSupport executionSupport) {
       for (Evaluator<OptionType>.OptionHolder optionHolder : this.options) {
-         optionHolder.option.setupNPC(role);
+         optionHolder.option.setupNPC(executionSupport);
       }
    }
 

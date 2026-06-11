@@ -35,6 +35,8 @@ import com.hypixel.hytale.server.flock.FlockMembership;
 import com.hypixel.hytale.server.npc.components.SpawnBeaconReference;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.role.support.MarkedEntitySupport;
+import com.hypixel.hytale.server.npc.role.support.StateSupport;
 import com.hypixel.hytale.server.spawning.SpawningContext;
 import com.hypixel.hytale.server.spawning.SpawningPlugin;
 import com.hypixel.hytale.server.spawning.assets.spawns.config.BeaconNPCSpawn;
@@ -295,10 +297,10 @@ public class LegacySpawnBeaconEntity extends Entity {
       assert npcComponent != null;
       Role role = npcComponent.getRole();
       BeaconNPCSpawn spawn = this.spawnWrapper.getSpawn();
-      role.getMarkedEntitySupport().setMarkedEntity(spawn.getTargetSlot(), targetRef);
+      MarkedEntitySupport.get(ref, store).setMarkedEntity(spawn.getTargetSlot(), targetRef);
       String spawnState = spawn.getNpcSpawnState();
       if (spawnState != null) {
-         role.getStateSupport().setState(ref, spawnState, spawn.getNpcSpawnSubState(), store);
+         StateSupport.get(ref, store).setState(ref, spawnState, spawn.getNpcSpawnSubState(), store);
       }
    }
 

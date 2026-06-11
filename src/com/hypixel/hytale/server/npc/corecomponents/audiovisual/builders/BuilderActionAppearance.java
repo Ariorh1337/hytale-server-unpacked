@@ -3,6 +3,7 @@ package com.hypixel.hytale.server.npc.corecomponents.audiovisual.builders;
 import com.google.gson.JsonElement;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.asset.builder.validators.asset.ModelExistsValidator;
 import com.hypixel.hytale.server.npc.corecomponents.audiovisual.ActionAppearance;
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderActionBase;
@@ -19,6 +20,7 @@ public class BuilderActionAppearance extends BuilderActionBase {
    @Nonnull
    public BuilderActionAppearance readConfig(@Nonnull JsonElement data) {
       this.requireAsset(data, "Appearance", s -> this.appearance = s, ModelExistsValidator.required(), BuilderDescriptorState.Stable, "Model name to use", null);
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
       return this;
    }
 

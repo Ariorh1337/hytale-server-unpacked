@@ -3,6 +3,7 @@ package com.hypixel.hytale.server.npc.corecomponents.audiovisual.builders;
 import com.google.gson.JsonElement;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.asset.builder.holder.StringHolder;
 import com.hypixel.hytale.server.npc.corecomponents.audiovisual.ActionDisplayName;
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderActionBase;
@@ -37,6 +38,7 @@ public class BuilderActionDisplayName extends BuilderActionBase {
    @Nonnull
    public BuilderActionDisplayName readConfig(@Nonnull JsonElement data) {
       this.requireString(data, "DisplayName", this.displayName, null, BuilderDescriptorState.Stable, "Name to display above NPC", null);
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
       return this;
    }
 

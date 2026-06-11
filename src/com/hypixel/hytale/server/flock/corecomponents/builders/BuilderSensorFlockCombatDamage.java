@@ -6,6 +6,7 @@ import com.hypixel.hytale.server.npc.asset.builder.Builder;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.asset.builder.Feature;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderSensorBase;
 import com.hypixel.hytale.server.npc.instructions.Sensor;
 import javax.annotation.Nonnull;
@@ -41,6 +42,7 @@ public class BuilderSensorFlockCombatDamage extends BuilderSensorBase {
    public Builder<Sensor> readConfig(@Nonnull JsonElement data) {
       this.getBoolean(data, "LeaderOnly", v -> this.leaderOnly = v, true, BuilderDescriptorState.Stable, "Only test for damage to flock leader", null);
       this.provideFeature(Feature.LiveEntity);
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
       return this;
    }
 

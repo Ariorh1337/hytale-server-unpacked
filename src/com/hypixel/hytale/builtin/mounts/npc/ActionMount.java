@@ -15,7 +15,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.ActionBase;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.systems.RoleChangeSystem;
 import javax.annotation.Nonnull;
@@ -39,15 +39,27 @@ public class ActionMount extends ActionBase {
    }
 
    @Override
-   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      Ref<EntityStore> target = role.getStateSupport().getInteractionIterationTarget();
+   public boolean canExecute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
+      Ref<EntityStore> target = executionSupport.getStateSupport().getInteractionIterationTarget();
       boolean targetExists = target != null && !store.getArchetype(target).contains(DeathComponent.getComponentType());
-      return super.canExecute(ref, role, sensorInfo, dt, store) && targetExists;
+      return super.canExecute(ref, executionSupport, sensorInfo, dt, store) && targetExists;
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      super.execute(ref, role, sensorInfo, dt, store);
+   public boolean execute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
+      super.execute(ref, executionSupport, sensorInfo, dt, store);
       ComponentType<EntityStore, NPCMountComponent> mountComponentType = NPCMountComponent.getComponentType();
       NPCMountComponent mountComponent = store.getComponent(ref, mountComponentType);
       if (mountComponent != null) {
@@ -55,8 +67,8 @@ public class ActionMount extends ActionBase {
       }
 
       mountComponent = store.ensureAndGetComponent(ref, mountComponentType);
-      mountComponent.setOriginalRoleIndex(NPCPlugin.get().getIndex(role.getRoleName()));
-      Ref<EntityStore> playerReference = role.getStateSupport().getInteractionIterationTarget();
+      mountComponent.setOriginalRoleIndex(NPCPlugin.get().getIndex(executionSupport.getRole().getRoleName()));
+      Ref<EntityStore> playerReference = executionSupport.getStateSupport().getInteractionIterationTarget();
       if (playerReference == null) {
          return false;
       }
@@ -68,7 +80,7 @@ public class ActionMount extends ActionBase {
       Player playerComponent = store.getComponent(playerReference, Player.getComponentType());
       assert playerComponent != null;
       PhysicsValues playerPhysicsValues = store.getComponent(playerReference, PhysicsValues.getComponentType());
-      RoleChangeSystem.requestRoleChange(ref, role, this.emptyRoleIndex, false, null, null, store);
+      RoleChangeSystem.requestRoleChange(ref, executionSupport.getRole(), this.emptyRoleIndex, false, null, null, store);
       MovementConfig movementConfig = MovementConfig.getAssetMap().getAsset(this.movementConfigId);
       if (movementConfig != null) {
          MovementManager movementManagerComponent = store.getComponent(playerReference, MovementManager.getComponentType());

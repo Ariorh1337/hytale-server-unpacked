@@ -10,8 +10,8 @@ import com.hypixel.hytale.server.npc.corecomponents.ActionBase;
 import com.hypixel.hytale.server.npc.corecomponents.WeightedAction;
 import com.hypixel.hytale.server.npc.corecomponents.utility.builders.BuilderActionRandom;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nonnull;
@@ -42,18 +42,24 @@ public class ActionRandom extends ActionBase {
    }
 
    @Override
-   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean canExecute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
       int length = this.actions.length;
-      if (super.canExecute(ref, role, sensorInfo, dt, store) && length != 0) {
+      if (super.canExecute(ref, executionSupport, sensorInfo, dt, store) && length != 0) {
          if (this.current != null) {
-            return this.current.canExecute(ref, role, sensorInfo, dt, store);
+            return this.current.canExecute(ref, executionSupport, sensorInfo, dt, store);
          }
 
          this.availableActionsCount = 0;
          this.totalWeight = 0.0;
 
          for (WeightedAction action : this.actions) {
-            if (action.canExecute(ref, role, sensorInfo, dt, store)) {
+            if (action.canExecute(ref, executionSupport, sensorInfo, dt, store)) {
                this.availableActions[this.availableActionsCount++] = action;
                this.totalWeight = this.totalWeight + action.getWeight();
             }
@@ -66,8 +72,14 @@ public class ActionRandom extends ActionBase {
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      super.execute(ref, role, sensorInfo, dt, store);
+   public boolean execute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
+      super.execute(ref, executionSupport, sensorInfo, dt, store);
       if (this.availableActionsCount == 0) {
          return true;
       }
@@ -82,13 +94,13 @@ public class ActionRandom extends ActionBase {
             this.totalWeight = this.totalWeight - this.current.getWeight();
          }
 
-         this.current.activate(role, sensorInfo);
+         this.current.activate(executionSupport, sensorInfo);
       }
 
-      boolean finished = this.current.execute(ref, role, sensorInfo, dt, store);
+      boolean finished = this.current.execute(ref, executionSupport, sensorInfo, dt, store);
       if (finished) {
          this.current.clearOnce();
-         this.current.deactivate(role, sensorInfo);
+         this.current.deactivate(executionSupport, sensorInfo);
          this.current = null;
       }
 
@@ -96,9 +108,9 @@ public class ActionRandom extends ActionBase {
    }
 
    @Override
-   public void registerWithSupport(Role role) {
+   public void registerWithSupport(ExecutionSupport executionSupport) {
       for (WeightedAction action : this.actions) {
-         action.registerWithSupport(role);
+         action.registerWithSupport(executionSupport);
       }
    }
 
@@ -115,37 +127,37 @@ public class ActionRandom extends ActionBase {
    }
 
    @Override
-   public void loaded(Role role) {
+   public void loaded(ExecutionSupport executionSupport) {
       for (WeightedAction action : this.actions) {
-         action.loaded(role);
+         action.loaded(executionSupport);
       }
    }
 
    @Override
-   public void spawned(Role role) {
+   public void spawned(ExecutionSupport executionSupport) {
       for (WeightedAction action : this.actions) {
-         action.spawned(role);
+         action.spawned(executionSupport);
       }
    }
 
    @Override
-   public void unloaded(Role role) {
+   public void unloaded(ExecutionSupport executionSupport) {
       for (WeightedAction action : this.actions) {
-         action.unloaded(role);
+         action.unloaded(executionSupport);
       }
    }
 
    @Override
-   public void removed(Role role) {
+   public void removed(ExecutionSupport executionSupport) {
       for (WeightedAction action : this.actions) {
-         action.removed(role);
+         action.removed(executionSupport);
       }
    }
 
    @Override
-   public void teleported(Role role, World from, World to) {
+   public void teleported(ExecutionSupport executionSupport, World from, World to) {
       for (WeightedAction action : this.actions) {
-         action.teleported(role, from, to);
+         action.teleported(executionSupport, from, to);
       }
    }
 }

@@ -1,7 +1,9 @@
 package com.hypixel.hytale.server.npc.corecomponents.combat.builders;
 
+import com.google.gson.JsonElement;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderSensorBase;
 import com.hypixel.hytale.server.npc.corecomponents.combat.SensorIsBackingAway;
 import javax.annotation.Nonnull;
@@ -28,5 +30,11 @@ public class BuilderSensorIsBackingAway extends BuilderSensorBase {
    @Override
    public BuilderDescriptorState getBuilderDescriptorState() {
       return BuilderDescriptorState.Stable;
+   }
+
+   @Nonnull
+   public BuilderSensorIsBackingAway readConfig(@Nonnull JsonElement data) {
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
+      return this;
    }
 }

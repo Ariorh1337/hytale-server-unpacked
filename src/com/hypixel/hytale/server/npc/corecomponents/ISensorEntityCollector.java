@@ -3,14 +3,14 @@ package com.hypixel.hytale.server.npc.corecomponents;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.instructions.RoleStateChange;
-import com.hypixel.hytale.server.npc.role.Role;
 import javax.annotation.Nonnull;
 
 public interface ISensorEntityCollector extends RoleStateChange {
    ISensorEntityCollector DEFAULT = new ISensorEntityCollector() {
       @Override
-      public void init(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      public void init(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       }
 
       @Override
@@ -31,7 +31,7 @@ public interface ISensorEntityCollector extends RoleStateChange {
       }
    };
 
-   void init(@Nonnull Ref<EntityStore> var1, @Nonnull Role var2, @Nonnull ComponentAccessor<EntityStore> var3);
+   void init(@Nonnull Ref<EntityStore> var1, @Nonnull ExecutionSupport var2, @Nonnull ComponentAccessor<EntityStore> var3);
 
    void collectMatching(@Nonnull Ref<EntityStore> var1, @Nonnull Ref<EntityStore> var2, @Nonnull ComponentAccessor<EntityStore> var3);
 

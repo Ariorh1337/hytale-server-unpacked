@@ -8,13 +8,13 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.movement.builders.BuilderBodyMotionFind;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.movement.Steering;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
 import com.hypixel.hytale.server.npc.movement.steeringforces.SteeringForcePursue;
 import com.hypixel.hytale.server.npc.navigation.AStarBase;
 import com.hypixel.hytale.server.npc.navigation.AStarNode;
 import com.hypixel.hytale.server.npc.navigation.AStarWithTarget;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.util.NPCPhysicsMath;
 import java.util.logging.Level;
@@ -88,26 +88,34 @@ public class BodyMotionFind extends BodyMotionFindWithTarget {
    @Override
    protected boolean computeSteering(
       @Nonnull Ref<EntityStore> ref,
-      @Nonnull Role role,
+      @Nonnull ExecutionSupport executionSupport,
       @Nonnull Vector3d position,
       @Nonnull Steering desiredSteering,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       this.seek.setPositions(position, this.getLastTargetPosition());
-      MotionController motionController = role.getActiveMotionController();
+      MotionController motionController = executionSupport.getMotionContextSupport().getActiveMotionController();
       this.seek.setComponentSelector(motionController.getComponentSelector());
       double desiredAltitudeWeight = this.desiredAltitudeWeight >= 0.0 ? this.desiredAltitudeWeight : motionController.getDesiredAltitudeWeight();
-      return this.scaleSteering(ref, role, this.seek, desiredSteering, desiredAltitudeWeight, componentAccessor);
+      return this.scaleSteering(ref, executionSupport, this.seek, desiredSteering, desiredAltitudeWeight, componentAccessor);
    }
 
    @Override
    public boolean canComputeMotion(
-      @Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider infoProvider, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider infoProvider,
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
-      if (super.canComputeMotion(ref, role, infoProvider, componentAccessor)
+      if (super.canComputeMotion(ref, executionSupport, infoProvider, componentAccessor)
          && (
             !(this.abortDistance > 0.0)
-               || !(role.getActiveMotionController().waypointDistanceSquared(ref, this.getLastTargetPosition(), componentAccessor) >= this.abortDistanceSquared)
+               || !(
+                  executionSupport.getMotionContextSupport()
+                        .getActiveMotionController()
+                        .waypointDistanceSquared(ref, this.getLastTargetPosition(), componentAccessor)
+                     >= this.abortDistanceSquared
+               )
          )) {
          if (this.selfBoundingBox != null && this.adjustRangeByHitboxSize) {
             double effectiveDistance = this.distance + Math.max(this.selfBoundingBox.width(), this.selfBoundingBox.depth());

@@ -4,6 +4,7 @@ import com.google.gson.JsonElement;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.asset.builder.Feature;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.asset.builder.holder.BooleanHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.DoubleHolder;
 import com.hypixel.hytale.server.npc.asset.builder.validators.DoubleSingleValidator;
@@ -62,6 +63,7 @@ public class BuilderActionPlaceBlock extends BuilderActionBase {
          null
       );
       this.requireFeature(EnumSet.of(Feature.Position));
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
       return this;
    }
 

@@ -9,10 +9,10 @@ import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.MotionBase;
 import com.hypixel.hytale.server.npc.corecomponents.timer.builders.BuilderMotionTimer;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.instructions.Motion;
 import com.hypixel.hytale.server.npc.movement.Steering;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -32,21 +32,21 @@ public abstract class MotionTimer<T extends Motion> extends MotionBase {
    }
 
    @Override
-   public void activate(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+   public void activate(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       this.activeTime = 0.0;
       this.timeToLive = RandomExtra.randomRange(this.atLeastSeconds, this.atMostSeconds);
-      this.motion.activate(ref, role, componentAccessor);
+      this.motion.activate(ref, executionSupport, componentAccessor);
    }
 
    @Override
-   public void deactivate(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      this.motion.deactivate(ref, role, componentAccessor);
+   public void deactivate(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      this.motion.deactivate(ref, executionSupport, componentAccessor);
    }
 
    @Override
    public boolean computeSteering(
       @Nonnull Ref<EntityStore> ref,
-      @Nonnull Role support,
+      @Nonnull ExecutionSupport executionSupport,
       @Nullable InfoProvider sensorInfo,
       double dt,
       @Nonnull Steering desiredSteering,
@@ -56,7 +56,7 @@ public abstract class MotionTimer<T extends Motion> extends MotionBase {
          return false;
       } else {
          this.activeTime += dt;
-         if (!this.motion.computeSteering(ref, support, sensorInfo, dt, desiredSteering, componentAccessor)) {
+         if (!this.motion.computeSteering(ref, executionSupport, sensorInfo, dt, desiredSteering, componentAccessor)) {
             this.activeTime = this.timeToLive;
             return false;
          } else {
@@ -66,8 +66,8 @@ public abstract class MotionTimer<T extends Motion> extends MotionBase {
    }
 
    @Override
-   public void registerWithSupport(Role role) {
-      this.motion.registerWithSupport(role);
+   public void registerWithSupport(ExecutionSupport executionSupport) {
+      this.motion.registerWithSupport(executionSupport);
    }
 
    @Override
@@ -81,27 +81,27 @@ public abstract class MotionTimer<T extends Motion> extends MotionBase {
    }
 
    @Override
-   public void loaded(Role role) {
-      this.motion.loaded(role);
+   public void loaded(ExecutionSupport executionSupport) {
+      this.motion.loaded(executionSupport);
    }
 
    @Override
-   public void spawned(Role role) {
-      this.motion.spawned(role);
+   public void spawned(ExecutionSupport executionSupport) {
+      this.motion.spawned(executionSupport);
    }
 
    @Override
-   public void unloaded(Role role) {
-      this.motion.unloaded(role);
+   public void unloaded(ExecutionSupport executionSupport) {
+      this.motion.unloaded(executionSupport);
    }
 
    @Override
-   public void removed(Role role) {
-      this.motion.removed(role);
+   public void removed(ExecutionSupport executionSupport) {
+      this.motion.removed(executionSupport);
    }
 
    @Override
-   public void teleported(Role role, World from, World to) {
-      this.motion.teleported(role, from, to);
+   public void teleported(ExecutionSupport executionSupport, World from, World to) {
+      this.motion.teleported(executionSupport, from, to);
    }
 }

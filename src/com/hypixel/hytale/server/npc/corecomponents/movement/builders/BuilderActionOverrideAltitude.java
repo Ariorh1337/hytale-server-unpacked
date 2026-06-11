@@ -4,6 +4,7 @@ import com.google.gson.JsonElement;
 import com.hypixel.hytale.server.npc.asset.builder.Builder;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.asset.builder.holder.NumberArrayHolder;
 import com.hypixel.hytale.server.npc.asset.builder.validators.DoubleSequenceValidator;
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderActionBase;
@@ -49,6 +50,7 @@ public class BuilderActionOverrideAltitude extends BuilderActionBase {
          "The desired altitude range",
          null
       );
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
       return this;
    }
 

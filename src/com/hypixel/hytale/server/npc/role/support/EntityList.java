@@ -16,8 +16,8 @@ import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.components.SortBufferProviderResource;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
-import com.hypixel.hytale.server.npc.role.Role;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import java.util.Set;
 import java.util.function.BiPredicate;
@@ -410,8 +410,8 @@ public class EntityList extends BucketList<Ref<EntityStore>> {
       @Nullable Ref<EntityStore> ignoredEntityReference,
       double minRange,
       double maxRange,
-      @Nonnull QuadPredicate<S, Ref<EntityStore>, Role, T> filter,
-      Role role,
+      @Nonnull QuadPredicate<S, Ref<EntityStore>, ExecutionSupport, T> filter,
+      ExecutionSupport executionSupport,
       S s,
       T t,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
@@ -445,7 +445,7 @@ public class EntityList extends BucketList<Ref<EntityStore>> {
                      }
 
                      Ref<EntityStore> ref = this.validateEntityRef(holder, componentAccessor);
-                     if (ref != null && filter.test(s, ref, role, t)) {
+                     if (ref != null && filter.test(s, ref, executionSupport, t)) {
                         return ref;
                      }
                   }
@@ -472,7 +472,7 @@ public class EntityList extends BucketList<Ref<EntityStore>> {
                      }
 
                      Ref<EntityStore> ref = this.validateEntityRef(holder, componentAccessor);
-                     if (ref != null && !ref.equals(ignoredEntityReference) && filter.test(s, ref, role, t)) {
+                     if (ref != null && !ref.equals(ignoredEntityReference) && filter.test(s, ref, executionSupport, t)) {
                         return ref;
                      }
                   }
@@ -491,8 +491,8 @@ public class EntityList extends BucketList<Ref<EntityStore>> {
       @Nonnull MotionController motionController,
       double minRange,
       double maxRange,
-      @Nonnull QuadPredicate<S, Ref<EntityStore>, Role, T> filter,
-      Role role,
+      @Nonnull QuadPredicate<S, Ref<EntityStore>, ExecutionSupport, T> filter,
+      ExecutionSupport executionSupport,
       S s,
       T t,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
@@ -530,7 +530,7 @@ public class EntityList extends BucketList<Ref<EntityStore>> {
                            return null;
                         }
 
-                        if (filter.test(s, ref, role, t)) {
+                        if (filter.test(s, ref, executionSupport, t)) {
                            return ref;
                         }
                      }
@@ -561,7 +561,7 @@ public class EntityList extends BucketList<Ref<EntityStore>> {
                            return null;
                         }
 
-                        if (filter.test(s, ref, role, t)) {
+                        if (filter.test(s, ref, executionSupport, t)) {
                            return ref;
                         }
                      }

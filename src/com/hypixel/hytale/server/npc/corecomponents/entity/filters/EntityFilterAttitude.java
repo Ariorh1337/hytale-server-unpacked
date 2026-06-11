@@ -7,7 +7,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.EntityFilterBase;
 import com.hypixel.hytale.server.npc.corecomponents.entity.filters.builders.BuilderEntityFilterAttitude;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import java.util.Arrays;
 import java.util.EnumSet;
 import javax.annotation.Nonnull;
@@ -27,9 +27,11 @@ public class EntityFilterAttitude extends EntityFilterBase {
    }
 
    @Override
-   public boolean matchesEntity(@Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull Role role, @Nonnull Store<EntityStore> store) {
-      Attitude attitude = role.getWorldSupport().getAttitude(ref, targetRef, store);
-      return attitude != null && this.attitudes.contains(attitude);
+   public boolean matchesEntity(
+      @Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull ExecutionSupport executionSupport, @Nonnull Store<EntityStore> store
+   ) {
+      Attitude attitude = executionSupport.getWorldSupport().getAttitude(ref, targetRef, store);
+      return this.attitudes.contains(attitude);
    }
 
    @Override
@@ -38,7 +40,7 @@ public class EntityFilterAttitude extends EntityFilterBase {
    }
 
    @Override
-   public void registerWithSupport(@Nonnull Role role) {
-      role.getWorldSupport().requireAttitudeCache();
+   public void registerWithSupport(@Nonnull ExecutionSupport executionSupport) {
+      executionSupport.getWorldSupport().requireAttitudeCache();
    }
 }

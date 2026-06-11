@@ -4,6 +4,7 @@ import com.google.gson.JsonElement;
 import com.hypixel.hytale.server.flock.corecomponents.ActionFlockLeave;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderActionBase;
 import javax.annotation.Nonnull;
 
@@ -15,6 +16,7 @@ public class BuilderActionFlockLeave extends BuilderActionBase {
 
    @Nonnull
    public BuilderActionFlockLeave readConfig(JsonElement data) {
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
       return this;
    }
 

@@ -4,6 +4,7 @@ import com.google.gson.JsonElement;
 import com.hypixel.hytale.server.npc.asset.builder.Builder;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderSensorBase;
 import com.hypixel.hytale.server.npc.corecomponents.movement.SensorInAir;
 import com.hypixel.hytale.server.npc.instructions.Sensor;
@@ -36,6 +37,7 @@ public class BuilderSensorInAir extends BuilderSensorBase {
    @Nonnull
    @Override
    public Builder<Sensor> readConfig(JsonElement data) {
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
       return this;
    }
 }

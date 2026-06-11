@@ -14,9 +14,7 @@ public class CacheVectorProviderAsset extends VectorProviderAsset {
          CacheVectorProviderAsset.class, CacheVectorProviderAsset::new, ABSTRACT_CODEC
       )
       .append(
-         new KeyedCodec<>("VectorProvider", VectorProviderAsset.CODEC, true),
-         (asset, value) -> asset.vectorProviderAsset = value,
-         asset -> asset.vectorProviderAsset
+         new KeyedCodec<>("Vector", VectorProviderAsset.CODEC, true), (asset, value) -> asset.vectorProviderAsset = value, asset -> asset.vectorProviderAsset
       )
       .add()
       .build();

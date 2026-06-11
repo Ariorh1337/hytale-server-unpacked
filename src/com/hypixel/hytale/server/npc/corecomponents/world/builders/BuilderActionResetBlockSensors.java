@@ -5,6 +5,7 @@ import com.hypixel.hytale.common.util.ArrayUtil;
 import com.hypixel.hytale.server.core.asset.type.blockset.config.BlockSet;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.asset.builder.holder.AssetArrayHolder;
 import com.hypixel.hytale.server.npc.asset.builder.validators.AssetValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.asset.BlockSetExistsValidator;
@@ -53,6 +54,7 @@ public class BuilderActionResetBlockSensors extends BuilderActionBase {
          "The searched blocksets to reset block sensors for",
          "The searched blocksets to reset block sensors for. If left empty, will reset all block sensors and found blocks"
       );
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
       return this;
    }
 

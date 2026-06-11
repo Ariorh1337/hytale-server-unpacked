@@ -202,6 +202,7 @@ public class MovementStatesSystems {
          to.sitting = from.sitting;
          to.gliding = from.gliding;
          to.sleeping = from.sleeping;
+         to.extraJumpsUsed = from.extraJumpsUsed;
       }
    }
 }

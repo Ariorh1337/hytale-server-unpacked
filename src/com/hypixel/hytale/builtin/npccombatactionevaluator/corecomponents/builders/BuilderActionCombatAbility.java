@@ -1,9 +1,13 @@
 package com.hypixel.hytale.builtin.npccombatactionevaluator.corecomponents.builders;
 
+import com.google.gson.JsonElement;
 import com.hypixel.hytale.builtin.npccombatactionevaluator.corecomponents.ActionCombatAbility;
+import com.hypixel.hytale.server.npc.asset.builder.Builder;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderActionBase;
+import com.hypixel.hytale.server.npc.instructions.Action;
 import javax.annotation.Nonnull;
 
 public class BuilderActionCombatAbility extends BuilderActionBase {
@@ -28,5 +32,12 @@ public class BuilderActionCombatAbility extends BuilderActionBase {
    @Override
    public BuilderDescriptorState getBuilderDescriptorState() {
       return BuilderDescriptorState.Stable;
+   }
+
+   @Nonnull
+   @Override
+   public Builder<Action> readConfig(@Nonnull JsonElement data) {
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
+      return this;
    }
 }

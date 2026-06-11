@@ -11,13 +11,13 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.movement.builders.BuilderBodyMotionMoveAway;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.movement.Steering;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
 import com.hypixel.hytale.server.npc.movement.steeringforces.SteeringForceEvade;
 import com.hypixel.hytale.server.npc.navigation.AStarBase;
 import com.hypixel.hytale.server.npc.navigation.AStarNode;
 import com.hypixel.hytale.server.npc.navigation.AStarWithTarget;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.util.NPCPhysicsMath;
 import javax.annotation.Nonnull;
@@ -57,8 +57,8 @@ public class BodyMotionMoveAway extends BodyMotionFindWithTarget {
    }
 
    @Override
-   public void activate(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      super.activate(ref, role, componentAccessor);
+   public void activate(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      super.activate(ref, executionSupport, componentAccessor);
       this.holdDirectionTimeRemaining = 0.0;
       this.fleeDirectionBlocked = false;
    }
@@ -66,7 +66,7 @@ public class BodyMotionMoveAway extends BodyMotionFindWithTarget {
    @Override
    public boolean computeSteering(
       @Nonnull Ref<EntityStore> ref,
-      @Nonnull Role role,
+      @Nonnull ExecutionSupport executionSupport,
       @Nullable InfoProvider infoProvider,
       double dt,
       @Nonnull Steering desiredSteering,
@@ -80,14 +80,14 @@ public class BodyMotionMoveAway extends BodyMotionFindWithTarget {
          return true;
       } else {
          this.holdDirectionTimeRemaining -= dt * speedMultiplier;
-         return super.computeSteering(ref, role, infoProvider, dt, desiredSteering, componentAccessor);
+         return super.computeSteering(ref, executionSupport, infoProvider, dt, desiredSteering, componentAccessor);
       }
    }
 
    @Override
    protected boolean computeSteering(
       @Nonnull Ref<EntityStore> ref,
-      @Nonnull Role role,
+      @Nonnull ExecutionSupport executionSupport,
       Vector3d position,
       @Nonnull Steering desiredSteering,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
@@ -103,7 +103,7 @@ public class BodyMotionMoveAway extends BodyMotionFindWithTarget {
          this.holdDirectionTimeRemaining = 0.0;
       }
 
-      MotionController motionController = role.getActiveMotionController();
+      MotionController motionController = executionSupport.getMotionContextSupport().getActiveMotionController();
       if (this.holdDirectionTimeRemaining <= 0.0 || this.fleeDirectionBlocked) {
          boolean inErraticRange = selfPosition.distanceSquared(lastTargetPosition) < this.erraticDistanceSquared;
          float jitter = inErraticRange ? this.erraticJitter : this.jitterAngle;
@@ -131,7 +131,7 @@ public class BodyMotionMoveAway extends BodyMotionFindWithTarget {
       this.evade.setPositions(selfPosition, lastTargetPosition);
       this.evade.setDirectionHint(this.fleeDirection);
       double desiredAltitudeWeight = this.desiredAltitudeWeight >= 0.0 ? this.desiredAltitudeWeight : motionController.getDesiredAltitudeWeight();
-      return this.scaleSteering(ref, role, this.evade, desiredSteering, desiredAltitudeWeight, componentAccessor);
+      return this.scaleSteering(ref, executionSupport, this.evade, desiredSteering, desiredAltitudeWeight, componentAccessor);
    }
 
    @Override

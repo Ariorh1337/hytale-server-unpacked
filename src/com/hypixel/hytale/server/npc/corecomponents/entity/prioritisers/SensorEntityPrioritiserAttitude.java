@@ -12,8 +12,8 @@ import com.hypixel.hytale.server.npc.corecomponents.IEntityFilter;
 import com.hypixel.hytale.server.npc.corecomponents.ISensorEntityPrioritiser;
 import com.hypixel.hytale.server.npc.corecomponents.entity.filters.EntityFilterAttitude;
 import com.hypixel.hytale.server.npc.corecomponents.entity.prioritisers.builders.BuilderSensorEntityPrioritiserAttitude;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.role.support.WorldSupport;
 import com.hypixel.hytale.server.npc.util.IEntityByPriorityFilter;
 import java.util.Arrays;
@@ -40,8 +40,8 @@ public class SensorEntityPrioritiserAttitude implements ISensorEntityPrioritiser
    }
 
    @Override
-   public void registerWithSupport(@Nonnull Role role) {
-      role.getWorldSupport().requireAttitudeCache();
+   public void registerWithSupport(@Nonnull ExecutionSupport executionSupport) {
+      executionSupport.getWorldSupport().requireAttitudeCache();
    }
 
    @Nonnull
@@ -60,21 +60,21 @@ public class SensorEntityPrioritiserAttitude implements ISensorEntityPrioritiser
    @Override
    public Ref<EntityStore> pickTarget(
       @Nonnull Ref<EntityStore> ref,
-      @Nonnull Role role,
+      @Nonnull ExecutionSupport executionSupport,
       @Nonnull Vector3d position,
       @Nonnull Ref<EntityStore> playerRef,
       @Nonnull Ref<EntityStore> npcRef,
       boolean useProjectedDistance,
       @Nonnull Store<EntityStore> store
    ) {
-      WorldSupport worldSupport = role.getWorldSupport();
+      WorldSupport worldSupport = executionSupport.getWorldSupport();
       int playerPriority = this.getPriority(ref, worldSupport, playerRef, store);
       int npcPriority = this.getPriority(ref, worldSupport, npcRef, store);
       if (playerPriority != npcPriority) {
          return playerPriority <= npcPriority ? playerRef : npcRef;
       }
 
-      MotionController motionController = role.getActiveMotionController();
+      MotionController motionController = executionSupport.getMotionContextSupport().getActiveMotionController();
       TransformComponent playerTransformComponent = store.getComponent(playerRef, TRANSFORM_COMPONENT_TYPE);
       assert playerTransformComponent != null;
       TransformComponent npcTransformComponent = store.getComponent(npcRef, TRANSFORM_COMPONENT_TYPE);
@@ -120,8 +120,8 @@ public class SensorEntityPrioritiserAttitude implements ISensorEntityPrioritiser
       }
 
       @Override
-      public void init(@Nonnull Role role) {
-         this.support = role.getWorldSupport();
+      public void init(@Nonnull ExecutionSupport executionSupport) {
+         this.support = executionSupport.getWorldSupport();
       }
 
       public boolean test(@Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {

@@ -20,6 +20,7 @@ import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.role.RoleDebugFlags;
 import com.hypixel.hytale.server.npc.role.support.DebugSupport;
+import com.hypixel.hytale.server.npc.role.support.MarkedEntitySupport;
 import com.hypixel.hytale.server.npc.util.VisHelper;
 import java.util.Set;
 import javax.annotation.Nonnull;
@@ -72,13 +73,16 @@ public class AvoidanceSystem extends SteppableTickingSystem {
       Role role = npcComponent.getRole();
       if (role != null) {
          if (role.isAvoidingEntities() || role.isApplySeparation()) {
-            Ref<EntityStore> target = role.getMarkedEntitySupport().getTargetReferenceToIgnoreForAvoidance();
+            MarkedEntitySupport markedEntitySupport = archetypeChunk.getComponent(index, MarkedEntitySupport.getComponentType());
+            assert markedEntitySupport != null;
+            Ref<EntityStore> target = markedEntitySupport.getTargetReferenceToIgnoreForAvoidance();
             if (target != null && target.isValid()) {
                role.getIgnoredEntitiesForAvoidance().add(target);
             }
          }
 
-         DebugSupport debugSupport = role.getDebugSupport();
+         DebugSupport debugSupport = archetypeChunk.getComponent(index, DebugSupport.getComponentType());
+         assert debugSupport != null;
          boolean debugVisSteeringPre = debugSupport.isDebugFlagSet(RoleDebugFlags.VisSteeringPre);
          Vector3d preBlendSteering = debugVisSteeringPre ? new Vector3d(role.getBodySteering().getTranslation()) : null;
          if (!role.getActiveMotionController().isObstructed()) {

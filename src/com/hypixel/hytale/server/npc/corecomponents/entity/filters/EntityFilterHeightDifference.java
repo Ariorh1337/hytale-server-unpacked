@@ -11,7 +11,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.EntityFilterBase;
 import com.hypixel.hytale.server.npc.corecomponents.entity.filters.builders.BuilderEntityFilterHeightDifference;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import javax.annotation.Nonnull;
 import org.joml.Vector3d;
 
@@ -32,7 +32,9 @@ public class EntityFilterHeightDifference extends EntityFilterBase {
    }
 
    @Override
-   public boolean matchesEntity(@Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull Role role, @Nonnull Store<EntityStore> store) {
+   public boolean matchesEntity(
+      @Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull ExecutionSupport executionSupport, @Nonnull Store<EntityStore> store
+   ) {
       BoundingBox targetBoundingBoxComponent = store.getComponent(targetRef, BOUNDING_BOX_COMPONENT_TYPE);
       if (targetBoundingBoxComponent == null) {
          return false;

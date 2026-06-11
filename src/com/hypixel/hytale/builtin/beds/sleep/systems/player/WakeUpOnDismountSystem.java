@@ -1,5 +1,6 @@
 package com.hypixel.hytale.builtin.beds.sleep.systems.player;
 
+import com.hypixel.hytale.builtin.beds.sleep.components.PlayerSleep;
 import com.hypixel.hytale.builtin.beds.sleep.components.PlayerSomnolence;
 import com.hypixel.hytale.builtin.mounts.MountedComponent;
 import com.hypixel.hytale.component.CommandBuffer;
@@ -57,7 +58,10 @@ public class WakeUpOnDismountSystem extends RefChangeSystem<EntityStore, Mounted
       @Nonnull Ref<EntityStore> ref, @Nonnull MountedComponent component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
    ) {
       if (component.getBlockMountType() == BlockMountType.Bed) {
-         commandBuffer.putComponent(ref, this.playerSomnolenceComponentType, PlayerSomnolence.AWAKE);
+         PlayerSomnolence somnolence = store.getComponent(ref, this.playerSomnolenceComponentType);
+         if (somnolence == null || !(somnolence.getSleepState() instanceof PlayerSleep.MorningWakeUp)) {
+            commandBuffer.putComponent(ref, this.playerSomnolenceComponentType, PlayerSomnolence.AWAKE);
+         }
       }
    }
 }

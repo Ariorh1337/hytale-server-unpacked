@@ -1,12 +1,15 @@
 package com.hypixel.hytale.server.npc.role.support;
 
+import com.hypixel.hytale.component.Component;
+import com.hypixel.hytale.component.ComponentAccessor;
+import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.NPCPlugin;
+import com.hypixel.hytale.server.npc.asset.builder.SupportConfigBuilder;
 import com.hypixel.hytale.server.npc.instructions.Sensor;
 import com.hypixel.hytale.server.npc.role.RoleDebugDisplay;
 import com.hypixel.hytale.server.npc.role.RoleDebugFlags;
-import com.hypixel.hytale.server.npc.role.builders.BuilderRole;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -16,8 +19,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.joml.Vector3d;
 
-public class DebugSupport {
-   protected final NPCEntity parent;
+public class DebugSupport implements Component<EntityStore> {
    @Nullable
    protected RoleDebugDisplay debugDisplay;
    protected boolean debugRoleSteering;
@@ -42,9 +44,24 @@ public class DebugSupport {
    @Nullable
    protected List<DebugSupport.PathWaypointVisData> pathVisDataList;
 
-   public DebugSupport(NPCEntity parent, @Nonnull BuilderRole builder) {
-      this.parent = parent;
+   @Nonnull
+   public static ComponentType<EntityStore, DebugSupport> getComponentType() {
+      return NPCPlugin.get().getDebugSupportComponentType();
+   }
+
+   @Nonnull
+   public static DebugSupport get(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> accessor) {
+      DebugSupport support = accessor.getComponent(ref, getComponentType());
+      assert support != null : "Missing DebugSupport on entity " + ref;
+      return support;
+   }
+
+   public DebugSupport(@Nonnull SupportConfigBuilder<?> builder) {
       this.debugFlags = builder.getDebugFlags();
+   }
+
+   public DebugSupport() {
+      this.debugFlags = EnumSet.noneOf(RoleDebugFlags.class);
    }
 
    @Nullable
@@ -235,6 +252,11 @@ public class DebugSupport {
 
    public boolean hasPathVisData() {
       return this.pathVisDataList != null && !this.pathVisDataList.isEmpty();
+   }
+
+   @Override
+   public Component<EntityStore> clone() {
+      return this;
    }
 
    public interface DebugFlagsChangeListener {

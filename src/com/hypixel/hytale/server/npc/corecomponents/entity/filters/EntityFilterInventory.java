@@ -8,7 +8,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.EntityFilterBase;
 import com.hypixel.hytale.server.npc.corecomponents.entity.filters.builders.BuilderEntityFilterInventory;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.util.InventoryHelper;
 import java.util.List;
 import javax.annotation.Nonnull;
@@ -38,7 +38,9 @@ public class EntityFilterInventory extends EntityFilterBase {
    }
 
    @Override
-   public boolean matchesEntity(@Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull Role role, @Nonnull Store<EntityStore> store) {
+   public boolean matchesEntity(
+      @Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull ExecutionSupport executionSupport, @Nonnull Store<EntityStore> store
+   ) {
       CombinedItemContainer container = InventoryComponent.getCombined(store, targetRef, InventoryComponent.HOTBAR_UTILITY_CONSUMABLE_STORAGE);
       int count = InventoryHelper.countItems(container, this.items);
       if (count < this.minCount || count > this.maxCount) {

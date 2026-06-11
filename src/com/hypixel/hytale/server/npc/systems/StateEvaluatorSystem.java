@@ -80,7 +80,8 @@ public class StateEvaluatorSystem extends EntityTickingSystem<EntityStore> {
       assert uuidComponent != null;
       Role role = npcComponent.getRole();
       if (role != null) {
-         StateSupport stateSupport = role.getStateSupport();
+         StateSupport stateSupport = archetypeChunk.getComponent(index, StateSupport.getComponentType());
+         assert stateSupport != null;
          if (!stateSupport.isRunningTransitionActions()) {
             StateEvaluator stateEvaluator = archetypeChunk.getComponent(index, this.stateEvaluatorComponent);
             assert stateEvaluator != null;

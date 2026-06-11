@@ -1,5 +1,6 @@
 package com.hypixel.hytale.builtin.hytalegenerator.graph;
 
+import com.hypixel.hytale.builtin.hytalegenerator.VectorUtil;
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3d;
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
 import com.hypixel.hytale.builtin.hytalegenerator.material.Material;
@@ -16,7 +17,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.joml.Vector3d;
@@ -39,7 +39,7 @@ public class GraphSpace {
    public void viewNodes(@Nonnull Bounds3d bounds, @Nonnull List<GraphSpace.Node> results) {
       this.rebuildIfDirty();
       Vector3d inclusiveMax = new Vector3d(bounds.max);
-      nextDown(inclusiveMax);
+      VectorUtil.nextDown(inclusiveMax);
       this.kdTree.collectBox(bounds.min, inclusiveMax, results);
    }
 
@@ -186,12 +186,6 @@ public class GraphSpace {
 
          this.kdTree.rebuild(this.spacialData);
       }
-   }
-
-   private static void nextDown(@Nonnull Vector3d vec) {
-      vec.x = Math.nextDown(vec.x);
-      vec.y = Math.nextDown(vec.y);
-      vec.z = Math.nextDown(vec.z);
    }
 
    public static class Content {
@@ -397,7 +391,8 @@ public class GraphSpace {
       @Override
       public int hashCode() {
          if (this.isHashCodeDirty) {
-            this.hashCode = Objects.hash(this.position.hashCode(), this.content.hashCode());
+            this.hashCode = this.position.hashCode();
+            this.isHashCodeDirty = false;
          }
 
          return this.hashCode;

@@ -19,10 +19,10 @@ public class MountMovement implements Packet, ToServerPacket {
    public static final int PACKET_ID = 166;
    public static final boolean IS_COMPRESSED = false;
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
-   public static final int FIXED_BLOCK_SIZE = 60;
+   public static final int FIXED_BLOCK_SIZE = 61;
    public static final int VARIABLE_FIELD_COUNT = 0;
-   public static final int VARIABLE_BLOCK_START = 60;
-   public static final int MAX_SIZE = 60;
+   public static final int VARIABLE_BLOCK_START = 61;
+   public static final int MAX_SIZE = 61;
    @Nullable
    public Position absolutePosition;
    @Nullable
@@ -57,8 +57,8 @@ public class MountMovement implements Packet, ToServerPacket {
 
    @Nonnull
    public static MountMovement deserialize(@Nonnull ByteBuf buf, int offset) {
-      if (buf.readableBytes() - offset < 60) {
-         throw ProtocolException.bufferTooSmall("MountMovement", 60, buf.readableBytes() - offset);
+      if (buf.readableBytes() - offset < 61) {
+         throw ProtocolException.bufferTooSmall("MountMovement", 61, buf.readableBytes() - offset);
       }
 
       MountMovement obj = new MountMovement();
@@ -79,11 +79,11 @@ public class MountMovement implements Packet, ToServerPacket {
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
-      return 60;
+      return 61;
    }
 
    public static boolean isBufferTooSmall(MemorySegment mem) {
-      return mem.byteSize() < 60L;
+      return mem.byteSize() < 61L;
    }
 
    @Nullable
@@ -136,8 +136,8 @@ public class MountMovement implements Packet, ToServerPacket {
    }
 
    public static MountMovement toObject(MemorySegment mem, int offset) {
-      if (offset + 60 > mem.byteSize()) {
-         throw ProtocolException.bufferTooSmall("MountMovement", offset + 60, (int)mem.byteSize());
+      if (offset + 61 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("MountMovement", offset + 61, (int)mem.byteSize());
       } else {
          return new MountMovement(
             hasAbsolutePosition(mem, offset) ? Position.toObject(mem, offset + 1) : null,
@@ -178,7 +178,7 @@ public class MountMovement implements Packet, ToServerPacket {
       if (this.movementStates != null) {
          this.movementStates.serialize(buf);
       } else {
-         buf.writeZero(23);
+         buf.writeZero(24);
       }
    }
 
@@ -213,20 +213,20 @@ public class MountMovement implements Packet, ToServerPacket {
       if (this.movementStates != null) {
          this.movementStates.serialize(mem, offset + 37);
       } else {
-         mem.asSlice(offset + 37, 23L).fill((byte)0);
+         mem.asSlice(offset + 37, 24L).fill((byte)0);
       }
 
-      return 60;
+      return 61;
    }
 
    @Override
    public int computeSize() {
-      return 60;
+      return 61;
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      if (buffer.readableBytes() - offset < 60) {
-         return ValidationResult.error("Buffer too small: expected at least 60 bytes");
+      if (buffer.readableBytes() - offset < 61) {
+         return ValidationResult.error("Buffer too small: expected at least 61 bytes");
       }
 
       byte nullBits = buffer.getByte(offset);

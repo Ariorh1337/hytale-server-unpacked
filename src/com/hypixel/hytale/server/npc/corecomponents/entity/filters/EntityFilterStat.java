@@ -10,7 +10,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.EntityFilterBase;
 import com.hypixel.hytale.server.npc.corecomponents.entity.filters.builders.BuilderEntityFilterStat;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import java.util.function.Supplier;
 import javax.annotation.Nonnull;
 
@@ -35,7 +35,9 @@ public class EntityFilterStat extends EntityFilterBase {
    }
 
    @Override
-   public boolean matchesEntity(@Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull Role role, @Nonnull Store<EntityStore> store) {
+   public boolean matchesEntity(
+      @Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull ExecutionSupport executionSupport, @Nonnull Store<EntityStore> store
+   ) {
       EntityStatMap entityStatMap = store.getComponent(targetRef, ENTITY_STAT_MAP_COMPONENT_TYPE);
       EntityStatValue entityStatValue = entityStatMap.get(this.stat);
       EntityStatValue relativeEntityStatValue = entityStatMap.get(this.relativeTo);

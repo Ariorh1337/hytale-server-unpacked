@@ -10,8 +10,8 @@ import com.hypixel.hytale.server.npc.corecomponents.ActionWithDelay;
 import com.hypixel.hytale.server.npc.corecomponents.utility.builders.BuilderActionTimeout;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.instructions.Action;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.util.IAnnotatedComponent;
 import com.hypixel.hytale.server.npc.util.IAnnotatedComponentCollection;
@@ -30,10 +30,17 @@ public class ActionTimeout extends ActionWithDelay implements IAnnotatedComponen
    }
 
    @Override
-   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      if (super.canExecute(ref, role, sensorInfo, dt, store) && (this.action == null || this.action.canExecute(ref, role, sensorInfo, dt, store))) {
+   public boolean canExecute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
+      if (super.canExecute(ref, executionSupport, sensorInfo, dt, store)
+         && (this.action == null || this.action.canExecute(ref, executionSupport, sensorInfo, dt, store))) {
          if (!this.isDelaying() && this.isDelayPrepared()) {
-            this.startDelay(role.getEntitySupport());
+            this.startDelay(executionSupport.getEntitySupport());
          }
 
          return !this.isDelaying();
@@ -43,10 +50,16 @@ public class ActionTimeout extends ActionWithDelay implements IAnnotatedComponen
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      super.execute(ref, role, sensorInfo, dt, store);
+   public boolean execute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
+      super.execute(ref, executionSupport, sensorInfo, dt, store);
       if (this.action != null) {
-         this.action.execute(ref, role, sensorInfo, dt, store);
+         this.action.execute(ref, executionSupport, sensorInfo, dt, store);
       }
 
       this.prepareDelay();
@@ -54,9 +67,9 @@ public class ActionTimeout extends ActionWithDelay implements IAnnotatedComponen
    }
 
    @Override
-   public void registerWithSupport(Role role) {
+   public void registerWithSupport(ExecutionSupport executionSupport) {
       if (this.action != null) {
-         this.action.registerWithSupport(role);
+         this.action.registerWithSupport(executionSupport);
       }
 
       if (this.delayAfter) {
@@ -79,37 +92,37 @@ public class ActionTimeout extends ActionWithDelay implements IAnnotatedComponen
    }
 
    @Override
-   public void loaded(Role role) {
+   public void loaded(ExecutionSupport executionSupport) {
       if (this.action != null) {
-         this.action.loaded(role);
+         this.action.loaded(executionSupport);
       }
    }
 
    @Override
-   public void spawned(Role role) {
+   public void spawned(ExecutionSupport executionSupport) {
       if (this.action != null) {
-         this.action.spawned(role);
+         this.action.spawned(executionSupport);
       }
    }
 
    @Override
-   public void unloaded(Role role) {
+   public void unloaded(ExecutionSupport executionSupport) {
       if (this.action != null) {
-         this.action.unloaded(role);
+         this.action.unloaded(executionSupport);
       }
    }
 
    @Override
-   public void removed(Role role) {
+   public void removed(ExecutionSupport executionSupport) {
       if (this.action != null) {
-         this.action.removed(role);
+         this.action.removed(executionSupport);
       }
    }
 
    @Override
-   public void teleported(Role role, World from, World to) {
+   public void teleported(ExecutionSupport executionSupport, World from, World to) {
       if (this.action != null) {
-         this.action.teleported(role, from, to);
+         this.action.teleported(executionSupport, from, to);
       }
    }
 

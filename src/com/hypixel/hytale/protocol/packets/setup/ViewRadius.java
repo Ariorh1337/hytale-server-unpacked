@@ -71,7 +71,12 @@ public class ViewRadius implements Packet, ToServerPacket, ToClientPacket {
    }
 
    public static int getValue(MemorySegment mem, int offset) {
-      return mem.get(PacketIO.PROTO_INT, offset + 0);
+      int value = mem.get(PacketIO.PROTO_INT, offset + 0);
+      if (value < 0) {
+         throw ProtocolException.valueBelowMinimum("Value", value, 0.0);
+      } else {
+         return value;
+      }
    }
 
    public static ViewRadius toObject(MemorySegment mem) {
@@ -82,7 +87,12 @@ public class ViewRadius implements Packet, ToServerPacket, ToClientPacket {
       if (offset + 4 > mem.byteSize()) {
          throw ProtocolException.bufferTooSmall("ViewRadius", offset + 4, (int)mem.byteSize());
       } else {
-         return new ViewRadius(mem.get(PacketIO.PROTO_INT, offset + 0));
+         int value = mem.get(PacketIO.PROTO_INT, offset + 0);
+         if (value < 0) {
+            throw ProtocolException.valueBelowMinimum("Value", value, 0.0);
+         } else {
+            return new ViewRadius(value);
+         }
       }
    }
 

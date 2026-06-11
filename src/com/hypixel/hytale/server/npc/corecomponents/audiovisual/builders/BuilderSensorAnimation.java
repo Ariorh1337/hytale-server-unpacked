@@ -5,6 +5,7 @@ import com.hypixel.hytale.server.npc.animations.NPCAnimationSlot;
 import com.hypixel.hytale.server.npc.asset.builder.Builder;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.asset.builder.holder.EnumHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.StringHolder;
 import com.hypixel.hytale.server.npc.asset.builder.validators.StringNotEmptyValidator;
@@ -47,6 +48,7 @@ public class BuilderSensorAnimation extends BuilderSensorBase {
       this.requireString(
          data, "Animation", this.animationId, StringNotEmptyValidator.get(), BuilderDescriptorState.Stable, "The animation ID to check for", null
       );
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
       return this;
    }
 

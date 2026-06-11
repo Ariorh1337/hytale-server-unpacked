@@ -35,8 +35,12 @@ import com.hypixel.hytale.server.npc.config.balancing.BalanceAsset;
 import com.hypixel.hytale.server.npc.decisionmaker.core.EvaluationContext;
 import com.hypixel.hytale.server.npc.decisionmaker.core.Evaluator;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
 import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.role.support.CombatSupport;
+import com.hypixel.hytale.server.npc.role.support.MarkedEntitySupport;
+import com.hypixel.hytale.server.npc.role.support.PositionCache;
 import com.hypixel.hytale.server.npc.role.support.StateSupport;
 import com.hypixel.hytale.server.npc.systems.BalancingInitialisationSystem;
 import com.hypixel.hytale.server.npc.systems.RoleSystems;
@@ -186,13 +190,16 @@ public class CombatActionEvaluatorSystems {
             CombatActionEvaluator evaluatorComponent = archetypeChunk.getComponent(index, this.componentType);
             assert evaluatorComponent != null;
             evaluatorComponent.tickBasicAttackCoolDown(dt);
-            StateSupport stateSupport = role.getStateSupport();
+            StateSupport stateSupport = archetypeChunk.getComponent(index, StateSupport.getComponentType());
+            assert stateSupport != null;
+            MarkedEntitySupport markedEntitySupport = archetypeChunk.getComponent(index, MarkedEntitySupport.getComponentType());
+            assert markedEntitySupport != null;
             int currentState = stateSupport.getStateIndex();
             if (currentState != evaluatorComponent.getRunInState()) {
                if (evaluatorComponent.getCurrentAction() != null) {
                   evaluatorComponent.completeCurrentAction(true, true);
                   evaluatorComponent.clearPrimaryTarget();
-                  role.getMarkedEntitySupport().clearMarkedEntity(evaluatorComponent.getMarkedTargetSlot());
+                  markedEntitySupport.clearMarkedEntity(evaluatorComponent.getMarkedTargetSlot());
                   HytaleLogger.Api context = CombatActionEvaluatorSystems.LOGGER.at(Level.FINEST);
                   if (context.isEnabled()) {
                      context.log("%s: Leaving combat", archetypeChunk.getReferenceTo(index));
@@ -203,143 +210,154 @@ public class CombatActionEvaluatorSystems {
                if (damageMemory != null) {
                   damageMemory.clearTotalDamage();
                }
-            } else if (!role.getCombatSupport().isExecutingAttack()) {
-               ValueStore valueStoreComponent = archetypeChunk.getComponent(index, this.valueStoreComponentType);
-               assert valueStoreComponent != null;
-               double[] postExecutionDistanceRange = evaluatorComponent.consumePostExecutionDistanceRange();
-               if (postExecutionDistanceRange != null) {
-                  valueStoreComponent.storeDouble(evaluatorComponent.getMinRangeSlot(), postExecutionDistanceRange[0]);
-                  valueStoreComponent.storeDouble(evaluatorComponent.getMaxRangeSlot(), postExecutionDistanceRange[1]);
-               }
-
-               int currentSubState = stateSupport.getSubStateIndex();
-               CombatActionEvaluatorConfig.BasicAttacks basicAttacks = evaluatorComponent.getBasicAttacks(currentSubState);
-               if (basicAttacks != null) {
-                  evaluatorComponent.setCurrentBasicAttackSet(currentSubState, basicAttacks);
-                  String currentBasicAttack = evaluatorComponent.getCurrentBasicAttack();
-                  if (currentBasicAttack != null) {
-                     if (!evaluatorComponent.tickBasicAttackTimeout(dt)) {
-                        role.getMarkedEntitySupport().setMarkedEntity(evaluatorComponent.getMarkedTargetSlot(), evaluatorComponent.getBasicAttackTarget());
-                        return;
-                     }
-
-                     evaluatorComponent.clearCurrentBasicAttack();
-                     HytaleLogger.Api context = CombatActionEvaluatorSystems.LOGGER.at(Level.FINEST);
-                     if (context.isEnabled()) {
-                        context.log("%s: Basic attack timed out", archetypeChunk.getReferenceTo(index));
-                     }
+            } else {
+               CombatSupport combatSupport = archetypeChunk.getComponent(index, CombatSupport.getComponentType());
+               assert combatSupport != null;
+               if (!combatSupport.isExecutingAttack()) {
+                  ValueStore valueStoreComponent = archetypeChunk.getComponent(index, this.valueStoreComponentType);
+                  assert valueStoreComponent != null;
+                  double[] postExecutionDistanceRange = evaluatorComponent.consumePostExecutionDistanceRange();
+                  if (postExecutionDistanceRange != null) {
+                     valueStoreComponent.storeDouble(evaluatorComponent.getMinRangeSlot(), postExecutionDistanceRange[0]);
+                     valueStoreComponent.storeDouble(evaluatorComponent.getMaxRangeSlot(), postExecutionDistanceRange[1]);
                   }
 
-                  if (evaluatorComponent.canUseBasicAttack(index, archetypeChunk, commandBuffer)) {
-                     MotionController activeMotionController = role.getActiveMotionController();
-                     TransformComponent transformComponent = archetypeChunk.getComponent(index, this.transformComponentType);
-                     assert transformComponent != null;
-                     Vector3d position = transformComponent.getPosition();
-                     Ref<EntityStore> targetRef = null;
-                     CombatActionEvaluator.CombatOptionHolder currentAction = evaluatorComponent.getCurrentAction();
-                     if (currentAction == null || ((CombatActionOption)currentAction.getOption()).getActionTarget() != CombatActionOption.Target.Friendly) {
-                        Ref<EntityStore> primaryTargetRef = evaluatorComponent.getPrimaryTarget();
-                        if (primaryTargetRef != null && primaryTargetRef.isValid()) {
-                           TransformComponent targetTransformComponent = commandBuffer.getComponent(primaryTargetRef, this.transformComponentType);
+                  int currentSubState = stateSupport.getSubStateIndex();
+                  CombatActionEvaluatorConfig.BasicAttacks basicAttacks = evaluatorComponent.getBasicAttacks(currentSubState);
+                  if (basicAttacks != null) {
+                     evaluatorComponent.setCurrentBasicAttackSet(currentSubState, basicAttacks);
+                     String currentBasicAttack = evaluatorComponent.getCurrentBasicAttack();
+                     if (currentBasicAttack != null) {
+                        if (!evaluatorComponent.tickBasicAttackTimeout(dt)) {
+                           markedEntitySupport.setMarkedEntity(evaluatorComponent.getMarkedTargetSlot(), evaluatorComponent.getBasicAttackTarget());
+                           return;
+                        }
+
+                        evaluatorComponent.clearCurrentBasicAttack();
+                        HytaleLogger.Api context = CombatActionEvaluatorSystems.LOGGER.at(Level.FINEST);
+                        if (context.isEnabled()) {
+                           context.log("%s: Basic attack timed out", archetypeChunk.getReferenceTo(index));
+                        }
+                     }
+
+                     if (evaluatorComponent.canUseBasicAttack(index, archetypeChunk, commandBuffer)) {
+                        MotionController activeMotionController = role.getActiveMotionController();
+                        TransformComponent transformComponent = archetypeChunk.getComponent(index, this.transformComponentType);
+                        assert transformComponent != null;
+                        Vector3d position = transformComponent.getPosition();
+                        Ref<EntityStore> targetRef = null;
+                        CombatActionEvaluator.CombatOptionHolder currentAction = evaluatorComponent.getCurrentAction();
+                        if (currentAction == null || ((CombatActionOption)currentAction.getOption()).getActionTarget() != CombatActionOption.Target.Friendly) {
+                           Ref<EntityStore> primaryTargetRef = evaluatorComponent.getPrimaryTarget();
+                           if (primaryTargetRef != null && primaryTargetRef.isValid()) {
+                              TransformComponent targetTransformComponent = commandBuffer.getComponent(primaryTargetRef, this.transformComponentType);
+                              assert targetTransformComponent != null;
+                              Vector3d targetPosition = targetTransformComponent.getPosition();
+                              if (activeMotionController.getSquaredDistance(position, targetPosition, basicAttacks.shouldUseProjectedDistance())
+                                 < basicAttacks.getMaxRangeSquared()) {
+                                 targetRef = primaryTargetRef;
+                              }
+                           }
+                        }
+
+                        if (targetRef == null) {
+                           TargetMemory targetMemoryComponent = archetypeChunk.getComponent(index, this.targetMemoryComponentType);
+                           assert targetMemoryComponent != null;
+                           targetRef = targetMemoryComponent.getClosestHostile();
+                        }
+
+                        if (targetRef != null) {
+                           TransformComponent targetTransformComponent = commandBuffer.getComponent(targetRef, this.transformComponentType);
                            assert targetTransformComponent != null;
                            Vector3d targetPosition = targetTransformComponent.getPosition();
                            if (activeMotionController.getSquaredDistance(position, targetPosition, basicAttacks.shouldUseProjectedDistance())
                               < basicAttacks.getMaxRangeSquared()) {
-                              targetRef = primaryTargetRef;
-                           }
-                        }
-                     }
+                              evaluatorComponent.setBasicAttackTarget(targetRef);
+                              markedEntitySupport.setMarkedEntity(evaluatorComponent.getMarkedTargetSlot(), targetRef);
+                              String[] basicAttackOptions = basicAttacks.getAttacks();
+                              String attack;
+                              if (basicAttacks.isRandom()) {
+                                 attack = basicAttackOptions[RandomExtra.randomRange(basicAttackOptions.length)];
+                              } else {
+                                 int nextAttackIndex = evaluatorComponent.getNextBasicAttackIndex();
+                                 attack = basicAttackOptions[nextAttackIndex];
+                                 if (++nextAttackIndex >= basicAttackOptions.length) {
+                                    nextAttackIndex = 0;
+                                 }
 
-                     if (targetRef == null) {
-                        TargetMemory targetMemoryComponent = archetypeChunk.getComponent(index, this.targetMemoryComponentType);
-                        assert targetMemoryComponent != null;
-                        targetRef = targetMemoryComponent.getClosestHostile();
-                     }
-
-                     if (targetRef != null) {
-                        TransformComponent targetTransformComponent = commandBuffer.getComponent(targetRef, this.transformComponentType);
-                        assert targetTransformComponent != null;
-                        Vector3d targetPosition = targetTransformComponent.getPosition();
-                        if (activeMotionController.getSquaredDistance(position, targetPosition, basicAttacks.shouldUseProjectedDistance())
-                           < basicAttacks.getMaxRangeSquared()) {
-                           evaluatorComponent.setBasicAttackTarget(targetRef);
-                           role.getMarkedEntitySupport().setMarkedEntity(evaluatorComponent.getMarkedTargetSlot(), targetRef);
-                           String[] basicAttackOptions = basicAttacks.getAttacks();
-                           String attack;
-                           if (basicAttacks.isRandom()) {
-                              attack = basicAttackOptions[RandomExtra.randomRange(basicAttackOptions.length)];
-                           } else {
-                              int nextAttackIndex = evaluatorComponent.getNextBasicAttackIndex();
-                              attack = basicAttackOptions[nextAttackIndex];
-                              if (++nextAttackIndex >= basicAttackOptions.length) {
-                                 nextAttackIndex = 0;
+                                 evaluatorComponent.setNextBasicAttackIndex(nextAttackIndex);
                               }
 
-                              evaluatorComponent.setNextBasicAttackIndex(nextAttackIndex);
-                           }
-
-                           evaluatorComponent.setCurrentBasicAttack(attack, basicAttacks.isDamageFriendlies(), basicAttacks::getInteractionVars);
-                           evaluatorComponent.setBasicAttackTimeout(basicAttacks.getTimeout());
-                           HytaleLogger.Api context = CombatActionEvaluatorSystems.LOGGER.at(Level.FINEST);
-                           if (context.isEnabled()) {
-                              context.log("%s: Started basic attack %s", archetypeChunk.getReferenceTo(index), attack);
+                              evaluatorComponent.setCurrentBasicAttack(attack, basicAttacks.isDamageFriendlies(), basicAttacks::getInteractionVars);
+                              evaluatorComponent.setBasicAttackTimeout(basicAttacks.getTimeout());
+                              HytaleLogger.Api context = CombatActionEvaluatorSystems.LOGGER.at(Level.FINEST);
+                              if (context.isEnabled()) {
+                                 context.log("%s: Started basic attack %s", archetypeChunk.getReferenceTo(index), attack);
+                              }
                            }
                         }
                      }
-                  }
-               } else {
-                  evaluatorComponent.setCurrentBasicAttackSet(currentSubState, null);
-               }
-
-               CombatActionEvaluator.CombatOptionHolder currentAction = evaluatorComponent.getCurrentAction();
-               if (currentAction != null) {
-                  if (((CombatActionOption)currentAction.getOption()).getActionTarget() == CombatActionOption.Target.Self) {
-                     return;
+                  } else {
+                     evaluatorComponent.setCurrentBasicAttackSet(currentSubState, null);
                   }
 
-                  if (!evaluatorComponent.hasTimedOut(dt)) {
-                     Ref<EntityStore> targetRef = evaluatorComponent.getPrimaryTarget();
-                     if (targetRef != null && targetRef.isValid() && !commandBuffer.getArchetype(targetRef).contains(DeathComponent.getComponentType())) {
-                        Player targetPlayerComponent = commandBuffer.getComponent(targetRef, this.playerComponentType);
-                        if (targetPlayerComponent == null || targetPlayerComponent.getGameMode() == GameMode.Adventure) {
-                           role.getMarkedEntitySupport().setMarkedEntity(evaluatorComponent.getMarkedTargetSlot(), targetRef);
-                           return;
+                  CombatActionEvaluator.CombatOptionHolder currentAction = evaluatorComponent.getCurrentAction();
+                  if (currentAction != null) {
+                     if (((CombatActionOption)currentAction.getOption()).getActionTarget() == CombatActionOption.Target.Self) {
+                        return;
+                     }
+
+                     if (!evaluatorComponent.hasTimedOut(dt)) {
+                        Ref<EntityStore> targetRef = evaluatorComponent.getPrimaryTarget();
+                        if (targetRef != null && targetRef.isValid() && !commandBuffer.getArchetype(targetRef).contains(DeathComponent.getComponentType())) {
+                           Player targetPlayerComponent = commandBuffer.getComponent(targetRef, this.playerComponentType);
+                           if (targetPlayerComponent == null || targetPlayerComponent.getGameMode() == GameMode.Adventure) {
+                              markedEntitySupport.setMarkedEntity(evaluatorComponent.getMarkedTargetSlot(), targetRef);
+                              return;
+                           }
                         }
                      }
-                  }
 
-                  evaluatorComponent.terminateCurrentAction();
-                  evaluatorComponent.clearPrimaryTarget();
-                  role.getMarkedEntitySupport().clearMarkedEntity(evaluatorComponent.getMarkedTargetSlot());
-                  HytaleLogger.Api context = CombatActionEvaluatorSystems.LOGGER.at(Level.FINEST);
-                  if (context.isEnabled()) {
-                     context.log("%s: Lost current action target or timed out", archetypeChunk.getReferenceTo(index));
-                  }
-               }
-
-               if (evaluatorComponent.getOptionsBySubState().containsKey(currentSubState)) {
-                  EvaluationContext evaluationContext = evaluatorComponent.getEvaluationContext();
-                  double minRunUtility = evaluatorComponent.getMinRunUtility();
-                  evaluationContext.setMinimumUtility(minRunUtility);
-                  evaluationContext.setMinimumWeightCoefficient(0.0);
-                  evaluationContext.setLastUsedNanos(evaluatorComponent.getLastRunNanos());
-                  CombatActionEvaluator.RunOption runOption = evaluatorComponent.getRunOption();
-                  double utility = runOption.calculateUtility(index, archetypeChunk, evaluatorComponent.getPrimaryTarget(), commandBuffer, evaluationContext);
-                  evaluationContext.reset();
-                  if (!(utility < minRunUtility)) {
-                     Int2ObjectMap<List<Evaluator<CombatActionOption>.OptionHolder>> optionLists = evaluatorComponent.getOptionsBySubState();
-                     List<Evaluator<CombatActionOption>.OptionHolder> currentStateOptions = optionLists.get(currentSubState);
-                     evaluatorComponent.setActiveOptions(currentStateOptions);
-                     evaluatorComponent.selectNextCombatAction(index, archetypeChunk, commandBuffer, role, valueStoreComponent);
-                     evaluatorComponent.setLastRunNanos(System.nanoTime());
-                     DamageMemory damageMemory = archetypeChunk.getComponent(index, this.damageMemoryComponentType);
-                     if (damageMemory != null) {
-                        damageMemory.clearRecentDamage();
-                     }
-
+                     evaluatorComponent.terminateCurrentAction();
+                     evaluatorComponent.clearPrimaryTarget();
+                     markedEntitySupport.clearMarkedEntity(evaluatorComponent.getMarkedTargetSlot());
                      HytaleLogger.Api context = CombatActionEvaluatorSystems.LOGGER.at(Level.FINEST);
                      if (context.isEnabled()) {
-                        context.log("%s: Has run the combat action evaluator", archetypeChunk.getReferenceTo(index));
+                        context.log("%s: Lost current action target or timed out", archetypeChunk.getReferenceTo(index));
+                     }
+                  }
+
+                  if (evaluatorComponent.getOptionsBySubState().containsKey(currentSubState)) {
+                     EvaluationContext evaluationContext = evaluatorComponent.getEvaluationContext();
+                     double minRunUtility = evaluatorComponent.getMinRunUtility();
+                     evaluationContext.setMinimumUtility(minRunUtility);
+                     evaluationContext.setMinimumWeightCoefficient(0.0);
+                     evaluationContext.setLastUsedNanos(evaluatorComponent.getLastRunNanos());
+                     CombatActionEvaluator.RunOption runOption = evaluatorComponent.getRunOption();
+                     double utility = runOption.calculateUtility(index, archetypeChunk, evaluatorComponent.getPrimaryTarget(), commandBuffer, evaluationContext);
+                     evaluationContext.reset();
+                     if (!(utility < minRunUtility)) {
+                        Int2ObjectMap<List<Evaluator<CombatActionOption>.OptionHolder>> optionLists = evaluatorComponent.getOptionsBySubState();
+                        List<Evaluator<CombatActionOption>.OptionHolder> currentStateOptions = optionLists.get(currentSubState);
+                        evaluatorComponent.setActiveOptions(currentStateOptions);
+                        ExecutionSupport executionSupport = role.acquireExecutionSupport(archetypeChunk.getReferenceTo(index), commandBuffer);
+
+                        try {
+                           evaluatorComponent.selectNextCombatAction(index, archetypeChunk, commandBuffer, executionSupport, valueStoreComponent);
+                        } finally {
+                           executionSupport.clearForReuse();
+                        }
+
+                        evaluatorComponent.setLastRunNanos(System.nanoTime());
+                        DamageMemory damageMemory = archetypeChunk.getComponent(index, this.damageMemoryComponentType);
+                        if (damageMemory != null) {
+                           damageMemory.clearRecentDamage();
+                        }
+
+                        HytaleLogger.Api context = CombatActionEvaluatorSystems.LOGGER.at(Level.FINEST);
+                        if (context.isEnabled()) {
+                           context.log("%s: Has run the combat action evaluator", archetypeChunk.getReferenceTo(index));
+                        }
                      }
                   }
                }
@@ -372,9 +390,14 @@ public class CombatActionEvaluatorSystems {
             BalanceAsset balancingAsset = BalanceAsset.getAssetMap().getAsset(role.getBalanceAsset());
             if (balancingAsset instanceof CombatBalanceAsset combatBalance) {
                CombatActionEvaluatorSystems.CombatConstructionData constructionData = holder.getComponent(this.combatConstructionDataComponentType);
-               CombatActionEvaluator evaluator = new CombatActionEvaluator(role, combatBalance.getEvaluatorConfig(), constructionData);
+               assert constructionData != null;
+               PositionCache positionCache = holder.getComponent(PositionCache.getComponentType());
+               assert positionCache != null;
+               StateSupport stateSupport = holder.getComponent(StateSupport.getComponentType());
+               assert stateSupport != null;
+               CombatActionEvaluator evaluator = new CombatActionEvaluator(stateSupport, combatBalance.getEvaluatorConfig(), constructionData);
                evaluator.setupNPC(holder);
-               role.getPositionCache().addExternalPositionCacheRegistration(evaluator::setupNPC);
+               positionCache.addExternalPositionCacheRegistration(evaluator::setupNPC);
                holder.putComponent(TargetMemory.getComponentType(), new TargetMemory(combatBalance.getTargetMemoryDuration()));
                holder.putComponent(CombatActionEvaluator.getComponentType(), evaluator);
                holder.ensureComponent(InteractionModule.get().getChainingDataComponent());

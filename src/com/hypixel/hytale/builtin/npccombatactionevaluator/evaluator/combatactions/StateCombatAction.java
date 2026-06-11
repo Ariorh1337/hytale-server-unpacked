@@ -10,7 +10,7 @@ import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.valuestore.ValueStore;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
@@ -48,12 +48,12 @@ public class StateCombatAction extends CombatActionOption {
       int index,
       @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
       @Nonnull CommandBuffer<EntityStore> commandBuffer,
-      @Nonnull Role role,
+      @Nonnull ExecutionSupport executionSupport,
       @Nonnull CombatActionEvaluator evaluator,
       ValueStore valueStore
    ) {
       Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
-      role.getStateSupport().setState(ref, this.state, this.subState, commandBuffer);
+      executionSupport.getStateSupport().setState(ref, this.state, this.subState, commandBuffer);
       evaluator.completeCurrentAction(true, true);
       evaluator.clearTimeout();
       HytaleLogger.Api ctx = CombatActionEvaluator.LOGGER.at(Level.FINEST);

@@ -24,7 +24,7 @@ import com.hypixel.hytale.server.npc.corecomponents.SensorBase;
 import com.hypixel.hytale.server.npc.corecomponents.world.builders.BuilderSensorPath;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.entities.PathManager;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.sensorinfo.PathProvider;
 import com.hypixel.hytale.server.npc.sensorinfo.PositionProvider;
@@ -72,8 +72,8 @@ public class SensorPath extends SensorBase {
    }
 
    @Override
-   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, double dt, @Nonnull Store<EntityStore> store) {
-      if (super.matches(ref, role, dt, store) && this.loadStatus != SensorPath.LoadStatus.FAILED) {
+   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, double dt, @Nonnull Store<EntityStore> store) {
+      if (super.matches(ref, executionSupport, dt, store) && this.loadStatus != SensorPath.LoadStatus.FAILED) {
          TransformComponent transformComponent = store.getComponent(ref, TransformComponent.getComponentType());
          assert transformComponent != null;
          NPCEntity npcComponent = store.getComponent(ref, NPCEntity.getComponentType());
@@ -81,7 +81,7 @@ public class SensorPath extends SensorBase {
          Vector3d position = transformComponent.getPosition();
          PathManager pathManager = npcComponent.getPathManager();
          int newRevision = NPCPlugin.get().getPathChangeRevision();
-         boolean newPathRequested = role.getWorldSupport().consumeNewPathRequested();
+         boolean newPathRequested = executionSupport.getWorldSupport().consumeNewPathRequested();
          if (pathManager.isFollowingPath() && newRevision == this.pathChangeRevision && !newPathRequested) {
             IPath<?> path = pathManager.getPath(ref, store);
             if (path == null) {

@@ -33,6 +33,7 @@ import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.BodyMotionBase;
 import com.hypixel.hytale.server.npc.corecomponents.combat.builders.BuilderBodyMotionCharge;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.instructions.Instruction;
 import com.hypixel.hytale.server.npc.movement.Steering;
 import com.hypixel.hytale.server.npc.movement.controllers.BlockHit;
@@ -45,7 +46,6 @@ import com.hypixel.hytale.server.npc.movement.controllers.RailPathSmoother;
 import com.hypixel.hytale.server.npc.movement.controllers.RailStepConfig;
 import com.hypixel.hytale.server.npc.movement.controllers.RailStepResult;
 import com.hypixel.hytale.server.npc.movement.controllers.TargetContactSamplePlanner;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.role.RoleDebugFlags;
 import com.hypixel.hytale.server.npc.role.support.DebugSupport;
 import com.hypixel.hytale.server.npc.role.support.PositionCache;
@@ -251,20 +251,42 @@ public class BodyMotionCharge extends BodyMotionBase implements DebugSupport.Deb
    }
 
    @Override
-   public void activate(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      super.activate(ref, role, componentAccessor);
+   public void activate(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      if (this.debugChargeState) {
+         Integer entityId = null;
+         NetworkId networkId = componentAccessor.getComponent(ref, NetworkId.getComponentType());
+         if (networkId != null) {
+            entityId = networkId.getId();
+         }
+
+         NPCPlugin.get().getLogger().at(Level.INFO).log("BodyMotionCharge activating role=%s entityId=%s", executionSupport.getRole().getRoleName(), entityId);
+      }
+
+      super.activate(ref, executionSupport, componentAccessor);
       this.state = BodyMotionCharge.ChargeState.LostTarget;
       this.sensorVisibleState = BodyMotionCharge.ChargeState.LostTarget;
-      MotionController motionController = role.getActiveMotionController();
+      MotionController motionController = executionSupport.getMotionContextSupport().getActiveMotionController();
       this.updateSizeCompensation(motionController);
       this.resetRailState();
    }
 
    @Override
-   public void deactivate(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      super.deactivate(ref, role, componentAccessor);
+   public void deactivate(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      super.deactivate(ref, executionSupport, componentAccessor);
       this.resetRailState();
       this.sensorVisibleState = BodyMotionCharge.ChargeState.LostTarget;
+      if (this.debugChargeState) {
+         Integer entityId = null;
+         NetworkId networkId = componentAccessor.getComponent(ref, NetworkId.getComponentType());
+         if (networkId != null) {
+            entityId = networkId.getId();
+         }
+
+         NPCPlugin.get()
+            .getLogger()
+            .at(Level.INFO)
+            .log("BodyMotionCharge deactivating role=%s entityId=%s", executionSupport.getRole().getRoleName(), entityId);
+      }
    }
 
    @Override
@@ -308,25 +330,27 @@ public class BodyMotionCharge extends BodyMotionBase implements DebugSupport.Deb
    }
 
    @Override
-   public void loaded(Role role) {
-      super.loaded(role);
+   public void loaded(ExecutionSupport executionSupport) {
+      super.loaded(executionSupport);
       if (this.clearOnceOnStateChange && this.parent instanceof Instruction instruction && instruction.getParent() instanceof Instruction instructionParent) {
          this.parentInstruction = instructionParent;
       }
    }
 
    @Override
-   public void registerWithSupport(Role role) {
-      super.registerWithSupport(role);
-      DebugSupport debugSupport = role.getDebugSupport();
+   public void registerWithSupport(ExecutionSupport executionSupport) {
+      super.registerWithSupport(executionSupport);
+      DebugSupport debugSupport = executionSupport.getDebugSupport();
       debugSupport.registerDebugFlagsListener(this);
       this.onDebugFlagsChanged(debugSupport.getDebugFlags());
-      role.getPositionCache().requirePlayerDistanceUnsorted(14.8F);
-      role.getPositionCache().requireEntityDistanceUnsorted(14.8F);
+      executionSupport.getPositionCache().requirePlayerDistanceUnsorted(14.8F);
+      executionSupport.getPositionCache().requireEntityDistanceUnsorted(14.8F);
    }
 
    @Override
-   public void preComputeSteering(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, @Nonnull Store<EntityStore> store) {
+   public void preComputeSteering(
+      @Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, @Nullable InfoProvider sensorInfo, @Nonnull Store<EntityStore> store
+   ) {
       if (sensorInfo != null) {
          sensorInfo.passExtraInfo(this.aimingData);
       }
@@ -335,7 +359,7 @@ public class BodyMotionCharge extends BodyMotionBase implements DebugSupport.Deb
    @Override
    public boolean computeSteering(
       @Nonnull Ref<EntityStore> ref,
-      @Nonnull Role role,
+      @Nonnull ExecutionSupport executionSupport,
       @Nullable InfoProvider sensorInfo,
       double dt,
       @Nonnull Steering desiredSteering,
@@ -355,7 +379,7 @@ public class BodyMotionCharge extends BodyMotionBase implements DebugSupport.Deb
 
             this.activeChargeDistance = Math.max(1.0, RandomExtra.randomRange(this.chargeDistanceRange));
             this.aimingData.setChargeDistance(this.activeChargeDistance);
-            this.transitionChargeState(BodyMotionCharge.ChargeState.Aiming, ref, role, componentAccessor);
+            this.transitionChargeState(BodyMotionCharge.ChargeState.Aiming, ref, executionSupport, componentAccessor, "have target");
             this.lastProbeTime = -Double.MAX_VALUE;
             this.timeSinceHaveTarget = 0.0;
          }
@@ -364,7 +388,7 @@ public class BodyMotionCharge extends BodyMotionBase implements DebugSupport.Deb
          assert transformComponent != null;
          Vector3d selfPosition = transformComponent.getPosition();
          Rotation3f selfRotation = transformComponent.getRotation();
-         MotionController motionController = role.getActiveMotionController();
+         MotionController motionController = executionSupport.getMotionContextSupport().getActiveMotionController();
          double targetDistanceSquared = targetAvailable ? motionController.waypointDistanceSquared(selfPosition, this.targetPosition) : Double.MAX_VALUE;
          boolean haveSolution;
          if (targetDistanceSquared <= this.activeChargeDistance * this.activeChargeDistance) {
@@ -376,14 +400,17 @@ public class BodyMotionCharge extends BodyMotionBase implements DebugSupport.Deb
          if (this.state == BodyMotionCharge.ChargeState.Aiming) {
             this.sensorVisibleState = BodyMotionCharge.ChargeState.Aiming;
             if (!targetAvailable) {
-               this.transitionChargeState(BodyMotionCharge.ChargeState.LostTarget, ref, role, componentAccessor);
+               this.transitionChargeState(BodyMotionCharge.ChargeState.LostTarget, ref, executionSupport, componentAccessor, "no target");
                return true;
             }
 
             if (haveSolution) {
                turnTo(desiredSteering, this.aimingData, this.relativeTurnSpeed);
-               if (this.aimingData.isOnTarget(selfRotation.yaw(), selfRotation.pitch(), this.lockedOnHalfAngleRad)) {
-                  this.transitionChargeState(BodyMotionCharge.ChargeState.LockedOn, ref, role, componentAccessor);
+               if (this.aimingData.isOnTarget(selfRotation.yaw(), selfRotation.pitch(), this.lockedOnHalfAngleRad)
+                  && this.isReachable(ref, componentAccessor, selfPosition, selfRotation, motionController, target, this.targetPosition, targetDistanceSquared)
+                  )
+                {
+                  this.transitionChargeState(BodyMotionCharge.ChargeState.LockedOn, ref, executionSupport, componentAccessor, "on target");
                }
 
                return true;
@@ -401,16 +428,16 @@ public class BodyMotionCharge extends BodyMotionBase implements DebugSupport.Deb
                   )
                 {
                   if (this.isPhaseOver()) {
-                     this.transitionChargeState(BodyMotionCharge.ChargeState.WindingUp, ref, role, componentAccessor);
+                     this.transitionChargeState(BodyMotionCharge.ChargeState.WindingUp, ref, executionSupport, componentAccessor, null);
                   }
 
                   return true;
                } else {
-                  this.transitionChargeState(BodyMotionCharge.ChargeState.Aiming, ref, role, componentAccessor);
+                  this.transitionChargeState(BodyMotionCharge.ChargeState.Aiming, ref, executionSupport, componentAccessor, "not reachable/not on target");
                   return true;
                }
             } else {
-               this.transitionChargeState(BodyMotionCharge.ChargeState.LostTarget, ref, role, componentAccessor);
+               this.transitionChargeState(BodyMotionCharge.ChargeState.LostTarget, ref, executionSupport, componentAccessor, "no solution");
                return true;
             }
          } else if (this.state == BodyMotionCharge.ChargeState.WindingUp) {
@@ -424,12 +451,14 @@ public class BodyMotionCharge extends BodyMotionBase implements DebugSupport.Deb
                }
 
                if (this.isPhaseOver()) {
-                  this.transitionChargeState(BodyMotionCharge.ChargeState.Launch, ref, role, componentAccessor);
+                  this.transitionChargeState(BodyMotionCharge.ChargeState.Launch, ref, executionSupport, componentAccessor, null);
                }
 
                return true;
             } else if (!haveSolution) {
-               this.transitionChargeState(BodyMotionCharge.ChargeState.LostTarget, ref, role, componentAccessor);
+               this.transitionChargeState(
+                  BodyMotionCharge.ChargeState.LostTarget, ref, executionSupport, componentAccessor, "lost target/no solution (interruptable)"
+               );
                return true;
             } else {
                turnTo(desiredSteering, this.aimingData, this.windingUpRelativeTurnSpeed);
@@ -439,11 +468,15 @@ public class BodyMotionCharge extends BodyMotionBase implements DebugSupport.Deb
                   && this.isReachable(ref, componentAccessor, selfPosition, selfRotation, motionController, target, this.targetPosition, targetDistanceSquared)
                   )
                 {
-                  this.transitionChargeState(BodyMotionCharge.ChargeState.Launch, ref, role, componentAccessor);
+                  this.transitionChargeState(BodyMotionCharge.ChargeState.Launch, ref, executionSupport, componentAccessor, null);
                   return true;
                } else {
                   this.transitionChargeState(
-                     this.skipLockedOnState ? BodyMotionCharge.ChargeState.Aiming : BodyMotionCharge.ChargeState.LockedOn, ref, role, componentAccessor
+                     this.skipLockedOnState ? BodyMotionCharge.ChargeState.Aiming : BodyMotionCharge.ChargeState.LockedOn,
+                     ref,
+                     executionSupport,
+                     componentAccessor,
+                     "off target/unreachable"
                   );
                   return true;
                }
@@ -467,7 +500,7 @@ public class BodyMotionCharge extends BodyMotionBase implements DebugSupport.Deb
                this.updateLaunchChargeReference(selfPosition);
                this.chargeSpeed = 0.0;
                this.chargeDistanceSinceLastRailRefresh = 0.0;
-               this.transitionChargeState(BodyMotionCharge.ChargeState.Charging, ref, role, componentAccessor);
+               this.transitionChargeState(BodyMotionCharge.ChargeState.Charging, ref, executionSupport, componentAccessor, null);
                return true;
             }
 
@@ -491,7 +524,7 @@ public class BodyMotionCharge extends BodyMotionBase implements DebugSupport.Deb
                         .log(
                            "BodyMotionCharge knockback check entityId=%s role=%s knockbackAmount=%.5f threshold=%.5f ignored=%s",
                            entityId,
-                           role.getRoleName(),
+                           executionSupport.getName(),
                            knockbackAmount,
                            this.knockbackThreshold,
                            knockbackIgnored
@@ -499,7 +532,7 @@ public class BodyMotionCharge extends BodyMotionBase implements DebugSupport.Deb
                   }
 
                   if (!knockbackIgnored) {
-                     this.transitionChargeState(BodyMotionCharge.ChargeState.Knockback, ref, role, componentAccessor);
+                     this.transitionChargeState(BodyMotionCharge.ChargeState.Knockback, ref, executionSupport, componentAccessor, "force pushed");
                      return true;
                   }
 
@@ -507,7 +540,7 @@ public class BodyMotionCharge extends BodyMotionBase implements DebugSupport.Deb
                }
 
                if (this.railPath.isFinished()) {
-                  this.transitionChargeState(BodyMotionCharge.ChargeState.Finished, ref, role, componentAccessor);
+                  this.transitionChargeState(BodyMotionCharge.ChargeState.Finished, ref, executionSupport, componentAccessor, null);
                   return true;
                }
 
@@ -521,14 +554,14 @@ public class BodyMotionCharge extends BodyMotionBase implements DebugSupport.Deb
                boolean startedNewSegment = this.railPath.getCursor() != oldCursor
                   || oldSegmentProgress <= 1.0E-6 && this.railPath.getSegmentProgress() > 1.0E-6;
                this.renderChargePathDebug(componentAccessor, selfPosition, startedNewSegment);
-               this.populateCandidateEntities(ref, role, componentAccessor);
+               this.populateCandidateEntities(ref, executionSupport, componentAccessor);
                this.railConfig.ignoredBlockFilter = this.ignoredBlockFilter;
                this.railConfig.ignoredBlocksFireTriggers = this.ignoredBlockSetTriggers;
                this.railConfig.stopOnEntityHit = this.entityStopsCharge;
                this.railConfig.candidateEntities = this.candidateEntitiesBuffer.isEmpty() ? null : this.candidateEntitiesBuffer;
 
                try {
-                  motionController.applyRailStep(ref, role, this.railDelta, this.railConfig, this.railResult, componentAccessor);
+                  motionController.applyRailStep(ref, executionSupport.getRole(), this.railDelta, this.railConfig, this.railResult, componentAccessor);
                   clearAccumulatedFallDistance(ref, componentAccessor);
                   this.refreshEntityCollisionHits();
                   this.chargeDistanceSinceLastRailRefresh = this.chargeDistanceSinceLastRailRefresh + this.railDelta.length() * this.railResult.appliedFraction;
@@ -541,16 +574,16 @@ public class BodyMotionCharge extends BodyMotionBase implements DebugSupport.Deb
                this.executeBlockCollisionInteraction(ref, componentAccessor);
                this.executeEntityCollisionInteraction(ref, componentAccessor);
                if (this.railResult.obstructed) {
-                  this.transitionChargeState(BodyMotionCharge.ChargeState.Obstructed, ref, role, componentAccessor);
+                  this.transitionChargeState(BodyMotionCharge.ChargeState.Obstructed, ref, executionSupport, componentAccessor, null);
                   return true;
                } else if (this.railResult.hitEntity) {
-                  this.transitionChargeState(BodyMotionCharge.ChargeState.EntityHit, ref, role, componentAccessor);
+                  this.transitionChargeState(BodyMotionCharge.ChargeState.EntityHit, ref, executionSupport, componentAccessor, null);
                   return true;
                } else if (this.railPath.isFinished()) {
-                  this.transitionChargeState(BodyMotionCharge.ChargeState.Finished, ref, role, componentAccessor);
+                  this.transitionChargeState(BodyMotionCharge.ChargeState.Finished, ref, executionSupport, componentAccessor, null);
                   return true;
                } else if (this.hasPassedLaunchChargeEndPlane(selfPosition)) {
-                  this.transitionChargeState(BodyMotionCharge.ChargeState.Finished, ref, role, componentAccessor);
+                  this.transitionChargeState(BodyMotionCharge.ChargeState.Finished, ref, executionSupport, componentAccessor, null);
                   return true;
                } else {
                   this.refreshChargeRailIfNeeded(
@@ -578,7 +611,7 @@ public class BodyMotionCharge extends BodyMotionBase implements DebugSupport.Deb
                desiredSteering.clear();
                this.clearEntityCollisionHits();
                if (this.isPhaseOver()) {
-                  this.transitionChargeState(BodyMotionCharge.ChargeState.LostTarget, ref, role, componentAccessor);
+                  this.transitionChargeState(BodyMotionCharge.ChargeState.LostTarget, ref, executionSupport, componentAccessor, null);
                }
 
                return true;
@@ -1036,8 +1069,9 @@ public class BodyMotionCharge extends BodyMotionBase implements DebugSupport.Deb
    private void transitionChargeState(
       @Nonnull BodyMotionCharge.ChargeState newState,
       @Nonnull Ref<EntityStore> ref,
-      @Nonnull Role role,
-      @Nonnull ComponentAccessor<EntityStore> componentAccessor
+      @Nonnull ExecutionSupport executionSupport,
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor,
+      @Nullable String reason
    ) {
       if (newState != this.state) {
          BodyMotionCharge.ChargeState previousState = this.state;
@@ -1085,7 +1119,14 @@ public class BodyMotionCharge extends BodyMotionBase implements DebugSupport.Deb
             NPCPlugin.get()
                .getLogger()
                .at(Level.INFO)
-               .log("BodyMotionCharge state %s -> %s role=%s entityId=%s", this.state, newState, role.getRoleName(), entityId);
+               .log(
+                  "BodyMotionCharge state %s -> %s role=%s entityId=%s reason=%s",
+                  this.state,
+                  newState,
+                  executionSupport.getRole().getRoleName(),
+                  entityId,
+                  reason != null ? reason : "<no reason>"
+               );
          }
 
          this.state = newState;
@@ -1152,9 +1193,11 @@ public class BodyMotionCharge extends BodyMotionBase implements DebugSupport.Deb
       }
    }
 
-   private void populateCandidateEntities(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+   private void populateCandidateEntities(
+      @Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
       this.candidateEntitiesBuffer.clear();
-      PositionCache positionCache = role.getPositionCache();
+      PositionCache positionCache = executionSupport.getPositionCache();
       positionCache.getPlayers()
          .forEachEntityUnordered(
             14.8F, NOT_SELF_PREDICATE, COLLECT_ENTITY_CONSUMER, ref, null, this.candidateEntitiesBuffer, componentAccessor, componentAccessor

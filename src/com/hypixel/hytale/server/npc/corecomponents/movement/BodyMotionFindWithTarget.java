@@ -16,10 +16,10 @@ import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.movement.builders.BuilderBodyMotionFindWithTarget;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
 import com.hypixel.hytale.server.npc.navigation.AStarBase;
 import com.hypixel.hytale.server.npc.navigation.AStarWithTarget;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.IPositionProvider;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.util.NPCPhysicsMath;
@@ -68,26 +68,29 @@ public abstract class BodyMotionFindWithTarget extends BodyMotionFindBase<AStarW
    }
 
    @Override
-   public void activate(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      super.activate(ref, role, componentAccessor);
+   public void activate(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      super.activate(ref, executionSupport, componentAccessor);
       this.haveValidTargetPosition = false;
       this.haveAccessibleTargetPosition = false;
       this.waitForTargetMovement = false;
       this.targetBoundingBox = null;
       this.lastPathedPosition.set(Double.MIN_VALUE, Double.MIN_VALUE, Double.MIN_VALUE);
-      this.self = role.getRoleName();
+      this.self = executionSupport.getName();
       this.lastDesiredTargetEntity = null;
    }
 
    @Override
-   public void deactivate(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      super.deactivate(ref, role, componentAccessor);
+   public void deactivate(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      super.deactivate(ref, executionSupport, componentAccessor);
       this.lastDesiredTargetEntity = null;
    }
 
    @Override
    public boolean canComputeMotion(
-      @Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider infoProvider, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider infoProvider,
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       BoundingBox boundingBoxComponent = componentAccessor.getComponent(ref, BoundingBox.getComponentType());
       assert boundingBoxComponent != null;
@@ -123,14 +126,18 @@ public abstract class BodyMotionFindWithTarget extends BodyMotionFindBase<AStarW
       }
 
       this.targetDeltaSquared = this.haveValidTargetPosition
-         ? role.getActiveMotionController().waypointDistanceSquared(this.getLastTargetPosition(), this.lastPathedPosition)
+         ? executionSupport.getMotionContextSupport()
+            .getActiveMotionController()
+            .waypointDistanceSquared(this.getLastTargetPosition(), this.lastPathedPosition)
          : Double.MAX_VALUE;
       return this.haveValidTargetPosition;
    }
 
    @Override
-   public boolean mustRecomputePath(@Nonnull MotionController activeMotionController) {
-      if (super.mustRecomputePath(activeMotionController)) {
+   public boolean mustRecomputePath(
+      @Nonnull Ref<EntityStore> ref, @Nonnull MotionController activeMotionController, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
+      if (super.mustRecomputePath(ref, activeMotionController, componentAccessor)) {
          return true;
       }
 
@@ -218,7 +225,7 @@ public abstract class BodyMotionFindWithTarget extends BodyMotionFindBase<AStarW
    @Override
    public AStarBase.Progress startComputePath(
       @Nonnull Ref<EntityStore> ref,
-      Role role,
+      ExecutionSupport executionSupport,
       @Nonnull MotionController activeMotionController,
       @Nonnull Vector3d position,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor

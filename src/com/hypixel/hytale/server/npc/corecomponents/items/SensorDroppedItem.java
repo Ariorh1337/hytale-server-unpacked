@@ -13,7 +13,9 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.SensorBase;
 import com.hypixel.hytale.server.npc.corecomponents.items.builders.BuilderSensorDroppedItem;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
+import com.hypixel.hytale.server.npc.role.support.PositionCache;
+import com.hypixel.hytale.server.npc.role.support.WorldSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.EntityPositionProvider;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.util.InventoryHelper;
@@ -47,26 +49,25 @@ public class SensorDroppedItem extends SensorBase {
    }
 
    @Override
-   public void registerWithSupport(@Nonnull Role role) {
-      role.getPositionCache().requireDroppedItemDistance(this.range);
+   public void registerWithSupport(@Nonnull ExecutionSupport executionSupport) {
+      executionSupport.getPositionCache().requireDroppedItemDistance(this.range);
    }
 
    @Override
-   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, double dt, @Nonnull Store<EntityStore> store) {
-      if (!super.matches(ref, role, dt, store)) {
+   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, double dt, @Nonnull Store<EntityStore> store) {
+      if (!super.matches(ref, executionSupport, dt, store)) {
          this.positionProvider.clear();
          return false;
       } else {
          HeadRotation headRotationComponent = store.getComponent(ref, HeadRotation.getComponentType());
          assert headRotationComponent != null;
          this.heading = headRotationComponent.getRotation().yaw();
-         Ref<EntityStore> droppedItem = role.getPositionCache()
+         Ref<EntityStore> droppedItem = executionSupport.getPositionCache()
             .getClosestDroppedItemInRange(
                ref,
                0.0,
                this.range,
-               (sensorDroppedItem, itemRef, role1, componentAccessor) -> sensorDroppedItem.filterItem(ref, itemRef, role1, componentAccessor),
-               role,
+               (sensorDroppedItem, itemRef, componentAccessor) -> sensorDroppedItem.filterItem(ref, itemRef, componentAccessor),
                this,
                store
             );
@@ -85,9 +86,7 @@ public class SensorDroppedItem extends SensorBase {
       return this.positionProvider;
    }
 
-   protected boolean filterItem(
-      @Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> itemRef, @Nonnull Role role, @Nonnull ComponentAccessor<EntityStore> componentAccessor
-   ) {
+   protected boolean filterItem(@Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> itemRef, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       if (!itemRef.isValid()) {
          return false;
       }
@@ -104,7 +103,7 @@ public class SensorDroppedItem extends SensorBase {
          }
       }
 
-      if (this.hasLineOfSight && !role.getPositionCache().hasLineOfSight(ref, itemRef, componentAccessor)) {
+      if (this.hasLineOfSight && !PositionCache.get(ref, componentAccessor).hasLineOfSight(ref, itemRef, componentAccessor)) {
          return false;
       }
 
@@ -119,7 +118,7 @@ public class SensorDroppedItem extends SensorBase {
          return true;
       }
 
-      Attitude attitude = role.getWorldSupport().getItemAttitude(itemStack);
+      Attitude attitude = WorldSupport.get(ref, componentAccessor).getItemAttitude(itemStack);
       return attitude != null && this.attitudes.contains(attitude);
    }
 }

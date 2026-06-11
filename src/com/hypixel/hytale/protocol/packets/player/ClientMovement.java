@@ -22,10 +22,10 @@ public class ClientMovement implements Packet, ToServerPacket {
    public static final int PACKET_ID = 108;
    public static final boolean IS_COMPRESSED = false;
    public static final int NULLABLE_BIT_FIELD_SIZE = 2;
-   public static final int FIXED_BLOCK_SIZE = 155;
+   public static final int FIXED_BLOCK_SIZE = 157;
    public static final int VARIABLE_FIELD_COUNT = 0;
-   public static final int VARIABLE_BLOCK_START = 155;
-   public static final int MAX_SIZE = 155;
+   public static final int VARIABLE_BLOCK_START = 157;
+   public static final int MAX_SIZE = 157;
    @Nullable
    public MovementStates movementStates;
    @Nullable
@@ -98,8 +98,8 @@ public class ClientMovement implements Packet, ToServerPacket {
 
    @Nonnull
    public static ClientMovement deserialize(@Nonnull ByteBuf buf, int offset) {
-      if (buf.readableBytes() - offset < 155) {
-         throw ProtocolException.bufferTooSmall("ClientMovement", 155, buf.readableBytes() - offset);
+      if (buf.readableBytes() - offset < 157) {
+         throw ProtocolException.bufferTooSmall("ClientMovement", 157, buf.readableBytes() - offset);
       }
 
       ClientMovement obj = new ClientMovement();
@@ -109,47 +109,47 @@ public class ClientMovement implements Packet, ToServerPacket {
       }
 
       if ((nullBits[0] & 2) != 0) {
-         obj.relativePosition = HalfFloatPosition.deserialize(buf, offset + 25);
+         obj.relativePosition = HalfFloatPosition.deserialize(buf, offset + 26);
       }
 
       if ((nullBits[0] & 4) != 0) {
-         obj.absolutePosition = Position.deserialize(buf, offset + 31);
+         obj.absolutePosition = Position.deserialize(buf, offset + 32);
       }
 
       if ((nullBits[0] & 8) != 0) {
-         obj.bodyOrientation = Direction.deserialize(buf, offset + 55);
+         obj.bodyOrientation = Direction.deserialize(buf, offset + 56);
       }
 
       if ((nullBits[0] & 16) != 0) {
-         obj.lookOrientation = Direction.deserialize(buf, offset + 67);
+         obj.lookOrientation = Direction.deserialize(buf, offset + 68);
       }
 
       if ((nullBits[0] & 32) != 0) {
-         obj.teleportAck = TeleportAck.deserialize(buf, offset + 79);
+         obj.teleportAck = TeleportAck.deserialize(buf, offset + 80);
       }
 
       if ((nullBits[0] & 64) != 0) {
-         obj.wishMovement = Position.deserialize(buf, offset + 80);
+         obj.wishMovement = Position.deserialize(buf, offset + 81);
       }
 
       if ((nullBits[0] & 128) != 0) {
-         obj.velocity = Vector3d.deserialize(buf, offset + 104);
+         obj.velocity = Vector3d.deserialize(buf, offset + 105);
       }
 
-      obj.mountedTo = buf.getIntLE(offset + 128);
+      obj.mountedTo = buf.getIntLE(offset + 129);
       if ((nullBits[1] & 1) != 0) {
-         obj.riderMovementStates = MovementStates.deserialize(buf, offset + 132);
+         obj.riderMovementStates = MovementStates.deserialize(buf, offset + 133);
       }
 
       return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
-      return 155;
+      return 157;
    }
 
    public static boolean isBufferTooSmall(MemorySegment mem) {
-      return mem.byteSize() < 155L;
+      return mem.byteSize() < 157L;
    }
 
    @Nullable
@@ -169,7 +169,7 @@ public class ClientMovement implements Packet, ToServerPacket {
 
    @Nullable
    public static HalfFloatPosition getRelativePosition(MemorySegment mem, int offset) {
-      return hasRelativePosition(mem, offset) ? HalfFloatPosition.toObject(mem, offset + 25) : null;
+      return hasRelativePosition(mem, offset) ? HalfFloatPosition.toObject(mem, offset + 26) : null;
    }
 
    @Nullable
@@ -179,7 +179,7 @@ public class ClientMovement implements Packet, ToServerPacket {
 
    @Nullable
    public static Position getAbsolutePosition(MemorySegment mem, int offset) {
-      return hasAbsolutePosition(mem, offset) ? Position.toObject(mem, offset + 31) : null;
+      return hasAbsolutePosition(mem, offset) ? Position.toObject(mem, offset + 32) : null;
    }
 
    @Nullable
@@ -189,7 +189,7 @@ public class ClientMovement implements Packet, ToServerPacket {
 
    @Nullable
    public static Direction getBodyOrientation(MemorySegment mem, int offset) {
-      return hasBodyOrientation(mem, offset) ? Direction.toObject(mem, offset + 55) : null;
+      return hasBodyOrientation(mem, offset) ? Direction.toObject(mem, offset + 56) : null;
    }
 
    @Nullable
@@ -199,7 +199,7 @@ public class ClientMovement implements Packet, ToServerPacket {
 
    @Nullable
    public static Direction getLookOrientation(MemorySegment mem, int offset) {
-      return hasLookOrientation(mem, offset) ? Direction.toObject(mem, offset + 67) : null;
+      return hasLookOrientation(mem, offset) ? Direction.toObject(mem, offset + 68) : null;
    }
 
    @Nullable
@@ -209,7 +209,7 @@ public class ClientMovement implements Packet, ToServerPacket {
 
    @Nullable
    public static TeleportAck getTeleportAck(MemorySegment mem, int offset) {
-      return hasTeleportAck(mem, offset) ? TeleportAck.toObject(mem, offset + 79) : null;
+      return hasTeleportAck(mem, offset) ? TeleportAck.toObject(mem, offset + 80) : null;
    }
 
    @Nullable
@@ -219,7 +219,7 @@ public class ClientMovement implements Packet, ToServerPacket {
 
    @Nullable
    public static Position getWishMovement(MemorySegment mem, int offset) {
-      return hasWishMovement(mem, offset) ? Position.toObject(mem, offset + 80) : null;
+      return hasWishMovement(mem, offset) ? Position.toObject(mem, offset + 81) : null;
    }
 
    @Nullable
@@ -229,7 +229,7 @@ public class ClientMovement implements Packet, ToServerPacket {
 
    @Nullable
    public static Vector3d getVelocity(MemorySegment mem, int offset) {
-      return hasVelocity(mem, offset) ? Vector3d.toObject(mem, offset + 104) : null;
+      return hasVelocity(mem, offset) ? Vector3d.toObject(mem, offset + 105) : null;
    }
 
    public static int getMountedTo(MemorySegment mem) {
@@ -237,7 +237,7 @@ public class ClientMovement implements Packet, ToServerPacket {
    }
 
    public static int getMountedTo(MemorySegment mem, int offset) {
-      return mem.get(PacketIO.PROTO_INT, offset + 128);
+      return mem.get(PacketIO.PROTO_INT, offset + 129);
    }
 
    @Nullable
@@ -247,7 +247,7 @@ public class ClientMovement implements Packet, ToServerPacket {
 
    @Nullable
    public static MovementStates getRiderMovementStates(MemorySegment mem, int offset) {
-      return hasRiderMovementStates(mem, offset) ? MovementStates.toObject(mem, offset + 132) : null;
+      return hasRiderMovementStates(mem, offset) ? MovementStates.toObject(mem, offset + 133) : null;
    }
 
    public static boolean hasMovementStates(MemorySegment mem, int offset) {
@@ -300,20 +300,20 @@ public class ClientMovement implements Packet, ToServerPacket {
    }
 
    public static ClientMovement toObject(MemorySegment mem, int offset) {
-      if (offset + 155 > mem.byteSize()) {
-         throw ProtocolException.bufferTooSmall("ClientMovement", offset + 155, (int)mem.byteSize());
+      if (offset + 157 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ClientMovement", offset + 157, (int)mem.byteSize());
       } else {
          return new ClientMovement(
             hasMovementStates(mem, offset) ? MovementStates.toObject(mem, offset + 2) : null,
-            hasRelativePosition(mem, offset) ? HalfFloatPosition.toObject(mem, offset + 25) : null,
-            hasAbsolutePosition(mem, offset) ? Position.toObject(mem, offset + 31) : null,
-            hasBodyOrientation(mem, offset) ? Direction.toObject(mem, offset + 55) : null,
-            hasLookOrientation(mem, offset) ? Direction.toObject(mem, offset + 67) : null,
-            hasTeleportAck(mem, offset) ? TeleportAck.toObject(mem, offset + 79) : null,
-            hasWishMovement(mem, offset) ? Position.toObject(mem, offset + 80) : null,
-            hasVelocity(mem, offset) ? Vector3d.toObject(mem, offset + 104) : null,
-            mem.get(PacketIO.PROTO_INT, offset + 128),
-            hasRiderMovementStates(mem, offset) ? MovementStates.toObject(mem, offset + 132) : null
+            hasRelativePosition(mem, offset) ? HalfFloatPosition.toObject(mem, offset + 26) : null,
+            hasAbsolutePosition(mem, offset) ? Position.toObject(mem, offset + 32) : null,
+            hasBodyOrientation(mem, offset) ? Direction.toObject(mem, offset + 56) : null,
+            hasLookOrientation(mem, offset) ? Direction.toObject(mem, offset + 68) : null,
+            hasTeleportAck(mem, offset) ? TeleportAck.toObject(mem, offset + 80) : null,
+            hasWishMovement(mem, offset) ? Position.toObject(mem, offset + 81) : null,
+            hasVelocity(mem, offset) ? Vector3d.toObject(mem, offset + 105) : null,
+            mem.get(PacketIO.PROTO_INT, offset + 129),
+            hasRiderMovementStates(mem, offset) ? MovementStates.toObject(mem, offset + 133) : null
          );
       }
    }
@@ -361,7 +361,7 @@ public class ClientMovement implements Packet, ToServerPacket {
       if (this.movementStates != null) {
          this.movementStates.serialize(buf);
       } else {
-         buf.writeZero(23);
+         buf.writeZero(24);
       }
 
       if (this.relativePosition != null) {
@@ -410,7 +410,7 @@ public class ClientMovement implements Packet, ToServerPacket {
       if (this.riderMovementStates != null) {
          this.riderMovementStates.serialize(buf);
       } else {
-         buf.writeZero(23);
+         buf.writeZero(24);
       }
    }
 
@@ -459,69 +459,69 @@ public class ClientMovement implements Packet, ToServerPacket {
       if (this.movementStates != null) {
          this.movementStates.serialize(mem, offset + 2);
       } else {
-         mem.asSlice(offset + 2, 23L).fill((byte)0);
+         mem.asSlice(offset + 2, 24L).fill((byte)0);
       }
 
       if (this.relativePosition != null) {
-         this.relativePosition.serialize(mem, offset + 25);
+         this.relativePosition.serialize(mem, offset + 26);
       } else {
-         mem.asSlice(offset + 25, 6L).fill((byte)0);
+         mem.asSlice(offset + 26, 6L).fill((byte)0);
       }
 
       if (this.absolutePosition != null) {
-         this.absolutePosition.serialize(mem, offset + 31);
+         this.absolutePosition.serialize(mem, offset + 32);
       } else {
-         mem.asSlice(offset + 31, 24L).fill((byte)0);
+         mem.asSlice(offset + 32, 24L).fill((byte)0);
       }
 
       if (this.bodyOrientation != null) {
-         this.bodyOrientation.serialize(mem, offset + 55);
+         this.bodyOrientation.serialize(mem, offset + 56);
       } else {
-         mem.asSlice(offset + 55, 12L).fill((byte)0);
+         mem.asSlice(offset + 56, 12L).fill((byte)0);
       }
 
       if (this.lookOrientation != null) {
-         this.lookOrientation.serialize(mem, offset + 67);
+         this.lookOrientation.serialize(mem, offset + 68);
       } else {
-         mem.asSlice(offset + 67, 12L).fill((byte)0);
+         mem.asSlice(offset + 68, 12L).fill((byte)0);
       }
 
       if (this.teleportAck != null) {
-         this.teleportAck.serialize(mem, offset + 79);
+         this.teleportAck.serialize(mem, offset + 80);
       } else {
-         mem.asSlice(offset + 79, 1L).fill((byte)0);
+         mem.asSlice(offset + 80, 1L).fill((byte)0);
       }
 
       if (this.wishMovement != null) {
-         this.wishMovement.serialize(mem, offset + 80);
+         this.wishMovement.serialize(mem, offset + 81);
       } else {
-         mem.asSlice(offset + 80, 24L).fill((byte)0);
+         mem.asSlice(offset + 81, 24L).fill((byte)0);
       }
 
       if (this.velocity != null) {
-         this.velocity.serialize(mem, offset + 104);
+         this.velocity.serialize(mem, offset + 105);
       } else {
-         mem.asSlice(offset + 104, 24L).fill((byte)0);
+         mem.asSlice(offset + 105, 24L).fill((byte)0);
       }
 
-      mem.set(PacketIO.PROTO_INT, offset + 128, this.mountedTo);
+      mem.set(PacketIO.PROTO_INT, offset + 129, this.mountedTo);
       if (this.riderMovementStates != null) {
-         this.riderMovementStates.serialize(mem, offset + 132);
+         this.riderMovementStates.serialize(mem, offset + 133);
       } else {
-         mem.asSlice(offset + 132, 23L).fill((byte)0);
+         mem.asSlice(offset + 133, 24L).fill((byte)0);
       }
 
-      return 155;
+      return 157;
    }
 
    @Override
    public int computeSize() {
-      return 155;
+      return 157;
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      if (buffer.readableBytes() - offset < 155) {
-         return ValidationResult.error("Buffer too small: expected at least 155 bytes");
+      if (buffer.readableBytes() - offset < 157) {
+         return ValidationResult.error("Buffer too small: expected at least 157 bytes");
       }
 
       byte[] nullBits = PacketIO.readBytes(buffer, offset, 2);

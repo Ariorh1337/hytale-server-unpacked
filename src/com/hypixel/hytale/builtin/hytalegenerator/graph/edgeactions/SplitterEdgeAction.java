@@ -2,6 +2,7 @@ package com.hypixel.hytale.builtin.hytalegenerator.graph.edgeactions;
 
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3d;
 import com.hypixel.hytale.builtin.hytalegenerator.graph.GraphSpace;
+import com.hypixel.hytale.builtin.hytalegenerator.graph.contentsuppliers.ContentSupplier;
 import java.util.function.Consumer;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
@@ -11,17 +12,17 @@ public class SplitterEdgeAction extends EdgeAction {
    private final int nodeCount;
    private final int segmentCount;
    @Nonnull
-   private final GraphSpace.Content content;
+   private final ContentSupplier contentSupplier;
    @Nonnull
    private final Vector3d rEdgeVector;
    @Nonnull
    private final Vector3d rNodePosition;
 
-   public SplitterEdgeAction(@Nonnull GraphSpace.Content content, int nodeCount) {
+   public SplitterEdgeAction(@Nonnull ContentSupplier contentSupplier, int nodeCount) {
       assert nodeCount >= 0;
       this.nodeCount = nodeCount;
       this.segmentCount = nodeCount + 1;
-      this.content = content;
+      this.contentSupplier = contentSupplier;
       this.rEdgeVector = new Vector3d();
       this.rNodePosition = new Vector3d();
    }
@@ -42,7 +43,8 @@ public class SplitterEdgeAction extends EdgeAction {
             boolean isLastNode = i == this.nodeCount - 1;
             graphSpace.schedule(() -> {
                GraphSpace.Node newNode = graphSpace.createNode(taskPosition);
-               newNode.setContent(this.content);
+               GraphSpace.Content content = this.contentSupplier.get(newNode);
+               newNode.setContent(content);
                graphSpace.getOrCreateEdge(previousNode, newNode);
                if (isLastNode) {
                   graphSpace.getOrCreateEdge(newNode, edge.nodeB());
@@ -66,6 +68,6 @@ public class SplitterEdgeAction extends EdgeAction {
 
    @Override
    public void viewAllPossibleContent(@NonNullDecl Consumer<GraphSpace.Content> consumer) {
-      consumer.accept(this.content);
+      this.contentSupplier.viewAllPossibleContent(consumer);
    }
 }

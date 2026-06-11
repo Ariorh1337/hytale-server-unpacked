@@ -19,9 +19,7 @@ public class SetXVectorProviderAsset extends VectorProviderAsset {
       .append(new KeyedCodec<>("Value", DensityAsset.CODEC, true), (asset, value) -> asset.valueAsset = value, asset -> asset.valueAsset)
       .add()
       .append(
-         new KeyedCodec<>("VectorProvider", VectorProviderAsset.CODEC, true),
-         (asset, value) -> asset.vectorProviderAsset = value,
-         asset -> asset.vectorProviderAsset
+         new KeyedCodec<>("Vector", VectorProviderAsset.CODEC, true), (asset, value) -> asset.vectorProviderAsset = value, asset -> asset.vectorProviderAsset
       )
       .add()
       .build();

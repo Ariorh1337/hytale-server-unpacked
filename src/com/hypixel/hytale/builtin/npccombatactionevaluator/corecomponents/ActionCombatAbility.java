@@ -21,8 +21,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.ActionBase;
 import com.hypixel.hytale.server.npc.corecomponents.combat.ActionAttack;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.interactions.NPCInteractionSimulationHandler;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.sensorinfo.parameterproviders.DoubleParameterProvider;
 import com.hypixel.hytale.server.npc.sensorinfo.parameterproviders.ParameterProvider;
@@ -52,7 +52,13 @@ public class ActionCombatAbility extends ActionBase {
    }
 
    @Override
-   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean canExecute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
       if (!this.initialised) {
          if (sensorInfo != null) {
             ParameterProvider parameterProvider = sensorInfo.getParameterProvider(this.positioningAngleProviderSlot);
@@ -64,7 +70,7 @@ public class ActionCombatAbility extends ActionBase {
          this.initialised = true;
       }
 
-      if (!super.canExecute(ref, role, sensorInfo, dt, store)) {
+      if (!super.canExecute(ref, executionSupport, sensorInfo, dt, store)) {
          return false;
       }
 
@@ -73,7 +79,13 @@ public class ActionCombatAbility extends ActionBase {
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean execute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
       CombatActionEvaluator combatActionEvaluatorComponent = store.getComponent(ref, COMPONENT_TYPE);
       assert combatActionEvaluatorComponent != null;
       InteractionManager interactionManagerComponent = store.getComponent(ref, InteractionModule.get().getInteractionManagerComponent());
@@ -116,7 +128,7 @@ public class ActionCombatAbility extends ActionBase {
       }
 
       Ref<EntityStore> target = aimingData != null ? aimingData.getTarget() : null;
-      if (!requireAiming || target != null && role.getPositionCache().hasLineOfSight(ref, target, store)) {
+      if (!requireAiming || target != null && executionSupport.getPositionCache().hasLineOfSight(ref, target, store)) {
          if (combatActionEvaluatorComponent.shouldPositionFirst()) {
             double positioningAngle = Double.MAX_VALUE;
             if (this.cachedPositioningAngleProvider != null) {
@@ -140,7 +152,7 @@ public class ActionCombatAbility extends ActionBase {
          }
 
          boolean damageFriendlies = combatActionEvaluatorComponent.shouldDamageFriendlies();
-         if (!damageFriendlies && target != null && role.getPositionCache().isFriendlyBlockingLineOfSight(ref, target, store)) {
+         if (!damageFriendlies && target != null && executionSupport.getPositionCache().isFriendlyBlockingLineOfSight(ref, target, store)) {
             aimingData.clearSolution();
             return false;
          }
@@ -156,7 +168,7 @@ public class ActionCombatAbility extends ActionBase {
             interactionType, context, RootInteraction.getRootInteractionOrUnknown(this.attack), false
          );
          interactionManagerComponent.queueExecuteChain(chain);
-         role.getCombatSupport().setExecutingAttack(chain, damageFriendlies, 0.0);
+         executionSupport.getCombatSupport().setExecutingAttack(chain, damageFriendlies, 0.0);
          if (aimingData != null) {
             aimingData.setHaveAttacked(true);
          }
@@ -174,8 +186,8 @@ public class ActionCombatAbility extends ActionBase {
    }
 
    @Override
-   public void activate(Role role, @Nullable InfoProvider infoProvider) {
-      super.activate(role, infoProvider);
+   public void activate(ExecutionSupport executionSupport, @Nullable InfoProvider infoProvider) {
+      super.activate(executionSupport, infoProvider);
       if (infoProvider != null) {
          AimingData aimingData = infoProvider.getPassedExtraInfo(AimingData.class);
          if (aimingData != null) {
@@ -185,8 +197,8 @@ public class ActionCombatAbility extends ActionBase {
    }
 
    @Override
-   public void deactivate(Role role, @Nullable InfoProvider infoProvider) {
-      super.deactivate(role, infoProvider);
+   public void deactivate(ExecutionSupport executionSupport, @Nullable InfoProvider infoProvider) {
+      super.deactivate(executionSupport, infoProvider);
       if (infoProvider != null) {
          AimingData aimingData = infoProvider.getPassedExtraInfo(AimingData.class);
          if (aimingData != null) {

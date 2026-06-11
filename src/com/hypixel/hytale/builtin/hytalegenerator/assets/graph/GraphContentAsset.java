@@ -4,6 +4,7 @@ import com.hypixel.hytale.assetstore.AssetExtraInfo;
 import com.hypixel.hytale.assetstore.codec.AssetBuilderCodec;
 import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
 import com.hypixel.hytale.assetstore.map.JsonAssetWithMap;
+import com.hypixel.hytale.builtin.hytalegenerator.LoggerUtil;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.Cleanable;
 import com.hypixel.hytale.builtin.hytalegenerator.graph.GraphSpace;
 import com.hypixel.hytale.codec.Codec;
@@ -11,10 +12,15 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nonnull;
 
 public class GraphContentAsset implements Cleanable, JsonAssetWithMap<String, DefaultAssetMap<String, GraphContentAsset>> {
+   @Nonnull
    public static final GraphContentAsset INSTANCE = new GraphContentAsset();
+   @Nonnull
+   private static final Map<String, GraphContentAsset> exportedNodes = new ConcurrentHashMap<>();
    @Nonnull
    public static final AssetBuilderCodec<String, GraphContentAsset> CODEC = AssetBuilderCodec.builder(
          GraphContentAsset.class,
@@ -25,6 +31,10 @@ public class GraphContentAsset implements Cleanable, JsonAssetWithMap<String, De
          (asset, value) -> asset.data = value,
          asset -> asset.data
       )
+      .append(new KeyedCodec<>("ExportName", Codec.STRING, true), (asset, value) -> asset.exportName = value, asset -> asset.exportName)
+      .add()
+      .append(new KeyedCodec<>("ImportName", Codec.STRING, true), (asset, value) -> asset.importName = value, asset -> asset.importName)
+      .add()
       .append(
          new KeyedCodec<>("DensityContent", new ArrayCodec<>(DensityContentAsset.CODEC, DensityContentAsset[]::new), true),
          (asset, value) -> asset.densityContentAssets = value,
@@ -51,9 +61,23 @@ public class GraphContentAsset implements Cleanable, JsonAssetWithMap<String, De
       .add()
       .append(new KeyedCodec<>("ContentTags", new ArrayCodec<>(Codec.STRING, String[]::new), true), (asset, value) -> asset.tags = value, asset -> asset.tags)
       .add()
+      .afterDecode(asset -> {
+         if (!asset.exportName.isEmpty()) {
+            if (exportedNodes.containsKey(asset.exportName)) {
+               LoggerUtil.getLogger().warning("Duplicate export name for asset: " + asset.exportName);
+            }
+
+            exportedNodes.put(asset.exportName, asset);
+            LoggerUtil.getLogger().fine("Registered imported GraphContent asset with name '" + asset.exportName + "' with asset id '" + asset.id);
+         }
+      })
       .build();
    private String id;
    private AssetExtraInfo.Data data;
+   @Nonnull
+   private String exportName = "";
+   @Nonnull
+   private String importName = "";
    @Nonnull
    private DensityContentAsset[] densityContentAssets = new DensityContentAsset[0];
    @Nonnull
@@ -67,6 +91,11 @@ public class GraphContentAsset implements Cleanable, JsonAssetWithMap<String, De
 
    @Nonnull
    public GraphSpace.Content build(@Nonnull GraphGeneratorAsset.Argument argument) {
+      if (!this.importName.isEmpty()) {
+         GraphContentAsset exportedAsset = exportedNodes.get(this.importName);
+         return exportedAsset == null ? GraphSpace.Content.DEFAULT : exportedAsset.build(argument);
+      }
+
       List<GraphSpace.ContentEntry<GraphSpace.DensityContent>> densityContent = new ArrayList<>(this.densityContentAssets.length);
       if (argument.buildDensityContent) {
          for (DensityContentAsset asset : this.densityContentAssets) {

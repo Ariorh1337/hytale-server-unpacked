@@ -9,16 +9,17 @@ import javax.annotation.Nonnull;
 
 public record PlayerSettings(
    boolean showEntityMarkers,
-   @Nonnull PickupLocation armorItemsPreferredPickupLocation,
-   @Nonnull PickupLocation weaponAndToolItemsPreferredPickupLocation,
-   @Nonnull PickupLocation usableItemsItemsPreferredPickupLocation,
-   @Nonnull PickupLocation solidBlockItemsPreferredPickupLocation,
-   @Nonnull PickupLocation miscItemsPreferredPickupLocation,
+   PickupLocation armorItemsPreferredPickupLocation,
+   PickupLocation weaponAndToolItemsPreferredPickupLocation,
+   PickupLocation usableItemsItemsPreferredPickupLocation,
+   PickupLocation solidBlockItemsPreferredPickupLocation,
+   PickupLocation miscItemsPreferredPickupLocation,
    PlayerCreativeSettings creativeSettings,
    boolean hideHelmet,
    boolean hideCuirass,
    boolean hideGauntlets,
-   boolean hidePants
+   boolean hidePants,
+   PlayerVoiceSettings voiceSettings
 ) implements Component<EntityStore> {
    @Nonnull
    private static final PlayerSettings INSTANCE = new PlayerSettings(
@@ -32,7 +33,8 @@ public record PlayerSettings(
       false,
       false,
       false,
-      false
+      false,
+      new PlayerVoiceSettings()
    );
 
    @Nonnull
@@ -55,11 +57,12 @@ public record PlayerSettings(
          this.usableItemsItemsPreferredPickupLocation,
          this.solidBlockItemsPreferredPickupLocation,
          this.miscItemsPreferredPickupLocation,
-         this.creativeSettings.clone(),
+         this.creativeSettings,
          this.hideHelmet,
          this.hideCuirass,
          this.hideGauntlets,
-         this.hidePants
+         this.hidePants,
+         this.voiceSettings
       );
    }
 }

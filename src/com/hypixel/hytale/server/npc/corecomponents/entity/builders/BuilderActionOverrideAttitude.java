@@ -5,6 +5,7 @@ import com.hypixel.hytale.server.core.asset.type.attitude.Attitude;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.asset.builder.Feature;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.asset.builder.holder.DoubleHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.EnumHolder;
 import com.hypixel.hytale.server.npc.asset.builder.validators.DoubleSingleValidator;
@@ -47,6 +48,7 @@ public class BuilderActionOverrideAttitude extends BuilderActionBase {
          data, "Duration", this.duration, 10.0, DoubleSingleValidator.greater0(), BuilderDescriptorState.Stable, "The duration to override for", null
       );
       this.requireFeature(Feature.LiveEntity);
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
       return this;
    }
 

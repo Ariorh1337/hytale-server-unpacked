@@ -1,6 +1,6 @@
 package com.hypixel.hytale.server.npc.corecomponents;
 
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.util.ComponentInfo;
 import com.hypixel.hytale.server.npc.util.IAnnotatedComponent;
 
@@ -9,7 +9,7 @@ public abstract class AnnotatedComponentBase implements IAnnotatedComponent {
    protected int index;
 
    @Override
-   public void getInfo(Role role, ComponentInfo holder) {
+   public void getInfo(ExecutionSupport executionSupport, ComponentInfo holder) {
    }
 
    @Override

@@ -33,7 +33,7 @@ import com.hypixel.hytale.server.npc.decisionmaker.core.conditions.TargetStatAbs
 import com.hypixel.hytale.server.npc.decisionmaker.core.conditions.TargetStatPercentageCondition;
 import com.hypixel.hytale.server.npc.decisionmaker.core.conditions.TimeOfDayCondition;
 import com.hypixel.hytale.server.npc.decisionmaker.core.conditions.TimeSinceLastUsedCondition;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import java.lang.ref.WeakReference;
 import javax.annotation.Nonnull;
 
@@ -87,7 +87,7 @@ public abstract class Condition implements JsonAssetWithMap<String, IndexedLooku
       return this.id;
    }
 
-   public void setupNPC(Role role) {
+   public void setupNPC(ExecutionSupport executionSupport) {
    }
 
    public void setupNPC(Holder<EntityStore> holder) {

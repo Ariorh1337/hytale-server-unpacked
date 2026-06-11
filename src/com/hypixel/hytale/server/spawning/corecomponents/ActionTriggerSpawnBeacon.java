@@ -5,7 +5,7 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.ActionBase;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.spawning.beacons.SpawnBeacon;
 import com.hypixel.hytale.server.spawning.corecomponents.builders.BuilderActionTriggerSpawnBeacon;
@@ -27,28 +27,40 @@ public class ActionTriggerSpawnBeacon extends ActionBase {
    }
 
    @Override
-   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      return super.canExecute(ref, role, sensorInfo, dt, store)
-         && (this.targetSlot == Integer.MIN_VALUE || role.getMarkedEntitySupport().hasMarkedEntityInSlot(this.targetSlot));
+   public boolean canExecute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
+      return super.canExecute(ref, executionSupport, sensorInfo, dt, store)
+         && (this.targetSlot == Integer.MIN_VALUE || executionSupport.getMarkedEntitySupport().hasMarkedEntityInSlot(this.targetSlot));
    }
 
    @Override
-   public void registerWithSupport(@Nonnull Role role) {
-      role.getPositionCache().requireSpawnBeaconDistance(this.range);
+   public void registerWithSupport(@Nonnull ExecutionSupport executionSupport) {
+      executionSupport.getPositionCache().requireSpawnBeaconDistance(this.range);
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      super.execute(ref, role, sensorInfo, dt, store);
+   public boolean execute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
+      super.execute(ref, executionSupport, sensorInfo, dt, store);
 
-      for (Ref<EntityStore> spawnBeaconRef : role.getPositionCache().getSpawnBeaconList()) {
+      for (Ref<EntityStore> spawnBeaconRef : executionSupport.getPositionCache().getSpawnBeaconList()) {
          SpawnBeacon spawnBeaconComponent = store.getComponent(spawnBeaconRef, SpawnBeacon.getComponentType());
          assert spawnBeaconComponent != null;
          BeaconSpawnWrapper spawnWrapper = spawnBeaconComponent.getSpawnWrapper();
          if (spawnWrapper.getSpawnIndex() == this.beaconId) {
             Ref<EntityStore> targetRef;
             if (this.targetSlot != Integer.MIN_VALUE) {
-               targetRef = role.getMarkedEntitySupport().getMarkedEntityRef(this.targetSlot);
+               targetRef = executionSupport.getMarkedEntitySupport().getMarkedEntityRef(this.targetSlot);
             } else {
                targetRef = ref;
             }

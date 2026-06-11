@@ -5,6 +5,7 @@ import com.hypixel.hytale.server.npc.asset.builder.Builder;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.asset.builder.Feature;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.asset.builder.holder.DoubleHolder;
 import com.hypixel.hytale.server.npc.asset.builder.validators.DoubleSingleValidator;
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderSensorBase;
@@ -46,6 +47,7 @@ public class BuilderSensorLeash extends BuilderSensorBase {
          data, "Range", this.range, DoubleSingleValidator.greater0(), BuilderDescriptorState.Stable, "The farthest distance allowed from the leash point", null
       );
       this.provideFeature(Feature.Position);
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
       return this;
    }
 

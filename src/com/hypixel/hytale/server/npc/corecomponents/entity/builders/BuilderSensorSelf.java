@@ -7,6 +7,7 @@ import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderValidationHelper;
 import com.hypixel.hytale.server.npc.asset.builder.ComponentContext;
 import com.hypixel.hytale.server.npc.asset.builder.Feature;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderSensorWithEntityFilters;
 import com.hypixel.hytale.server.npc.corecomponents.entity.SensorSelf;
 import com.hypixel.hytale.server.npc.instructions.Sensor;
@@ -36,6 +37,7 @@ public class BuilderSensorSelf extends BuilderSensorWithEntityFilters {
       BuilderValidationHelper builderHelper = this.createFilterValidationHelper(ComponentContext.SensorSelf);
       this.requireArray(data, "Filters", this.filters, null, BuilderDescriptorState.Stable, "A series of entity filter sensors to test", null, builderHelper);
       this.provideFeature(Feature.Position);
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
       return this;
    }
 

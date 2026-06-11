@@ -30,6 +30,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.role.RoleDebugFlags;
+import com.hypixel.hytale.server.npc.role.support.DebugSupport;
 import java.util.EnumSet;
 import java.util.UUID;
 import java.util.logging.Level;
@@ -94,7 +95,7 @@ public class FlockMembershipSystems {
       if (npcComponent != null) {
          Role role = npcComponent.getRole();
          if (role != null) {
-            membership.registerAsDebugListener(role.getDebugSupport(), flock);
+            membership.registerAsDebugListener(DebugSupport.get(ref, accessor), flock);
          }
       }
    }
@@ -106,7 +107,7 @@ public class FlockMembershipSystems {
       if (npcComponent != null) {
          Role role = npcComponent.getRole();
          if (role != null) {
-            membership.unregisterAsDebugListener(role.getDebugSupport(), flock);
+            membership.unregisterAsDebugListener(DebugSupport.get(ref, accessor), flock);
          }
       }
    }
@@ -325,7 +326,7 @@ public class FlockMembershipSystems {
          if (npcComponent != null) {
             Role role = npcComponent.getRole();
             if (role != null) {
-               EnumSet<RoleDebugFlags> flags = role.getDebugSupport().getDebugFlags();
+               EnumSet<RoleDebugFlags> flags = DebugSupport.get(ref, store).getDebugFlags();
                flockComponent.setTrace(flags.contains(RoleDebugFlags.Flock));
             }
          }
@@ -762,7 +763,7 @@ public class FlockMembershipSystems {
             if (newLeaderNpcComponent != null) {
                Role role = newLeaderNpcComponent.getRole();
                if (role != null) {
-                  EnumSet<RoleDebugFlags> flags = role.getDebugSupport().getDebugFlags();
+                  EnumSet<RoleDebugFlags> flags = DebugSupport.get(ref, store).getDebugFlags();
                   flock.setTrace(flags.contains(RoleDebugFlags.Flock));
                }
             }

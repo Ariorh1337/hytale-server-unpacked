@@ -44,8 +44,6 @@ import org.joml.Vector3d;
 
 public class BuilderSupport {
    private final BuilderManager builderManager;
-   @Nonnull
-   private final NPCEntity npcEntity;
    private final Holder<EntityStore> holder;
    private final ExecutionContext executionContext;
    private boolean requireLeashPosition;
@@ -82,39 +80,46 @@ public class BuilderSupport {
    @Nonnull
    private final StdScope sensorScope;
    @Nonnull
-   private final Builder<?> roleBuilder;
+   private final Builder<?> builder;
+   @Nullable
    private final RoleStats roleStats;
    private StateEvaluator stateEvaluator;
    private ValueStore.Builder valueStoreBuilder;
    private final ArrayDeque<String> stateStack = new ArrayDeque<>();
 
    public BuilderSupport(
-      BuilderManager builderManager,
+      @Nonnull BuilderManager builderManager,
       @Nonnull NPCEntity npcEntity,
-      Holder<EntityStore> holder,
-      ExecutionContext executionContext,
-      @Nonnull Builder<?> roleBuilder,
-      RoleStats roleStats
+      @Nullable Holder<EntityStore> holder,
+      @Nonnull ExecutionContext executionContext,
+      @Nonnull Builder<?> builder,
+      @Nullable RoleStats roleStats
+   ) {
+      this(builderManager, holder, executionContext, builder, builder.getStateMappingHelper(), roleStats, EntitySupport.createScope(npcEntity));
+   }
+
+   private BuilderSupport(
+      @Nonnull BuilderManager builderManager,
+      @Nullable Holder<EntityStore> holder,
+      @Nonnull ExecutionContext executionContext,
+      @Nonnull Builder<?> builder,
+      @Nonnull StateMappingHelper stateHelper,
+      @Nullable RoleStats roleStats,
+      @Nonnull StdScope sensorScope
    ) {
       this.builderManager = builderManager;
-      this.npcEntity = npcEntity;
       this.holder = holder;
       this.executionContext = executionContext;
-      this.roleBuilder = roleBuilder;
-      this.stateHelper = roleBuilder.getStateMappingHelper();
+      this.builder = builder;
+      this.stateHelper = stateHelper;
       this.roleStats = roleStats;
-      this.sensorScope = EntitySupport.createScope(npcEntity);
+      this.sensorScope = sensorScope;
       this.instructionSlotMappings = new Object2IntOpenHashMap<>();
       this.instructionSlotMappings.defaultReturnValue(Integer.MIN_VALUE);
    }
 
    public BuilderManager getBuilderManager() {
       return this.builderManager;
-   }
-
-   @Nonnull
-   public NPCEntity getEntity() {
-      return this.npcEntity;
    }
 
    public Holder<EntityStore> getHolder() {
@@ -126,12 +131,12 @@ public class BuilderSupport {
    }
 
    @Nonnull
-   public Builder<?> getParentSpawnable() {
-      return this.roleBuilder;
+   public Builder<?> getRootBuilder() {
+      return this.builder;
    }
 
    public void setScope(Scope scope) {
-      this.getExecutionContext().setScope(scope);
+      this.executionContext.setScope(scope);
    }
 
    public void setGlobalScope(Scope scope) {
@@ -163,9 +168,13 @@ public class BuilderSupport {
    }
 
    public Alarm getAlarm(String name) {
-      NPCEntity npc = this.holder.getComponent(NPCEntity.getComponentType());
-      AlarmStore alarmStore = npc.getAlarmStore();
-      return alarmStore.get(this.npcEntity, name);
+      AlarmStore alarmStore = this.holder.getComponent(AlarmStore.getComponentType());
+      if (alarmStore == null) {
+         alarmStore = new AlarmStore();
+         this.holder.putComponent(AlarmStore.getComponentType(), alarmStore);
+      }
+
+      return alarmStore.get(name);
    }
 
    @Nullable
@@ -525,6 +534,7 @@ public class BuilderSupport {
       this.currentComponentContext = currentComponentContext;
    }
 
+   @Nullable
    public RoleStats getRoleStats() {
       return this.roleStats;
    }

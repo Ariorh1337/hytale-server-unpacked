@@ -64,6 +64,10 @@ public class MoveItemStack implements Packet, ToServerPacket {
       obj.fromSectionId = buf.getIntLE(offset + 0);
       obj.fromSlotId = buf.getIntLE(offset + 4);
       obj.quantity = buf.getIntLE(offset + 8);
+      if (obj.quantity < 1) {
+         throw ProtocolException.valueBelowMinimum("Quantity", obj.quantity, 1.0);
+      }
+
       obj.toSectionId = buf.getIntLE(offset + 12);
       obj.toSlotId = buf.getIntLE(offset + 16);
       return obj;
@@ -98,7 +102,12 @@ public class MoveItemStack implements Packet, ToServerPacket {
    }
 
    public static int getQuantity(MemorySegment mem, int offset) {
-      return mem.get(PacketIO.PROTO_INT, offset + 8);
+      int value = mem.get(PacketIO.PROTO_INT, offset + 8);
+      if (value < 1) {
+         throw ProtocolException.valueBelowMinimum("Quantity", value, 1.0);
+      } else {
+         return value;
+      }
    }
 
    public static int getToSectionId(MemorySegment mem) {
@@ -125,13 +134,18 @@ public class MoveItemStack implements Packet, ToServerPacket {
       if (offset + 20 > mem.byteSize()) {
          throw ProtocolException.bufferTooSmall("MoveItemStack", offset + 20, (int)mem.byteSize());
       } else {
-         return new MoveItemStack(
-            mem.get(PacketIO.PROTO_INT, offset + 0),
-            mem.get(PacketIO.PROTO_INT, offset + 4),
-            mem.get(PacketIO.PROTO_INT, offset + 8),
-            mem.get(PacketIO.PROTO_INT, offset + 12),
-            mem.get(PacketIO.PROTO_INT, offset + 16)
-         );
+         int quantity = mem.get(PacketIO.PROTO_INT, offset + 8);
+         if (quantity < 1) {
+            throw ProtocolException.valueBelowMinimum("Quantity", quantity, 1.0);
+         } else {
+            return new MoveItemStack(
+               mem.get(PacketIO.PROTO_INT, offset + 0),
+               mem.get(PacketIO.PROTO_INT, offset + 4),
+               quantity,
+               mem.get(PacketIO.PROTO_INT, offset + 12),
+               mem.get(PacketIO.PROTO_INT, offset + 16)
+            );
+         }
       }
    }
 
@@ -139,6 +153,10 @@ public class MoveItemStack implements Packet, ToServerPacket {
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeIntLE(this.fromSectionId);
       buf.writeIntLE(this.fromSlotId);
+      if (this.quantity < 1) {
+         throw ProtocolException.valueBelowMinimum("Quantity", this.quantity, 1.0);
+      }
+
       buf.writeIntLE(this.quantity);
       buf.writeIntLE(this.toSectionId);
       buf.writeIntLE(this.toSlotId);
@@ -160,7 +178,12 @@ public class MoveItemStack implements Packet, ToServerPacket {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 20 ? ValidationResult.error("Buffer too small: expected at least 20 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 20) {
+         return ValidationResult.error("Buffer too small: expected at least 20 bytes");
+      }
+
+      int quantityVal = buffer.getIntLE(offset + 8);
+      return quantityVal < 1 ? ValidationResult.error("Quantity value out of range") : ValidationResult.OK;
    }
 
    public MoveItemStack clone() {

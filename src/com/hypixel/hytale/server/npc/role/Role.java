@@ -29,6 +29,8 @@ import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.instructions.BodyMotion;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
+import com.hypixel.hytale.server.npc.instructions.IndexedInstructions;
 import com.hypixel.hytale.server.npc.instructions.Instruction;
 import com.hypixel.hytale.server.npc.movement.GroupSteeringAccumulator;
 import com.hypixel.hytale.server.npc.movement.Steering;
@@ -38,10 +40,13 @@ import com.hypixel.hytale.server.npc.movement.steeringforces.SteeringForceAvoidC
 import com.hypixel.hytale.server.npc.role.builders.BuilderRole;
 import com.hypixel.hytale.server.npc.role.support.CombatSupport;
 import com.hypixel.hytale.server.npc.role.support.DebugSupport;
+import com.hypixel.hytale.server.npc.role.support.DisplayNameSupport;
 import com.hypixel.hytale.server.npc.role.support.EntitySupport;
+import com.hypixel.hytale.server.npc.role.support.FlagsComponent;
 import com.hypixel.hytale.server.npc.role.support.MarkedEntitySupport;
+import com.hypixel.hytale.server.npc.role.support.MotionContextSupport;
+import com.hypixel.hytale.server.npc.role.support.PlayerTaskSupport;
 import com.hypixel.hytale.server.npc.role.support.PositionCache;
-import com.hypixel.hytale.server.npc.role.support.RoleStats;
 import com.hypixel.hytale.server.npc.role.support.StateSupport;
 import com.hypixel.hytale.server.npc.role.support.WorldSupport;
 import com.hypixel.hytale.server.npc.statetransition.StateTransitionController;
@@ -72,20 +77,6 @@ public class Role implements IAnnotatedComponentCollection {
    public static final double RANDOMIZE_OFFSET_MAX_DISTANCE = 0.001;
    public static final double RANDOMIZE_OFFSET_SQUARED_MAX_DISTANCE = 1.0E-6;
    private static final double MIN_SEPARATION_SUMMED_SQUARED = 0.010000000000000002;
-   @Nonnull
-   protected final CombatSupport combatSupport;
-   @Nonnull
-   protected final StateSupport stateSupport;
-   @Nonnull
-   protected final MarkedEntitySupport markedEntitySupport;
-   @Nonnull
-   protected final WorldSupport worldSupport;
-   @Nonnull
-   protected final EntitySupport entitySupport;
-   @Nonnull
-   protected final PositionCache positionCache;
-   @Nonnull
-   protected final DebugSupport debugSupport;
    protected final int initialMaxHealth;
    protected final double collisionProbeDistance;
    protected final double collisionRadius;
@@ -159,8 +150,6 @@ public class Role implements IAnnotatedComponentCollection {
    protected final int hotbarSlots;
    protected final int offHandSlots;
    protected final byte defaultOffHandSlot;
-   protected final List<Role.DeferredAction> deferredActions = new ObjectArrayList<>();
-   protected final RoleStats roleStats;
    @Nullable
    protected final String balanceAsset;
    @Nullable
@@ -170,24 +159,24 @@ public class Role implements IAnnotatedComponentCollection {
    protected String appearance;
    @Nonnull
    protected Map<String, MotionController> motionControllers = new HashMap<>();
+   @Nullable
+   protected String initialMotionControllerName;
    protected MotionController activeMotionController;
    protected int[] flockSpawnTypeIndices;
    protected boolean requiresLeashPosition;
    protected boolean hasReachedTerminalAction;
    @Nullable
    protected String[] armor;
-   protected boolean[] flags;
    protected Instruction rootInstruction;
    @Nullable
    protected Instruction lastBodyMotionStep;
    @Nullable
    protected Instruction lastHeadMotionStep;
-   protected Instruction[] indexedInstructions;
+   protected IndexedInstructions indexedInstructions;
    @Nullable
    protected Instruction interactionInstruction;
    @Nullable
    protected Instruction deathInstruction;
-   protected Instruction currentTreeModeStep;
    protected boolean roleChangeRequested;
    protected final boolean isMemory;
    protected final String memoriesNameOverride;
@@ -197,15 +186,39 @@ public class Role implements IAnnotatedComponentCollection {
    protected boolean backingAway;
    protected boolean deathItemsDropped;
 
-   public Role(@Nonnull BuilderRole builder, @Nonnull BuilderSupport builderSupport) {
-      NPCEntity npcComponent = builderSupport.getEntity();
-      this.combatSupport = new CombatSupport(npcComponent, builder, builderSupport);
-      this.stateSupport = new StateSupport(builder, builderSupport);
-      this.markedEntitySupport = new MarkedEntitySupport(npcComponent);
-      this.worldSupport = new WorldSupport(npcComponent, builder, builderSupport);
-      this.entitySupport = new EntitySupport(npcComponent, builder);
-      this.positionCache = new PositionCache(this);
-      this.debugSupport = new DebugSupport(npcComponent, builder);
+   @Nonnull
+   public static Role createAndAttach(@Nonnull Holder<EntityStore> holder, @Nonnull BuilderRole builder, @Nonnull BuilderSupport builderSupport) {
+      CombatSupport combatSupport = new CombatSupport(builder, builderSupport);
+      StateSupport stateSupport = new StateSupport(builder, builderSupport);
+      MarkedEntitySupport markedEntitySupport = new MarkedEntitySupport();
+      WorldSupport worldSupport = new WorldSupport(builder, builderSupport);
+      EntitySupport entitySupport = new EntitySupport();
+      PositionCache positionCache = new PositionCache(builderSupport.getRoleStats());
+      positionCache.setOpaqueBlockSet(builder.getOpaqueBlockSet());
+      DebugSupport debugSupport = new DebugSupport(builder);
+      FlagsComponent flagsComponent = new FlagsComponent();
+      DisplayNameSupport displayNameSupport = new DisplayNameSupport();
+      displayNameSupport.setDisplayNames(builder.getDisplayNames());
+      MotionContextSupport motionContextSupport = new MotionContextSupport();
+      PlayerTaskSupport playerTaskSupport = new PlayerTaskSupport();
+      holder.putComponent(CombatSupport.getComponentType(), combatSupport);
+      holder.putComponent(StateSupport.getComponentType(), stateSupport);
+      holder.putComponent(MarkedEntitySupport.getComponentType(), markedEntitySupport);
+      holder.putComponent(WorldSupport.getComponentType(), worldSupport);
+      holder.putComponent(EntitySupport.getComponentType(), entitySupport);
+      holder.putComponent(PositionCache.getComponentType(), positionCache);
+      holder.putComponent(DebugSupport.getComponentType(), debugSupport);
+      holder.putComponent(FlagsComponent.getComponentType(), flagsComponent);
+      holder.putComponent(DisplayNameSupport.getComponentType(), displayNameSupport);
+      holder.putComponent(MotionContextSupport.getComponentType(), motionContextSupport);
+      holder.putComponent(PlayerTaskSupport.getComponentType(), playerTaskSupport);
+      Role role = new Role(builder, builderSupport);
+      role.postRoleBuilt(holder, builderSupport);
+      role.preInitMotionControllers(debugSupport, builder.getMotionControllerMap(builderSupport), builder.getInitialMotionController(builderSupport));
+      return role;
+   }
+
+   private Role(@Nonnull BuilderRole builder, @Nonnull BuilderSupport builderSupport) {
       this.initialMaxHealth = builder.getMaxHealth(builderSupport);
       this.nameTranslationKey = builder.getNameTranslationKey(builderSupport);
       this.appearance = builder.getAppearance(builderSupport);
@@ -226,7 +239,6 @@ public class Role implements IAnnotatedComponentCollection {
          motionController.setKnockbackScale(this.knockbackScale);
       }
 
-      this.positionCache.setOpaqueBlockSet(builder.getOpaqueBlockSet());
       this.dropListId = builder.getDropListId(builderSupport);
       this.isAvoidingEntities = builder.isAvoidingEntities();
       this.avoidanceMode = builder.getAvoidanceMode(builderSupport);
@@ -282,14 +294,13 @@ public class Role implements IAnnotatedComponentCollection {
       this.hotbarSlots = builder.getHotbarSlots();
       this.offHandSlots = builder.getOffHandSlots();
       this.corpseStaysInFlock = builder.isCorpseStaysInFlock();
-      this.roleStats = builderSupport.getRoleStats();
       this.balanceAsset = builder.getBalanceAsset(builderSupport);
       this.interactionVars = builder.getInteractionVars(builderSupport);
       this.isMemory = builder.isMemory(builderSupport.getExecutionContext());
       this.memoriesNameOverride = builder.getMemoriesNameOverride(builderSupport.getExecutionContext());
       this.isMemoriesNameOverriden = this.memoriesNameOverride != null && !this.memoriesNameOverride.isEmpty();
       this.spawnLockTime = builder.getSpawnLockTime(builderSupport);
-      this.entitySupport.pickRandomDisplayName(builderSupport.getHolder(), false);
+      DisplayNameSupport.setRandomDisplayName(builderSupport.getHolder(), builder.getDisplayNames(), false);
       List<Instruction> instructionList = builder.getInstructionList(builderSupport);
       if (instructionList == null) {
          instructionList = new ObjectArrayList<>();
@@ -300,7 +311,6 @@ public class Role implements IAnnotatedComponentCollection {
       this.interactionInstruction = builder.getInteractionInstruction(builderSupport);
       this.deathInstruction = builder.getDeathInstruction(builderSupport);
       builder.registerStateEvaluator(builderSupport);
-      this.setMotionControllers(builderSupport.getEntity(), builder.getMotionControllerMap(builderSupport), builder.getInitialMotionController(builderSupport));
       if (this.interactionInstruction != null) {
          builderSupport.trackInteractions();
       }
@@ -389,30 +399,51 @@ public class Role implements IAnnotatedComponentCollection {
       return this.spawnLockTime;
    }
 
-   public void postRoleBuilt(@Nonnull BuilderSupport builderSupport) {
+   public void postRoleBuilt(@Nonnull Holder<EntityStore> holder, @Nonnull BuilderSupport builderSupport) {
       this.requiresLeashPosition = builderSupport.requiresLeashPosition();
-      this.flags = builderSupport.allocateFlags();
-      this.indexedInstructions = builderSupport.getInstructionSlotMappings();
-      this.stateSupport.postRoleBuilt(builderSupport);
-      this.worldSupport.postRoleBuilt(builderSupport);
-      this.entitySupport.postRoleBuilt(builderSupport);
-      this.markedEntitySupport.postRoleBuilder(builderSupport);
+      holder.getComponent(FlagsComponent.getComponentType()).setFlags(builderSupport.allocateFlags());
+      this.indexedInstructions = new IndexedInstructions(builderSupport.getInstructionSlotMappings());
+      holder.getComponent(StateSupport.getComponentType()).postRoleBuilt(builderSupport);
+      holder.getComponent(WorldSupport.getComponentType()).postRoleBuilt(builderSupport);
+      holder.getComponent(EntitySupport.getComponentType()).postRoleBuilt(builderSupport);
+      holder.getComponent(MarkedEntitySupport.getComponentType()).postRoleBuilder(builderSupport);
+      if (builderSupport.requiresBlockTypeBlackboard()) {
+         NPCEntity npcEntity = holder.getComponent(NPCEntity.getComponentType());
+         npcEntity.addBlackboardBlockTypeSets(builderSupport.getBlockTypeBlackboardBlockSets());
+      }
+
       this.rootInstruction.setContext(this, 0);
    }
 
-   public void loaded() {
-      this.rootInstruction.loaded(this);
-      if (this.interactionInstruction != null) {
-         this.interactionInstruction.loaded(this);
-      }
+   @Nonnull
+   public ExecutionSupport acquireExecutionSupport(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> accessor) {
+      ExecutionSupport es = ExecutionSupport.acquire();
+      es.populateFromEntity(ref, accessor);
+      es.setRoleIndex(this.roleIndex);
+      es.setName(this.roleName);
+      es.setIndexedInstructions(this.indexedInstructions);
+      return es;
+   }
 
-      if (this.deathInstruction != null) {
-         this.deathInstruction.loaded(this);
-      }
+   public void loaded(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> accessor) {
+      ExecutionSupport executionSupport = this.acquireExecutionSupport(ref, accessor);
 
-      StateTransitionController stateTransitions = this.stateSupport.getStateTransitionController();
-      if (stateTransitions != null) {
-         stateTransitions.loaded(this);
+      try {
+         this.rootInstruction.loaded(executionSupport);
+         if (this.interactionInstruction != null) {
+            this.interactionInstruction.loaded(executionSupport);
+         }
+
+         if (this.deathInstruction != null) {
+            this.deathInstruction.loaded(executionSupport);
+         }
+
+         StateTransitionController stateTransitions = executionSupport.getStateSupport().getStateTransitionController();
+         if (stateTransitions != null) {
+            stateTransitions.loaded(executionSupport);
+         }
+      } finally {
+         executionSupport.clearForReuse();
       }
    }
 
@@ -422,73 +453,101 @@ public class Role implements IAnnotatedComponentCollection {
          activeMotionController.spawned();
       }
 
-      this.entitySupport.pickRandomDisplayName(holder, true);
-      this.rootInstruction.spawned(this);
-      if (this.interactionInstruction != null) {
-         this.interactionInstruction.spawned(this);
-      }
+      holder.getComponent(DisplayNameSupport.getComponentType()).pickRandomDisplayName(holder, true);
+      ExecutionSupport executionSupport = ExecutionSupport.acquire();
+      executionSupport.populateFromHolder(holder);
+      executionSupport.setRoleIndex(this.roleIndex);
+      executionSupport.setName(this.roleName);
+      executionSupport.setIndexedInstructions(this.indexedInstructions);
 
-      if (this.deathInstruction != null) {
-         this.deathInstruction.spawned(this);
-      }
+      try {
+         this.rootInstruction.spawned(executionSupport);
+         if (this.interactionInstruction != null) {
+            this.interactionInstruction.spawned(executionSupport);
+         }
 
-      StateTransitionController stateTransitions = this.stateSupport.getStateTransitionController();
-      if (stateTransitions != null) {
-         stateTransitions.spawned(this);
+         if (this.deathInstruction != null) {
+            this.deathInstruction.spawned(executionSupport);
+         }
+
+         StateTransitionController stateTransitions = executionSupport.getStateSupport().getStateTransitionController();
+         if (stateTransitions != null) {
+            stateTransitions.spawned(executionSupport);
+         }
+      } finally {
+         executionSupport.clearForReuse();
       }
 
       this.initialiseInventories(npcComponent, holder, store);
    }
 
-   public void unloaded() {
-      this.worldSupport.unloaded();
-      this.markedEntitySupport.unloaded();
-      this.deferredActions.clear();
-      this.rootInstruction.unloaded(this);
-      if (this.interactionInstruction != null) {
-         this.interactionInstruction.unloaded(this);
-      }
+   public void unloaded(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> accessor) {
+      ExecutionSupport executionSupport = this.acquireExecutionSupport(ref, accessor);
 
-      if (this.deathInstruction != null) {
-         this.deathInstruction.unloaded(this);
-      }
+      try {
+         executionSupport.getEntitySupport().unloaded();
+         executionSupport.getWorldSupport().unloaded(ref);
+         executionSupport.getMarkedEntitySupport().unloaded();
+         this.rootInstruction.unloaded(executionSupport);
+         if (this.interactionInstruction != null) {
+            this.interactionInstruction.unloaded(executionSupport);
+         }
 
-      StateTransitionController stateTransitions = this.stateSupport.getStateTransitionController();
-      if (stateTransitions != null) {
-         stateTransitions.unloaded(this);
-      }
-   }
+         if (this.deathInstruction != null) {
+            this.deathInstruction.unloaded(executionSupport);
+         }
 
-   public void removed() {
-      this.worldSupport.resetAllBlockSensors();
-      this.rootInstruction.removed(this);
-      if (this.interactionInstruction != null) {
-         this.interactionInstruction.removed(this);
-      }
-
-      if (this.deathInstruction != null) {
-         this.deathInstruction.removed(this);
-      }
-
-      StateTransitionController stateTransitions = this.stateSupport.getStateTransitionController();
-      if (stateTransitions != null) {
-         stateTransitions.removed(this);
+         StateTransitionController stateTransitions = executionSupport.getStateSupport().getStateTransitionController();
+         if (stateTransitions != null) {
+            stateTransitions.unloaded(executionSupport);
+         }
+      } finally {
+         executionSupport.clearForReuse();
       }
    }
 
-   public void teleported(@Nonnull World from, @Nonnull World to) {
-      this.rootInstruction.teleported(this, from, to);
-      if (this.interactionInstruction != null) {
-         this.interactionInstruction.teleported(this, from, to);
-      }
+   public void removed(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> accessor) {
+      ExecutionSupport executionSupport = this.acquireExecutionSupport(ref, accessor);
 
-      if (this.deathInstruction != null) {
-         this.deathInstruction.teleported(this, from, to);
-      }
+      try {
+         executionSupport.getWorldSupport().resetAllBlockSensors(ref);
+         this.rootInstruction.removed(executionSupport);
+         if (this.interactionInstruction != null) {
+            this.interactionInstruction.removed(executionSupport);
+         }
 
-      StateTransitionController stateTransitions = this.stateSupport.getStateTransitionController();
-      if (stateTransitions != null) {
-         stateTransitions.teleported(this, from, to);
+         if (this.deathInstruction != null) {
+            this.deathInstruction.removed(executionSupport);
+         }
+
+         StateTransitionController stateTransitions = executionSupport.getStateSupport().getStateTransitionController();
+         if (stateTransitions != null) {
+            stateTransitions.removed(executionSupport);
+         }
+      } finally {
+         executionSupport.clearForReuse();
+      }
+   }
+
+   public void teleported(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> accessor, @Nonnull World from, @Nonnull World to) {
+      ExecutionSupport executionSupport = this.acquireExecutionSupport(ref, accessor);
+
+      try {
+         this.rootInstruction.teleported(executionSupport, from, to);
+         if (this.interactionInstruction != null) {
+            this.interactionInstruction.teleported(executionSupport, from, to);
+         }
+
+         if (this.deathInstruction != null) {
+            this.deathInstruction.teleported(executionSupport, from, to);
+         }
+
+         StateTransitionController stateTransitions = executionSupport.getStateSupport().getStateTransitionController();
+         if (stateTransitions != null) {
+            stateTransitions.teleported(executionSupport, from, to);
+         }
+      } finally {
+         executionSupport.clearForReuse();
       }
    }
 
@@ -500,41 +559,6 @@ public class Role implements IAnnotatedComponentCollection {
       return this.activeMotionController;
    }
 
-   @Nonnull
-   public CombatSupport getCombatSupport() {
-      return this.combatSupport;
-   }
-
-   @Nonnull
-   public StateSupport getStateSupport() {
-      return this.stateSupport;
-   }
-
-   @Nonnull
-   public WorldSupport getWorldSupport() {
-      return this.worldSupport;
-   }
-
-   @Nonnull
-   public MarkedEntitySupport getMarkedEntitySupport() {
-      return this.markedEntitySupport;
-   }
-
-   @Nonnull
-   public PositionCache getPositionCache() {
-      return this.positionCache;
-   }
-
-   @Nonnull
-   public EntitySupport getEntitySupport() {
-      return this.entitySupport;
-   }
-
-   @Nonnull
-   public DebugSupport getDebugSupport() {
-      return this.debugSupport;
-   }
-
    public boolean isRoleChangeRequested() {
       return this.roleChangeRequested;
    }
@@ -544,7 +568,7 @@ public class Role implements IAnnotatedComponentCollection {
    }
 
    public boolean setActiveMotionController(
-      @Nullable Ref<EntityStore> ref, @Nonnull NPCEntity npcComponent, @Nonnull String name, @Nullable ComponentAccessor<EntityStore> componentAccessor
+      @Nonnull Ref<EntityStore> ref, @Nonnull NPCEntity npcComponent, @Nonnull String name, @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       MotionController motionController = this.motionControllers.get(name);
       if (motionController == null) {
@@ -560,10 +584,10 @@ public class Role implements IAnnotatedComponentCollection {
    }
 
    public void setActiveMotionController(
-      @Nullable Ref<EntityStore> ref,
+      @Nonnull Ref<EntityStore> ref,
       @Nonnull NPCEntity npcComponent,
       @Nonnull MotionController motionController,
-      @Nullable ComponentAccessor<EntityStore> componentAccessor
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       if (this.activeMotionController != motionController) {
          if (this.activeMotionController != null) {
@@ -571,16 +595,19 @@ public class Role implements IAnnotatedComponentCollection {
          }
 
          this.activeMotionController = motionController;
+         MotionContextSupport mcs = componentAccessor.getComponent(ref, MotionContextSupport.getComponentType());
+         assert mcs != null;
+         mcs.setActiveMotionController(motionController);
          this.activeMotionController.activate();
          this.motionControllerChanged(ref, npcComponent, this.activeMotionController, componentAccessor);
       }
    }
 
    protected void motionControllerChanged(
-      @Nullable Ref<EntityStore> ref,
+      @Nonnull Ref<EntityStore> ref,
       @Nonnull NPCEntity npcComponent,
       @Nullable MotionController motionController,
-      @Nullable ComponentAccessor<EntityStore> componentAccessor
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       npcComponent.setActiveMotionControllerName(motionController != null ? motionController.getType() : null);
       this.rootInstruction.motionControllerChanged(ref, npcComponent, motionController, componentAccessor);
@@ -592,28 +619,32 @@ public class Role implements IAnnotatedComponentCollection {
          this.interactionInstruction.motionControllerChanged(ref, npcComponent, motionController, componentAccessor);
       }
 
-      StateTransitionController stateTransitions = this.stateSupport.getStateTransitionController();
+      StateTransitionController stateTransitions = StateSupport.get(ref, componentAccessor).getStateTransitionController();
       if (stateTransitions != null) {
          stateTransitions.motionControllerChanged(ref, npcComponent, motionController, componentAccessor);
       }
    }
 
-   public void setMotionControllers(
-      @Nonnull NPCEntity npcComponent, @Nonnull Map<String, MotionController> motionControllers, @Nullable String initialMotionController
+   public void preInitMotionControllers(
+      @Nonnull DebugSupport debugSupport, @Nonnull Map<String, MotionController> motionControllers, @Nullable String initialMotionController
    ) {
       this.motionControllers = motionControllers;
+      this.initialMotionControllerName = initialMotionController;
 
       for (Entry<String, MotionController> entry : this.motionControllers.entrySet()) {
-         this.debugSupport.registerDebugFlagsListener(entry.getValue());
+         debugSupport.registerDebugFlagsListener(entry.getValue());
       }
 
       this.updateMotionControllers(null, null, null, null);
-      if (!this.motionControllers.isEmpty()) {
-         if (initialMotionController != null && this.setActiveMotionController(null, npcComponent, initialMotionController, null)) {
-            return;
-         }
+   }
 
-         this.setActiveMotionController(null, npcComponent, RandomExtra.randomElement(new ObjectArrayList<>(motionControllers.values())), null);
+   public void activateInitialMotionController(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> accessor, @Nonnull NPCEntity npcComponent) {
+      if (this.activeMotionController == null) {
+         if (!this.motionControllers.isEmpty()) {
+            if (this.initialMotionControllerName == null || !this.setActiveMotionController(ref, npcComponent, this.initialMotionControllerName, accessor)) {
+               this.setActiveMotionController(ref, npcComponent, RandomExtra.randomElement(new ObjectArrayList<>(this.motionControllers.values())), accessor);
+            }
+         }
       }
    }
 
@@ -644,61 +675,61 @@ public class Role implements IAnnotatedComponentCollection {
    }
 
    public void tick(@Nonnull Ref<EntityStore> ref, float tickTime, @Nonnull Store<EntityStore> store) {
-      int i = 0;
+      ExecutionSupport executionSupport = this.acquireExecutionSupport(ref, store);
 
-      while (i < this.deferredActions.size()) {
-         Role.DeferredAction action = this.deferredActions.get(i);
-         if (action.tick(ref, this, tickTime, store)) {
-            this.deferredActions.remove(i);
-         } else {
-            i++;
-         }
+      try {
+         executionSupport.getEntitySupport().tickDeferredActions(ref, executionSupport, tickTime, store);
+         this.computeActionsAndSteering(ref, executionSupport, tickTime, this.bodySteering, this.headSteering, store);
+      } finally {
+         executionSupport.clearForReuse();
       }
-
-      this.computeActionsAndSteering(ref, tickTime, this.bodySteering, this.headSteering, store);
-   }
-
-   public void addDeferredAction(@Nonnull Role.DeferredAction handler) {
-      this.deferredActions.add(handler);
    }
 
    protected void computeActionsAndSteering(
-      @Nonnull Ref<EntityStore> ref, double tickTime, @Nonnull Steering bodySteering, @Nonnull Steering headSteering, @Nonnull Store<EntityStore> store
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      double tickTime,
+      @Nonnull Steering bodySteering,
+      @Nonnull Steering headSteering,
+      @Nonnull Store<EntityStore> store
    ) {
-      if (this.debugSupport.isVisSensorRanges()) {
-         this.debugSupport.beginSensorVisualization();
+      DebugSupport debugSupport = executionSupport.getDebugSupport();
+      if (debugSupport.isVisSensorRanges()) {
+         debugSupport.beginSensorVisualization();
       }
 
       boolean isDead = store.getArchetype(ref).contains(DeathComponent.getComponentType());
       if (isDead) {
-         if (this.deathInstruction != null && this.deathInstruction.matches(ref, this, tickTime, store)) {
-            this.deathInstruction.execute(ref, this, tickTime, store);
+         if (this.deathInstruction != null && this.deathInstruction.matches(ref, executionSupport, tickTime, store)) {
+            this.deathInstruction.execute(ref, executionSupport, tickTime, store);
          }
       } else {
+         StateSupport stateSupport = executionSupport.getStateSupport();
          if (this.interactionInstruction != null) {
-            this.positionCache.forEachPlayer((d, _playerRef, _this, _selfRef, _store) -> {
-               _this.stateSupport.setInteractionIterationTarget(_playerRef);
-               assert _this.interactionInstruction != null;
-               if (_this.interactionInstruction.matches(_selfRef, _this, d, _store)) {
-                  _this.interactionInstruction.execute(_selfRef, _this, d, _store);
+            executionSupport.getPositionCache().forEachPlayer((d, _playerRef, _es, _selfRef, _store) -> {
+               _es.getStateSupport().setInteractionIterationTarget(_playerRef);
+               assert this.interactionInstruction != null;
+               if (this.interactionInstruction.matches(_selfRef, _es, d, _store)) {
+                  this.interactionInstruction.execute(_selfRef, _es, d, _store);
                }
-            }, this, ref, store, tickTime, store);
-            this.stateSupport.setInteractionIterationTarget(null);
-            this.entitySupport.clearTargetPlayerActiveTasks();
+            }, executionSupport, ref, store, tickTime, store);
+            stateSupport.setInteractionIterationTarget(null);
+            executionSupport.getPlayerTaskSupport().clearTargetPlayerActiveTasks();
          }
 
          this.activeMotionController.beforeInstructionSensorsAndActions(tickTime);
-         if (!this.stateSupport.runTransitionActions(ref, this, tickTime, store)) {
-            this.entitySupport.clearNextBodyMotionStep();
-            this.entitySupport.clearNextHeadMotionStep();
-            this.rootInstruction.execute(ref, this, tickTime, store);
+         MotionContextSupport motionContextSupport = executionSupport.getMotionContextSupport();
+         if (!stateSupport.runTransitionActions(ref, executionSupport, tickTime, store)) {
+            motionContextSupport.clearNextBodyMotionStep();
+            motionContextSupport.clearNextHeadMotionStep();
+            this.rootInstruction.execute(ref, executionSupport, tickTime, store);
          } else {
-            if (this.stateSupport.isClearHeadMotion()) {
-               this.entitySupport.clearNextHeadMotionStep();
+            if (stateSupport.isClearHeadMotion()) {
+               motionContextSupport.clearNextHeadMotionStep();
             }
 
-            if (this.stateSupport.isClearBodyMotion()) {
-               this.entitySupport.clearNextBodyMotionStep();
+            if (stateSupport.isClearBodyMotion()) {
+               motionContextSupport.clearNextBodyMotionStep();
             }
          }
 
@@ -706,38 +737,40 @@ public class Role implements IAnnotatedComponentCollection {
          assert npcComponent != null;
          if (!npcComponent.isPlayingDespawnAnim()) {
             this.activeMotionController.beforeInstructionMotion(tickTime);
-            Instruction nextBodyMotionStep = this.entitySupport.getNextBodyMotionStep();
+            Instruction nextBodyMotionStep = motionContextSupport.getNextBodyMotionStep();
             if (nextBodyMotionStep != this.lastBodyMotionStep) {
                if (this.lastBodyMotionStep != null) {
-                  this.lastBodyMotionStep.getBodyMotion().deactivate(ref, this, store);
+                  this.lastBodyMotionStep.getBodyMotion().deactivate(ref, executionSupport, store);
                   this.lastBodyMotionStep.onEndMotion();
                }
 
                if (nextBodyMotionStep != null) {
-                  nextBodyMotionStep.getBodyMotion().activate(ref, this, store);
+                  nextBodyMotionStep.getBodyMotion().activate(ref, executionSupport, store);
                }
             }
 
             this.lastBodyMotionStep = nextBodyMotionStep;
-            Instruction nextHeadMotionStep = this.entitySupport.getNextHeadMotionStep();
+            Instruction nextHeadMotionStep = motionContextSupport.getNextHeadMotionStep();
             if (nextHeadMotionStep != this.lastHeadMotionStep) {
                if (this.lastHeadMotionStep != null) {
-                  this.lastHeadMotionStep.getHeadMotion().deactivate(ref, this, store);
+                  this.lastHeadMotionStep.getHeadMotion().deactivate(ref, executionSupport, store);
                   this.lastHeadMotionStep.onEndMotion();
                }
 
                if (nextHeadMotionStep != null) {
-                  nextHeadMotionStep.getHeadMotion().activate(ref, this, store);
+                  nextHeadMotionStep.getHeadMotion().activate(ref, executionSupport, store);
                }
             }
 
             this.lastHeadMotionStep = nextHeadMotionStep;
             if (nextBodyMotionStep != null) {
-               nextBodyMotionStep.getBodyMotion().computeSteering(ref, this, nextBodyMotionStep.getSensor().getSensorInfo(), tickTime, bodySteering, store);
+               nextBodyMotionStep.getBodyMotion()
+                  .computeSteering(ref, executionSupport, nextBodyMotionStep.getSensor().getSensorInfo(), tickTime, bodySteering, store);
             }
 
             if (nextHeadMotionStep != null) {
-               nextHeadMotionStep.getHeadMotion().computeSteering(ref, this, nextHeadMotionStep.getSensor().getSensorInfo(), tickTime, headSteering, store);
+               nextHeadMotionStep.getHeadMotion()
+                  .computeSteering(ref, executionSupport, nextHeadMotionStep.getSensor().getSensorInfo(), tickTime, headSteering, store);
             }
          }
       }
@@ -752,7 +785,7 @@ public class Role implements IAnnotatedComponentCollection {
       @Nonnull CommandBuffer<EntityStore> commandBuffer
    ) {
       this.lastSeparationSteering.zero();
-      Ref<EntityStore> targetRef = this.markedEntitySupport.getTargetReferenceToIgnoreForAvoidance();
+      Ref<EntityStore> targetRef = MarkedEntitySupport.get(selfRef, commandBuffer).getTargetReferenceToIgnoreForAvoidance();
       Ref<EntityStore> ignoredTargetRef = targetRef != null && targetRef.isValid() ? targetRef : null;
       this.separationSummedDistances.zero();
       this.separationSummedCount = 0;
@@ -764,7 +797,7 @@ public class Role implements IAnnotatedComponentCollection {
             this.computeSummedDistancePush(selfRef, position, transformComponentType, commandBuffer, ignoredTargetRef);
       }
 
-      if (this.debugSupport.isDebugFlagSet(RoleDebugFlags.VisSeparationSummed)) {
+      if (DebugSupport.get(selfRef, commandBuffer).isDebugFlagSet(RoleDebugFlags.VisSeparationSummed)) {
          World world = commandBuffer.getExternalData().getWorld();
          Vector3d direction = new Vector3d(this.separationSummedDistances);
          VisHelper.renderDebugVector(position, direction, DebugUtils.COLOR_BLACK, world);
@@ -813,7 +846,7 @@ public class Role implements IAnnotatedComponentCollection {
       this.groupSteeringAccumulator.setViewConeHalfAngleCosine(this.collisionViewHalfAngleCosine);
       this.groupSteeringAccumulator.setNormalizeDistances(this.normalizeDistances);
       this.groupSteeringAccumulator.begin(selfRef, commandBuffer);
-      this.positionCache
+      PositionCache.get(selfRef, commandBuffer)
          .forEachEntityInAvoidanceRange(
             this.ignoredEntitiesForAvoidance,
             (ref, _groupSteeringAccumulator, _role, _buffer) -> _groupSteeringAccumulator.processEntity(ref, this.separationWeight, 1.0, 1.0, _buffer),
@@ -866,7 +899,7 @@ public class Role implements IAnnotatedComponentCollection {
          motionTargetPosition = null;
       }
 
-      this.positionCache
+      PositionCache.get(selfRef, commandBuffer)
          .forEachEntityInAvoidanceRange(
             this.ignoredEntitiesForAvoidance,
             (ref, componentSelector, _role, componentAccessor) -> {
@@ -922,7 +955,7 @@ public class Role implements IAnnotatedComponentCollection {
                         dx *= d;
                         dy *= d;
                         dz *= d;
-                        if (this.debugSupport.isDebugFlagSet(RoleDebugFlags.VisSeparationTargets)) {
+                        if (DebugSupport.get(selfRef, commandBuffer).isDebugFlagSet(RoleDebugFlags.VisSeparationTargets)) {
                            World world = commandBuffer.getExternalData().getWorld();
                            VisHelper.renderDebugSphere(
                               otherPosition, maxRange, maxRange == this.separationDistance ? DebugUtils.COLOR_WHITE : DebugUtils.COLOR_CYAN, world
@@ -987,7 +1020,7 @@ public class Role implements IAnnotatedComponentCollection {
       @Nonnull Steering steering,
       @Nonnull CommandBuffer<EntityStore> commandBuffer
    ) {
-      this.steeringForceAvoidCollision.setDebug(this.debugSupport.isDebugRoleSteering());
+      this.steeringForceAvoidCollision.setDebug(DebugSupport.get(ref, commandBuffer).isDebugRoleSteering());
       this.steeringForceAvoidCollision.setAvoidanceMode(this.avoidanceMode);
       this.steeringForceAvoidCollision.setSelf(ref, position, commandBuffer);
       if (!this.activeMotionController.estimateVelocity(steering, this.steeringForceAvoidCollision.getSelfVelocity())) {
@@ -1002,7 +1035,7 @@ public class Role implements IAnnotatedComponentCollection {
       this.steeringForceAvoidCollision.setFalloff(this.collisionForceFalloff);
       this.steeringForceAvoidCollision.setComponentSelector(this.activeMotionController.getComponentSelector());
       this.steeringForceAvoidCollision.reset();
-      this.positionCache
+      PositionCache.get(ref, commandBuffer)
          .forEachEntityInAvoidanceRange(
             this.ignoredEntitiesForAvoidance,
             (_ref, _steeringForceAvoidCollision, _buffer) -> _steeringForceAvoidCollision.add(_ref, _buffer),
@@ -1017,10 +1050,6 @@ public class Role implements IAnnotatedComponentCollection {
       return this.steeringForceAvoidCollision.getLastSteeringDirection();
    }
 
-   public void resetInstruction(int instruction) {
-      this.indexedInstructions[instruction].reset();
-   }
-
    public String getRoleName() {
       return this.roleName;
    }
@@ -1029,9 +1058,11 @@ public class Role implements IAnnotatedComponentCollection {
       return this.roleIndex;
    }
 
-   public void setRoleIndex(int roleIndex, @Nonnull String roleName) {
+   public void setRoleIndex(@Nonnull Holder<EntityStore> holder, int roleIndex, @Nonnull String roleName) {
       this.roleIndex = roleIndex;
       this.roleName = roleName;
+      holder.getComponent(PositionCache.getComponentType()).setRoleIndex(roleIndex);
+      holder.getComponent(CombatSupport.getComponentType()).setRoleIndex(roleIndex);
    }
 
    public boolean isInvulnerable() {
@@ -1066,8 +1097,8 @@ public class Role implements IAnnotatedComponentCollection {
       }
    }
 
-   public boolean couldBreatheCached() {
-      return this.positionCache.couldBreatheCached();
+   public boolean couldBreatheCached(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> accessor) {
+      return PositionCache.get(ref, accessor).couldBreatheCached();
    }
 
    public void addVelocity(@Nonnull Vector3d velocity, @Nullable VelocityConfig velocityConfig) {
@@ -1111,7 +1142,7 @@ public class Role implements IAnnotatedComponentCollection {
       return this.requiresLeashPosition;
    }
 
-   public void clearOnce() {
+   public void clearOnce(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> accessor) {
       this.rootInstruction.clearOnce();
       if (this.interactionInstruction != null) {
          this.interactionInstruction.clearOnce();
@@ -1121,22 +1152,21 @@ public class Role implements IAnnotatedComponentCollection {
          this.deathInstruction.clearOnce();
       }
 
-      this.stateSupport.pollNeedClearOnce();
+      StateSupport.get(ref, accessor).pollNeedClearOnce();
    }
 
-   public void clearOnceIfNeeded() {
-      if (this.stateSupport.pollNeedClearOnce()) {
-         this.clearOnce();
-         this.stateSupport.resetLocalStateMachines();
+   public void clearOnceIfNeeded(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> accessor) {
+      StateSupport stateSupport = StateSupport.get(ref, accessor);
+      if (stateSupport.pollNeedClearOnce()) {
+         this.clearOnce(ref, accessor);
+         stateSupport.resetLocalStateMachines();
       }
    }
 
-   public void setMarkedTarget(@Nonnull String targetSlot, @Nonnull Ref<EntityStore> target) {
-      this.markedEntitySupport.setMarkedEntity(targetSlot, target);
-   }
-
-   public boolean isFriendly(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      return !this.combatSupport.getCanCauseDamage(ref, componentAccessor);
+   public void setMarkedTarget(
+      @Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> accessor, @Nonnull String targetSlot, @Nonnull Ref<EntityStore> target
+   ) {
+      MarkedEntitySupport.get(ref, accessor).setMarkedEntity(targetSlot, target);
    }
 
    public boolean isIgnoredForAvoidance(@Nonnull Ref<EntityStore> entityReference) {
@@ -1227,48 +1257,12 @@ public class Role implements IAnnotatedComponentCollection {
       return this.hasReachedTerminalAction;
    }
 
-   public void setFlag(int index, boolean value) {
-      if (this.flags == null) {
-         throw new NullPointerException(String.format("Trying to set a flag in role %s but flags are null", this.roleName));
-      }
-
-      if (index >= 0 && index < this.flags.length) {
-         this.flags[index] = value;
-      } else {
-         throw new IllegalArgumentException(
-            String.format("Flag value cannot be less than 0 and must be less than array length %s. Value was %s", this.flags.length, index)
-         );
-      }
-   }
-
-   public boolean isFlagSet(int index) {
-      return this.flags != null && index >= 0 && index < this.flags.length ? this.flags[index] : false;
-   }
-
    public boolean isBackingAway() {
       return this.backingAway;
    }
 
    public void setBackingAway(boolean backingAway) {
       this.backingAway = backingAway;
-   }
-
-   public Instruction swapTreeModeSteps(Instruction newStep) {
-      Instruction old = this.currentTreeModeStep;
-      this.currentTreeModeStep = newStep;
-      return old;
-   }
-
-   public void notifySensorMatch() {
-      if (this.currentTreeModeStep != null) {
-         this.currentTreeModeStep.notifyChildSensorMatch();
-      }
-   }
-
-   public void resetAllInstructions() {
-      for (Instruction instruction : this.indexedInstructions) {
-         instruction.reset();
-      }
    }
 
    @Nullable
@@ -1304,7 +1298,7 @@ public class Role implements IAnnotatedComponentCollection {
    }
 
    @Override
-   public void getInfo(Role role, ComponentInfo holder) {
+   public void getInfo(ExecutionSupport executionSupport, ComponentInfo holder) {
    }
 
    @Override
@@ -1525,12 +1519,8 @@ public class Role implements IAnnotatedComponentCollection {
    public void onLoadFromWorldGenOrPrefab(
       @Nonnull Ref<EntityStore> ref, @Nonnull NPCEntity npcComponent, @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
-      this.entitySupport.pickRandomDisplayName(ref, true, componentAccessor);
+      componentAccessor.getComponent(ref, DisplayNameSupport.getComponentType()).pickRandomDisplayName(ref, true, componentAccessor);
       this.initialiseInventories(npcComponent, componentAccessor, ref);
-   }
-
-   public RoleStats getRoleStats() {
-      return this.roleStats;
    }
 
    public enum AvoidanceMode implements Supplier<String> {
@@ -1549,11 +1539,6 @@ public class Role implements IAnnotatedComponentCollection {
       public String get() {
          return this.description;
       }
-   }
-
-   @FunctionalInterface
-   public interface DeferredAction {
-      boolean tick(@Nonnull Ref<EntityStore> var1, @Nonnull Role var2, double var3, @Nonnull Store<EntityStore> var5);
    }
 
    public enum SeparationMode implements Supplier<String> {

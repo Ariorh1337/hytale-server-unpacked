@@ -16,12 +16,12 @@ import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.BodyMotionBase;
 import com.hypixel.hytale.server.npc.corecomponents.movement.builders.BuilderBodyMotionWanderBase;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.movement.Steering;
 import com.hypixel.hytale.server.npc.movement.constraints.RelaxedConstraint;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
 import com.hypixel.hytale.server.npc.movement.controllers.ProbeMoveData;
 import com.hypixel.hytale.server.npc.movement.steeringforces.SteeringForcePursue;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.role.RoleDebugFlags;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.util.NPCPhysicsMath;
@@ -121,15 +121,15 @@ public abstract class BodyMotionWanderBase extends BodyMotionBase {
    }
 
    @Override
-   public void activate(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      this.debugSteer = role.getDebugSupport().isDebugFlagSet(RoleDebugFlags.MotionControllerSteer);
+   public void activate(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      this.debugSteer = executionSupport.getDebugSupport().isDebugFlagSet(RoleDebugFlags.MotionControllerSteer);
       NPCEntity npcComponent = componentAccessor.getComponent(ref, NPCEntity.getComponentType());
       assert npcComponent != null;
-      this.restartSearch(ref, npcComponent, role.getActiveMotionController(), componentAccessor);
+      this.restartSearch(ref, npcComponent, executionSupport.getMotionContextSupport().getActiveMotionController(), componentAccessor);
    }
 
    @Override
-   public void deactivate(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+   public void deactivate(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       if (this.debugSteer) {
          componentAccessor.removeComponent(ref, Nameplate.getComponentType());
       }
@@ -148,7 +148,7 @@ public abstract class BodyMotionWanderBase extends BodyMotionBase {
    @Override
    public boolean computeSteering(
       @Nonnull Ref<EntityStore> ref,
-      @Nonnull Role role,
+      @Nonnull ExecutionSupport executionSupport,
       @Nullable InfoProvider sensorInfo,
       double dt,
       @Nonnull Steering desiredSteering,
@@ -156,7 +156,7 @@ public abstract class BodyMotionWanderBase extends BodyMotionBase {
    ) {
       NPCEntity npcComponent = componentAccessor.getComponent(ref, NPCEntity.getComponentType());
       assert npcComponent != null;
-      MotionController activeMotionController = role.getActiveMotionController();
+      MotionController activeMotionController = executionSupport.getMotionContextSupport().getActiveMotionController();
       if (this.debugSteer) {
          LOGGER.at(Level.INFO)
             .log(
@@ -182,7 +182,7 @@ public abstract class BodyMotionWanderBase extends BodyMotionBase {
       }
 
       this.probeMoveData.setRelaxedConstraints(this.cachedEffectiveConstraints);
-      boolean usesEscapeConstraints = applyEscapeConstraints(role, this.probeMoveData);
+      boolean usesEscapeConstraints = applyEscapeConstraints(executionSupport, this.probeMoveData);
       if (this.state == BodyMotionWanderBase.State.SEARCHING && this.directionIndex == 0) {
          this.searchUsesEscapeConstraints = usesEscapeConstraints;
       } else if (this.searchUsesEscapeConstraints && !usesEscapeConstraints) {
@@ -230,7 +230,7 @@ public abstract class BodyMotionWanderBase extends BodyMotionBase {
 
                   this.restartSearch(ref, npcComponent, activeMotionController, componentAccessor);
                } else {
-                  if (this.probeDirection(ref, this.directionIndex, role, componentAccessor)) {
+                  if (this.probeDirection(ref, this.directionIndex, executionSupport, componentAccessor)) {
                      break;
                   }
 
@@ -312,7 +312,7 @@ public abstract class BodyMotionWanderBase extends BodyMotionBase {
 
             activeMotionController.setRelaxedMoveConstraints(this.cachedEffectiveConstraints);
             this.probeMoveData.setRelaxedConstraints(this.cachedEffectiveConstraints);
-            applyEscapeConstraints(role, this.probeMoveData);
+            applyEscapeConstraints(executionSupport, this.probeMoveData);
             desiredSteering.scaleTranslation(this.relativeSpeed);
          }
 
@@ -367,7 +367,7 @@ public abstract class BodyMotionWanderBase extends BodyMotionBase {
 
    protected abstract double constrainMove(
       @Nonnull Ref<EntityStore> var1,
-      @Nonnull Role var2,
+      @Nonnull ExecutionSupport var2,
       @Nonnull Vector3d var3,
       @Nonnull Vector3d var4,
       double var5,
@@ -424,12 +424,14 @@ public abstract class BodyMotionWanderBase extends BodyMotionBase {
       }
    }
 
-   protected boolean probeDirection(@Nonnull Ref<EntityStore> ref, int dirIndex, @Nonnull Role role, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+   protected boolean probeDirection(
+      @Nonnull Ref<EntityStore> ref, int dirIndex, @Nonnull ExecutionSupport executionSupport, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
       int direction = this.walkDirections[dirIndex];
-      MotionController motionController = role.getActiveMotionController();
+      MotionController motionController = executionSupport.getMotionContextSupport().getActiveMotionController();
       float heading = this.toAngle(ref, direction, componentAccessor);
       this.computeTargetPosition(ref, heading, this.desiredWalkDistance, componentAccessor);
-      double constrainDistance = this.constrainMove(ref, role, this.probePosition, this.targetPosition, this.desiredWalkDistance, componentAccessor);
+      double constrainDistance = this.constrainMove(ref, executionSupport, this.probePosition, this.targetPosition, this.desiredWalkDistance, componentAccessor);
       if (constrainDistance < 1.0E-5) {
          return false;
       }

@@ -6,8 +6,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.SensorBase;
 import com.hypixel.hytale.server.npc.corecomponents.combat.builders.BuilderSensorChargeState;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.instructions.Instruction;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import java.util.EnumSet;
 import javax.annotation.Nonnull;
@@ -24,15 +24,15 @@ public class SensorChargeState extends SensorBase {
    }
 
    @Override
-   public void loaded(Role role) {
+   public void loaded(ExecutionSupport executionSupport) {
       if (this.parent instanceof Instruction instruction) {
          this.matchingChargeBodyMotion = instruction.findNearestPrecedingBodyMotion(BodyMotionCharge.class);
       }
    }
 
    @Override
-   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, double dt, @Nonnull Store<EntityStore> store) {
-      return !super.matches(ref, role, dt, store)
+   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, double dt, @Nonnull Store<EntityStore> store) {
+      return !super.matches(ref, executionSupport, dt, store)
          ? false
          : this.matchingChargeBodyMotion != null && this.states.contains(this.matchingChargeBodyMotion.getState());
    }

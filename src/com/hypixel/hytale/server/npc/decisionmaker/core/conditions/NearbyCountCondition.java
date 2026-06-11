@@ -14,6 +14,7 @@ import com.hypixel.hytale.server.npc.asset.builder.BuilderManager;
 import com.hypixel.hytale.server.npc.decisionmaker.core.EvaluationContext;
 import com.hypixel.hytale.server.npc.decisionmaker.core.conditions.base.ScaledCurveCondition;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.role.support.PositionCache;
 import com.hypixel.hytale.server.npc.role.support.WorldSupport;
@@ -57,8 +58,8 @@ public class NearbyCountCondition extends ScaledCurveCondition {
    }
 
    @Override
-   public void setupNPC(@Nonnull Role role) {
-      PositionCache positionCache = role.getPositionCache();
+   public void setupNPC(@Nonnull ExecutionSupport executionSupport) {
+      PositionCache positionCache = executionSupport.getPositionCache();
       positionCache.requireEntityDistanceSorted(this.range);
       this.includePlayers = WorldSupport.hasTagInGroup(this.npcGroupIndex, BuilderManager.getPlayerGroupID());
       if (this.includePlayers) {
@@ -76,7 +77,8 @@ public class NearbyCountCondition extends ScaledCurveCondition {
    ) {
       NPCEntity selfNpcComponent = archetypeChunk.getComponent(selfIndex, NPCEntity.getComponentType());
       assert selfNpcComponent != null;
-      PositionCache positionCache = selfNpcComponent.getRole().getPositionCache();
+      PositionCache positionCache = archetypeChunk.getComponent(selfIndex, PositionCache.getComponentType());
+      assert positionCache != null;
       return positionCache.countEntitiesInRange(
          0.0, this.range, this.includePlayers, NearbyCountCondition::filterNPC, selfNpcComponent.getRole(), this, commandBuffer
       );

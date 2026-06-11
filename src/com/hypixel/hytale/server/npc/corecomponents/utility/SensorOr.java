@@ -5,8 +5,8 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.utility.builders.BuilderSensorOr;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.instructions.Sensor;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.role.support.DebugSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.WrappedInfoProvider;
 import java.util.List;
@@ -18,13 +18,13 @@ public class SensorOr extends SensorMany {
    }
 
    @Override
-   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, double dt, @Nonnull Store<EntityStore> store) {
       this.infoProvider.clearMatches();
       this.infoProvider.clearPositionMatch();
-      DebugSupport debugSupport = role.getDebugSupport();
-      if (!super.matches(ref, role, dt, store)) {
+      DebugSupport debugSupport = executionSupport.getDebugSupport();
+      if (!super.matches(ref, executionSupport, dt, store)) {
          if (this.autoUnlockTargetSlot >= 0) {
-            role.getMarkedEntitySupport().clearMarkedEntity(this.autoUnlockTargetSlot);
+            executionSupport.getMarkedEntitySupport().clearMarkedEntity(this.autoUnlockTargetSlot);
          }
 
          if (debugSupport.isTraceSensorFails()) {
@@ -34,9 +34,9 @@ public class SensorOr extends SensorMany {
          return false;
       } else {
          Sensor match = null;
-         if (super.matches(ref, role, dt, store)) {
+         if (super.matches(ref, executionSupport, dt, store)) {
             for (Sensor s : this.sensors) {
-               if (s.matches(ref, role, dt, store)) {
+               if (s.matches(ref, executionSupport, dt, store)) {
                   if (match == null) {
                      match = s;
                   }
@@ -51,7 +51,7 @@ public class SensorOr extends SensorMany {
 
          if (match == null) {
             if (this.autoUnlockTargetSlot >= 0) {
-               role.getMarkedEntitySupport().clearMarkedEntity(this.autoUnlockTargetSlot);
+               executionSupport.getMarkedEntitySupport().clearMarkedEntity(this.autoUnlockTargetSlot);
             }
 
             if (debugSupport.isTraceSensorFails()) {

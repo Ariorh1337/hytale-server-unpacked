@@ -17,8 +17,8 @@ import javax.annotation.Nullable;
 public class ItemArmor {
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
    public static final int FIXED_BLOCK_SIZE = 10;
-   public static final int VARIABLE_FIELD_COUNT = 5;
-   public static final int VARIABLE_BLOCK_START = 30;
+   public static final int VARIABLE_FIELD_COUNT = 6;
+   public static final int VARIABLE_BLOCK_START = 34;
    public static final int MAX_SIZE = 1677721600;
    @Nonnull
    public ItemArmorSlot armorSlot = ItemArmorSlot.Head;
@@ -33,6 +33,8 @@ public class ItemArmor {
    public Map<String, Modifier[]> damageEnhancement;
    @Nullable
    public Map<String, Modifier[]> damageClassEnhancement;
+   @Nullable
+   public ItemMovementSettings movementSettings;
 
    public ItemArmor() {
    }
@@ -44,7 +46,8 @@ public class ItemArmor {
       double baseDamageResistance,
       @Nullable Map<String, ResistanceModifier[]> damageResistance,
       @Nullable Map<String, Modifier[]> damageEnhancement,
-      @Nullable Map<String, Modifier[]> damageClassEnhancement
+      @Nullable Map<String, Modifier[]> damageClassEnhancement,
+      @Nullable ItemMovementSettings movementSettings
    ) {
       this.armorSlot = armorSlot;
       this.cosmeticsToHide = cosmeticsToHide;
@@ -53,6 +56,7 @@ public class ItemArmor {
       this.damageResistance = damageResistance;
       this.damageEnhancement = damageEnhancement;
       this.damageClassEnhancement = damageClassEnhancement;
+      this.movementSettings = movementSettings;
    }
 
    public ItemArmor(@Nonnull ItemArmor other) {
@@ -63,12 +67,13 @@ public class ItemArmor {
       this.damageResistance = other.damageResistance;
       this.damageEnhancement = other.damageEnhancement;
       this.damageClassEnhancement = other.damageClassEnhancement;
+      this.movementSettings = other.movementSettings;
    }
 
    @Nonnull
    public static ItemArmor deserialize(@Nonnull ByteBuf buf, int offset) {
-      if (buf.readableBytes() - offset < 30) {
-         throw ProtocolException.bufferTooSmall("ItemArmor", 30, buf.readableBytes() - offset);
+      if (buf.readableBytes() - offset < 34) {
+         throw ProtocolException.bufferTooSmall("ItemArmor", 34, buf.readableBytes() - offset);
       }
 
       ItemArmor obj = new ItemArmor();
@@ -77,11 +82,11 @@ public class ItemArmor {
       obj.baseDamageResistance = buf.getDoubleLE(offset + 2);
       if ((nullBits & 1) != 0) {
          int varPosBase0 = buf.getIntLE(offset + 10);
-         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 30) {
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 34) {
             throw ProtocolException.invalidOffset("CosmeticsToHide", varPosBase0, buf.readableBytes());
          }
 
-         int varPos0 = offset + 30 + varPosBase0;
+         int varPos0 = offset + 34 + varPosBase0;
          int cosmeticsToHideCount = VarInt.peek(buf, varPos0);
          if (cosmeticsToHideCount < 0) {
             throw ProtocolException.invalidVarInt("CosmeticsToHide");
@@ -107,11 +112,11 @@ public class ItemArmor {
 
       if ((nullBits & 2) != 0) {
          int varPosBase1 = buf.getIntLE(offset + 14);
-         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 30) {
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 34) {
             throw ProtocolException.invalidOffset("StatModifiers", varPosBase1, buf.readableBytes());
          }
 
-         int varPos1 = offset + 30 + varPosBase1;
+         int varPos1 = offset + 34 + varPosBase1;
          int statModifiersCount = VarInt.peek(buf, varPos1);
          if (statModifiersCount < 0) {
             throw ProtocolException.invalidVarInt("StatModifiers");
@@ -158,11 +163,11 @@ public class ItemArmor {
 
       if ((nullBits & 4) != 0) {
          int varPosBase2 = buf.getIntLE(offset + 18);
-         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 30) {
+         if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 34) {
             throw ProtocolException.invalidOffset("DamageResistance", varPosBase2, buf.readableBytes());
          }
 
-         int varPos2 = offset + 30 + varPosBase2;
+         int varPos2 = offset + 34 + varPosBase2;
          int damageResistanceCount = VarInt.peek(buf, varPos2);
          if (damageResistanceCount < 0) {
             throw ProtocolException.invalidVarInt("DamageResistance");
@@ -223,11 +228,11 @@ public class ItemArmor {
 
       if ((nullBits & 8) != 0) {
          int varPosBase3 = buf.getIntLE(offset + 22);
-         if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 30) {
+         if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 34) {
             throw ProtocolException.invalidOffset("DamageEnhancement", varPosBase3, buf.readableBytes());
          }
 
-         int varPos3 = offset + 30 + varPosBase3;
+         int varPos3 = offset + 34 + varPosBase3;
          int damageEnhancementCount = VarInt.peek(buf, varPos3);
          if (damageEnhancementCount < 0) {
             throw ProtocolException.invalidVarInt("DamageEnhancement");
@@ -288,11 +293,11 @@ public class ItemArmor {
 
       if ((nullBits & 16) != 0) {
          int varPosBase4 = buf.getIntLE(offset + 26);
-         if (varPosBase4 < 0 || varPosBase4 > buf.writerIndex() - offset - 30) {
+         if (varPosBase4 < 0 || varPosBase4 > buf.writerIndex() - offset - 34) {
             throw ProtocolException.invalidOffset("DamageClassEnhancement", varPosBase4, buf.readableBytes());
          }
 
-         int varPos4 = offset + 30 + varPosBase4;
+         int varPos4 = offset + 34 + varPosBase4;
          int damageClassEnhancementCount = VarInt.peek(buf, varPos4);
          if (damageClassEnhancementCount < 0) {
             throw ProtocolException.invalidVarInt("DamageClassEnhancement");
@@ -351,19 +356,29 @@ public class ItemArmor {
          }
       }
 
+      if ((nullBits & 32) != 0) {
+         int varPosBase5 = buf.getIntLE(offset + 30);
+         if (varPosBase5 < 0 || varPosBase5 > buf.writerIndex() - offset - 34) {
+            throw ProtocolException.invalidOffset("MovementSettings", varPosBase5, buf.readableBytes());
+         }
+
+         int varPos5 = offset + 34 + varPosBase5;
+         obj.movementSettings = ItemMovementSettings.deserialize(buf, varPos5);
+      }
+
       return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte nullBits = buf.getByte(offset);
-      int maxEnd = 30;
+      int maxEnd = 34;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 10);
-         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 30) {
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 34) {
             throw ProtocolException.invalidOffset("CosmeticsToHide", fieldOffset0, maxEnd);
          }
 
-         int pos0 = offset + 30 + fieldOffset0;
+         int pos0 = offset + 34 + fieldOffset0;
          int arrLen = VarInt.peek(buf, pos0);
          pos0 += VarInt.size(arrLen) + arrLen * 1;
          if (pos0 - offset > maxEnd) {
@@ -373,11 +388,11 @@ public class ItemArmor {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 14);
-         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 30) {
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 34) {
             throw ProtocolException.invalidOffset("StatModifiers", fieldOffset1, maxEnd);
          }
 
-         int pos1 = offset + 30 + fieldOffset1;
+         int pos1 = offset + 34 + fieldOffset1;
          int dictLen = VarInt.peek(buf, pos1);
          pos1 += VarInt.size(dictLen);
 
@@ -398,11 +413,11 @@ public class ItemArmor {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 18);
-         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 30) {
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 34) {
             throw ProtocolException.invalidOffset("DamageResistance", fieldOffset2, maxEnd);
          }
 
-         int pos2 = offset + 30 + fieldOffset2;
+         int pos2 = offset + 34 + fieldOffset2;
          int dictLen = VarInt.peek(buf, pos2);
          pos2 += VarInt.size(dictLen);
 
@@ -424,11 +439,11 @@ public class ItemArmor {
 
       if ((nullBits & 8) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 22);
-         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 30) {
+         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 34) {
             throw ProtocolException.invalidOffset("DamageEnhancement", fieldOffset3, maxEnd);
          }
 
-         int pos3 = offset + 30 + fieldOffset3;
+         int pos3 = offset + 34 + fieldOffset3;
          int dictLen = VarInt.peek(buf, pos3);
          pos3 += VarInt.size(dictLen);
 
@@ -450,11 +465,11 @@ public class ItemArmor {
 
       if ((nullBits & 16) != 0) {
          int fieldOffset4 = buf.getIntLE(offset + 26);
-         if (fieldOffset4 < 0 || fieldOffset4 > buf.writerIndex() - offset - 30) {
+         if (fieldOffset4 < 0 || fieldOffset4 > buf.writerIndex() - offset - 34) {
             throw ProtocolException.invalidOffset("DamageClassEnhancement", fieldOffset4, maxEnd);
          }
 
-         int pos4 = offset + 30 + fieldOffset4;
+         int pos4 = offset + 34 + fieldOffset4;
          int dictLen = VarInt.peek(buf, pos4);
          pos4 += VarInt.size(dictLen);
 
@@ -474,11 +489,24 @@ public class ItemArmor {
          }
       }
 
+      if ((nullBits & 32) != 0) {
+         int fieldOffset5 = buf.getIntLE(offset + 30);
+         if (fieldOffset5 < 0 || fieldOffset5 > buf.writerIndex() - offset - 34) {
+            throw ProtocolException.invalidOffset("MovementSettings", fieldOffset5, maxEnd);
+         }
+
+         int pos5 = offset + 34 + fieldOffset5;
+         pos5 += ItemMovementSettings.computeBytesConsumed(buf, pos5);
+         if (pos5 - offset > maxEnd) {
+            maxEnd = pos5 - offset;
+         }
+      }
+
       return maxEnd;
    }
 
    public static boolean isBufferTooSmall(MemorySegment mem) {
-      return mem.byteSize() < 30L;
+      return mem.byteSize() < 34L;
    }
 
    public static ItemArmorSlot getArmorSlot(MemorySegment mem) {
@@ -500,7 +528,7 @@ public class ItemArmor {
          return null;
       }
 
-      int off = offset + getValidatedOffset(mem, offset, 10, 30, "CosmeticsToHide");
+      int off = offset + getValidatedOffset(mem, offset, 10, 34, "CosmeticsToHide");
       long packed = VarInt.getWithLength(mem, off);
       int len = (int)packed;
       if (len < 0) {
@@ -537,7 +565,7 @@ public class ItemArmor {
          return null;
       }
 
-      int off = offset + getValidatedOffset(mem, offset, 14, 30, "StatModifiers");
+      int off = offset + getValidatedOffset(mem, offset, 14, 34, "StatModifiers");
       long packed = VarInt.getWithLength(mem, off);
       int len = (int)packed;
       if (len < 0) {
@@ -604,7 +632,7 @@ public class ItemArmor {
          return null;
       }
 
-      int off = offset + getValidatedOffset(mem, offset, 18, 30, "DamageResistance");
+      int off = offset + getValidatedOffset(mem, offset, 18, 34, "DamageResistance");
       long packed = VarInt.getWithLength(mem, off);
       int len = (int)packed;
       if (len < 0) {
@@ -665,7 +693,7 @@ public class ItemArmor {
          return null;
       }
 
-      int off = offset + getValidatedOffset(mem, offset, 22, 30, "DamageEnhancement");
+      int off = offset + getValidatedOffset(mem, offset, 22, 34, "DamageEnhancement");
       long packed = VarInt.getWithLength(mem, off);
       int len = (int)packed;
       if (len < 0) {
@@ -726,7 +754,7 @@ public class ItemArmor {
          return null;
       }
 
-      int off = offset + getValidatedOffset(mem, offset, 26, 30, "DamageClassEnhancement");
+      int off = offset + getValidatedOffset(mem, offset, 26, 34, "DamageClassEnhancement");
       long packed = VarInt.getWithLength(mem, off);
       int len = (int)packed;
       if (len < 0) {
@@ -776,6 +804,16 @@ public class ItemArmor {
       return data;
    }
 
+   @Nullable
+   public static ItemMovementSettings getMovementSettings(MemorySegment mem) {
+      return getMovementSettings(mem, 0);
+   }
+
+   @Nullable
+   public static ItemMovementSettings getMovementSettings(MemorySegment mem, int offset) {
+      return hasMovementSettings(mem, offset) ? ItemMovementSettings.toObject(mem, offset + getValidatedOffset(mem, offset, 30, 34, "MovementSettings")) : null;
+   }
+
    public static boolean hasCosmeticsToHide(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
       return (b & 1) != 0;
@@ -801,6 +839,11 @@ public class ItemArmor {
       return (b & 16) != 0;
    }
 
+   public static boolean hasMovementSettings(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
+      return (b & 32) != 0;
+   }
+
    private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
       int offset = buffer.get(PacketIO.PROTO_INT, base + slotPosition);
       if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
@@ -815,13 +858,13 @@ public class ItemArmor {
    }
 
    public static ItemArmor toObject(MemorySegment mem, int offset) {
-      if (offset + 30 > mem.byteSize()) {
-         throw ProtocolException.bufferTooSmall("ItemArmor", offset + 30, (int)mem.byteSize());
+      if (offset + 34 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ItemArmor", offset + 34, (int)mem.byteSize());
       }
 
       Cosmetic[] cosmeticsToHide = null;
       if (hasCosmeticsToHide(mem, offset)) {
-         int off = offset + getValidatedOffset(mem, offset, 10, 30, "CosmeticsToHide");
+         int off = offset + getValidatedOffset(mem, offset, 10, 34, "CosmeticsToHide");
          long packed = VarInt.getWithLength(mem, off);
          int len = (int)packed;
          if (len < 0) {
@@ -847,7 +890,7 @@ public class ItemArmor {
 
       Map<Integer, Modifier[]> statModifiers = null;
       if (hasStatModifiers(mem, offset)) {
-         int off = offset + getValidatedOffset(mem, offset, 14, 30, "StatModifiers");
+         int off = offset + getValidatedOffset(mem, offset, 14, 34, "StatModifiers");
          long packed = VarInt.getWithLength(mem, off);
          int len = (int)packed;
          if (len < 0) {
@@ -895,7 +938,7 @@ public class ItemArmor {
 
       Map<String, ResistanceModifier[]> damageResistance = null;
       if (hasDamageResistance(mem, offset)) {
-         int off = offset + getValidatedOffset(mem, offset, 18, 30, "DamageResistance");
+         int off = offset + getValidatedOffset(mem, offset, 18, 34, "DamageResistance");
          long packed = VarInt.getWithLength(mem, off);
          int len = (int)packed;
          if (len < 0) {
@@ -945,7 +988,7 @@ public class ItemArmor {
 
       Map<String, Modifier[]> damageEnhancement = null;
       if (hasDamageEnhancement(mem, offset)) {
-         int off = offset + getValidatedOffset(mem, offset, 22, 30, "DamageEnhancement");
+         int off = offset + getValidatedOffset(mem, offset, 22, 34, "DamageEnhancement");
          long packed = VarInt.getWithLength(mem, off);
          int len = (int)packed;
          if (len < 0) {
@@ -995,7 +1038,7 @@ public class ItemArmor {
 
       Map<String, Modifier[]> damageClassEnhancement = null;
       if (hasDamageClassEnhancement(mem, offset)) {
-         int off = offset + getValidatedOffset(mem, offset, 26, 30, "DamageClassEnhancement");
+         int off = offset + getValidatedOffset(mem, offset, 26, 34, "DamageClassEnhancement");
          long packed = VarInt.getWithLength(mem, off);
          int len = (int)packed;
          if (len < 0) {
@@ -1050,7 +1093,8 @@ public class ItemArmor {
          mem.get(PacketIO.PROTO_DOUBLE, offset + 2),
          damageResistance,
          damageEnhancement,
-         damageClassEnhancement
+         damageClassEnhancement,
+         hasMovementSettings(mem, offset) ? ItemMovementSettings.toObject(mem, offset + getValidatedOffset(mem, offset, 30, 34, "MovementSettings")) : null
       );
    }
 
@@ -1077,6 +1121,10 @@ public class ItemArmor {
          nullBits = (byte)(nullBits | 16);
       }
 
+      if (this.movementSettings != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
       buf.writeByte(nullBits);
       buf.writeByte(this.armorSlot.getValue());
       buf.writeDoubleLE(this.baseDamageResistance);
@@ -1089,6 +1137,8 @@ public class ItemArmor {
       int damageEnhancementOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
       int damageClassEnhancementOffsetSlot = buf.writerIndex();
+      buf.writeIntLE(0);
+      int movementSettingsOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
       int varBlockStart = buf.writerIndex();
       if (this.cosmeticsToHide != null) {
@@ -1185,6 +1235,13 @@ public class ItemArmor {
       } else {
          buf.setIntLE(damageClassEnhancementOffsetSlot, -1);
       }
+
+      if (this.movementSettings != null) {
+         buf.setIntLE(movementSettingsOffsetSlot, buf.writerIndex() - varBlockStart);
+         this.movementSettings.serialize(buf);
+      } else {
+         buf.setIntLE(movementSettingsOffsetSlot, -1);
+      }
    }
 
    public int serialize(@Nonnull MemorySegment mem, int offset) {
@@ -1209,12 +1266,16 @@ public class ItemArmor {
          nullBits = (byte)(nullBits | 16);
       }
 
+      if (this.movementSettings != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
       mem.set(PacketIO.PROTO_BYTE, offset + 0, nullBits);
       mem.set(PacketIO.PROTO_BYTE, offset + 1, (byte)this.armorSlot.getValue());
       mem.set(PacketIO.PROTO_DOUBLE, offset + 2, this.baseDamageResistance);
-      int varOffset = offset + 30;
+      int varOffset = offset + 34;
       if (this.cosmeticsToHide != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 10, varOffset - offset - 30);
+         mem.set(PacketIO.PROTO_INT, offset + 10, varOffset - offset - 34);
          if (this.cosmeticsToHide.length > 4096000) {
             throw ProtocolException.arrayTooLong("CosmeticsToHide", this.cosmeticsToHide.length, 4096000);
          }
@@ -1231,7 +1292,7 @@ public class ItemArmor {
       }
 
       if (this.statModifiers != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 14, varOffset - offset - 30);
+         mem.set(PacketIO.PROTO_INT, offset + 14, varOffset - offset - 34);
          if (this.statModifiers.size() > 4096000) {
             throw ProtocolException.dictionaryTooLarge("StatModifiers", this.statModifiers.size(), 4096000);
          }
@@ -1252,7 +1313,7 @@ public class ItemArmor {
       }
 
       if (this.damageResistance != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 18, varOffset - offset - 30);
+         mem.set(PacketIO.PROTO_INT, offset + 18, varOffset - offset - 34);
          if (this.damageResistance.size() > 4096000) {
             throw ProtocolException.dictionaryTooLarge("DamageResistance", this.damageResistance.size(), 4096000);
          }
@@ -1272,7 +1333,7 @@ public class ItemArmor {
       }
 
       if (this.damageEnhancement != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 22, varOffset - offset - 30);
+         mem.set(PacketIO.PROTO_INT, offset + 22, varOffset - offset - 34);
          if (this.damageEnhancement.size() > 4096000) {
             throw ProtocolException.dictionaryTooLarge("DamageEnhancement", this.damageEnhancement.size(), 4096000);
          }
@@ -1292,7 +1353,7 @@ public class ItemArmor {
       }
 
       if (this.damageClassEnhancement != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 26, varOffset - offset - 30);
+         mem.set(PacketIO.PROTO_INT, offset + 26, varOffset - offset - 34);
          if (this.damageClassEnhancement.size() > 4096000) {
             throw ProtocolException.dictionaryTooLarge("DamageClassEnhancement", this.damageClassEnhancement.size(), 4096000);
          }
@@ -1311,11 +1372,18 @@ public class ItemArmor {
          mem.set(PacketIO.PROTO_INT, offset + 26, -1);
       }
 
+      if (this.movementSettings != null) {
+         mem.set(PacketIO.PROTO_INT, offset + 30, varOffset - offset - 34);
+         varOffset += this.movementSettings.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, offset + 30, -1);
+      }
+
       return varOffset - offset;
    }
 
    public int computeSize() {
-      int size = 30;
+      int size = 34;
       if (this.cosmeticsToHide != null) {
          size += VarInt.size(this.cosmeticsToHide.length) + this.cosmeticsToHide.length * 1;
       }
@@ -1360,12 +1428,16 @@ public class ItemArmor {
          size += VarInt.size(this.damageClassEnhancement.size()) + damageClassEnhancementSize;
       }
 
+      if (this.movementSettings != null) {
+         size += this.movementSettings.computeSize();
+      }
+
       return size;
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      if (buffer.readableBytes() - offset < 30) {
-         return ValidationResult.error("Buffer too small: expected at least 30 bytes");
+      if (buffer.readableBytes() - offset < 34) {
+         return ValidationResult.error("Buffer too small: expected at least 34 bytes");
       }
 
       byte nullBits = buffer.getByte(offset);
@@ -1376,11 +1448,11 @@ public class ItemArmor {
 
       if ((nullBits & 1) != 0) {
          v = buffer.getIntLE(offset + 10);
-         if (v < 0 || v > buffer.writerIndex() - offset - 30) {
+         if (v < 0 || v > buffer.writerIndex() - offset - 34) {
             return ValidationResult.error("Invalid offset for CosmeticsToHide");
          }
 
-         int pos = offset + 30 + v;
+         int pos = offset + 34 + v;
          int cosmeticsToHideCount = VarInt.peek(buffer, pos);
          if (cosmeticsToHideCount < 0) {
             return ValidationResult.error("Invalid array count for CosmeticsToHide");
@@ -1407,11 +1479,11 @@ public class ItemArmor {
 
       if ((nullBits & 2) != 0) {
          v = buffer.getIntLE(offset + 14);
-         if (v < 0 || v > buffer.writerIndex() - offset - 30) {
+         if (v < 0 || v > buffer.writerIndex() - offset - 34) {
             return ValidationResult.error("Invalid offset for StatModifiers");
          }
 
-         int pos = offset + 30 + v;
+         int pos = offset + 34 + v;
          int statModifiersCount = VarInt.peek(buffer, pos);
          if (statModifiersCount < 0) {
             return ValidationResult.error("Invalid dictionary count for StatModifiers");
@@ -1444,11 +1516,11 @@ public class ItemArmor {
 
       if ((nullBits & 4) != 0) {
          v = buffer.getIntLE(offset + 18);
-         if (v < 0 || v > buffer.writerIndex() - offset - 30) {
+         if (v < 0 || v > buffer.writerIndex() - offset - 34) {
             return ValidationResult.error("Invalid offset for DamageResistance");
          }
 
-         int pos = offset + 30 + v;
+         int pos = offset + 34 + v;
          int damageResistanceCount = VarInt.peek(buffer, pos);
          if (damageResistanceCount < 0) {
             return ValidationResult.error("Invalid dictionary count for DamageResistance");
@@ -1491,11 +1563,11 @@ public class ItemArmor {
 
       if ((nullBits & 8) != 0) {
          v = buffer.getIntLE(offset + 22);
-         if (v < 0 || v > buffer.writerIndex() - offset - 30) {
+         if (v < 0 || v > buffer.writerIndex() - offset - 34) {
             return ValidationResult.error("Invalid offset for DamageEnhancement");
          }
 
-         int pos = offset + 30 + v;
+         int pos = offset + 34 + v;
          int damageEnhancementCount = VarInt.peek(buffer, pos);
          if (damageEnhancementCount < 0) {
             return ValidationResult.error("Invalid dictionary count for DamageEnhancement");
@@ -1538,11 +1610,11 @@ public class ItemArmor {
 
       if ((nullBits & 16) != 0) {
          v = buffer.getIntLE(offset + 26);
-         if (v < 0 || v > buffer.writerIndex() - offset - 30) {
+         if (v < 0 || v > buffer.writerIndex() - offset - 34) {
             return ValidationResult.error("Invalid offset for DamageClassEnhancement");
          }
 
-         int pos = offset + 30 + v;
+         int pos = offset + 34 + v;
          int damageClassEnhancementCount = VarInt.peek(buffer, pos);
          if (damageClassEnhancementCount < 0) {
             return ValidationResult.error("Invalid dictionary count for DamageClassEnhancement");
@@ -1581,6 +1653,21 @@ public class ItemArmor {
                pos += 6;
             }
          }
+      }
+
+      if ((nullBits & 32) != 0) {
+         v = buffer.getIntLE(offset + 30);
+         if (v < 0 || v > buffer.writerIndex() - offset - 34) {
+            return ValidationResult.error("Invalid offset for MovementSettings");
+         }
+
+         int pos = offset + 34 + v;
+         ValidationResult movementSettingsResult = ItemMovementSettings.validateStructure(buffer, pos);
+         if (!movementSettingsResult.isValid()) {
+            return ValidationResult.error("Invalid MovementSettings: " + movementSettingsResult.error());
+         }
+
+         pos += ItemMovementSettings.computeBytesConsumed(buffer, pos);
       }
 
       return ValidationResult.OK;
@@ -1631,6 +1718,7 @@ public class ItemArmor {
          copy.damageClassEnhancement = m;
       }
 
+      copy.movementSettings = this.movementSettings != null ? this.movementSettings.clone() : null;
       return copy;
    }
 
@@ -1647,7 +1735,8 @@ public class ItemArmor {
                && this.baseDamageResistance == other.baseDamageResistance
                && Objects.equals(this.damageResistance, other.damageResistance)
                && Objects.equals(this.damageEnhancement, other.damageEnhancement)
-               && Objects.equals(this.damageClassEnhancement, other.damageClassEnhancement);
+               && Objects.equals(this.damageClassEnhancement, other.damageClassEnhancement)
+               && Objects.equals(this.movementSettings, other.movementSettings);
       }
    }
 
@@ -1660,6 +1749,7 @@ public class ItemArmor {
       result = 31 * result + Double.hashCode(this.baseDamageResistance);
       result = 31 * result + Objects.hashCode(this.damageResistance);
       result = 31 * result + Objects.hashCode(this.damageEnhancement);
-      return 31 * result + Objects.hashCode(this.damageClassEnhancement);
+      result = 31 * result + Objects.hashCode(this.damageClassEnhancement);
+      return 31 * result + Objects.hashCode(this.movementSettings);
    }
 }

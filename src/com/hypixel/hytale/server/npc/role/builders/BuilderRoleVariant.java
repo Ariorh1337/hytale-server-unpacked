@@ -3,9 +3,11 @@ package com.hypixel.hytale.server.npc.role.builders;
 import com.google.gson.JsonElement;
 import com.hypixel.hytale.codec.schema.config.Schema;
 import com.hypixel.hytale.codec.schema.config.StringSchema;
+import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.function.function.TriFunction;
 import com.hypixel.hytale.function.function.TriToIntFunction;
 import com.hypixel.hytale.logger.sentry.SkipSentryException;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.asset.builder.Builder;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
@@ -13,7 +15,7 @@ import com.hypixel.hytale.server.npc.asset.builder.BuilderInfo;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderModifier;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderParameters;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
-import com.hypixel.hytale.server.npc.asset.builder.SpawnableWithModelBuilder;
+import com.hypixel.hytale.server.npc.asset.builder.DependencyTrackingBuilder;
 import com.hypixel.hytale.server.npc.asset.builder.StateMappingHelper;
 import com.hypixel.hytale.server.npc.asset.builder.holder.StringHolder;
 import com.hypixel.hytale.server.npc.movement.MovementMode;
@@ -34,14 +36,30 @@ import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-public class BuilderRoleVariant extends SpawnableWithModelBuilder<Role> {
+public class BuilderRoleVariant extends DependencyTrackingBuilder<Role> implements ISpawnableWithModel, RoleBuilder {
    protected final StringHolder reference = new StringHolder();
    protected int referenceIndex;
    protected BuilderModifier modifier;
 
+   @Override
+   public boolean isSpawnable() {
+      return true;
+   }
+
    @Nullable
    public Role build(@Nonnull BuilderSupport builderSupport) {
       return this.executeOnSuperRole(builderSupport, Builder::build, () -> null);
+   }
+
+   @Nonnull
+   @Override
+   public Role createAndAttach(@Nonnull Holder<EntityStore> holder, @Nonnull BuilderSupport builderSupport) {
+      Role result = this.executeOnSuperRole(builderSupport, (superBuilder, superBs) -> ((RoleBuilder)superBuilder).createAndAttach(holder, superBs), () -> null);
+      if (result == null) {
+         throw new IllegalStateException("Variant super role missing or does not implement RoleBuilder");
+      } else {
+         return result;
+      }
    }
 
    @Override

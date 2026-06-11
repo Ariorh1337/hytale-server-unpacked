@@ -1,5 +1,6 @@
 package com.hypixel.hytale.server.npc.role.support;
 
+import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
@@ -16,9 +17,9 @@ import com.hypixel.hytale.server.flock.FlockPlugin;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.asset.builder.StateMappingHelper;
+import com.hypixel.hytale.server.npc.asset.builder.SupportConfigBuilder;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
-import com.hypixel.hytale.server.npc.role.Role;
-import com.hypixel.hytale.server.npc.role.builders.BuilderRole;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.statetransition.StateTransitionController;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
@@ -34,9 +35,8 @@ import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-public class StateSupport {
+public class StateSupport implements Component<EntityStore> {
    public static final int NO_STATE = Integer.MIN_VALUE;
-   @Nullable
    protected static final ComponentType<EntityStore, NPCEntity> NPC_COMPONENT_TYPE = NPCEntity.getComponentType();
    protected final StateMappingHelper stateHelper;
    protected final int startState;
@@ -59,7 +59,19 @@ public class StateSupport {
    @Nullable
    protected final StateTransitionController stateTransitionController;
 
-   public StateSupport(@Nonnull BuilderRole builder, @Nonnull BuilderSupport support) {
+   @Nonnull
+   public static ComponentType<EntityStore, StateSupport> getComponentType() {
+      return NPCPlugin.get().getStateSupportComponentType();
+   }
+
+   @Nonnull
+   public static StateSupport get(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> accessor) {
+      StateSupport support = accessor.getComponent(ref, getComponentType());
+      assert support != null : "Missing StateSupport on entity " + ref;
+      return support;
+   }
+
+   public StateSupport(@Nonnull SupportConfigBuilder<?> builder, @Nonnull BuilderSupport support) {
       this.stateHelper = builder.getStateMappingHelper();
       this.busyStates = builder.getBusyStates();
       this.stateTransitionController = builder.getStateTransitionController(support);
@@ -209,11 +221,8 @@ public class StateSupport {
 
       if (!this.missingStates.add(state)) {
          NPCEntity npcComponent = componentAccessor.getComponent(ref, NPCEntity.getComponentType());
-         assert npcComponent != null;
-         NPCPlugin.get()
-            .getLogger()
-            .at(Level.WARNING)
-            .log("State '%s.%s' in '%s' does not exist and was set by an external call", state, subState, npcComponent.getRoleName());
+         String hostName = npcComponent != null ? npcComponent.getRoleName() : String.valueOf(ref);
+         NPCPlugin.get().getLogger().at(Level.WARNING).log("State '%s.%s' in '%s' does not exist and was set by an external call", state, subState, hostName);
       }
    }
 
@@ -374,8 +383,8 @@ public class StateSupport {
       return this.interactablePlayers != null && this.interactablePlayers.contains(playerReference) && !this.isInBusyState();
    }
 
-   public boolean runTransitionActions(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, double dt, @Nonnull Store<EntityStore> store) {
-      return this.stateTransitionController == null ? false : this.stateTransitionController.runTransitionActions(ref, role, dt, store);
+   public boolean runTransitionActions(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, double dt, @Nonnull Store<EntityStore> store) {
+      return this.stateTransitionController == null ? false : this.stateTransitionController.runTransitionActions(ref, executionSupport, dt, store);
    }
 
    public boolean isRunningTransitionActions() {
@@ -384,5 +393,10 @@ public class StateSupport {
 
    public void activate() {
       this.setState(this.startState, this.startSubState, true, true);
+   }
+
+   @Override
+   public Component<EntityStore> clone() {
+      return this;
    }
 }

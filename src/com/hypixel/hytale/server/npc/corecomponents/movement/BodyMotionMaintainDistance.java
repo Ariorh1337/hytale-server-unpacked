@@ -13,12 +13,12 @@ import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.BodyMotionBase;
 import com.hypixel.hytale.server.npc.corecomponents.movement.builders.BuilderBodyMotionMaintainDistance;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.movement.Steering;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionControllerWalk;
 import com.hypixel.hytale.server.npc.movement.steeringforces.SteeringForceEvade;
 import com.hypixel.hytale.server.npc.movement.steeringforces.SteeringForcePursue;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.IPositionProvider;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.sensorinfo.parameterproviders.DoubleParameterProvider;
@@ -91,7 +91,7 @@ public class BodyMotionMaintainDistance extends BodyMotionBase {
    @Override
    public boolean computeSteering(
       @Nonnull Ref<EntityStore> ref,
-      @Nonnull Role support,
+      @Nonnull ExecutionSupport executionSupport,
       @Nullable InfoProvider sensorInfo,
       double dt,
       @Nonnull Steering desiredSteering,
@@ -99,8 +99,8 @@ public class BodyMotionMaintainDistance extends BodyMotionBase {
    ) {
       desiredSteering.clear();
       this.lastTargetEntity = null;
-      if (!support.getActiveMotionController().matchesType(MotionControllerWalk.class)) {
-         support.setBackingAway(false);
+      if (!executionSupport.getMotionContextSupport().getActiveMotionController().matchesType(MotionControllerWalk.class)) {
+         executionSupport.getRole().setBackingAway(false);
          return false;
       }
 
@@ -216,11 +216,11 @@ public class BodyMotionMaintainDistance extends BodyMotionBase {
                   this.targetDistanceSquared = targetDistance * targetDistance;
                   this.movingAway = true;
                   this.approaching = false;
-                  support.setBackingAway(true);
+                  executionSupport.getRole().setBackingAway(true);
                }
 
                this.flee.setPositions(selfPosition, this.targetPosition);
-               MotionController activeMotionController = support.getActiveMotionController();
+               MotionController activeMotionController = executionSupport.getMotionContextSupport().getActiveMotionController();
                this.flee.setComponentSelector(activeMotionController.getComponentSelector());
                this.flee.compute(desiredSteering);
                desiredSteering.scaleTranslation(this.relativeBackwardsSpeed);
@@ -232,11 +232,11 @@ public class BodyMotionMaintainDistance extends BodyMotionBase {
                this.seek.setDistances(targetDistance + this.moveTowardsSlowdownThreshold, targetDistance);
                this.approaching = true;
                this.movingAway = false;
-               support.setBackingAway(false);
+               executionSupport.getRole().setBackingAway(false);
             }
 
             this.seek.setPositions(selfPosition, this.targetPosition);
-            MotionController activeMotionController = support.getActiveMotionController();
+            MotionController activeMotionController = executionSupport.getMotionContextSupport().getActiveMotionController();
             this.seek.setComponentSelector(activeMotionController.getComponentSelector());
             this.seek.compute(desiredSteering);
             desiredSteering.scaleTranslation(this.relativeForwardsSpeed);
@@ -245,7 +245,7 @@ public class BodyMotionMaintainDistance extends BodyMotionBase {
          double x = this.targetPosition.x() - selfPosition.x();
          double z = this.targetPosition.z() - selfPosition.z();
          float targetYaw = PhysicsMath.normalizeTurnAngle(PhysicsMath.headingFromDirection(x, z));
-         MotionController motionController = support.getActiveMotionController();
+         MotionController motionController = executionSupport.getMotionContextSupport().getActiveMotionController();
          Ref<EntityStore> targetRef = positionProvider.getTarget();
          if (this.strafingDurationRange[1] > 0.0 || positioningAngle != Double.MAX_VALUE) {
             if (positioningAngle == Double.MAX_VALUE) {
@@ -292,7 +292,7 @@ public class BodyMotionMaintainDistance extends BodyMotionBase {
                   desiredSteering.getTranslation().rotateY(angle);
                }
 
-               support.setBackingAway(true);
+               executionSupport.getRole().setBackingAway(true);
                if (!motionController.isObstructed()) {
                   targetYaw += angle;
                }
@@ -320,10 +320,10 @@ public class BodyMotionMaintainDistance extends BodyMotionBase {
    }
 
    @Override
-   public void deactivate(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      super.deactivate(ref, role, componentAccessor);
+   public void deactivate(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      super.deactivate(ref, executionSupport, componentAccessor);
       this.lastTargetEntity = null;
-      role.setBackingAway(false);
+      executionSupport.getRole().setBackingAway(false);
    }
 
    @Override

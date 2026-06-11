@@ -7,10 +7,10 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.movement.builders.BuilderBodyMotionLand;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.movement.Steering;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionControllerFly;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -29,19 +29,19 @@ public class BodyMotionLand extends BodyMotionFind {
    @Override
    public boolean computeSteering(
       @Nonnull Ref<EntityStore> ref,
-      @Nonnull Role role,
+      @Nonnull ExecutionSupport executionSupport,
       @Nullable InfoProvider infoProvider,
       double dt,
       @Nonnull Steering desiredSteering,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
-      boolean result = super.computeSteering(ref, role, infoProvider, dt, desiredSteering, componentAccessor);
+      boolean result = super.computeSteering(ref, executionSupport, infoProvider, dt, desiredSteering, componentAccessor);
       TransformComponent transformComponent = componentAccessor.getComponent(ref, TransformComponent.getComponentType());
       assert transformComponent != null;
-      if (this.isGoalReached(ref, role.getActiveMotionController(), transformComponent.getPosition(), componentAccessor)) {
+      if (this.isGoalReached(ref, executionSupport.getMotionContextSupport().getActiveMotionController(), transformComponent.getPosition(), componentAccessor)) {
          NPCEntity npcComponent = componentAccessor.getComponent(ref, NPCEntity.getComponentType());
          assert npcComponent != null;
-         role.setActiveMotionController(ref, npcComponent, "Walk", componentAccessor);
+         executionSupport.getRole().setActiveMotionController(ref, npcComponent, "Walk", componentAccessor);
          return false;
       } else {
          return result;
@@ -50,12 +50,15 @@ public class BodyMotionLand extends BodyMotionFind {
 
    @Override
    public boolean canComputeMotion(
-      @Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider positionProvider, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider positionProvider,
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
-      MotionController activeMotionController = role.getActiveMotionController();
+      MotionController activeMotionController = executionSupport.getMotionContextSupport().getActiveMotionController();
       return activeMotionController.matchesType(MotionControllerFly.class)
          && !activeMotionController.isObstructed()
-         && super.canComputeMotion(ref, role, positionProvider, componentAccessor);
+         && super.canComputeMotion(ref, executionSupport, positionProvider, componentAccessor);
    }
 
    @Override

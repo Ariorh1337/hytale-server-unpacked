@@ -8,8 +8,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.corecomponents.EntityFilterBase;
 import com.hypixel.hytale.server.npc.corecomponents.IEntityFilter;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.util.IAnnotatedComponent;
 import com.hypixel.hytale.server.npc.util.IAnnotatedComponentCollection;
 import javax.annotation.Nonnull;
@@ -23,8 +23,10 @@ public class EntityFilterNot extends EntityFilterBase implements IAnnotatedCompo
    }
 
    @Override
-   public boolean matchesEntity(@Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull Role role, @Nonnull Store<EntityStore> store) {
-      return !this.filter.matchesEntity(ref, targetRef, role, store);
+   public boolean matchesEntity(
+      @Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull ExecutionSupport executionSupport, @Nonnull Store<EntityStore> store
+   ) {
+      return !this.filter.matchesEntity(ref, targetRef, executionSupport, store);
    }
 
    @Override
@@ -33,8 +35,8 @@ public class EntityFilterNot extends EntityFilterBase implements IAnnotatedCompo
    }
 
    @Override
-   public void registerWithSupport(Role role) {
-      this.filter.registerWithSupport(role);
+   public void registerWithSupport(ExecutionSupport executionSupport) {
+      this.filter.registerWithSupport(executionSupport);
    }
 
    @Override
@@ -48,28 +50,28 @@ public class EntityFilterNot extends EntityFilterBase implements IAnnotatedCompo
    }
 
    @Override
-   public void loaded(Role role) {
-      this.filter.loaded(role);
+   public void loaded(ExecutionSupport executionSupport) {
+      this.filter.loaded(executionSupport);
    }
 
    @Override
-   public void spawned(Role role) {
-      this.filter.spawned(role);
+   public void spawned(ExecutionSupport executionSupport) {
+      this.filter.spawned(executionSupport);
    }
 
    @Override
-   public void unloaded(Role role) {
-      this.filter.unloaded(role);
+   public void unloaded(ExecutionSupport executionSupport) {
+      this.filter.unloaded(executionSupport);
    }
 
    @Override
-   public void removed(Role role) {
-      this.filter.removed(role);
+   public void removed(ExecutionSupport executionSupport) {
+      this.filter.removed(executionSupport);
    }
 
    @Override
-   public void teleported(Role role, World from, World to) {
-      this.filter.teleported(role, from, to);
+   public void teleported(ExecutionSupport executionSupport, World from, World to) {
+      this.filter.teleported(executionSupport, from, to);
    }
 
    @Override

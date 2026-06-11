@@ -44,6 +44,9 @@ import com.hypixel.hytale.server.npc.components.messaging.PlayerBlockEventSuppor
 import com.hypixel.hytale.server.npc.components.messaging.PlayerEntityEventSupport;
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.role.RoleDebugFlags;
+import com.hypixel.hytale.server.npc.role.support.CombatSupport;
+import com.hypixel.hytale.server.npc.role.support.DebugSupport;
+import com.hypixel.hytale.server.npc.role.support.StateSupport;
 import com.hypixel.hytale.server.npc.storage.AlarmStore;
 import com.hypixel.hytale.server.npc.util.DamageData;
 import com.hypixel.hytale.server.spawning.assets.spawns.config.WorldNPCSpawn;
@@ -86,7 +89,7 @@ public class NPCEntity extends LivingEntity implements INonPlayerCharacter {
          npcEntity.spawnConfigurationIndex = WorldNPCSpawn.getAssetMap().getIndex(s);
       }, npcEntity -> npcEntity.spawnConfigurationName)
       .addField(new KeyedCodec<>("SpawnInstant", Codec.INSTANT), (npcEntity, instant) -> npcEntity.spawnInstant = instant, npcEntity -> npcEntity.spawnInstant)
-      .append(new KeyedCodec<>("AlarmStore", AlarmStore.CODEC), (npcEntity, alarmStore) -> npcEntity.alarmStore = alarmStore, npcEntity -> npcEntity.alarmStore)
+      .append(new KeyedCodec<>("AlarmStore", AlarmStore.CODEC), (npcEntity, alarmStore) -> npcEntity.alarmStore = alarmStore, npcEntity -> null)
       .add()
       .addField(new KeyedCodec<>("WorldgenId", Codec.INTEGER), (npcEntity, i) -> npcEntity.worldgenId = i, npcEntity -> npcEntity.worldgenId)
       .append(new KeyedCodec<>("PathManager", PathManager.CODEC), (npcEntity, manager) -> npcEntity.pathManager = manager, npcEntity -> npcEntity.pathManager)
@@ -126,6 +129,7 @@ public class NPCEntity extends LivingEntity implements INonPlayerCharacter {
    private int environmentIndex = Integer.MIN_VALUE;
    private int spawnConfigurationIndex = Integer.MIN_VALUE;
    private boolean isSpawnTracked;
+   private boolean collectSensorStats;
    private boolean isDespawning;
    private boolean isPlayingDespawnAnim;
    private float despawnRemainingSeconds;
@@ -150,6 +154,8 @@ public class NPCEntity extends LivingEntity implements INonPlayerCharacter {
    private Map<BlockEventType, IntSet> blackboardBlockChangeSets;
    private EntityEventView blackboardEntityEventView;
    private Map<EntityEventType, IntSet> blackboardEntityEventSets;
+   @Deprecated(forRemoval = true)
+   @Nullable
    private AlarmStore alarmStore;
    @Deprecated(forRemoval = true)
    private int worldgenId = 0;
@@ -171,17 +177,12 @@ public class NPCEntity extends LivingEntity implements INonPlayerCharacter {
       this.role = null;
    }
 
-   @Nonnull
-   public AlarmStore getAlarmStore() {
-      if (this.alarmStore == null) {
-         this.alarmStore = new AlarmStore();
-      }
-
-      return this.alarmStore;
-   }
-
-   public void setAlarmStore(@Nonnull AlarmStore alarmStore) {
-      this.alarmStore = alarmStore;
+   @Deprecated(forRemoval = true)
+   @Nullable
+   public AlarmStore takeLegacyAlarmStore() {
+      AlarmStore legacy = this.alarmStore;
+      this.alarmStore = null;
+      return legacy;
    }
 
    @Nullable
@@ -289,17 +290,19 @@ public class NPCEntity extends LivingEntity implements INonPlayerCharacter {
    }
 
    public boolean getCanCauseDamage(@Nonnull Ref<EntityStore> attackerRef, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      return this.role.getCombatSupport().getCanCauseDamage(attackerRef, componentAccessor);
+      CombatSupport combatSupport = CombatSupport.get(this.reference, componentAccessor);
+      return combatSupport.getCanCauseDamage(this.reference, attackerRef, componentAccessor);
    }
 
    public void onFlockSetState(
       @Nonnull Ref<EntityStore> ref, @Nonnull String state, @Nullable String subState, @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
-      this.role.getStateSupport().setState(ref, state, subState, componentAccessor);
+      StateSupport stateSupport = StateSupport.get(ref, componentAccessor);
+      stateSupport.setState(ref, state, subState, componentAccessor);
    }
 
    public void onFlockSetTarget(@Nonnull String targetSlot, @Nonnull Ref<EntityStore> target) {
-      this.role.setMarkedTarget(targetSlot, target);
+      this.role.setMarkedTarget(this.reference, this.reference.getStore(), targetSlot, target);
    }
 
    public void saveLeashInformation(@Nonnull Vector3dc position, @Nonnull Rotation3fc rotation) {
@@ -370,6 +373,14 @@ public class NPCEntity extends LivingEntity implements INonPlayerCharacter {
 
    public void setRoleIndex(int roleIndex) {
       this.roleIndex = roleIndex;
+   }
+
+   public boolean shouldCollectSensorStats() {
+      return this.collectSensorStats;
+   }
+
+   public void setCollectSensorStats(boolean collectSensorStats) {
+      this.collectSensorStats = collectSensorStats;
    }
 
    public void setRole(Role role) {
@@ -555,11 +566,13 @@ public class NPCEntity extends LivingEntity implements INonPlayerCharacter {
    }
 
    public EnumSet<RoleDebugFlags> getRoleDebugFlags() {
-      return this.role.getDebugSupport().getDebugFlags();
+      DebugSupport debugSupport = DebugSupport.get(this.reference, this.reference.getStore());
+      return debugSupport.getDebugFlags();
    }
 
    public void setRoleDebugFlags(@Nonnull EnumSet<RoleDebugFlags> flags) {
-      this.role.getDebugSupport().setDebugFlags(flags);
+      DebugSupport debugSupport = DebugSupport.get(this.reference, this.reference.getStore());
+      debugSupport.setDebugFlags(flags);
    }
 
    public void setSpawnInstant(@Nonnull Instant spawned) {

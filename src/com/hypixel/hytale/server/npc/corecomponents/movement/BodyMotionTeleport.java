@@ -12,9 +12,9 @@ import com.hypixel.hytale.server.core.modules.physics.util.PhysicsMath;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.corecomponents.BodyMotionBase;
 import com.hypixel.hytale.server.npc.corecomponents.movement.builders.BuilderBodyMotionTeleport;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.movement.Steering;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import java.util.function.Supplier;
 import javax.annotation.Nonnull;
@@ -49,14 +49,14 @@ public class BodyMotionTeleport extends BodyMotionBase {
    }
 
    @Override
-   public void activate(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+   public void activate(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       this.tries = 10;
    }
 
    @Override
    public boolean computeSteering(
       @Nonnull Ref<EntityStore> ref,
-      @Nonnull Role role,
+      @Nonnull ExecutionSupport executionSupport,
       @Nullable InfoProvider sensorInfo,
       double dt,
       @Nonnull Steering desiredSteering,
@@ -83,7 +83,7 @@ public class BodyMotionTeleport extends BodyMotionBase {
             this.offsetVector.normalize(RandomExtra.randomRange(this.minOffset, this.maxOffset));
             this.offsetVector.rotateY(RandomExtra.randomRange(-this.angle, this.angle));
             this.target.add(this.offsetVector);
-            MotionController motionController = role.getActiveMotionController();
+            MotionController motionController = executionSupport.getMotionContextSupport().getActiveMotionController();
             BoundingBox boundingBoxComponent = componentAccessor.getComponent(ref, BOUNDING_BOX_COMPONENT_TYPE);
             if (motionController.translateToAccessiblePosition(
                   this.target,

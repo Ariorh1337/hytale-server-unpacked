@@ -13,11 +13,4 @@ public record PlayerCreativeSettings(
    public PlayerCreativeSettings() {
       this(false, false, "default", 10, true, false);
    }
-
-   @Nonnull
-   public PlayerCreativeSettings clone() {
-      return new PlayerCreativeSettings(
-         this.allowNPCDetection, this.respondToHit, this.placeMode, this.creativeInteractionDistance, this.showBuilderToolsNotifications, this.noPhysics
-      );
-   }
 }

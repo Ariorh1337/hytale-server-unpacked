@@ -29,6 +29,7 @@ import com.hypixel.hytale.server.flock.FlockMembership;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.decisionmaker.stateevaluator.StateEvaluator;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.instructions.Instruction;
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.role.support.EntityList;
@@ -43,8 +44,10 @@ import javax.annotation.Nullable;
 import org.joml.Vector3d;
 
 public class PositionCacheSystems {
-   public static void initialisePositionCache(@Nonnull Role role, @Nullable StateEvaluator stateEvaluator, double flockInfluenceRange) {
-      PositionCache positionCache = role.getPositionCache();
+   public static void initialisePositionCache(
+      @Nonnull ExecutionSupport executionSupport, @Nonnull Role role, @Nullable StateEvaluator stateEvaluator, double flockInfluenceRange
+   ) {
+      PositionCache positionCache = executionSupport.getPositionCache();
       positionCache.reset(true);
       if (role.isAvoidingEntities()) {
          double collisionProbeDistance = role.getCollisionProbeDistance();
@@ -64,29 +67,29 @@ public class PositionCacheSystems {
       }
 
       Instruction instruction = role.getRootInstruction();
-      instruction.registerWithSupport(role);
+      instruction.registerWithSupport(executionSupport);
       Instruction interactionInstruction = role.getInteractionInstruction();
       if (interactionInstruction != null) {
-         interactionInstruction.registerWithSupport(role);
+         interactionInstruction.registerWithSupport(executionSupport);
          positionCache.requirePlayerDistanceUnsorted(10.0);
       }
 
       Instruction deathInstruction = role.getDeathInstruction();
       if (deathInstruction != null) {
-         deathInstruction.registerWithSupport(role);
+         deathInstruction.registerWithSupport(executionSupport);
       }
 
-      StateTransitionController stateTransitions = role.getStateSupport().getStateTransitionController();
+      StateTransitionController stateTransitions = executionSupport.getStateSupport().getStateTransitionController();
       if (stateTransitions != null) {
-         stateTransitions.registerWithSupport(role);
+         stateTransitions.registerWithSupport(executionSupport);
       }
 
       if (stateEvaluator != null) {
-         stateEvaluator.setupNPC(role);
+         stateEvaluator.setupNPC(executionSupport);
       }
 
-      for (Consumer<Role> registration : positionCache.getExternalRegistrations()) {
-         registration.accept(role);
+      for (Consumer<ExecutionSupport> registration : positionCache.getExternalRegistrations()) {
+         registration.accept(executionSupport);
       }
 
       positionCache.finalizeConfiguration();
@@ -132,7 +135,13 @@ public class PositionCacheSystems {
          NPCEntity npcComponent = store.getComponent(ref, this.npcComponentType);
          assert npcComponent != null;
          Role role = npcComponent.getRole();
-         PositionCacheSystems.initialisePositionCache(role, store.getComponent(ref, this.stateEvaluatorComponentType), role.getFlockInfluenceRange());
+         ExecutionSupport es = role.acquireExecutionSupport(ref, store);
+
+         try {
+            PositionCacheSystems.initialisePositionCache(es, role, store.getComponent(ref, this.stateEvaluatorComponentType), role.getFlockInfluenceRange());
+         } finally {
+            es.clearForReuse();
+         }
       }
 
       public void onComponentSet(
@@ -145,7 +154,13 @@ public class PositionCacheSystems {
          NPCEntity npcComponent = store.getComponent(ref, this.npcComponentType);
          assert npcComponent != null;
          Role role = npcComponent.getRole();
-         PositionCacheSystems.initialisePositionCache(role, store.getComponent(ref, this.stateEvaluatorComponentType), role.getFlockInfluenceRange());
+         ExecutionSupport es = role.acquireExecutionSupport(ref, store);
+
+         try {
+            PositionCacheSystems.initialisePositionCache(es, role, store.getComponent(ref, this.stateEvaluatorComponentType), role.getFlockInfluenceRange());
+         } finally {
+            es.clearForReuse();
+         }
       }
 
       public void onComponentRemoved(
@@ -187,14 +202,21 @@ public class PositionCacheSystems {
             stateEvaluator.setupNPC(holder);
          }
 
-         PositionCacheSystems.initialisePositionCache(role, stateEvaluator, influenceRadius);
+         ExecutionSupport es = ExecutionSupport.acquire();
+         es.populateFromHolder(holder);
+
+         try {
+            PositionCacheSystems.initialisePositionCache(es, role, stateEvaluator, influenceRadius);
+         } finally {
+            es.clearForReuse();
+         }
       }
 
       @Override
       public void onEntityRemoved(@Nonnull Holder<EntityStore> holder, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store) {
-         NPCEntity npcComponent = holder.getComponent(this.npcComponentType);
-         assert npcComponent != null;
-         npcComponent.getRole().getPositionCache().reset(false);
+         PositionCache positionCache = holder.getComponent(PositionCache.getComponentType());
+         assert positionCache != null;
+         positionCache.reset(false);
       }
 
       @Nonnull
@@ -269,7 +291,8 @@ public class PositionCacheSystems {
          NPCEntity npcComponent = archetypeChunk.getComponent(index, this.npcComponentType);
          assert npcComponent != null;
          Role role = npcComponent.getRole();
-         PositionCache positionCache = role.getPositionCache();
+         PositionCache positionCache = archetypeChunk.getComponent(index, PositionCache.getComponentType());
+         assert positionCache != null;
          positionCache.setBenchmarking(NPCPlugin.get().isBenchmarkingSensorSupport());
          CachedStatsComponent cachedStats = archetypeChunk.getComponent(index, CachedStatsComponent.getComponentType());
          assert cachedStats != null;

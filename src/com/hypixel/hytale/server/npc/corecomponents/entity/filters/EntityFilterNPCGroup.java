@@ -6,7 +6,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.EntityFilterBase;
 import com.hypixel.hytale.server.npc.corecomponents.entity.filters.builders.BuilderEntityFilterNPCGroup;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.role.support.WorldSupport;
 import javax.annotation.Nonnull;
 
@@ -21,14 +21,16 @@ public class EntityFilterNPCGroup extends EntityFilterBase {
    }
 
    @Override
-   public boolean matchesEntity(@Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull Role role, @Nonnull Store<EntityStore> store) {
-      if (this.includeGroups != null && this.includeGroups.length > 0 && !WorldSupport.isGroupMember(role.getRoleIndex(), targetRef, this.includeGroups, store)
-         )
-       {
+   public boolean matchesEntity(
+      @Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull ExecutionSupport executionSupport, @Nonnull Store<EntityStore> store
+   ) {
+      if (this.includeGroups != null
+         && this.includeGroups.length > 0
+         && !WorldSupport.isGroupMember(executionSupport.getRoleIndex(), targetRef, this.includeGroups, store)) {
          return false;
       } else {
          return this.excludeGroups != null && this.excludeGroups.length > 0
-            ? !WorldSupport.isGroupMember(role.getRoleIndex(), targetRef, this.excludeGroups, store)
+            ? !WorldSupport.isGroupMember(executionSupport.getRoleIndex(), targetRef, this.excludeGroups, store)
             : true;
       }
    }

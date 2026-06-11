@@ -12,7 +12,7 @@ import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderManager;
 import com.hypixel.hytale.server.npc.config.AttitudeGroup;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.role.support.WorldSupport;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntSet;
@@ -32,8 +32,10 @@ public class AttitudeMap {
    }
 
    @Nullable
-   public Attitude getAttitude(@Nonnull Role role, @Nonnull Ref<EntityStore> target, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      int group = role.getWorldSupport().getAttitudeGroup();
+   public Attitude getAttitude(
+      @Nonnull Ref<EntityStore> ref, int sourceRoleIndex, @Nonnull Ref<EntityStore> target, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
+      int group = WorldSupport.get(ref, componentAccessor).getAttitudeGroup();
       if (group == Integer.MIN_VALUE) {
          return null;
       }
@@ -55,7 +57,7 @@ public class AttitudeMap {
          targetId = BuilderManager.getPlayerGroupID();
       }
 
-      return targetId == role.getRoleIndex() ? attitudeMap.get(BuilderManager.getSelfGroupID()) : attitudeMap.get(targetId);
+      return targetId == sourceRoleIndex ? attitudeMap.get(BuilderManager.getSelfGroupID()) : attitudeMap.get(targetId);
    }
 
    public int getAttitudeGroupCount() {

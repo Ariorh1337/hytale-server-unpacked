@@ -9,9 +9,9 @@ import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.SensorBase;
 import com.hypixel.hytale.server.npc.corecomponents.utility.builders.BuilderSensorNot;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.instructions.Sensor;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.role.support.DebugSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.EntityPositionProvider;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
@@ -34,19 +34,19 @@ public class SensorNot extends SensorBase implements IAnnotatedComponentCollecti
    }
 
    @Override
-   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, double dt, @Nonnull Store<EntityStore> store) {
-      if (super.matches(ref, role, dt, store) && !this.sensor.matches(ref, role, dt, store)) {
-         Ref<EntityStore> targetRef = this.targetSlot >= 0 ? role.getMarkedEntitySupport().getMarkedEntityRef(this.targetSlot) : null;
+   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, double dt, @Nonnull Store<EntityStore> store) {
+      if (super.matches(ref, executionSupport, dt, store) && !this.sensor.matches(ref, executionSupport, dt, store)) {
+         Ref<EntityStore> targetRef = this.targetSlot >= 0 ? executionSupport.getMarkedEntitySupport().getMarkedEntityRef(this.targetSlot) : null;
          this.positionProvider.setTarget(targetRef, store);
          return true;
       }
 
       this.positionProvider.clear();
       if (this.autoUnlockTargetSlot >= 0) {
-         role.getMarkedEntitySupport().clearMarkedEntity(this.autoUnlockTargetSlot);
+         executionSupport.getMarkedEntitySupport().clearMarkedEntity(this.autoUnlockTargetSlot);
       }
 
-      DebugSupport debugSupport = role.getDebugSupport();
+      DebugSupport debugSupport = executionSupport.getDebugSupport();
       if (debugSupport.isTraceSensorFails()) {
          debugSupport.setLastFailingSensor(this.sensor);
       }
@@ -60,8 +60,8 @@ public class SensorNot extends SensorBase implements IAnnotatedComponentCollecti
    }
 
    @Override
-   public void registerWithSupport(Role role) {
-      this.sensor.registerWithSupport(role);
+   public void registerWithSupport(ExecutionSupport executionSupport) {
+      this.sensor.registerWithSupport(executionSupport);
    }
 
    @Override
@@ -75,28 +75,28 @@ public class SensorNot extends SensorBase implements IAnnotatedComponentCollecti
    }
 
    @Override
-   public void loaded(Role role) {
-      this.sensor.loaded(role);
+   public void loaded(ExecutionSupport executionSupport) {
+      this.sensor.loaded(executionSupport);
    }
 
    @Override
-   public void spawned(Role role) {
-      this.sensor.spawned(role);
+   public void spawned(ExecutionSupport executionSupport) {
+      this.sensor.spawned(executionSupport);
    }
 
    @Override
-   public void unloaded(Role role) {
-      this.sensor.unloaded(role);
+   public void unloaded(ExecutionSupport executionSupport) {
+      this.sensor.unloaded(executionSupport);
    }
 
    @Override
-   public void removed(Role role) {
-      this.sensor.removed(role);
+   public void removed(ExecutionSupport executionSupport) {
+      this.sensor.removed(executionSupport);
    }
 
    @Override
-   public void teleported(Role role, World from, World to) {
-      this.sensor.teleported(role, from, to);
+   public void teleported(ExecutionSupport executionSupport, World from, World to) {
+      this.sensor.teleported(executionSupport, from, to);
    }
 
    @Override

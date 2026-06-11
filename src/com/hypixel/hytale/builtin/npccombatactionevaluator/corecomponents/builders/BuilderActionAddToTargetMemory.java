@@ -6,6 +6,7 @@ import com.hypixel.hytale.server.npc.asset.builder.Builder;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.asset.builder.Feature;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderActionBase;
 import com.hypixel.hytale.server.npc.instructions.Action;
 import javax.annotation.Nonnull;
@@ -38,6 +39,7 @@ public class BuilderActionAddToTargetMemory extends BuilderActionBase {
    @Override
    public Builder<Action> readConfig(JsonElement data) {
       this.requireFeature(Feature.LiveEntity);
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
       return this;
    }
 }

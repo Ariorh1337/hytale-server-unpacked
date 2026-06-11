@@ -7,7 +7,7 @@ import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.ActionBase;
 import com.hypixel.hytale.server.npc.corecomponents.lifecycle.builders.BuilderActionRole;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.systems.RoleChangeSystem;
 import javax.annotation.Nonnull;
@@ -17,6 +17,7 @@ public class ActionRole extends ActionBase {
    protected final int roleIndex;
    protected final String kind;
    protected final boolean changeAppearance;
+   protected final boolean detachFromSpawning;
    @Nullable
    protected final String state;
    @Nullable
@@ -27,6 +28,7 @@ public class ActionRole extends ActionBase {
       this.kind = builder.getRole(builderSupport);
       this.roleIndex = NPCPlugin.get().getIndex(this.kind);
       this.changeAppearance = builder.getChangeAppearance(builderSupport);
+      this.detachFromSpawning = builder.getDetachFromSpawning(builderSupport);
       String stateString = builder.getState(builderSupport);
       if (stateString != null) {
          String[] split = stateString.split("\\.");
@@ -39,19 +41,33 @@ public class ActionRole extends ActionBase {
    }
 
    @Override
-   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      return super.canExecute(ref, role, sensorInfo, dt, store) && this.roleIndex >= 0;
+   public boolean canExecute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
+      return super.canExecute(ref, executionSupport, sensorInfo, dt, store) && this.roleIndex >= 0;
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      super.execute(ref, role, sensorInfo, dt, store);
-      if (role.isRoleChangeRequested()) {
+   public boolean execute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
+      super.execute(ref, executionSupport, sensorInfo, dt, store);
+      if (executionSupport.getRole().isRoleChangeRequested()) {
          return false;
       }
 
-      RoleChangeSystem.requestRoleChange(ref, role, this.roleIndex, this.changeAppearance, this.state, this.subState, store);
-      role.setReachedTerminalAction(true);
+      RoleChangeSystem.requestRoleChange(
+         ref, executionSupport.getRole(), this.roleIndex, this.changeAppearance, this.state, this.subState, this.detachFromSpawning, store
+      );
+      executionSupport.getRole().setReachedTerminalAction(true);
       return true;
    }
 }

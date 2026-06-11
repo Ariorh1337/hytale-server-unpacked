@@ -9,7 +9,7 @@ import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.asset.builder.ComponentContext;
 import com.hypixel.hytale.server.npc.corecomponents.SensorWithEntityFilters;
 import com.hypixel.hytale.server.npc.corecomponents.entity.builders.BuilderSensorTarget;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.EntityPositionProvider;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import javax.annotation.Nonnull;
@@ -30,21 +30,21 @@ public class SensorTarget extends SensorWithEntityFilters {
    }
 
    @Override
-   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, double dt, @Nonnull Store<EntityStore> store) {
-      if (!super.matches(ref, role, dt, store)) {
+   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, double dt, @Nonnull Store<EntityStore> store) {
+      if (!super.matches(ref, executionSupport, dt, store)) {
          this.positionProvider.clear();
          return false;
       }
 
-      Ref<EntityStore> target = role.getMarkedEntitySupport().getMarkedEntityRef(this.targetSlot);
+      Ref<EntityStore> target = executionSupport.getMarkedEntitySupport().getMarkedEntityRef(this.targetSlot);
       if (target == null) {
          return false;
       }
 
-      if (!this.fulfilsRequirements(ref, role, target, store)) {
+      if (!this.fulfilsRequirements(ref, executionSupport, target, store)) {
          if (this.autoUnlockTarget) {
             this.positionProvider.clear();
-            role.getMarkedEntitySupport().clearMarkedEntity(this.targetSlot);
+            executionSupport.getMarkedEntitySupport().clearMarkedEntity(this.targetSlot);
          }
 
          return false;
@@ -58,7 +58,9 @@ public class SensorTarget extends SensorWithEntityFilters {
       return this.positionProvider;
    }
 
-   protected boolean fulfilsRequirements(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull Ref<EntityStore> target, @Nonnull Store<EntityStore> store) {
+   protected boolean fulfilsRequirements(
+      @Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, @Nonnull Ref<EntityStore> target, @Nonnull Store<EntityStore> store
+   ) {
       TransformComponent transformComponent = store.getComponent(ref, TRANSFORM_COMPONENT_TYPE);
       if (transformComponent == null) {
          return false;
@@ -77,6 +79,6 @@ public class SensorTarget extends SensorWithEntityFilters {
          }
       }
 
-      return this.matchesFilters(ref, target, role, store);
+      return this.matchesFilters(ref, target, executionSupport, store);
    }
 }

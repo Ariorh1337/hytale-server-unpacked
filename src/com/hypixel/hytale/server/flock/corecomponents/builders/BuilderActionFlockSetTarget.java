@@ -5,6 +5,7 @@ import com.hypixel.hytale.server.flock.corecomponents.ActionFlockSetTarget;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.asset.builder.Feature;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.asset.builder.holder.StringHolder;
 import com.hypixel.hytale.server.npc.asset.builder.validators.StringNotEmptyValidator;
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderActionBase;
@@ -34,6 +35,7 @@ public class BuilderActionFlockSetTarget extends BuilderActionBase {
          data, "TargetSlot", this.targetSlot, "LockedTarget", StringNotEmptyValidator.get(), BuilderDescriptorState.Stable, "The target slot to use", null
       );
       this.requireFeature(Feature.LiveEntity);
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
       return this;
    }
 

@@ -9,8 +9,8 @@ import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderWeightedAction;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.instructions.Action;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.util.ComponentInfo;
 import javax.annotation.Nonnull;
@@ -30,23 +30,35 @@ public class WeightedAction extends AnnotatedComponentBase implements Action {
    }
 
    @Override
-   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      return this.action.canExecute(ref, role, sensorInfo, dt, store);
+   public boolean canExecute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
+      return this.action.canExecute(ref, executionSupport, sensorInfo, dt, store);
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      return this.action.execute(ref, role, sensorInfo, dt, store);
+   public boolean execute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
+      return this.action.execute(ref, executionSupport, sensorInfo, dt, store);
    }
 
    @Override
-   public void activate(Role role, InfoProvider infoProvider) {
-      this.action.activate(role, infoProvider);
+   public void activate(ExecutionSupport executionSupport, InfoProvider infoProvider) {
+      this.action.activate(executionSupport, infoProvider);
    }
 
    @Override
-   public void deactivate(Role role, InfoProvider infoProvider) {
-      this.action.deactivate(role, infoProvider);
+   public void deactivate(ExecutionSupport executionSupport, InfoProvider infoProvider) {
+      this.action.deactivate(executionSupport, infoProvider);
    }
 
    @Override
@@ -55,8 +67,8 @@ public class WeightedAction extends AnnotatedComponentBase implements Action {
    }
 
    @Override
-   public void getInfo(Role role, ComponentInfo holder) {
-      this.action.getInfo(role, holder);
+   public void getInfo(ExecutionSupport executionSupport, ComponentInfo holder) {
+      this.action.getInfo(executionSupport, holder);
    }
 
    @Override
@@ -80,8 +92,8 @@ public class WeightedAction extends AnnotatedComponentBase implements Action {
    }
 
    @Override
-   public void registerWithSupport(Role role) {
-      this.action.registerWithSupport(role);
+   public void registerWithSupport(ExecutionSupport executionSupport) {
+      this.action.registerWithSupport(executionSupport);
    }
 
    @Override
@@ -95,27 +107,27 @@ public class WeightedAction extends AnnotatedComponentBase implements Action {
    }
 
    @Override
-   public void loaded(Role role) {
-      this.action.loaded(role);
+   public void loaded(ExecutionSupport executionSupport) {
+      this.action.loaded(executionSupport);
    }
 
    @Override
-   public void spawned(Role role) {
-      this.action.spawned(role);
+   public void spawned(ExecutionSupport executionSupport) {
+      this.action.spawned(executionSupport);
    }
 
    @Override
-   public void unloaded(Role role) {
-      this.action.unloaded(role);
+   public void unloaded(ExecutionSupport executionSupport) {
+      this.action.unloaded(executionSupport);
    }
 
    @Override
-   public void removed(Role role) {
-      this.action.removed(role);
+   public void removed(ExecutionSupport executionSupport) {
+      this.action.removed(executionSupport);
    }
 
    @Override
-   public void teleported(Role role, World from, World to) {
-      this.action.teleported(role, from, to);
+   public void teleported(ExecutionSupport executionSupport, World from, World to) {
+      this.action.teleported(executionSupport, from, to);
    }
 }

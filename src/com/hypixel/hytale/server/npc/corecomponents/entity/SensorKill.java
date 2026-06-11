@@ -7,7 +7,7 @@ import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.SensorBase;
 import com.hypixel.hytale.server.npc.corecomponents.entity.builders.BuilderSensorKill;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.sensorinfo.PositionProvider;
 import com.hypixel.hytale.server.npc.util.DamageData;
@@ -24,14 +24,14 @@ public class SensorKill extends SensorBase {
    }
 
    @Override
-   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, double dt, @Nonnull Store<EntityStore> store) {
       NPCEntity npcComponent = store.getComponent(ref, NPCEntity.getComponentType());
       assert npcComponent != null;
       DamageData damageData = npcComponent.getDamageData();
-      if (super.matches(ref, role, dt, store) && damageData.haveKill()) {
+      if (super.matches(ref, executionSupport, dt, store) && damageData.haveKill()) {
          Ref<EntityStore> targetRef;
          if (this.targetSlot >= 0) {
-            targetRef = role.getMarkedEntitySupport().getMarkedEntityRef(this.targetSlot);
+            targetRef = executionSupport.getMarkedEntitySupport().getMarkedEntityRef(this.targetSlot);
             if (targetRef == null || !damageData.haveKilled(targetRef)) {
                this.positionProvider.clear();
                return false;

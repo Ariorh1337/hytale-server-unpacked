@@ -11,9 +11,9 @@ import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.asset.builder.StateMappingHelper;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.instructions.ActionList;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.instructions.RoleStateChange;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.statetransition.builders.BuilderStateTransition;
 import com.hypixel.hytale.server.npc.statetransition.builders.BuilderStateTransitionController;
@@ -67,9 +67,9 @@ public class StateTransitionController {
       this.stateTransitionActions.trim();
    }
 
-   public void registerWithSupport(Role role) {
+   public void registerWithSupport(ExecutionSupport executionSupport) {
       for (StateTransitionController.IActionListHolder actions : this.stateTransitionActions.values()) {
-         actions.registerWithSupport(role);
+         actions.registerWithSupport(executionSupport);
       }
    }
 
@@ -84,33 +84,33 @@ public class StateTransitionController {
       }
    }
 
-   public void loaded(Role role) {
+   public void loaded(ExecutionSupport executionSupport) {
       for (StateTransitionController.IActionListHolder actions : this.stateTransitionActions.values()) {
-         actions.loaded(role);
+         actions.loaded(executionSupport);
       }
    }
 
-   public void spawned(Role role) {
+   public void spawned(ExecutionSupport executionSupport) {
       for (StateTransitionController.IActionListHolder actions : this.stateTransitionActions.values()) {
-         actions.spawned(role);
+         actions.spawned(executionSupport);
       }
    }
 
-   public void unloaded(Role role) {
+   public void unloaded(ExecutionSupport executionSupport) {
       for (StateTransitionController.IActionListHolder actions : this.stateTransitionActions.values()) {
-         actions.unloaded(role);
+         actions.unloaded(executionSupport);
       }
    }
 
-   public void removed(Role role) {
+   public void removed(ExecutionSupport executionSupport) {
       for (StateTransitionController.IActionListHolder actions : this.stateTransitionActions.values()) {
-         actions.removed(role);
+         actions.removed(executionSupport);
       }
    }
 
-   public void teleported(Role role, World from, World to) {
+   public void teleported(ExecutionSupport executionSupport, World from, World to) {
       for (StateTransitionController.IActionListHolder actions : this.stateTransitionActions.values()) {
-         actions.teleported(role, from, to);
+         actions.teleported(executionSupport, from, to);
       }
    }
 
@@ -128,11 +128,11 @@ public class StateTransitionController {
       return this.runningActions != null;
    }
 
-   public boolean runTransitionActions(Ref<EntityStore> ref, Role role, double dt, Store<EntityStore> store) {
+   public boolean runTransitionActions(Ref<EntityStore> ref, ExecutionSupport executionSupport, double dt, Store<EntityStore> store) {
       if (this.runningActions == null) {
          return false;
-      } else if (this.runningActions.canExecute(ref, role, null, dt, store)
-         && this.runningActions.execute(ref, role, null, dt, store)
+      } else if (this.runningActions.canExecute(ref, executionSupport, null, dt, store)
+         && this.runningActions.execute(ref, executionSupport, null, dt, store)
          && this.runningActions.hasCompletedRun()) {
          this.runningActions.clearOnce();
          this.runningActions = null;
@@ -182,21 +182,31 @@ public class StateTransitionController {
 
       @Override
       public boolean canExecute(
-         @Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store
+         @Nonnull Ref<EntityStore> ref,
+         @Nonnull ExecutionSupport executionSupport,
+         @Nullable InfoProvider sensorInfo,
+         double dt,
+         @Nonnull Store<EntityStore> store
       ) {
          if (this.currentIndex >= this.actionLists.size()) {
             this.currentIndex = 0;
          }
 
-         return this.actionLists.get(this.currentIndex).actionList.canExecute(ref, role, sensorInfo, dt, store);
+         return this.actionLists.get(this.currentIndex).actionList.canExecute(ref, executionSupport, sensorInfo, dt, store);
       }
 
       @Override
-      public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+      public boolean execute(
+         @Nonnull Ref<EntityStore> ref,
+         @Nonnull ExecutionSupport executionSupport,
+         @Nullable InfoProvider sensorInfo,
+         double dt,
+         @Nonnull Store<EntityStore> store
+      ) {
          StateTransitionController.PrioritisedActionList actionList = this.actionLists.get(this.currentIndex);
-         if (!actionList.actionList.canExecute(ref, role, sensorInfo, dt, store)) {
+         if (!actionList.actionList.canExecute(ref, executionSupport, sensorInfo, dt, store)) {
             return false;
-         } else if (actionList.actionList.execute(ref, role, sensorInfo, dt, store) && actionList.actionList.hasCompletedRun()) {
+         } else if (actionList.actionList.execute(ref, executionSupport, sensorInfo, dt, store) && actionList.actionList.hasCompletedRun()) {
             this.currentIndex++;
             return true;
          } else {
@@ -215,9 +225,9 @@ public class StateTransitionController {
       }
 
       @Override
-      public void registerWithSupport(Role role) {
+      public void registerWithSupport(ExecutionSupport executionSupport) {
          for (StateTransitionController.PrioritisedActionList actionList : this.actionLists) {
-            actionList.actionList.registerWithSupport(role);
+            actionList.actionList.registerWithSupport(executionSupport);
          }
       }
 
@@ -234,37 +244,37 @@ public class StateTransitionController {
       }
 
       @Override
-      public void loaded(Role role) {
+      public void loaded(ExecutionSupport executionSupport) {
          for (StateTransitionController.PrioritisedActionList actionList : this.actionLists) {
-            actionList.actionList.loaded(role);
+            actionList.actionList.loaded(executionSupport);
          }
       }
 
       @Override
-      public void spawned(Role role) {
+      public void spawned(ExecutionSupport executionSupport) {
          for (StateTransitionController.PrioritisedActionList actionList : this.actionLists) {
-            actionList.actionList.spawned(role);
+            actionList.actionList.spawned(executionSupport);
          }
       }
 
       @Override
-      public void unloaded(Role role) {
+      public void unloaded(ExecutionSupport executionSupport) {
          for (StateTransitionController.PrioritisedActionList actionList : this.actionLists) {
-            actionList.actionList.unloaded(role);
+            actionList.actionList.unloaded(executionSupport);
          }
       }
 
       @Override
-      public void removed(Role role) {
+      public void removed(ExecutionSupport executionSupport) {
          for (StateTransitionController.PrioritisedActionList actionList : this.actionLists) {
-            actionList.actionList.removed(role);
+            actionList.actionList.removed(executionSupport);
          }
       }
 
       @Override
-      public void teleported(Role role, World from, World to) {
+      public void teleported(ExecutionSupport executionSupport, World from, World to) {
          for (StateTransitionController.PrioritisedActionList actionList : this.actionLists) {
-            actionList.actionList.teleported(role, from, to);
+            actionList.actionList.teleported(executionSupport, from, to);
          }
       }
 
@@ -277,9 +287,9 @@ public class StateTransitionController {
    }
 
    private interface IActionListHolder extends RoleStateChange {
-      boolean canExecute(Ref<EntityStore> var1, Role var2, InfoProvider var3, double var4, Store<EntityStore> var6);
+      boolean canExecute(Ref<EntityStore> var1, ExecutionSupport var2, InfoProvider var3, double var4, Store<EntityStore> var6);
 
-      boolean execute(Ref<EntityStore> var1, Role var2, InfoProvider var3, double var4, Store<EntityStore> var6);
+      boolean execute(Ref<EntityStore> var1, ExecutionSupport var2, InfoProvider var3, double var4, Store<EntityStore> var6);
 
       boolean hasCompletedRun();
 
@@ -289,14 +299,24 @@ public class StateTransitionController {
    private record PrioritisedActionList(int priority, ActionList actionList) implements StateTransitionController.IActionListHolder {
       @Override
       public boolean canExecute(
-         @Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store
+         @Nonnull Ref<EntityStore> ref,
+         @Nonnull ExecutionSupport executionSupport,
+         @Nullable InfoProvider sensorInfo,
+         double dt,
+         @Nonnull Store<EntityStore> store
       ) {
-         return this.actionList.canExecute(ref, role, sensorInfo, dt, store);
+         return this.actionList.canExecute(ref, executionSupport, sensorInfo, dt, store);
       }
 
       @Override
-      public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-         return this.actionList.execute(ref, role, sensorInfo, dt, store);
+      public boolean execute(
+         @Nonnull Ref<EntityStore> ref,
+         @Nonnull ExecutionSupport executionSupport,
+         @Nullable InfoProvider sensorInfo,
+         double dt,
+         @Nonnull Store<EntityStore> store
+      ) {
+         return this.actionList.execute(ref, executionSupport, sensorInfo, dt, store);
       }
 
       @Override
@@ -305,8 +325,8 @@ public class StateTransitionController {
       }
 
       @Override
-      public void registerWithSupport(Role role) {
-         this.actionList.registerWithSupport(role);
+      public void registerWithSupport(ExecutionSupport executionSupport) {
+         this.actionList.registerWithSupport(executionSupport);
       }
 
       @Override
@@ -320,28 +340,28 @@ public class StateTransitionController {
       }
 
       @Override
-      public void loaded(Role role) {
-         this.actionList.loaded(role);
+      public void loaded(ExecutionSupport executionSupport) {
+         this.actionList.loaded(executionSupport);
       }
 
       @Override
-      public void spawned(Role role) {
-         this.actionList.spawned(role);
+      public void spawned(ExecutionSupport executionSupport) {
+         this.actionList.spawned(executionSupport);
       }
 
       @Override
-      public void unloaded(Role role) {
-         this.actionList.unloaded(role);
+      public void unloaded(ExecutionSupport executionSupport) {
+         this.actionList.unloaded(executionSupport);
       }
 
       @Override
-      public void removed(Role role) {
-         this.actionList.removed(role);
+      public void removed(ExecutionSupport executionSupport) {
+         this.actionList.removed(executionSupport);
       }
 
       @Override
-      public void teleported(Role role, World from, World to) {
-         this.actionList.teleported(role, from, to);
+      public void teleported(ExecutionSupport executionSupport, World from, World to) {
+         this.actionList.teleported(executionSupport, from, to);
       }
 
       @Override

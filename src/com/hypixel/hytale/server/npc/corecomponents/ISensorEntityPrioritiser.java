@@ -3,8 +3,8 @@ package com.hypixel.hytale.server.npc.corecomponents;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.instructions.RoleStateChange;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.util.IEntityByPriorityFilter;
 import java.util.List;
 import org.joml.Vector3d;
@@ -15,7 +15,7 @@ public interface ISensorEntityPrioritiser extends RoleStateChange {
    IEntityByPriorityFilter getPlayerPrioritiser();
 
    Ref<EntityStore> pickTarget(
-      Ref<EntityStore> var1, Role var2, Vector3d var3, Ref<EntityStore> var4, Ref<EntityStore> var5, boolean var6, Store<EntityStore> var7
+      Ref<EntityStore> var1, ExecutionSupport var2, Vector3d var3, Ref<EntityStore> var4, Ref<EntityStore> var5, boolean var6, Store<EntityStore> var7
    );
 
    boolean providesFilters();

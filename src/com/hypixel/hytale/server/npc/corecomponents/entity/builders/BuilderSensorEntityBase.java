@@ -8,6 +8,7 @@ import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderValidationHelper;
 import com.hypixel.hytale.server.npc.asset.builder.ComponentContext;
 import com.hypixel.hytale.server.npc.asset.builder.Feature;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.asset.builder.holder.BooleanHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.DoubleHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.StringHolder;
@@ -107,6 +108,10 @@ public abstract class BuilderSensorEntityBase extends BuilderSensorWithEntityFil
       this.getArray(data, "Filters", this.filters, null, BuilderDescriptorState.Stable, "A series of entity filter sensors to test", null, builderHelper);
       this.validateDoubleRelation(this.range, RelationalOperator.GreaterEqual, this.minRange);
       this.provideFeature(Feature.LiveEntity);
+      if (!this.isCreatingDescriptor() && this.useProjectedDistance.isStatic() && this.useProjectedDistance.get(null)) {
+         this.requireInstructionType(InstructionType.NPCOnlyInstructions);
+      }
+
       return this;
    }
 

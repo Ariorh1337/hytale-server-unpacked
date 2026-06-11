@@ -5,6 +5,7 @@ import com.hypixel.hytale.builtin.mounts.npc.ActionMount;
 import com.hypixel.hytale.server.npc.asset.builder.Builder;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.asset.builder.holder.FloatHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.StringHolder;
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderActionBase;
@@ -62,6 +63,7 @@ public class BuilderActionMount extends BuilderActionBase {
       this.requireFloat(data, "AnchorY", this.anchorY, null, BuilderDescriptorState.Stable, "The Y anchor pos", null);
       this.requireFloat(data, "AnchorZ", this.anchorZ, null, BuilderDescriptorState.Stable, "The Z anchor pos", null);
       this.requireString(data, "MovementConfig", this.movementConfig, null, BuilderDescriptorState.Stable, "The MovementConfig to use for this mount", null);
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
       return super.readConfig(data);
    }
 }

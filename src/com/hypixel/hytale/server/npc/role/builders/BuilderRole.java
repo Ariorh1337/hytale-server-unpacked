@@ -1,8 +1,9 @@
 package com.hypixel.hytale.server.npc.role.builders;
 
 import com.google.gson.JsonElement;
-import com.hypixel.hytale.server.core.asset.type.attitude.Attitude;
+import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.server.core.asset.type.blockset.config.BlockSet;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.asset.builder.Builder;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderCodecObjectHelper;
@@ -19,7 +20,7 @@ import com.hypixel.hytale.server.npc.asset.builder.FeatureEvaluatorHelper;
 import com.hypixel.hytale.server.npc.asset.builder.FeatureOverride;
 import com.hypixel.hytale.server.npc.asset.builder.InstructionContextHelper;
 import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
-import com.hypixel.hytale.server.npc.asset.builder.SpawnableWithModelBuilder;
+import com.hypixel.hytale.server.npc.asset.builder.SupportConfigBuilder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.AssetArrayHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.AssetHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.BooleanHolder;
@@ -39,17 +40,12 @@ import com.hypixel.hytale.server.npc.asset.builder.validators.IntSingleValidator
 import com.hypixel.hytale.server.npc.asset.builder.validators.StringArrayNoEmptyStringsValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.StringNotEmptyValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.StringNullOrNotEmptyValidator;
-import com.hypixel.hytale.server.npc.asset.builder.validators.TagSetExistsValidator;
-import com.hypixel.hytale.server.npc.asset.builder.validators.asset.AttitudeGroupExistsValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.asset.BlockSetExistsValidator;
-import com.hypixel.hytale.server.npc.asset.builder.validators.asset.ItemAttitudeGroupExistsValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.asset.ItemDropListExistsValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.asset.ItemExistsValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.asset.ModelExistsValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.asset.ParticleSystemExistsValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.asset.RootInteractionValidator;
-import com.hypixel.hytale.server.npc.config.AttitudeGroup;
-import com.hypixel.hytale.server.npc.config.ItemAttitudeGroup;
 import com.hypixel.hytale.server.npc.config.balancing.BalanceAsset;
 import com.hypixel.hytale.server.npc.decisionmaker.stateevaluator.StateEvaluator;
 import com.hypixel.hytale.server.npc.instructions.Instruction;
@@ -58,19 +54,14 @@ import com.hypixel.hytale.server.npc.movement.controllers.BuilderMotionControlle
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
 import com.hypixel.hytale.server.npc.movement.controllers.builders.BuilderMotionControllerBase;
 import com.hypixel.hytale.server.npc.role.Role;
-import com.hypixel.hytale.server.npc.role.RoleDebugFlags;
 import com.hypixel.hytale.server.npc.role.SpawnEffect;
-import com.hypixel.hytale.server.npc.role.support.WorldSupport;
-import com.hypixel.hytale.server.npc.statetransition.StateTransitionController;
 import com.hypixel.hytale.server.npc.util.expression.ExecutionContext;
 import com.hypixel.hytale.server.npc.util.expression.Scope;
 import com.hypixel.hytale.server.npc.validators.NPCLoadTimeValidationHelper;
 import com.hypixel.hytale.server.spawning.ISpawnable;
+import com.hypixel.hytale.server.spawning.ISpawnableWithModel;
 import com.hypixel.hytale.server.spawning.SpawnTestResult;
 import com.hypixel.hytale.server.spawning.SpawningContext;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import it.unimi.dsi.fastutil.ints.IntSet;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -79,18 +70,12 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.joml.Vector3d;
 
-public class BuilderRole extends SpawnableWithModelBuilder<Role> implements SpawnEffect {
+public class BuilderRole extends SupportConfigBuilder<Role> implements ISpawnableWithModel, SpawnEffect, RoleBuilder {
    protected static final double[] DEFAULT_HEAD_PITCH_RANGE = new double[]{-89.0, 89.0};
    protected String[] displayNames;
    protected final AssetHolder appearance = new AssetHolder();
    protected final AssetHolder dropListId = new AssetHolder();
    protected final IntHolder maxHealth = new IntHolder();
-   protected String startState;
-   protected String defaultSubState;
-   protected int startStateIndex;
-   protected int startSubStateIndex;
-   protected final EnumSet<RoleDebugFlags> parsedDebugFlags = EnumSet.noneOf(RoleDebugFlags.class);
-   protected String debugFlags;
    protected double inertia;
    protected final DoubleHolder knockbackScale = new DoubleHolder();
    protected String opaqueBlockSet;
@@ -146,8 +131,6 @@ public class BuilderRole extends SpawnableWithModelBuilder<Role> implements Spaw
    protected float despawnAnimationTime;
    @Nonnull
    protected AssetHolder deathInteraction = new AssetHolder();
-   protected boolean disableDamageFlock;
-   protected final AssetArrayHolder disableDamageGroups = new AssetArrayHolder();
    protected final AssetHolder spawnParticles = new AssetHolder();
    protected final NumberArrayHolder spawnParticleOffset = new NumberArrayHolder();
    protected final StringHolder spawnParticlesTargetNode = new StringHolder();
@@ -156,20 +139,12 @@ public class BuilderRole extends SpawnableWithModelBuilder<Role> implements Spaw
    protected int inventorySlots;
    protected int hotbarSlots;
    protected int offHandSlots;
-   protected final EnumHolder<Attitude> defaultPlayerAttitude = new EnumHolder<>();
-   protected final EnumHolder<Attitude> defaultNPCAttitude = new EnumHolder<>();
-   protected final AssetHolder attitudeGroup = new AssetHolder();
-   protected final AssetHolder itemAttitudeGroup = new AssetHolder();
-   protected Int2ObjectMap<IntSet> busyStates;
    protected final BuilderObjectReferenceHelper<Map<String, MotionController>> motionControllers = new BuilderObjectReferenceHelper<>(
       BuilderMotionControllerMapUtil.CLASS_REFERENCE, this
    );
    protected final BuilderObjectListHelper<Instruction> instructionList = new BuilderObjectListHelper<>(Instruction.class, this);
    protected final BuilderObjectReferenceHelper<Instruction> interactionInstruction = new BuilderObjectReferenceHelper<>(Instruction.class, this);
    protected final BuilderObjectReferenceHelper<Instruction> deathInstruction = new BuilderObjectReferenceHelper<>(Instruction.class, this);
-   protected final BuilderObjectReferenceHelper<StateTransitionController> stateTransitionController = new BuilderObjectReferenceHelper<>(
-      StateTransitionController.class, this
-   );
    protected final StringHolder initialMotionController = new StringHolder();
    protected final BuilderCodecObjectHelper<StateEvaluator> stateEvaluator = new BuilderCodecObjectHelper<>(StateEvaluator.class, StateEvaluator.CODEC, null);
    protected final BuilderCombatConfig combatConfig = new BuilderCombatConfig(BalanceAsset.CHILD_ASSET_CODEC, BalanceAsset.VALIDATOR_CACHE.getValidator());
@@ -180,6 +155,11 @@ public class BuilderRole extends SpawnableWithModelBuilder<Role> implements Spaw
    protected final StringHolder nameTranslationKey = new StringHolder();
    protected final NumberArrayHolder headPitchAngleRange = new NumberArrayHolder();
    protected final BooleanHolder overrideHeadPitchAngle = new BooleanHolder();
+
+   @Override
+   public boolean isSpawnable() {
+      return true;
+   }
 
    @Nonnull
    @Override
@@ -201,7 +181,13 @@ public class BuilderRole extends SpawnableWithModelBuilder<Role> implements Spaw
 
    @Nonnull
    public Role build(@Nonnull BuilderSupport builderSupport) {
-      return new Role(this, builderSupport);
+      throw new UnsupportedOperationException("Use BuilderRole.createAndAttach(holder, builderSupport) - Role requires entity context");
+   }
+
+   @Nonnull
+   @Override
+   public Role createAndAttach(@Nonnull Holder<EntityStore> holder, @Nonnull BuilderSupport builderSupport) {
+      return Role.createAndAttach(holder, this, builderSupport);
    }
 
    @Override
@@ -264,10 +250,9 @@ public class BuilderRole extends SpawnableWithModelBuilder<Role> implements Spaw
 
    @Nonnull
    public BuilderRole readConfig(@Nonnull JsonElement data) {
-      super.readCommonConfig(data);
+      super.readConfig(data);
       this.setNotComponent();
       this.requireInt(data, "MaxHealth", this.maxHealth, IntSingleValidator.greater0(), BuilderDescriptorState.Stable, "Max health", null);
-      this.getString(data, "Debug", e -> this.debugFlags = e, "", null, BuilderDescriptorState.WorkInProgress, "Debugging flags", null);
       this.requireAsset(data, "Appearance", this.appearance, ModelExistsValidator.required(), BuilderDescriptorState.Stable, "Model to use for rendering", null);
       this.getStringArray(
          data,
@@ -403,16 +388,6 @@ public class BuilderRole extends SpawnableWithModelBuilder<Role> implements Spaw
          ItemDropListExistsValidator.withConfig(AssetValidator.CanBeEmpty),
          BuilderDescriptorState.Stable,
          "Drop list to spawn when killed",
-         null
-      );
-      this.getString(data, "StartState", s -> this.startState = s, "start", StringNotEmptyValidator.get(), BuilderDescriptorState.Stable, "Initial state", null);
-      this.getDefaultSubState(
-         data,
-         "DefaultSubState",
-         v -> this.defaultSubState = v,
-         StringNotEmptyValidator.get(),
-         BuilderDescriptorState.Stable,
-         "The default sub state to reference when transitioning to a main state without a specified sub state",
          null
       );
       this.getDouble(
@@ -718,36 +693,6 @@ public class BuilderRole extends SpawnableWithModelBuilder<Role> implements Spaw
          "Influence radius flock forces",
          null
       );
-      this.getBoolean(
-         data,
-         "DisableDamageFlock",
-         b -> this.disableDamageFlock = b,
-         true,
-         BuilderDescriptorState.WorkInProgress,
-         "If true disables combat damage from flock members",
-         null
-      );
-      this.getAssetArray(
-         data,
-         "DisableDamageGroups",
-         this.disableDamageGroups,
-         null,
-         0,
-         Integer.MAX_VALUE,
-         TagSetExistsValidator.withConfig(AssetValidator.ListCanBeEmpty),
-         BuilderDescriptorState.WorkInProgress,
-         "Members in this list of group won't cause damage",
-         null
-      );
-      this.getExistentStateSet(
-         data,
-         "BusyStates",
-         s -> this.busyStates = s,
-         this.stateHelper,
-         BuilderDescriptorState.Stable,
-         "States during which this NPC is busy and can't be interacted with",
-         null
-      );
       this.getCodecObject(
          data, "CombatConfig", this.combatConfig, BuilderDescriptorState.Stable, "The combat configuration providing optional combat action evaluator", null
       );
@@ -846,46 +791,6 @@ public class BuilderRole extends SpawnableWithModelBuilder<Role> implements Spaw
          "View distance for spawn particle",
          null
       );
-      this.getEnum(
-         data,
-         "DefaultPlayerAttitude",
-         this.defaultPlayerAttitude,
-         Attitude.class,
-         Attitude.HOSTILE,
-         BuilderDescriptorState.Stable,
-         "The default attitude of this NPC towards players",
-         null
-      );
-      this.getEnum(
-         data,
-         "DefaultNPCAttitude",
-         this.defaultNPCAttitude,
-         Attitude.class,
-         Attitude.NEUTRAL,
-         BuilderDescriptorState.Stable,
-         "The default attitude of this NPC towards other NPCs",
-         null
-      );
-      this.getAsset(
-         data,
-         "AttitudeGroup",
-         this.attitudeGroup,
-         null,
-         AttitudeGroupExistsValidator.withConfig(EnumSet.of(AssetValidator.Config.NULLABLE)),
-         BuilderDescriptorState.Stable,
-         "The attitude group towards other NPCs this NPC belongs to (often species related)",
-         null
-      );
-      this.getAsset(
-         data,
-         "ItemAttitudeGroup",
-         this.itemAttitudeGroup,
-         null,
-         ItemAttitudeGroupExistsValidator.withConfig(EnumSet.of(AssetValidator.Config.NULLABLE)),
-         BuilderDescriptorState.Stable,
-         "This NPC's item attitudes",
-         null
-      );
       this.getBoolean(
          data,
          "CorpseStaysInFlock",
@@ -915,14 +820,6 @@ public class BuilderRole extends SpawnableWithModelBuilder<Role> implements Spaw
          null
       );
       this.validateAny(this.breathesInAir, this.breathesInWater);
-      this.registerStateSetter(this.startState, this.defaultSubState, (m, s) -> {
-         this.startStateIndex = m;
-         this.startSubStateIndex = s;
-      });
-      if (this.debugFlags != null && !this.debugFlags.isEmpty()) {
-         this.parsedDebugFlags.addAll(this.toDebugFlagSet("RoleDebugFlags", this.debugFlags));
-      }
-
       this.requireObject(
          data,
          "MotionControllerList",
@@ -1214,18 +1111,6 @@ public class BuilderRole extends SpawnableWithModelBuilder<Role> implements Spaw
       return this.dropListId.get(builderSupport.getExecutionContext());
    }
 
-   public String getStartState() {
-      return this.startState;
-   }
-
-   public int getStartStateIndex() {
-      return this.startStateIndex;
-   }
-
-   public int getStartSubStateIndex() {
-      return this.startSubStateIndex;
-   }
-
    public double getCollisionDistance() {
       return this.collisionDistance;
    }
@@ -1373,11 +1258,6 @@ public class BuilderRole extends SpawnableWithModelBuilder<Role> implements Spaw
       return this.flockInfluenceRange;
    }
 
-   @Nonnull
-   public EnumSet<RoleDebugFlags> getDebugFlags() {
-      return this.parsedDebugFlags;
-   }
-
    public float getCollisionViewAngle() {
       return (float) (Math.PI / 180.0) * this.collisionViewAngle;
    }
@@ -1409,14 +1289,6 @@ public class BuilderRole extends SpawnableWithModelBuilder<Role> implements Spaw
       return this.despawnAnimationTime;
    }
 
-   public boolean isDisableDamageFlock() {
-      return this.disableDamageFlock;
-   }
-
-   public int[] getDisableDamageGroups(@Nonnull BuilderSupport support) {
-      return WorldSupport.createTagSetIndexArray(this.disableDamageGroups.get(support.getExecutionContext()));
-   }
-
    public boolean isInvulnerable(BuilderSupport support) {
       return this.invulnerable.get(support.getExecutionContext());
    }
@@ -1435,28 +1307,6 @@ public class BuilderRole extends SpawnableWithModelBuilder<Role> implements Spaw
 
    public byte getDefaultOffHandSlot(@Nonnull BuilderSupport support) {
       return (byte)this.defaultOffHandSlot.get(support.getExecutionContext());
-   }
-
-   public Int2ObjectMap<IntSet> getBusyStates() {
-      return this.busyStates;
-   }
-
-   public Attitude getDefaultPlayerAttitude(@Nonnull BuilderSupport support) {
-      return this.defaultPlayerAttitude.get(support.getExecutionContext());
-   }
-
-   public Attitude getDefaultNPCAttitude(@Nonnull BuilderSupport support) {
-      return this.defaultNPCAttitude.get(support.getExecutionContext());
-   }
-
-   public int getAttitudeGroup(@Nonnull BuilderSupport support) {
-      String groupName = this.attitudeGroup.get(support.getExecutionContext());
-      return AttitudeGroup.getAssetMap().getIndex(groupName);
-   }
-
-   public int getItemAttitudeGroup(@Nonnull BuilderSupport support) {
-      String groupName = this.itemAttitudeGroup.get(support.getExecutionContext());
-      return ItemAttitudeGroup.getAssetMap().getIndex(groupName);
    }
 
    public boolean isCorpseStaysInFlock() {
@@ -1488,12 +1338,6 @@ public class BuilderRole extends SpawnableWithModelBuilder<Role> implements Spaw
    public Instruction getDeathInstruction(@Nonnull BuilderSupport support) {
       support.setCurrentInstructionContext(InstructionType.Death);
       return this.deathInstruction.build(support);
-   }
-
-   @Nullable
-   public StateTransitionController getStateTransitionController(@Nonnull BuilderSupport support) {
-      support.setCurrentInstructionContext(InstructionType.Default);
-      return this.stateTransitionController.build(support);
    }
 
    public void registerStateEvaluator(@Nonnull BuilderSupport support) {

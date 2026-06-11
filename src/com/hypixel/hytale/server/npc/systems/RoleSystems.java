@@ -4,7 +4,6 @@ import com.hypixel.hytale.component.AddReason;
 import com.hypixel.hytale.component.ArchetypeChunk;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.ComponentType;
-import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
@@ -12,7 +11,7 @@ import com.hypixel.hytale.component.dependency.Dependency;
 import com.hypixel.hytale.component.dependency.Order;
 import com.hypixel.hytale.component.dependency.SystemDependency;
 import com.hypixel.hytale.component.query.Query;
-import com.hypixel.hytale.component.system.HolderSystem;
+import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.component.system.tick.TickingSystem;
 import com.hypixel.hytale.math.shape.Box;
@@ -41,9 +40,14 @@ import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.role.RoleDebugDisplay;
 import com.hypixel.hytale.server.npc.role.RoleDebugFlags;
+import com.hypixel.hytale.server.npc.role.support.CombatSupport;
 import com.hypixel.hytale.server.npc.role.support.DebugSupport;
+import com.hypixel.hytale.server.npc.role.support.DisplayNameSupport;
 import com.hypixel.hytale.server.npc.role.support.EntitySupport;
 import com.hypixel.hytale.server.npc.role.support.MarkedEntitySupport;
+import com.hypixel.hytale.server.npc.role.support.PositionCache;
+import com.hypixel.hytale.server.npc.role.support.StateSupport;
+import com.hypixel.hytale.server.npc.role.support.WorldSupport;
 import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
 import java.util.List;
 import java.util.Map;
@@ -126,6 +130,129 @@ public class RoleSystems {
       }
    }
 
+   public static class EntitySupportTickSystem extends SteppableTickingSystem {
+      @Nonnull
+      private final ComponentType<EntityStore, EntitySupport> entitySupportComponentType;
+      @Nonnull
+      private final Set<Dependency<EntityStore>> dependencies = Set.of(new SystemDependency<>(Order.AFTER, RoleSystems.BehaviourTickSystem.class));
+
+      public EntitySupportTickSystem(@Nonnull ComponentType<EntityStore, EntitySupport> entitySupportComponentType) {
+         this.entitySupportComponentType = entitySupportComponentType;
+      }
+
+      @Nonnull
+      @Override
+      public Set<Dependency<EntityStore>> getDependencies() {
+         return this.dependencies;
+      }
+
+      @Override
+      public boolean isParallel(int archetypeChunkSize, int taskCount) {
+         return EntityTickingSystem.maybeUseParallel(archetypeChunkSize, taskCount);
+      }
+
+      @Nonnull
+      @Override
+      public Query<EntityStore> getQuery() {
+         return this.entitySupportComponentType;
+      }
+
+      @Override
+      public void steppedTick(
+         float dt,
+         int index,
+         @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
+         @Nonnull Store<EntityStore> store,
+         @Nonnull CommandBuffer<EntityStore> commandBuffer
+      ) {
+         EntitySupport entitySupport = archetypeChunk.getComponent(index, this.entitySupportComponentType);
+         assert entitySupport != null;
+         entitySupport.tick(dt);
+      }
+   }
+
+   public static class MarkedEntitySupportPostSystem extends SteppableTickingSystem {
+      @Nonnull
+      private final ComponentType<EntityStore, MarkedEntitySupport> markedEntitySupportComponentType;
+      @Nonnull
+      private final Set<Dependency<EntityStore>> dependencies = Set.of(new SystemDependency<>(Order.AFTER, SteeringSystem.class));
+
+      public MarkedEntitySupportPostSystem(@Nonnull ComponentType<EntityStore, MarkedEntitySupport> markedEntitySupportComponentType) {
+         this.markedEntitySupportComponentType = markedEntitySupportComponentType;
+      }
+
+      @Nonnull
+      @Override
+      public Set<Dependency<EntityStore>> getDependencies() {
+         return this.dependencies;
+      }
+
+      @Override
+      public boolean isParallel(int archetypeChunkSize, int taskCount) {
+         return EntityTickingSystem.maybeUseParallel(archetypeChunkSize, taskCount);
+      }
+
+      @Nonnull
+      @Override
+      public Query<EntityStore> getQuery() {
+         return this.markedEntitySupportComponentType;
+      }
+
+      @Override
+      public void steppedTick(
+         float dt,
+         int index,
+         @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
+         @Nonnull Store<EntityStore> store,
+         @Nonnull CommandBuffer<EntityStore> commandBuffer
+      ) {
+         MarkedEntitySupport markedEntitySupport = archetypeChunk.getComponent(index, this.markedEntitySupportComponentType);
+         assert markedEntitySupport != null;
+         markedEntitySupport.setTargetSlotToIgnoreForAvoidance(Integer.MIN_VALUE);
+      }
+   }
+
+   public static class PositionCacheClearSystem extends SteppableTickingSystem {
+      @Nonnull
+      private final ComponentType<EntityStore, PositionCache> positionCacheComponentType;
+      @Nonnull
+      private final Set<Dependency<EntityStore>> dependencies = Set.of(new SystemDependency<>(Order.AFTER, SteeringSystem.class));
+
+      public PositionCacheClearSystem(@Nonnull ComponentType<EntityStore, PositionCache> positionCacheComponentType) {
+         this.positionCacheComponentType = positionCacheComponentType;
+      }
+
+      @Nonnull
+      @Override
+      public Set<Dependency<EntityStore>> getDependencies() {
+         return this.dependencies;
+      }
+
+      @Override
+      public boolean isParallel(int archetypeChunkSize, int taskCount) {
+         return EntityTickingSystem.maybeUseParallel(archetypeChunkSize, taskCount);
+      }
+
+      @Nonnull
+      @Override
+      public Query<EntityStore> getQuery() {
+         return this.positionCacheComponentType;
+      }
+
+      @Override
+      public void steppedTick(
+         float dt,
+         int index,
+         @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
+         @Nonnull Store<EntityStore> store,
+         @Nonnull CommandBuffer<EntityStore> commandBuffer
+      ) {
+         PositionCache positionCache = archetypeChunk.getComponent(index, this.positionCacheComponentType);
+         assert positionCache != null;
+         positionCache.clear(dt);
+      }
+   }
+
    public static class PostBehaviourSupportTickSystem extends SteppableTickingSystem {
       @Nonnull
       private final ComponentType<EntityStore, NPCEntity> npcComponentType;
@@ -176,16 +303,14 @@ public class RoleSystems {
          MotionController activeMotionController = role.getActiveMotionController();
          activeMotionController.clearOverrides();
          activeMotionController.constrainRotations(role, archetypeChunk.getComponent(index, this.transformComponentType));
-         role.getCombatSupport().tick(dt);
-         role.getWorldSupport().tick(dt);
-         EntitySupport entitySupport = role.getEntitySupport();
-         entitySupport.tick(dt);
-         entitySupport.handleNominatedDisplayName(ref, commandBuffer);
-         role.getStateSupport().update(commandBuffer);
+         CombatSupport combatSupport = archetypeChunk.getComponent(index, CombatSupport.getComponentType());
+         assert combatSupport != null;
+         combatSupport.tick(dt);
+         DisplayNameSupport displayNameSupport = archetypeChunk.getComponent(index, DisplayNameSupport.getComponentType());
+         assert displayNameSupport != null;
+         displayNameSupport.handleNominatedDisplayName(ref, commandBuffer);
          npcComponent.clearDamageData();
-         role.getMarkedEntitySupport().setTargetSlotToIgnoreForAvoidance(Integer.MIN_VALUE);
          role.setReachedTerminalAction(false);
-         role.getPositionCache().clear(dt);
       }
    }
 
@@ -233,8 +358,8 @@ public class RoleSystems {
       ) {
          NPCEntity npcComponent = archetypeChunk.getComponent(index, this.npcComponentType);
          assert npcComponent != null;
-         Role role = npcComponent.getRole();
-         MarkedEntitySupport markedEntitySupport = role.getMarkedEntitySupport();
+         MarkedEntitySupport markedEntitySupport = archetypeChunk.getComponent(index, MarkedEntitySupport.getComponentType());
+         assert markedEntitySupport != null;
          Ref<EntityStore>[] entityTargets = markedEntitySupport.getEntityTargets();
 
          for (int i = 0; i < entityTargets.length; i++) {
@@ -265,7 +390,9 @@ public class RoleSystems {
             }
          }
 
-         role.clearOnceIfNeeded();
+         Role role = npcComponent.getRole();
+         Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
+         role.clearOnceIfNeeded(ref, commandBuffer);
          role.getBodySteering().clear();
          role.getHeadSteering().clear();
          role.getIgnoredEntitiesForAvoidance().clear();
@@ -273,7 +400,7 @@ public class RoleSystems {
       }
    }
 
-   public static class RoleActivateSystem extends HolderSystem<EntityStore> {
+   public static class RoleActivateSystem extends RefSystem<EntityStore> {
       @Nonnull
       private final ComponentType<EntityStore, NPCEntity> npcComponentType;
       @Nonnull
@@ -308,34 +435,48 @@ public class RoleSystems {
       }
 
       @Override
-      public void onEntityAdd(@Nonnull Holder<EntityStore> holder, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store) {
-         NPCEntity npcComponent = holder.getComponent(this.npcComponentType);
+      public void onEntityAdded(
+         @Nonnull Ref<EntityStore> ref, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
+      ) {
+         NPCEntity npcComponent = store.getComponent(ref, this.npcComponentType);
          assert npcComponent != null;
          Role role = npcComponent.getRole();
-         role.getStateSupport().activate();
-         role.getDebugSupport().notifyDebugFlagsListeners(role.getDebugSupport().getDebugFlags());
-         ModelComponent modelComponent = holder.getComponent(this.modelComponentType);
+         StateSupport.get(ref, commandBuffer).activate();
+         DebugSupport debugSupport = DebugSupport.get(ref, commandBuffer);
+         debugSupport.notifyDebugFlagsListeners(debugSupport.getDebugFlags());
+         ModelComponent modelComponent = store.getComponent(ref, this.modelComponentType);
          assert modelComponent != null;
-         BoundingBox boundingBoxComponent = holder.getComponent(this.boundingBoxComponentType);
+         BoundingBox boundingBoxComponent = store.getComponent(ref, this.boundingBoxComponentType);
          assert boundingBoxComponent != null;
-         role.updateMotionControllers(null, modelComponent.getModel(), boundingBoxComponent.getBoundingBox(), null);
-         role.clearOnce();
-         role.getActiveMotionController().activate();
+         role.updateMotionControllers(ref, modelComponent.getModel(), boundingBoxComponent.getBoundingBox(), commandBuffer);
+         role.clearOnce(ref, commandBuffer);
          String activeMC = npcComponent.getActiveMotionControllerName();
          if (activeMC != null) {
-            role.setActiveMotionController(null, npcComponent, activeMC, null);
+            role.setActiveMotionController(ref, npcComponent, activeMC, commandBuffer);
+         } else {
+            role.activateInitialMotionController(ref, commandBuffer, npcComponent);
          }
 
-         holder.ensureComponent(InteractionModule.get().getChainingDataComponent());
+         role.getActiveMotionController().activate();
+         commandBuffer.ensureComponent(ref, InteractionModule.get().getChainingDataComponent());
       }
 
       @Override
-      public void onEntityRemoved(@Nonnull Holder<EntityStore> holder, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store) {
-         NPCEntity npcComponent = holder.getComponent(this.npcComponentType);
-         assert npcComponent != null;
-         Role role = npcComponent.getRole();
-         role.getActiveMotionController().deactivate();
-         role.getWorldSupport().resetAllBlockSensors();
+      public void onEntityRemove(
+         @Nonnull Ref<EntityStore> ref, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
+      ) {
+         NPCEntity npcComponent = store.getComponent(ref, this.npcComponentType);
+         if (npcComponent != null) {
+            Role role = npcComponent.getRole();
+            if (role != null) {
+               MotionController activeMotionController = role.getActiveMotionController();
+               if (activeMotionController != null) {
+                  activeMotionController.deactivate();
+               }
+
+               WorldSupport.get(ref, commandBuffer).resetAllBlockSensors(ref);
+            }
+         }
       }
    }
 
@@ -394,14 +535,15 @@ public class RoleSystems {
          assert npcComponent != null;
          Role role = npcComponent.getRole();
          if (role != null) {
-            DebugSupport debugSupport = role.getDebugSupport();
+            DebugSupport debugSupport = archetypeChunk.getComponent(index, DebugSupport.getComponentType());
+            assert debugSupport != null;
             RoleDebugDisplay debugDisplay = debugSupport.getDebugDisplay();
             if (debugDisplay != null) {
                debugDisplay.display(role, index, archetypeChunk, commandBuffer);
             }
 
             if (debugSupport.isDebugFlagSet(RoleDebugFlags.VisMarkedTargets)) {
-               renderMarkedTargetArrows(role, index, archetypeChunk, commandBuffer);
+               renderMarkedTargetArrows(index, archetypeChunk, commandBuffer);
             }
 
             boolean hasSensorVis = debugSupport.hasSensorVisData();
@@ -430,13 +572,13 @@ public class RoleSystems {
       }
 
       private static void renderMarkedTargetArrows(
-         @Nonnull Role role, int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull CommandBuffer<EntityStore> commandBuffer
+         int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
          Ref<EntityStore> npcRef = archetypeChunk.getReferenceTo(index);
          Transform npcLook = TargetUtil.getLook(npcRef, commandBuffer);
          Vector3d npcEyePosition = npcLook.getPosition();
          World world = commandBuffer.getExternalData().getWorld();
-         MarkedEntitySupport markedEntitySupport = role.getMarkedEntitySupport();
+         MarkedEntitySupport markedEntitySupport = MarkedEntitySupport.get(npcRef, commandBuffer);
          Ref<EntityStore>[] entityTargets = markedEntitySupport.getEntityTargets();
 
          for (int slotIndex = 0; slotIndex < entityTargets.length; slotIndex++) {
@@ -686,6 +828,88 @@ public class RoleSystems {
                DebugUtils.addLine(world, npcPosition.x, npcMidY, npcPosition.z, targetX, targetY, targetZ, lineColor, 0.08, 0.1F, 0);
             }
          }
+      }
+   }
+
+   public static class StateSupportUpdateSystem extends SteppableTickingSystem {
+      @Nonnull
+      private final ComponentType<EntityStore, StateSupport> stateSupportComponentType;
+      @Nonnull
+      private final Set<Dependency<EntityStore>> dependencies = Set.of(new SystemDependency<>(Order.AFTER, RoleSystems.BehaviourTickSystem.class));
+
+      public StateSupportUpdateSystem(@Nonnull ComponentType<EntityStore, StateSupport> stateSupportComponentType) {
+         this.stateSupportComponentType = stateSupportComponentType;
+      }
+
+      @Nonnull
+      @Override
+      public Set<Dependency<EntityStore>> getDependencies() {
+         return this.dependencies;
+      }
+
+      @Override
+      public boolean isParallel(int archetypeChunkSize, int taskCount) {
+         return EntityTickingSystem.maybeUseParallel(archetypeChunkSize, taskCount);
+      }
+
+      @Nonnull
+      @Override
+      public Query<EntityStore> getQuery() {
+         return this.stateSupportComponentType;
+      }
+
+      @Override
+      public void steppedTick(
+         float dt,
+         int index,
+         @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
+         @Nonnull Store<EntityStore> store,
+         @Nonnull CommandBuffer<EntityStore> commandBuffer
+      ) {
+         StateSupport stateSupport = archetypeChunk.getComponent(index, this.stateSupportComponentType);
+         assert stateSupport != null;
+         stateSupport.update(commandBuffer);
+      }
+   }
+
+   public static class WorldSupportTickSystem extends SteppableTickingSystem {
+      @Nonnull
+      private final ComponentType<EntityStore, WorldSupport> worldSupportComponentType;
+      @Nonnull
+      private final Set<Dependency<EntityStore>> dependencies = Set.of(new SystemDependency<>(Order.AFTER, RoleSystems.BehaviourTickSystem.class));
+
+      public WorldSupportTickSystem(@Nonnull ComponentType<EntityStore, WorldSupport> worldSupportComponentType) {
+         this.worldSupportComponentType = worldSupportComponentType;
+      }
+
+      @Nonnull
+      @Override
+      public Set<Dependency<EntityStore>> getDependencies() {
+         return this.dependencies;
+      }
+
+      @Override
+      public boolean isParallel(int archetypeChunkSize, int taskCount) {
+         return EntityTickingSystem.maybeUseParallel(archetypeChunkSize, taskCount);
+      }
+
+      @Nonnull
+      @Override
+      public Query<EntityStore> getQuery() {
+         return this.worldSupportComponentType;
+      }
+
+      @Override
+      public void steppedTick(
+         float dt,
+         int index,
+         @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
+         @Nonnull Store<EntityStore> store,
+         @Nonnull CommandBuffer<EntityStore> commandBuffer
+      ) {
+         WorldSupport worldSupport = archetypeChunk.getComponent(index, this.worldSupportComponentType);
+         assert worldSupport != null;
+         worldSupport.tick(dt);
       }
    }
 }

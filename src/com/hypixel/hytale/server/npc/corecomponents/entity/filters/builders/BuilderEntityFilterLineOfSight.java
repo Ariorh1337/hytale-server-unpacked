@@ -39,6 +39,7 @@ public class BuilderEntityFilterLineOfSight extends BuilderEntityFilterBase {
    @Override
    public Builder<IEntityFilter> readConfig(JsonElement data) {
       this.requireContext(InstructionType.Any, ComponentContext.NotSelfEntitySensor);
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
       return this;
    }
 }

@@ -14,7 +14,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.SensorBase;
 import com.hypixel.hytale.server.npc.corecomponents.world.builders.BuilderSensorCanPlace;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.CachedPositionProvider;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.util.BlockPlacementHelper;
@@ -44,9 +44,9 @@ public class SensorCanPlace extends SensorBase {
    }
 
    @Override
-   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, double dt, @Nonnull Store<EntityStore> store) {
-      if (super.matches(ref, role, dt, store) && role.getWorldSupport().getBlockToPlace() != null) {
-         BlockType placedBlockType = BlockType.getAssetMap().getAsset(role.getWorldSupport().getBlockToPlace());
+   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, double dt, @Nonnull Store<EntityStore> store) {
+      if (super.matches(ref, executionSupport, dt, store) && executionSupport.getWorldSupport().getBlockToPlace() != null) {
+         BlockType placedBlockType = BlockType.getAssetMap().getAsset(executionSupport.getWorldSupport().getBlockToPlace());
          if (placedBlockType == null) {
             this.positionProvider.clear();
             return false;

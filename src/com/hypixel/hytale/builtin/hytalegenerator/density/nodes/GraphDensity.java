@@ -1,12 +1,11 @@
 package com.hypixel.hytale.builtin.hytalegenerator.density.nodes;
 
 import com.hypixel.hytale.builtin.hytalegenerator.LoggerUtil;
+import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3d;
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
 import com.hypixel.hytale.builtin.hytalegenerator.graph.GraphGenerator;
-import com.hypixel.hytale.builtin.hytalegenerator.graph.GraphGrid;
 import com.hypixel.hytale.builtin.hytalegenerator.graph.GraphSpace;
-import com.hypixel.hytale.builtin.hytalegenerator.graph.PreciseTimeInstrument;
-import com.hypixel.hytale.math.util.ChunkUtil;
+import com.hypixel.hytale.builtin.hytalegenerator.graph.GridGraphCache;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
@@ -15,13 +14,16 @@ import java.util.List;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 import org.joml.Vector3d;
+import org.joml.Vector3dc;
 import org.joml.Vector3i;
 
 public class GraphDensity extends Density {
    private static final int GRAPH_PROBE_ID = 0;
    private static final int DENSITY_PROBE_ID = 1;
    @Nonnull
-   private final GraphGrid graphGrid;
+   private final GridGraphCache gridGraphCache;
+   @Nonnull
+   private final GraphGenerator graphGenerator;
    private final int contentLayerId;
    private final double backgroundDensity;
    private final double transitionSteepness;
@@ -29,12 +31,11 @@ public class GraphDensity extends Density {
    private final double contentRadius;
    @Nonnull
    private final List<GraphSpace.Node> rNodeResultList;
-   private final boolean measureStats;
+   private final boolean printStats;
    @Nonnull
    private final String statsLabel;
    private final int statsSamplesCap;
-   @Nonnull
-   private final PreciseTimeInstrument timeInstrument;
+   private int statsSampleCount;
 
    public GraphDensity(
       @Nonnull GraphGenerator graphGenerator,
@@ -42,43 +43,45 @@ public class GraphDensity extends Density {
       double backgroundValue,
       double transitionSteepness,
       double transitionPoint,
-      boolean measureStats,
+      boolean printStats,
       @Nonnull String statsLabel,
-      int statsSampleCount
+      int statsSampleCount,
+      @Nonnull Vector3dc cacheCellSize,
+      int cacheCapacity
    ) {
       assert statsSampleCount >= 0;
-      int CACHE_CAPACITY = 1;
+      assert GridGraphCache.isValidCellSize(cacheCellSize);
+      assert cacheCapacity >= 0;
       this.contentLayerId = contentLayerId;
-      this.graphGrid = new GraphGrid(graphGenerator, graphGenerator.getDensityContentRadius(contentLayerId), 1);
+      this.gridGraphCache = new GridGraphCache(cacheCellSize, cacheCapacity);
+      this.graphGenerator = graphGenerator;
       this.backgroundDensity = backgroundValue;
       this.transitionSteepness = transitionSteepness;
       this.transitionPoint = transitionPoint;
       this.contentRadius = graphGenerator.getDensityContentRadius(contentLayerId);
-      this.measureStats = measureStats;
+      this.printStats = printStats;
       this.statsLabel = statsLabel;
       this.statsSamplesCap = statsSampleCount;
-      this.timeInstrument = new PreciseTimeInstrument(2);
-      this.timeInstrument.setProbeLabel(0, "Graph Retrieval");
-      this.timeInstrument.setProbeLabel(1, "Density Generation");
+      this.statsSampleCount = 0;
       this.rNodeResultList = new ArrayList<>();
    }
 
    @Override
    public double process(@NonNullDecl Density.Context context) {
-      if (this.measureStats) {
-         this.timeInstrument.start(0);
-      }
-
-      Vector3i cellPosition = new Vector3i(ChunkUtil.chunkCoordinate(context.position.x), 0, ChunkUtil.chunkCoordinate(context.position.z));
-      GraphSpace graph = this.graphGrid.get(cellPosition);
-      if (this.measureStats) {
-         this.timeInstrument.stop(0);
-         this.timeInstrument.start(1);
+      Vector3i cellIndex = new Vector3i();
+      this.gridGraphCache.toCellIndex(context.position, cellIndex);
+      GridGraphCache.Result result = new GridGraphCache.Result();
+      this.gridGraphCache.getCell(cellIndex, result);
+      Bounds3d localCellBounds_voxelGrid = new Bounds3d();
+      this.gridGraphCache.toCellBounds(cellIndex, localCellBounds_voxelGrid);
+      localCellBounds_voxelGrid.expand(this.contentRadius);
+      if (result.isNew) {
+         this.graphGenerator.generate(result.graph, localCellBounds_voxelGrid);
       }
 
       List<GraphDensity.DensityDistanceEntry> densityDistanceEntries = new ArrayList<>();
       this.rNodeResultList.clear();
-      graph.viewNodes(context.position, this.contentRadius, this.rNodeResultList);
+      result.graph.viewNodes(context.position, this.contentRadius, this.rNodeResultList);
 
       for (GraphSpace.Node node : this.rNodeResultList) {
          GraphSpace.Content content = node.content();
@@ -112,22 +115,20 @@ public class GraphDensity extends Density {
       }
 
       interpolatedDensity /= totalFactor;
-      if (this.measureStats) {
-         this.timeInstrument.stop(1);
-         this.timeInstrument.save();
-         if (this.timeInstrument.getSampleCount() >= this.statsSamplesCap) {
+      if (this.printStats) {
+         this.statsSampleCount++;
+         if (this.statsSampleCount >= this.statsSamplesCap) {
             Thread thread = Thread.currentThread();
-            String label = "[" + thread.getName() + "] GraphDensity " + this.statsLabel + " Call Performance Report";
-            String msg = this.timeInstrument.toString(label);
-            this.timeInstrument.clear();
-            GraphGrid.Stats graphGridStats = this.graphGrid.getStats();
+            String msg = "[" + thread.getName() + "] GraphDensity " + this.statsLabel + " Call Performance Report";
+            GridGraphCache.Stats graphGridStats = this.gridGraphCache.getStats();
             BigDecimal missRatio = BigDecimal.valueOf(graphGridStats.misses)
-               .divide(BigDecimal.valueOf(graphGridStats.totalCallCount), new MathContext(6, RoundingMode.HALF_UP))
+               .divide(BigDecimal.valueOf(graphGridStats.totalCallCount), new MathContext(5, RoundingMode.HALF_UP))
                .multiply(BigDecimal.valueOf(100L));
-            msg = msg + "\nGraphGrid Total Call Count : " + graphGridStats.totalCallCount;
-            msg = msg + "\nGraphGrid Cache Misses : " + graphGridStats.misses;
-            msg = msg + "\nGraphGrid Miss/Total Ratio : " + missRatio.toString() + "%";
+            msg = msg + "\n\tGraphGrid Total Call Count : " + graphGridStats.totalCallCount;
+            msg = msg + "\n\tGraphGrid Cache Misses : " + graphGridStats.misses;
+            msg = msg + "\n\tGraphGrid Miss/Total Ratio : " + missRatio.toString() + "%";
             LoggerUtil.getLogger().info(msg);
+            this.statsSampleCount = 0;
          }
       }
 

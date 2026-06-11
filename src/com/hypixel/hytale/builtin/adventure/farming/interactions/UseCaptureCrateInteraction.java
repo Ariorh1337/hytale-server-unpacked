@@ -173,7 +173,7 @@ public class UseCaptureCrateInteraction extends SimpleBlockInteraction {
                                        }
                                     }
 
-                                    itemMetaData.setAlarmStore(npcComponent.getAlarmStore());
+                                    itemMetaData.setAlarmStore(commandBuffer.getComponent(targetEntity, AlarmStore.getComponentType()));
                                     ItemStack itemWithNPC = inHandItemStack.withMetadata(CapturedNPCMetadata.KEYED_CODEC, itemMetaData);
                                     hotbarComponent.getInventory().replaceItemStackInSlot(activeHotbarSlot, item, itemWithNPC);
                                     commandBuffer.removeEntity(targetEntity, RemoveReason.REMOVE);
@@ -261,9 +261,9 @@ public class UseCaptureCrateInteraction extends SimpleBlockInteraction {
                      String roleId = existingMeta.getNpcNameKey();
                      int roleIndex = NPCPlugin.get().getIndex(roleId);
                      AlarmStore savedAlarmStore = existingMeta.getAlarmStore();
-                     commandBuffer.run(_store -> NPCPlugin.get().spawnEntity(_store, roleIndex, spawnPos, Rotation3f.IDENTITY, null, (npc, _holder, _s) -> {
+                     commandBuffer.run(_store -> NPCPlugin.get().spawnEntity(_store, roleIndex, spawnPos, Rotation3f.IDENTITY, null, (npc, holder, _s) -> {
                         if (savedAlarmStore != null) {
-                           npc.setAlarmStore(savedAlarmStore);
+                           holder.putComponent(AlarmStore.getComponentType(), savedAlarmStore);
                         }
                      }, null));
                      hotbarComponent.getInventory().replaceItemStackInSlot(activeHotbarSlot, item, noMetaItemStack);

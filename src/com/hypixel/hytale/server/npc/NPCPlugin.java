@@ -285,7 +285,20 @@ import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.role.builders.BuilderRole;
 import com.hypixel.hytale.server.npc.role.builders.BuilderRoleAbstract;
 import com.hypixel.hytale.server.npc.role.builders.BuilderRoleVariant;
+import com.hypixel.hytale.server.npc.role.builders.RoleBuilder;
+import com.hypixel.hytale.server.npc.role.support.CombatSupport;
+import com.hypixel.hytale.server.npc.role.support.DebugSupport;
+import com.hypixel.hytale.server.npc.role.support.DisplayNameSupport;
+import com.hypixel.hytale.server.npc.role.support.EntitySupport;
+import com.hypixel.hytale.server.npc.role.support.FlagsComponent;
+import com.hypixel.hytale.server.npc.role.support.MarkedEntitySupport;
+import com.hypixel.hytale.server.npc.role.support.MotionContextSupport;
+import com.hypixel.hytale.server.npc.role.support.PlayerTaskSupport;
+import com.hypixel.hytale.server.npc.role.support.PositionCache;
+import com.hypixel.hytale.server.npc.role.support.StateSupport;
+import com.hypixel.hytale.server.npc.role.support.WorldSupport;
 import com.hypixel.hytale.server.npc.statetransition.StateTransitionController;
+import com.hypixel.hytale.server.npc.storage.AlarmStore;
 import com.hypixel.hytale.server.npc.systems.AvoidanceSystem;
 import com.hypixel.hytale.server.npc.systems.BalancingInitialisationSystem;
 import com.hypixel.hytale.server.npc.systems.BlackboardSystems;
@@ -411,6 +424,18 @@ public class NPCPlugin extends JavaPlugin {
    private ComponentType<EntityStore, Timers> timersComponentType;
    private ComponentType<EntityStore, StateEvaluator> stateEvaluatorComponentType;
    private ComponentType<EntityStore, ValueStore> valueStoreComponentType;
+   private ComponentType<EntityStore, CombatSupport> combatSupportComponentType;
+   private ComponentType<EntityStore, StateSupport> stateSupportComponentType;
+   private ComponentType<EntityStore, MarkedEntitySupport> markedEntitySupportComponentType;
+   private ComponentType<EntityStore, WorldSupport> worldSupportComponentType;
+   private ComponentType<EntityStore, EntitySupport> entitySupportComponentType;
+   private ComponentType<EntityStore, MotionContextSupport> motionContextSupportComponentType;
+   private ComponentType<EntityStore, DisplayNameSupport> displayNameSupportComponentType;
+   private ComponentType<EntityStore, PlayerTaskSupport> playerTaskSupportComponentType;
+   private ComponentType<EntityStore, PositionCache> positionCacheComponentType;
+   private ComponentType<EntityStore, DebugSupport> debugSupportComponentType;
+   private ComponentType<EntityStore, FlagsComponent> flagsComponentType;
+   private ComponentType<EntityStore, AlarmStore> alarmStoreComponentType;
 
    public static NPCPlugin get() {
       return instance;
@@ -557,6 +582,32 @@ public class NPCPlugin extends JavaPlugin {
       this.valueStoreComponentType = entityStoreRegistry.registerComponent(ValueStore.class, () -> {
          throw new UnsupportedOperationException("Not implemented");
       });
+      this.combatSupportComponentType = entityStoreRegistry.registerComponent(CombatSupport.class, () -> {
+         throw new UnsupportedOperationException("Not implemented");
+      });
+      this.stateSupportComponentType = entityStoreRegistry.registerComponent(StateSupport.class, () -> {
+         throw new UnsupportedOperationException("Not implemented");
+      });
+      this.markedEntitySupportComponentType = entityStoreRegistry.registerComponent(MarkedEntitySupport.class, () -> {
+         throw new UnsupportedOperationException("Not implemented");
+      });
+      this.worldSupportComponentType = entityStoreRegistry.registerComponent(WorldSupport.class, () -> {
+         throw new UnsupportedOperationException("Not implemented");
+      });
+      this.entitySupportComponentType = entityStoreRegistry.registerComponent(EntitySupport.class, () -> {
+         throw new UnsupportedOperationException("Not implemented");
+      });
+      this.motionContextSupportComponentType = entityStoreRegistry.registerComponent(MotionContextSupport.class, MotionContextSupport::new);
+      this.displayNameSupportComponentType = entityStoreRegistry.registerComponent(DisplayNameSupport.class, DisplayNameSupport::new);
+      this.playerTaskSupportComponentType = entityStoreRegistry.registerComponent(PlayerTaskSupport.class, PlayerTaskSupport::new);
+      this.positionCacheComponentType = entityStoreRegistry.registerComponent(PositionCache.class, () -> {
+         throw new UnsupportedOperationException("Not implemented");
+      });
+      this.debugSupportComponentType = entityStoreRegistry.registerComponent(DebugSupport.class, () -> {
+         throw new UnsupportedOperationException("Not implemented");
+      });
+      this.flagsComponentType = entityStoreRegistry.registerComponent(FlagsComponent.class, FlagsComponent::new);
+      this.alarmStoreComponentType = entityStoreRegistry.registerComponent(AlarmStore.class, "AlarmStore", AlarmStore.CODEC);
       ComponentType<EntityStore, NPCEntity> npcComponentType = NPCEntity.getComponentType();
       entityStoreRegistry.registerSystem(new BlackboardSystems.InitSystem(this.blackboardResourceType));
       entityStoreRegistry.registerSystem(new BlackboardSystems.TickingSystem(this.blackboardResourceType));
@@ -588,6 +639,11 @@ public class NPCPlugin extends JavaPlugin {
       entityStoreRegistry.registerSystem(new AvoidanceSystem(npcComponentType));
       entityStoreRegistry.registerSystem(new SteeringSystem(npcComponentType));
       entityStoreRegistry.registerSystem(new RoleSystems.PostBehaviourSupportTickSystem(npcComponentType));
+      entityStoreRegistry.registerSystem(new RoleSystems.WorldSupportTickSystem(this.worldSupportComponentType));
+      entityStoreRegistry.registerSystem(new RoleSystems.EntitySupportTickSystem(this.entitySupportComponentType));
+      entityStoreRegistry.registerSystem(new RoleSystems.PositionCacheClearSystem(this.positionCacheComponentType));
+      entityStoreRegistry.registerSystem(new RoleSystems.StateSupportUpdateSystem(this.stateSupportComponentType));
+      entityStoreRegistry.registerSystem(new RoleSystems.MarkedEntitySupportPostSystem(this.markedEntitySupportComponentType));
       entityStoreRegistry.registerSystem(new RoleSystems.RoleDebugSystem(npcComponentType, postBehaviourDependency));
       entityStoreRegistry.registerSystem(new TimerSystem(this.timersComponentType, postBehaviourDependency));
       entityStoreRegistry.registerSystem(new ComputeVelocitySystem(npcComponentType, EntityModule.get().getVelocityComponentType(), postBehaviourDependency));
@@ -702,6 +758,54 @@ public class NPCPlugin extends JavaPlugin {
 
    public ComponentType<EntityStore, PlayerEntityEventSupport> getPlayerEntityEventSupportComponentType() {
       return this.playerEntityEventSupportComponentType;
+   }
+
+   public ComponentType<EntityStore, CombatSupport> getCombatSupportComponentType() {
+      return this.combatSupportComponentType;
+   }
+
+   public ComponentType<EntityStore, StateSupport> getStateSupportComponentType() {
+      return this.stateSupportComponentType;
+   }
+
+   public ComponentType<EntityStore, MarkedEntitySupport> getMarkedEntitySupportComponentType() {
+      return this.markedEntitySupportComponentType;
+   }
+
+   public ComponentType<EntityStore, WorldSupport> getWorldSupportComponentType() {
+      return this.worldSupportComponentType;
+   }
+
+   public ComponentType<EntityStore, EntitySupport> getEntitySupportComponentType() {
+      return this.entitySupportComponentType;
+   }
+
+   public ComponentType<EntityStore, MotionContextSupport> getMotionContextSupportComponentType() {
+      return this.motionContextSupportComponentType;
+   }
+
+   public ComponentType<EntityStore, DisplayNameSupport> getDisplayNameSupportComponentType() {
+      return this.displayNameSupportComponentType;
+   }
+
+   public ComponentType<EntityStore, PlayerTaskSupport> getPlayerTaskSupportComponentType() {
+      return this.playerTaskSupportComponentType;
+   }
+
+   public ComponentType<EntityStore, PositionCache> getPositionCacheComponentType() {
+      return this.positionCacheComponentType;
+   }
+
+   public ComponentType<EntityStore, DebugSupport> getDebugSupportComponentType() {
+      return this.debugSupportComponentType;
+   }
+
+   public ComponentType<EntityStore, AlarmStore> getAlarmStoreComponentType() {
+      return this.alarmStoreComponentType;
+   }
+
+   public ComponentType<EntityStore, FlagsComponent> getFlagsComponentType() {
+      return this.flagsComponentType;
    }
 
    public ComponentType<EntityStore, StepComponent> getStepComponentType() {
@@ -1314,20 +1418,25 @@ public class NPCPlugin extends JavaPlugin {
    }
 
    @Nonnull
-   public static Role buildRole(@Nonnull Builder<Role> roleBuilder, @Nonnull BuilderInfo builderInfo, @Nonnull BuilderSupport builderSupport, int roleIndex) {
+   public static Role buildRole(
+      @Nonnull Holder<EntityStore> holder,
+      @Nonnull Builder<Role> roleBuilder,
+      @Nonnull BuilderInfo builderInfo,
+      @Nonnull BuilderSupport builderSupport,
+      int roleIndex
+   ) {
       Role role;
       try {
          StdScope scope = roleBuilder.getBuilderParameters().createScope();
          builderSupport.setScope(scope);
          builderSupport.setGlobalScope(scope);
-         role = roleBuilder.build(builderSupport);
-         role.postRoleBuilt(builderSupport);
+         role = ((RoleBuilder)roleBuilder).createAndAttach(holder, builderSupport);
       } catch (Throwable e) {
          builderInfo.setNeedsReload();
          throw new SkipSentryException(e);
       }
 
-      role.setRoleIndex(roleIndex, builderInfo.getKeyName());
+      role.setRoleIndex(holder, roleIndex, builderInfo.getKeyName());
       return role;
    }
 

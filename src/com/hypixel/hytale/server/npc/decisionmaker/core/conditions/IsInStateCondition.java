@@ -10,7 +10,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.decisionmaker.core.EvaluationContext;
 import com.hypixel.hytale.server.npc.decisionmaker.core.conditions.base.SimpleCondition;
-import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.role.support.StateSupport;
 import javax.annotation.Nonnull;
 
@@ -54,9 +53,8 @@ public class IsInStateCondition extends SimpleCondition {
       CommandBuffer<EntityStore> commandBuffer,
       EvaluationContext context
    ) {
-      NPCEntity npcComponent = archetypeChunk.getComponent(selfIndex, NPCEntity.getComponentType());
-      assert npcComponent != null;
-      StateSupport stateSupport = npcComponent.getRole().getStateSupport();
+      StateSupport stateSupport = archetypeChunk.getComponent(selfIndex, StateSupport.getComponentType());
+      assert stateSupport != null;
       return stateSupport.inState(this.state, this.subState);
    }
 

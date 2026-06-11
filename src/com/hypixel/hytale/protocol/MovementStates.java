@@ -10,10 +10,10 @@ import javax.annotation.Nonnull;
 
 public class MovementStates {
    public static final int NULLABLE_BIT_FIELD_SIZE = 0;
-   public static final int FIXED_BLOCK_SIZE = 23;
+   public static final int FIXED_BLOCK_SIZE = 24;
    public static final int VARIABLE_FIELD_COUNT = 0;
-   public static final int VARIABLE_BLOCK_START = 23;
-   public static final int MAX_SIZE = 23;
+   public static final int VARIABLE_BLOCK_START = 24;
+   public static final int MAX_SIZE = 24;
    public boolean idle;
    public boolean horizontalIdle;
    public boolean jumping;
@@ -37,6 +37,7 @@ public class MovementStates {
    public boolean sitting;
    public boolean gliding;
    public boolean sleeping;
+   public byte extraJumpsUsed;
 
    public MovementStates() {
    }
@@ -64,7 +65,8 @@ public class MovementStates {
       boolean rolling,
       boolean sitting,
       boolean gliding,
-      boolean sleeping
+      boolean sleeping,
+      byte extraJumpsUsed
    ) {
       this.idle = idle;
       this.horizontalIdle = horizontalIdle;
@@ -89,6 +91,7 @@ public class MovementStates {
       this.sitting = sitting;
       this.gliding = gliding;
       this.sleeping = sleeping;
+      this.extraJumpsUsed = extraJumpsUsed;
    }
 
    public MovementStates(@Nonnull MovementStates other) {
@@ -115,12 +118,13 @@ public class MovementStates {
       this.sitting = other.sitting;
       this.gliding = other.gliding;
       this.sleeping = other.sleeping;
+      this.extraJumpsUsed = other.extraJumpsUsed;
    }
 
    @Nonnull
    public static MovementStates deserialize(@Nonnull ByteBuf buf, int offset) {
-      if (buf.readableBytes() - offset < 23) {
-         throw ProtocolException.bufferTooSmall("MovementStates", 23, buf.readableBytes() - offset);
+      if (buf.readableBytes() - offset < 24) {
+         throw ProtocolException.bufferTooSmall("MovementStates", 24, buf.readableBytes() - offset);
       }
 
       MovementStates obj = new MovementStates();
@@ -147,15 +151,16 @@ public class MovementStates {
       obj.sitting = buf.getByte(offset + 20) != 0;
       obj.gliding = buf.getByte(offset + 21) != 0;
       obj.sleeping = buf.getByte(offset + 22) != 0;
+      obj.extraJumpsUsed = buf.getByte(offset + 23);
       return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
-      return 23;
+      return 24;
    }
 
    public static boolean isBufferTooSmall(MemorySegment mem) {
-      return mem.byteSize() < 23L;
+      return mem.byteSize() < 24L;
    }
 
    public static boolean getIdle(MemorySegment mem) {
@@ -342,13 +347,21 @@ public class MovementStates {
       return mem.get(PacketIO.PROTO_BOOL, offset + 22);
    }
 
+   public static byte getExtraJumpsUsed(MemorySegment mem) {
+      return getExtraJumpsUsed(mem, 0);
+   }
+
+   public static byte getExtraJumpsUsed(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BYTE, offset + 23);
+   }
+
    public static MovementStates toObject(MemorySegment mem) {
       return toObject(mem, 0);
    }
 
    public static MovementStates toObject(MemorySegment mem, int offset) {
-      if (offset + 23 > mem.byteSize()) {
-         throw ProtocolException.bufferTooSmall("MovementStates", offset + 23, (int)mem.byteSize());
+      if (offset + 24 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("MovementStates", offset + 24, (int)mem.byteSize());
       } else {
          return new MovementStates(
             mem.get(PacketIO.PROTO_BOOL, offset + 0),
@@ -373,7 +386,8 @@ public class MovementStates {
             mem.get(PacketIO.PROTO_BOOL, offset + 19),
             mem.get(PacketIO.PROTO_BOOL, offset + 20),
             mem.get(PacketIO.PROTO_BOOL, offset + 21),
-            mem.get(PacketIO.PROTO_BOOL, offset + 22)
+            mem.get(PacketIO.PROTO_BOOL, offset + 22),
+            mem.get(PacketIO.PROTO_BYTE, offset + 23)
          );
       }
    }
@@ -402,6 +416,7 @@ public class MovementStates {
       buf.writeByte(this.sitting ? 1 : 0);
       buf.writeByte(this.gliding ? 1 : 0);
       buf.writeByte(this.sleeping ? 1 : 0);
+      buf.writeByte(this.extraJumpsUsed);
    }
 
    public int serialize(@Nonnull MemorySegment mem, int offset) {
@@ -428,15 +443,16 @@ public class MovementStates {
       mem.set(PacketIO.PROTO_BOOL, offset + 20, this.sitting);
       mem.set(PacketIO.PROTO_BOOL, offset + 21, this.gliding);
       mem.set(PacketIO.PROTO_BOOL, offset + 22, this.sleeping);
-      return 23;
+      mem.set(PacketIO.PROTO_BYTE, offset + 23, this.extraJumpsUsed);
+      return 24;
    }
 
    public int computeSize() {
-      return 23;
+      return 24;
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 23 ? ValidationResult.error("Buffer too small: expected at least 23 bytes") : ValidationResult.OK;
+      return buffer.readableBytes() - offset < 24 ? ValidationResult.error("Buffer too small: expected at least 24 bytes") : ValidationResult.OK;
    }
 
    public MovementStates clone() {
@@ -464,6 +480,7 @@ public class MovementStates {
       copy.sitting = this.sitting;
       copy.gliding = this.gliding;
       copy.sleeping = this.sleeping;
+      copy.extraJumpsUsed = this.extraJumpsUsed;
       return copy;
    }
 
@@ -496,7 +513,8 @@ public class MovementStates {
                && this.rolling == other.rolling
                && this.sitting == other.sitting
                && this.gliding == other.gliding
-               && this.sleeping == other.sleeping;
+               && this.sleeping == other.sleeping
+               && this.extraJumpsUsed == other.extraJumpsUsed;
       }
    }
 
@@ -525,7 +543,8 @@ public class MovementStates {
          this.rolling,
          this.sitting,
          this.gliding,
-         this.sleeping
+         this.sleeping,
+         this.extraJumpsUsed
       );
    }
 }

@@ -18,6 +18,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.role.support.DebugSupport;
 import java.util.Set;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
@@ -75,7 +76,9 @@ public class SteeringSystem extends SteppableTickingSystem {
          Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
 
          try {
-            if (role.getDebugSupport().isDebugMotionSteering()) {
+            DebugSupport debugSupport = archetypeChunk.getComponent(index, DebugSupport.getComponentType());
+            assert debugSupport != null;
+            if (debugSupport.isDebugMotionSteering()) {
                Vector3d position = transformComponent.getPosition();
                double x = position.x();
                double z = position.z();

@@ -6,6 +6,7 @@ import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderObjectReferenceHelper;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderValidationHelper;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderActionBase;
 import com.hypixel.hytale.server.npc.corecomponents.world.ActionMakePath;
 import com.hypixel.hytale.server.npc.instructions.Action;
@@ -48,6 +49,7 @@ public class BuilderActionMakePath extends BuilderActionBase {
          null,
          new BuilderValidationHelper(this.fileName, null, this.internalReferenceResolver, null, null, this.extraInfo, null, this.readErrors)
       );
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
       return this;
    }
 

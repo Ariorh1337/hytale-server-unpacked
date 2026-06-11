@@ -51,6 +51,7 @@ import com.hypixel.hytale.server.npc.movement.constraints.RelaxedConstraint;
 import com.hypixel.hytale.server.npc.movement.controllers.builders.BuilderMotionControllerBase;
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.role.RoleDebugFlags;
+import com.hypixel.hytale.server.npc.role.support.DebugSupport;
 import com.hypixel.hytale.server.npc.util.NPCPhysicsMath;
 import com.hypixel.hytale.server.npc.util.VisHelper;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -154,7 +155,9 @@ public abstract class MotionControllerBase implements MotionController {
    protected MovementSettings movementSettings;
 
    public MotionControllerBase(@Nonnull BuilderSupport builderSupport, @Nonnull BuilderMotionControllerBase builder) {
-      this.entity = builderSupport.getEntity();
+      NPCEntity npcEntity = builderSupport.getHolder().getComponent(NPCEntity.getComponentType());
+      assert npcEntity != null : "NPC component null in motion controller construction!";
+      this.entity = npcEntity;
       this.type = builder.getType();
       this.epsilonSpeed = builder.getEpsilonSpeed();
       this.epsilonAngle = builder.getEpsilonAngle();
@@ -446,7 +449,7 @@ public abstract class MotionControllerBase implements MotionController {
       NPCEntity npcComponent = componentAccessor.getComponent(ref, NPCEntity.getComponentType());
       assert npcComponent != null;
       this.effectHorizontalSpeedMultiplier = npcComponent.getCurrentHorizontalSpeedMultiplier(ref, componentAccessor);
-      this.applyRuntimeRelaxedConstraints(!role.couldBreatheCached());
+      this.applyRuntimeRelaxedConstraints(!role.couldBreatheCached(ref, componentAccessor));
       this.translation.zero();
       this.cachedMovementBlocked = this.isMovementBlocked(ref, componentAccessor);
       this.computeMove(ref, role, bodySteering, interval, this.translation, componentAccessor);
@@ -478,16 +481,16 @@ public abstract class MotionControllerBase implements MotionController {
          this.translation.zero();
       }
 
-      this.applyRuntimeRelaxedConstraints(!role.couldBreatheCached());
+      this.applyRuntimeRelaxedConstraints(!role.couldBreatheCached(ref, componentAccessor));
       this.executeMove(ref, role, interval, this.translation, componentAccessor);
-      if (role.getDebugSupport().isDebugFlagSet(RoleDebugFlags.VisTranslation)) {
+      if (DebugSupport.get(ref, componentAccessor).isDebugFlagSet(RoleDebugFlags.VisTranslation)) {
          VisHelper.renderDebugVectorTo(this.position, this.translation, VisHelper.DEBUG_COLOR_STEERING_PRE, world);
       }
 
       this.postExecuteMove();
       this.clearRequirePreciseMovement();
       this.clearBlendHeading();
-      boolean cannotBreathe = !role.couldBreatheCached();
+      boolean cannotBreathe = !role.couldBreatheCached(ref, componentAccessor);
       this.relaxedConstraints.clear();
       this.applyRuntimeRelaxedConstraints(cannotBreathe);
       float maxBodyRotation = (float)(interval * this.getCurrentMaxBodyRotationSpeed() * bodySteering.getRelativeTurnSpeed());

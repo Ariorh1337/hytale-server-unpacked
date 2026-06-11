@@ -5,6 +5,7 @@ import com.hypixel.hytale.server.flock.corecomponents.EntityFilterFlock;
 import com.hypixel.hytale.server.npc.asset.builder.Builder;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.corecomponents.IEntityFilter;
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderEntityFilterBase;
 import com.hypixel.hytale.server.npc.movement.FlockMembershipType;
@@ -73,6 +74,7 @@ public class BuilderEntityFilterFlock extends BuilderEntityFilterBase {
          "If true, will filter entities in a flock the executor can join",
          null
       );
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
       return this;
    }
 

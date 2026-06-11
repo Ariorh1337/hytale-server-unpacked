@@ -6,19 +6,19 @@ import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class NotNodeSelector extends NodeSelector {
    @Nonnull
-   private final NodeSelector edgeSelector;
+   private final NodeSelector nodeSelector;
 
-   public NotNodeSelector(@Nonnull NodeSelector edgeSelector) {
-      this.edgeSelector = edgeSelector;
+   public NotNodeSelector(@Nonnull NodeSelector nodeSelector) {
+      this.nodeSelector = nodeSelector;
    }
 
    @Override
    public boolean isSelected(@NonNullDecl GraphSpace graphSpace, @NonNullDecl GraphSpace.Node node) {
-      return !this.edgeSelector.isSelected(graphSpace, node);
+      return !this.nodeSelector.isSelected(graphSpace, node);
    }
 
    @Override
    public double getReadRange(double longestConnection) {
-      return this.edgeSelector.getReadRange(longestConnection);
+      return this.nodeSelector.getReadRange(longestConnection);
    }
 }

@@ -13,7 +13,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.ActionWithDelay;
 import com.hypixel.hytale.server.npc.corecomponents.items.builders.BuilderActionPickUpItem;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.util.InventoryHelper;
 import java.util.List;
@@ -41,13 +41,19 @@ public class ActionPickUpItem extends ActionWithDelay {
    }
 
    @Override
-   public void registerWithSupport(@Nonnull Role role) {
-      role.getPositionCache().requireDroppedItemDistance(this.range);
+   public void registerWithSupport(@Nonnull ExecutionSupport executionSupport) {
+      executionSupport.getPositionCache().requireDroppedItemDistance(this.range);
    }
 
    @Override
-   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      if (!super.canExecute(ref, role, sensorInfo, dt, store)) {
+   public boolean canExecute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
+      if (!super.canExecute(ref, executionSupport, sensorInfo, dt, store)) {
          return false;
       }
 
@@ -76,7 +82,7 @@ public class ActionPickUpItem extends ActionWithDelay {
          if (distanceSquared > this.range * this.range) {
             return false;
          }
-      } else if (role.getPositionCache().getDroppedItemList().isEmpty()) {
+      } else if (executionSupport.getPositionCache().getDroppedItemList().isEmpty()) {
          return false;
       }
 
@@ -84,19 +90,25 @@ public class ActionPickUpItem extends ActionWithDelay {
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      super.execute(ref, role, sensorInfo, dt, store);
+   public boolean execute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
+      super.execute(ref, executionSupport, sensorInfo, dt, store);
       Ref<EntityStore> itemRef = null;
       if (!this.hoover) {
          if (sensorInfo != null) {
             itemRef = sensorInfo.getPositionProvider().getTarget();
          }
       } else {
-         itemRef = role.getPositionCache().getClosestDroppedItemInRange(ref, 0.0, this.range, ActionPickUpItem::filterItem, role, this, store);
+         itemRef = executionSupport.getPositionCache().getClosestDroppedItemInRange(ref, 0.0, this.range, ActionPickUpItem::filterItem, this, store);
       }
 
       this.prepareDelay();
-      this.startDelay(role.getEntitySupport());
+      this.startDelay(executionSupport.getEntitySupport());
       if (itemRef == null) {
          return false;
       }
@@ -117,7 +129,7 @@ public class ActionPickUpItem extends ActionWithDelay {
       return true;
    }
 
-   protected boolean filterItem(@Nonnull Ref<EntityStore> ref, Role role, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+   protected boolean filterItem(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       if (!ref.isValid()) {
          return false;
       }

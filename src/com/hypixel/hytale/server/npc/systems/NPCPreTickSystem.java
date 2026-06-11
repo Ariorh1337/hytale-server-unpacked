@@ -20,6 +20,7 @@ import com.hypixel.hytale.server.core.modules.time.WorldTimeResource;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.components.SpawnBeaconReference;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.role.support.StateSupport;
 import com.hypixel.hytale.server.spawning.SpawningPlugin;
 import java.util.Set;
 import javax.annotation.Nonnull;
@@ -96,7 +97,9 @@ public class NPCPreTickSystem extends SteppableTickingSystem {
       } else {
          if (npcComponent.tickDespawnCheckRemainingSeconds(dt)) {
             npcComponent.setDespawnCheckRemainingSeconds(30.0F);
-            if (npcComponent.getRole().getStateSupport().isInBusyState()) {
+            StateSupport stateSupport = archetypeChunk.getComponent(index, StateSupport.getComponentType());
+            assert stateSupport != null;
+            if (stateSupport.isInBusyState()) {
                return;
             }
 

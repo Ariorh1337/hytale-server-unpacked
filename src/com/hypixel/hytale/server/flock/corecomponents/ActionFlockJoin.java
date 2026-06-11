@@ -8,7 +8,7 @@ import com.hypixel.hytale.server.flock.FlockMembershipSystems;
 import com.hypixel.hytale.server.flock.FlockPlugin;
 import com.hypixel.hytale.server.flock.corecomponents.builders.BuilderActionFlockJoin;
 import com.hypixel.hytale.server.npc.corecomponents.ActionBase;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -22,13 +22,25 @@ public class ActionFlockJoin extends ActionBase {
    }
 
    @Override
-   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      return super.canExecute(ref, role, sensorInfo, dt, store) && sensorInfo != null && sensorInfo.hasPosition();
+   public boolean canExecute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
+      return super.canExecute(ref, executionSupport, sensorInfo, dt, store) && sensorInfo != null && sensorInfo.hasPosition();
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      super.execute(ref, role, sensorInfo, dt, store);
+   public boolean execute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
+      super.execute(ref, executionSupport, sensorInfo, dt, store);
       Ref<EntityStore> target = sensorInfo != null && sensorInfo.hasPosition() ? sensorInfo.getPositionProvider().getTarget() : null;
       if (target == null) {
          return false;
@@ -46,8 +58,8 @@ public class ActionFlockJoin extends ActionBase {
       } else if (targetFlockReference != null) {
          FlockMembershipSystems.join(ref, targetFlockReference, store);
       } else {
-         flockReference = FlockPlugin.createFlock(store, role);
-         if (role.isCanLeadFlock()) {
+         flockReference = FlockPlugin.createFlock(store, executionSupport.getRole());
+         if (executionSupport.getRole().isCanLeadFlock()) {
             FlockMembershipSystems.join(ref, flockReference, store);
             FlockMembershipSystems.join(target, flockReference, store);
          } else {

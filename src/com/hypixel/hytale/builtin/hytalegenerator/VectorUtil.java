@@ -3,6 +3,7 @@ package com.hypixel.hytale.builtin.hytalegenerator;
 import com.hypixel.hytale.builtin.hytalegenerator.math.Calculator;
 import it.unimi.dsi.fastutil.Pair;
 import it.unimi.dsi.fastutil.doubles.DoubleObjectPair;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -15,6 +16,28 @@ import org.joml.Vector3i;
 import org.joml.Vector3ic;
 
 public class VectorUtil {
+   @Nonnull
+   public static String toString(@Nonnull Vector3dc vec) {
+      return "{x="
+         + BigDecimal.valueOf(vec.x()).toPlainString()
+         + ", y="
+         + BigDecimal.valueOf(vec.y()).toPlainString()
+         + ", z="
+         + BigDecimal.valueOf(vec.z()).toPlainString()
+         + "}";
+   }
+
+   @Nonnull
+   public static String toString(@Nonnull Vector3ic vec) {
+      return "{x=" + vec.x() + ", y=" + vec.y() + ", z=" + vec.z() + "}";
+   }
+
+   public static void nextDown(@Nonnull Vector3d vec) {
+      vec.x = Math.nextDown(vec.x);
+      vec.y = Math.nextDown(vec.y);
+      vec.z = Math.nextDown(vec.z);
+   }
+
    public static void orthogonalVector(@Nonnull Vector3d vec, @Nonnull Vector3d dest) {
       if (isZero(vec)) {
          dest.set(0.0);

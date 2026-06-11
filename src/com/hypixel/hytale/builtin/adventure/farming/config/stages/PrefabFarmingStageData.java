@@ -68,11 +68,29 @@ public class PrefabFarmingStageData extends FarmingStageData {
          stage -> stage.replaceMaskTags
       )
       .add()
+      .append(
+         new KeyedCodec<>("TolerateObstructionsBelowY", Codec.INTEGER),
+         (stage, value) -> stage.tolerateObstructionsBelowY = value,
+         stage -> stage.tolerateObstructionsBelowY
+      )
+      .add()
+      .append(
+         new KeyedCodec<>("TolerateObstructionsAboveY", Codec.INTEGER),
+         (stage, value) -> stage.tolerateObstructionsAboveY = value,
+         stage -> stage.tolerateObstructionsAboveY
+      )
+      .add()
       .afterDecode(PrefabFarmingStageData::processConfig)
       .build();
    protected IWeightedMap<PrefabFarmingStageData.PrefabStage> prefabStages;
    private String[] replaceMaskTags = EMPTY_REPLACE_MASK;
    private int[] replaceMaskTagIndices;
+   @Nullable
+   private Integer tolerateObstructionsBelowY;
+   @Nullable
+   private Integer tolerateObstructionsAboveY;
+   private int belowToleranceMaxY = Integer.MIN_VALUE;
+   private int aboveToleranceMinY = Integer.MAX_VALUE;
 
    private static double computeParticlesRate(@Nonnull IPrefabBuffer prefab) {
       double xLength = prefab.getMaxX() - prefab.getMinX();
@@ -120,7 +138,7 @@ public class PrefabFarmingStageData extends FarmingStageData {
       }
    }
 
-   private static boolean isPrefabIntact(
+   private boolean isPrefabIntact(
       @Nonnull IPrefabBuffer prefabBuffer,
       @Nonnull LocalCachedChunkAccessor chunkAccessor,
       int worldX,
@@ -130,16 +148,26 @@ public class PrefabFarmingStageData extends FarmingStageData {
       @Nonnull FastRandom random
    ) {
       return prefabBuffer.forEachRaw(
-         IPrefabBuffer.iterateAllColumns(), (blockX, blockY, blockZ, blockId, chance, holder, supportValue, rotation, filler, t) -> {
+         IPrefabBuffer.iterateAllColumns(),
+         (blockX, blockY, blockZ, blockId, chance, holder, supportValue, rotation, filler, t) -> {
             if (chance < 1.0F) {
                return true;
+            } else if (filler != 0) {
+               return true;
             } else {
-               return filler != 0
+               return this.isObstructionTolerated(blockY)
                   ? true
                   : isPrefabBlockIntact(chunkAccessor, worldX, worldY, worldZ, blockX, blockY, blockZ, blockId, rotation, prefabRotation);
             }
-         }, (fluidX, fluidY, fluidZ, fluidId, level, o) -> true, null, new PrefabBufferCall(random, prefabRotation)
+         },
+         (fluidX, fluidY, fluidZ, fluidId, level, o) -> true,
+         null,
+         new PrefabBufferCall(random, prefabRotation)
       );
+   }
+
+   private boolean isObstructionTolerated(int blockY) {
+      return blockY <= this.belowToleranceMaxY || blockY >= this.aboveToleranceMinY;
    }
 
    @Override
@@ -197,25 +225,29 @@ public class PrefabFarmingStageData extends FarmingStageData {
                double brokenParticlesRate = computeParticlesRate(prefabBuffer);
                world.execute(
                   () -> {
-                     boolean isIntact = isPrefabIntact(oldPrefabBuffer, chunkAccessor, worldX, worldY, worldZ, prefabRotation, random);
+                     boolean isIntact = oldPrefab.isPrefabIntact(oldPrefabBuffer, chunkAccessor, worldX, worldY, worldZ, prefabRotation, random);
                      if (isIntact) {
                         boolean isUnobstructed = prefabBuffer.compare(
                            (px, py, pz, blockId, stateWrapper, chance, rotation, filler, secondBlockId, secondStateWrapper, secondChance, secondRotation, secondFiller, prefabBufferCall) -> {
                               int bx = worldX + px;
                               int by = worldY + py;
                               int bz = worldZ + pz;
-                              if (blockId != 0 && blockId != Integer.MIN_VALUE) {
-                                 long chunkIndex = ChunkUtil.indexChunkFromBlock(bx, bz);
-                                 WorldChunk nonTickingWorldChunkComponent = chunkAccessor.getNonTickingChunk(chunkIndex);
-                                 if (nonTickingWorldChunkComponent == null) {
-                                    return false;
-                                 }
-
-                                 int worldBlockId = nonTickingWorldChunkComponent.getBlock(bx, by, bz);
-                                 return worldBlockId == secondBlockId ? true : !this.doesBlockObstruct(blockId, worldBlockId);
-                              } else {
+                              if (blockId == 0 || blockId == Integer.MIN_VALUE) {
                                  return true;
                               }
+
+                              if (this.isObstructionTolerated(py)) {
+                                 return true;
+                              }
+
+                              long chunkIndex = ChunkUtil.indexChunkFromBlock(bx, bz);
+                              WorldChunk nonTickingWorldChunkComponent = chunkAccessor.getNonTickingChunk(chunkIndex);
+                              if (nonTickingWorldChunkComponent == null) {
+                                 return false;
+                              }
+
+                              int worldBlockId = nonTickingWorldChunkComponent.getBlock(bx, by, bz);
+                              return worldBlockId == secondBlockId ? true : !this.doesBlockObstruct(blockId, worldBlockId);
                            },
                            new PrefabBufferCall(random, prefabRotation),
                            oldPrefabBuffer
@@ -297,18 +329,22 @@ public class PrefabFarmingStageData extends FarmingStageData {
                            int bx = worldX + prefabRotation.getX(blockX, blockZ);
                            int by = worldY + blockY;
                            int bz = worldZ + prefabRotation.getZ(blockX, blockZ);
-                           if (blockId != 0 && blockId != Integer.MIN_VALUE) {
-                              long chunkIndex = ChunkUtil.indexChunkFromBlock(bx, bz);
-                              WorldChunk nonTickingWorldChunkComponent = chunkAccessor.getNonTickingChunk(chunkIndex);
-                              if (nonTickingWorldChunkComponent == null) {
-                                 return false;
-                              }
-
-                              int worldBlock = nonTickingWorldChunkComponent.getBlock(bx, by, bz);
-                              return !this.doesBlockObstruct(blockId, worldBlock);
-                           } else {
+                           if (blockId == 0 || blockId == Integer.MIN_VALUE) {
                               return true;
                            }
+
+                           if (this.isObstructionTolerated(blockY)) {
+                              return true;
+                           }
+
+                           long chunkIndex = ChunkUtil.indexChunkFromBlock(bx, bz);
+                           WorldChunk nonTickingWorldChunkComponent = chunkAccessor.getNonTickingChunk(chunkIndex);
+                           if (nonTickingWorldChunkComponent == null) {
+                              return false;
+                           }
+
+                           int worldBlock = nonTickingWorldChunkComponent.getBlock(bx, by, bz);
+                           return !this.doesBlockObstruct(blockId, worldBlock);
                         }, (fluidX, fluidY, fluidZ, fluidId, level, o) -> true, null, new PrefabBufferCall(random, prefabRotation)
                      );
                      if (isUnObstructed) {
@@ -435,12 +471,31 @@ public class PrefabFarmingStageData extends FarmingStageData {
       for (int i = 0; i < this.replaceMaskTags.length; i++) {
          this.replaceMaskTagIndices[i] = AssetRegistry.getOrCreateTagIndex(this.replaceMaskTags[i]);
       }
+
+      this.belowToleranceMaxY = this.tolerateObstructionsBelowY != null ? this.tolerateObstructionsBelowY : Integer.MIN_VALUE;
+      this.aboveToleranceMinY = this.tolerateObstructionsAboveY != null ? this.tolerateObstructionsAboveY : Integer.MAX_VALUE;
+      if (this.belowToleranceMaxY >= this.aboveToleranceMinY) {
+         LOGGER.at(Level.WARNING)
+            .log(
+               "Overlapping obstruction tolerance on prefab farming stage (TolerateObstructionsBelowY=%d >= TolerateObstructionsAboveY=%d); all obstructions will be tolerated",
+               Integer.valueOf(this.belowToleranceMaxY),
+               Integer.valueOf(this.aboveToleranceMinY)
+            );
+      }
    }
 
    @Nonnull
    @Override
    public String toString() {
-      return "PrefabFarmingStageData{replaceMaskTags=" + Arrays.toString(this.replaceMaskTags) + ", prefabStages=" + this.prefabStages + "}";
+      return "PrefabFarmingStageData{replaceMaskTags="
+         + Arrays.toString(this.replaceMaskTags)
+         + ", tolerateObstructionsBelowY="
+         + this.tolerateObstructionsBelowY
+         + ", tolerateObstructionsAboveY="
+         + this.tolerateObstructionsAboveY
+         + ", prefabStages="
+         + this.prefabStages
+         + "}";
    }
 
    public static class PrefabStage implements IWeightedElement {

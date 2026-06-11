@@ -162,28 +162,25 @@ public class ArchetypeChunk<ECS_TYPE> {
       if (this.refs.length <= entityIndex) {
          int newLength = ArrayUtil.grow(entityIndex);
          this.refs = Arrays.copyOf(this.refs, newLength);
+         int minI = Math.min(this.archetype.getMinIndex(), source.archetype.getMinIndex());
+         int maxI = Math.max(this.archetype.length(), source.archetype.length());
 
-         for (int i = this.archetype.getMinIndex(); i < this.archetype.length(); i++) {
-            if (this.archetype.get(i) != null) {
+         for (int i = minI; i < maxI; i++) {
+            boolean inTarget = i < this.archetype.length() && this.archetype.get(i) != null;
+            boolean inSource = i < source.archetype.length() && source.archetype.get(i) != null;
+            if (inTarget) {
                Component<ECS_TYPE>[] grown = Arrays.copyOf(this.components[i], newLength);
                grown[entityIndex] = i == overrideIndex ? overrideComponent : source.components[i][sourceIndex];
                this.components[i] = grown;
             }
-         }
 
-         if (sourceIndex != sourceLastIndex) {
-            for (int i = source.archetype.getMinIndex(); i < source.archetype.length(); i++) {
-               if (source.archetype.get(i) != null) {
-                  Component<ECS_TYPE>[] col = source.components[i];
+            if (inSource) {
+               Component<ECS_TYPE>[] col = source.components[i];
+               if (sourceIndex != sourceLastIndex) {
                   col[sourceIndex] = col[sourceLastIndex];
-                  col[sourceLastIndex] = null;
                }
-            }
-         } else {
-            for (int i = source.archetype.getMinIndex(); i < source.archetype.length(); i++) {
-               if (source.archetype.get(i) != null) {
-                  source.components[i][sourceLastIndex] = null;
-               }
+
+               col[sourceLastIndex] = null;
             }
          }
       } else {

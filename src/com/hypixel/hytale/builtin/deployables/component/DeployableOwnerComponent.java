@@ -116,19 +116,29 @@ public class DeployableOwnerComponent implements Component<EntityStore> {
    private void handleGlobalDeployableLimit(@Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> owner) {
       int limit = 1;
       int current = 0;
+      this.tempDestructionList.clear();
 
       for (Pair<String, Ref<EntityStore>> deployablePair : this.deployables) {
-         DeployableComponent deployableComponent = store.getComponent(deployablePair.value(), DeployableComponent.getComponentType());
-         assert deployableComponent != null;
-         DeployableConfig deployableConfig = deployableComponent.getConfig();
-         if (deployableConfig.getCountTowardsGlobalLimit()) {
-            current++;
+         Ref<EntityStore> ref = deployablePair.value();
+         if (ref.isValid() && ref.getStore() == store) {
+            DeployableComponent deployableComponent = store.getComponent(ref, DeployableComponent.getComponentType());
+            assert deployableComponent != null;
+            DeployableConfig deployableConfig = deployableComponent.getConfig();
+            if (deployableConfig.getCountTowardsGlobalLimit()) {
+               current++;
+            }
+         } else {
+            this.tempDestructionList.add(deployablePair);
          }
+      }
+
+      if (!this.tempDestructionList.isEmpty()) {
+         this.deployables.removeAll(this.tempDestructionList);
+         this.tempDestructionList.clear();
       }
 
       if (current > 1) {
          int diff = current - 1;
-         this.tempDestructionList.clear();
 
          for (Pair<String, Ref<EntityStore>> deployablePair : this.deployables) {
             Ref<EntityStore> deployableRef = deployablePair.value();

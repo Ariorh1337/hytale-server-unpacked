@@ -25,4 +25,11 @@ public class Alarm extends PersistentParameter<Instant> {
    public boolean hasPassed(@Nonnull Instant instant) {
       return this.alarmInstant != null && instant.isAfter(this.alarmInstant);
    }
+
+   @Nonnull
+   public Alarm cloneAlarm() {
+      Alarm copy = new Alarm();
+      copy.alarmInstant = this.alarmInstant;
+      return copy;
+   }
 }

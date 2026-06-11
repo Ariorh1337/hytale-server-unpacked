@@ -40,6 +40,7 @@ import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.util.expression.ExecutionContext;
 import com.hypixel.hytale.server.npc.util.expression.StdLib;
 import com.hypixel.hytale.server.npc.validators.NPCLoadTimeValidationHelper;
+import com.hypixel.hytale.server.spawning.ISpawnableWithModel;
 import com.hypixel.hytale.server.spawning.LoadedNPCEvent;
 import com.hypixel.hytale.sneakythrow.SneakyThrow;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
@@ -934,7 +935,7 @@ public class BuilderManager {
       builders.forEach(
          (index, builderInfo) -> {
             Builder<?> builder = builderInfo.getBuilder();
-            if (builder.isSpawnable() && builder instanceof SpawnableWithModelBuilder<?> spawnableBuilder) {
+            if (builder.isSpawnable() && builder instanceof ISpawnableWithModel spawnableBuilder) {
                ExecutionContext context = new ExecutionContext(builder.getBuilderParameters().createScope());
                String fileName = builderInfo.getPath().toString();
 

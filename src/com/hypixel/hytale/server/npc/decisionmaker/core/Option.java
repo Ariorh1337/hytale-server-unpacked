@@ -13,7 +13,7 @@ import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.decisionmaker.core.conditions.base.Condition;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import java.lang.ref.WeakReference;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -77,9 +77,9 @@ public abstract class Option {
       Arrays.sort(this.sortedConditions, Comparator.comparingInt(Option.ConditionReference::getSimplicity));
    }
 
-   public void setupNPC(Role role) {
+   public void setupNPC(ExecutionSupport executionSupport) {
       for (Option.ConditionReference condition : this.sortedConditions) {
-         condition.get().setupNPC(role);
+         condition.get().setupNPC(executionSupport);
       }
    }
 

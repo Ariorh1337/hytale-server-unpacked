@@ -5,6 +5,7 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Roo
 import com.hypixel.hytale.server.npc.asset.builder.BuilderCodecObjectHelper;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.asset.builder.holder.AssetHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.DoubleHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.EnumHolder;
@@ -179,6 +180,7 @@ public class BuilderActionAttack extends BuilderActionBase {
       this.validateBooleanImplicationAnyAntecedent(
          ANTECEDENT, new boolean[]{this.skipAiming}, true, SUBSEQUENT, new boolean[]{this.checkLineOfSight, this.avoidFriendlyFire}, false
       );
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
       return this;
    }
 

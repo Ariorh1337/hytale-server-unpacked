@@ -14,9 +14,7 @@ public class PlaneProjectorVectorProviderAsset extends VectorProviderAsset {
          PlaneProjectorVectorProviderAsset.class, PlaneProjectorVectorProviderAsset::new, VectorProviderAsset.ABSTRACT_CODEC
       )
       .append(
-         new KeyedCodec<>("VectorProvider", VectorProviderAsset.CODEC, true),
-         (asset, value) -> asset.vectorProviderAsset = value,
-         asset -> asset.vectorProviderAsset
+         new KeyedCodec<>("Vector", VectorProviderAsset.CODEC, true), (asset, value) -> asset.vectorProviderAsset = value, asset -> asset.vectorProviderAsset
       )
       .add()
       .append(new KeyedCodec<>("PlaneA", VectorProviderAsset.CODEC, true), (asset, value) -> asset.planeAAsset = value, asset -> asset.planeAAsset)

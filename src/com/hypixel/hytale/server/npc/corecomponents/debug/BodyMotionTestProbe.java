@@ -9,10 +9,10 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.corecomponents.BodyMotionBase;
 import com.hypixel.hytale.server.npc.corecomponents.debug.builders.BuilderBodyMotionTestProbe;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.movement.Steering;
 import com.hypixel.hytale.server.npc.movement.constraints.RelaxedConstraint;
 import com.hypixel.hytale.server.npc.movement.controllers.ProbeMoveData;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.role.RoleDebugFlags;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import java.util.EnumSet;
@@ -54,8 +54,8 @@ public class BodyMotionTestProbe extends BodyMotionBase {
    }
 
    @Override
-   public void activate(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      this.displayText = role.getDebugSupport().isDebugFlagSet(RoleDebugFlags.DisplayCustom);
+   public void activate(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      this.displayText = executionSupport.getDebugSupport().isDebugFlagSet(RoleDebugFlags.DisplayCustom);
       if (!(this.adjustX < 0.0) || !(this.adjustZ < 0.0)) {
          TransformComponent transformComponent = componentAccessor.getComponent(ref, TransformComponent.getComponentType());
          if (transformComponent != null) {
@@ -80,7 +80,7 @@ public class BodyMotionTestProbe extends BodyMotionBase {
    @Override
    public boolean computeSteering(
       @Nonnull Ref<EntityStore> ref,
-      @Nonnull Role role,
+      @Nonnull ExecutionSupport executionSupport,
       @Nullable InfoProvider sensorInfo,
       double dt,
       @Nonnull Steering desiredSteering,
@@ -88,7 +88,7 @@ public class BodyMotionTestProbe extends BodyMotionBase {
    ) {
       desiredSteering.clear();
       this.probeMoveData.setRelaxedConstraints(this.cachedEffectiveConstraints);
-      applyEscapeConstraints(role, this.probeMoveData);
+      applyEscapeConstraints(executionSupport, this.probeMoveData);
       if (sensorInfo != null && sensorInfo.getPositionProvider().providePosition(this.direction)) {
          TransformComponent transformComponent = componentAccessor.getComponent(ref, TransformComponent.getComponentType());
          if (transformComponent == null) {
@@ -123,8 +123,10 @@ public class BodyMotionTestProbe extends BodyMotionBase {
 
          desiredSteering.setYaw(yaw);
          desiredSteering.setPitch(pitch);
-         double distance = role.getActiveMotionController().probeMove(ref, position, this.direction, this.probeMoveData, componentAccessor);
-         role.getDebugSupport().setDisplayCustomString(String.format("PR: %.2f DX: %.2f DZ: %.2f", distance, this.direction.x, this.direction.z));
+         double distance = executionSupport.getMotionContextSupport()
+            .getActiveMotionController()
+            .probeMove(ref, position, this.direction, this.probeMoveData, componentAccessor);
+         executionSupport.getDebugSupport().setDisplayCustomString(String.format("PR: %.2f DX: %.2f DZ: %.2f", distance, this.direction.x, this.direction.z));
          return true;
       } else {
          return false;

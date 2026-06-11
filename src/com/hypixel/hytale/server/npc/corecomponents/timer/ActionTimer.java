@@ -12,7 +12,7 @@ import com.hypixel.hytale.server.npc.corecomponents.timer.builders.BuilderAction
 import com.hypixel.hytale.server.npc.corecomponents.timer.builders.BuilderActionTimerRestart;
 import com.hypixel.hytale.server.npc.corecomponents.timer.builders.BuilderActionTimerStart;
 import com.hypixel.hytale.server.npc.corecomponents.timer.builders.BuilderActionTimerStop;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.util.Timer;
 import javax.annotation.Nonnull;
@@ -77,8 +77,14 @@ public class ActionTimer extends ActionBase {
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      super.execute(ref, role, sensorInfo, dt, store);
+   public boolean execute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
+      super.execute(ref, executionSupport, sensorInfo, dt, store);
       switch (this.action) {
          case START:
             this.executeStartAction();

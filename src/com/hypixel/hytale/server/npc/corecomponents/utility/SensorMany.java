@@ -8,9 +8,9 @@ import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.SensorBase;
 import com.hypixel.hytale.server.npc.corecomponents.utility.builders.BuilderSensorMany;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.instructions.Sensor;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.sensorinfo.WrappedInfoProvider;
 import com.hypixel.hytale.server.npc.util.IAnnotatedComponent;
@@ -51,9 +51,9 @@ public abstract class SensorMany extends SensorBase implements IAnnotatedCompone
    }
 
    @Override
-   public void registerWithSupport(Role role) {
+   public void registerWithSupport(ExecutionSupport executionSupport) {
       for (Sensor sensor : this.sensors) {
-         sensor.registerWithSupport(role);
+         sensor.registerWithSupport(executionSupport);
       }
    }
 
@@ -70,37 +70,37 @@ public abstract class SensorMany extends SensorBase implements IAnnotatedCompone
    }
 
    @Override
-   public void loaded(Role role) {
+   public void loaded(ExecutionSupport executionSupport) {
       for (Sensor sensor : this.sensors) {
-         sensor.loaded(role);
+         sensor.loaded(executionSupport);
       }
    }
 
    @Override
-   public void spawned(Role role) {
+   public void spawned(ExecutionSupport executionSupport) {
       for (Sensor sensor : this.sensors) {
-         sensor.spawned(role);
+         sensor.spawned(executionSupport);
       }
    }
 
    @Override
-   public void unloaded(Role role) {
+   public void unloaded(ExecutionSupport executionSupport) {
       for (Sensor sensor : this.sensors) {
-         sensor.unloaded(role);
+         sensor.unloaded(executionSupport);
       }
    }
 
    @Override
-   public void removed(Role role) {
+   public void removed(ExecutionSupport executionSupport) {
       for (Sensor sensor : this.sensors) {
-         sensor.removed(role);
+         sensor.removed(executionSupport);
       }
    }
 
    @Override
-   public void teleported(Role role, World from, World to) {
+   public void teleported(ExecutionSupport executionSupport, World from, World to) {
       for (Sensor sensor : this.sensors) {
-         sensor.teleported(role, from, to);
+         sensor.teleported(executionSupport, from, to);
       }
    }
 

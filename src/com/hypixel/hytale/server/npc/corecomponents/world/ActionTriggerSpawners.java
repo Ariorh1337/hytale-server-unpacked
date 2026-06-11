@@ -9,7 +9,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.ActionBase;
 import com.hypixel.hytale.server.npc.corecomponents.world.builders.BuilderActionTriggerSpawners;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.spawning.spawnmarkers.SpawnMarkerEntity;
 import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
@@ -39,15 +39,21 @@ public class ActionTriggerSpawners extends ActionBase {
    }
 
    @Override
-   public void registerWithSupport(@Nonnull Role role) {
-      role.getPositionCache().requireSpawnMarkerDistance(this.range);
+   public void registerWithSupport(@Nonnull ExecutionSupport executionSupport) {
+      executionSupport.getPositionCache().requireSpawnMarkerDistance(this.range);
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      super.execute(ref, role, sensorInfo, dt, store);
+   public boolean execute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
+      super.execute(ref, executionSupport, sensorInfo, dt, store);
       this.parentRef = ref;
-      List<Ref<EntityStore>> spawners = role.getPositionCache().getSpawnMarkerList();
+      List<Ref<EntityStore>> spawners = executionSupport.getPositionCache().getSpawnMarkerList();
       if (this.count <= 0) {
          for (int i = 0; i < spawners.size(); i++) {
             Ref<EntityStore> spawnMarkerRef = this.filterMarker(spawners.get(i), store);

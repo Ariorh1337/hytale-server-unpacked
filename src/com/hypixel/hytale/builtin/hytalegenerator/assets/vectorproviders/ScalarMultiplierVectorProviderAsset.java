@@ -16,17 +16,15 @@ public class ScalarMultiplierVectorProviderAsset extends VectorProviderAsset {
    public static final BuilderCodec<ScalarMultiplierVectorProviderAsset> CODEC = BuilderCodec.builder(
          ScalarMultiplierVectorProviderAsset.class, ScalarMultiplierVectorProviderAsset::new, VectorProviderAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Density", DensityAsset.CODEC, true), (asset, value) -> asset.densityAsset = value, asset -> asset.densityAsset)
+      .append(new KeyedCodec<>("Scalar", DensityAsset.CODEC, true), (asset, value) -> asset.scalarAsset = value, asset -> asset.scalarAsset)
       .add()
       .append(
-         new KeyedCodec<>("VectorProvider", VectorProviderAsset.CODEC, true),
-         (asset, value) -> asset.vectorProviderAsset = value,
-         asset -> asset.vectorProviderAsset
+         new KeyedCodec<>("Vector", VectorProviderAsset.CODEC, true), (asset, value) -> asset.vectorProviderAsset = value, asset -> asset.vectorProviderAsset
       )
       .add()
       .build();
    @Nonnull
-   private DensityAsset densityAsset = new ConstantDensityAsset();
+   private DensityAsset scalarAsset = new ConstantDensityAsset();
    @Nonnull
    private VectorProviderAsset vectorProviderAsset = ConstantVectorProviderAsset.INSTANCE;
 
@@ -37,14 +35,14 @@ public class ScalarMultiplierVectorProviderAsset extends VectorProviderAsset {
          return new ConstantVectorProvider(new Vector3d());
       }
 
-      Density density = this.densityAsset.build(DensityAsset.from(argument));
+      Density scalar = this.scalarAsset.build(DensityAsset.from(argument));
       VectorProvider vectorProvider = this.vectorProviderAsset.build(argument);
-      return new ScalarMultiplierVectorProvider(density, vectorProvider);
+      return new ScalarMultiplierVectorProvider(scalar, vectorProvider);
    }
 
    @Override
    public void cleanUp() {
-      this.densityAsset.cleanUp();
+      this.scalarAsset.cleanUp();
       this.vectorProviderAsset.cleanUp();
    }
 }

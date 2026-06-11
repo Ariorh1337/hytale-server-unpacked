@@ -3,6 +3,7 @@ package com.hypixel.hytale.server.npc.corecomponents.lifecycle.builders;
 import com.google.gson.JsonElement;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderActionBase;
 import com.hypixel.hytale.server.npc.corecomponents.lifecycle.ActionDespawn;
 import javax.annotation.Nonnull;
@@ -36,6 +37,7 @@ public class BuilderActionDespawn extends BuilderActionBase {
    @Nonnull
    public BuilderActionDespawn readConfig(@Nonnull JsonElement data) {
       this.getBoolean(data, "Force", b -> this.force = b, false, BuilderDescriptorState.Stable, "Force the NPC to remove automatically", null);
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
       return this;
    }
 

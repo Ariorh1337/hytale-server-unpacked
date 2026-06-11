@@ -7,7 +7,6 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.util.IAnnotatedComponent;
 import java.util.Objects;
@@ -39,7 +38,13 @@ public class ActionList {
       this.atomic = atomic;
    }
 
-   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean canExecute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
       if (this.actions.length == 0) {
          return false;
       }
@@ -49,10 +54,10 @@ public class ActionList {
             this.actionIndex = 0;
          }
 
-         return this.actions[this.actionIndex].canExecute(ref, role, sensorInfo, dt, store);
+         return this.actions[this.actionIndex].canExecute(ref, executionSupport, sensorInfo, dt, store);
       } else {
          for (Action action : this.actions) {
-            if (action.canExecute(ref, role, sensorInfo, dt, store)) {
+            if (action.canExecute(ref, executionSupport, sensorInfo, dt, store)) {
                if (!this.atomic) {
                   return true;
                }
@@ -65,34 +70,40 @@ public class ActionList {
       }
    }
 
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean execute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
       if (this.blocking) {
          Action action = this.actions[this.actionIndex];
-         if (!action.canExecute(ref, role, sensorInfo, dt, store)) {
+         if (!action.canExecute(ref, executionSupport, sensorInfo, dt, store)) {
             return false;
          }
 
          if (!action.isActivated()) {
-            action.activate(role, sensorInfo);
+            action.activate(executionSupport, sensorInfo);
          }
 
-         if (!action.execute(ref, role, sensorInfo, dt, store)) {
+         if (!action.execute(ref, executionSupport, sensorInfo, dt, store)) {
             return false;
          }
 
-         action.deactivate(role, sensorInfo);
+         action.deactivate(executionSupport, sensorInfo);
          this.actionIndex++;
          return this.actionIndex >= this.actions.length;
       } else {
          for (Action action : this.actions) {
-            if (action.canExecute(ref, role, sensorInfo, dt, store)) {
+            if (action.canExecute(ref, executionSupport, sensorInfo, dt, store)) {
                if (!action.isActivated()) {
-                  action.activate(role, sensorInfo);
+                  action.activate(executionSupport, sensorInfo);
                }
 
-               action.execute(ref, role, sensorInfo, dt, store);
+               action.execute(ref, executionSupport, sensorInfo, dt, store);
             } else if (action.isActivated()) {
-               action.deactivate(role, sensorInfo);
+               action.deactivate(executionSupport, sensorInfo);
             }
          }
 
@@ -115,9 +126,9 @@ public class ActionList {
       }
    }
 
-   public void registerWithSupport(Role role) {
+   public void registerWithSupport(ExecutionSupport executionSupport) {
       for (Action action : this.actions) {
-         action.registerWithSupport(role);
+         action.registerWithSupport(executionSupport);
       }
    }
 
@@ -132,33 +143,33 @@ public class ActionList {
       }
    }
 
-   public void loaded(Role role) {
+   public void loaded(ExecutionSupport executionSupport) {
       for (Action action : this.actions) {
-         action.loaded(role);
+         action.loaded(executionSupport);
       }
    }
 
-   public void spawned(Role role) {
+   public void spawned(ExecutionSupport executionSupport) {
       for (Action action : this.actions) {
-         action.spawned(role);
+         action.spawned(executionSupport);
       }
    }
 
-   public void unloaded(Role role) {
+   public void unloaded(ExecutionSupport executionSupport) {
       for (Action action : this.actions) {
-         action.unloaded(role);
+         action.unloaded(executionSupport);
       }
    }
 
-   public void removed(Role role) {
+   public void removed(ExecutionSupport executionSupport) {
       for (Action action : this.actions) {
-         action.removed(role);
+         action.removed(executionSupport);
       }
    }
 
-   public void teleported(Role role, World from, World to) {
+   public void teleported(ExecutionSupport executionSupport, World from, World to) {
       for (Action action : this.actions) {
-         action.teleported(role, from, to);
+         action.teleported(executionSupport, from, to);
       }
    }
 

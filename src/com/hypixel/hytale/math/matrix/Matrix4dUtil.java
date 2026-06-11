@@ -1,9 +1,9 @@
 package com.hypixel.hytale.math.matrix;
 
-import org.joml.Matrix4d;
+import org.joml.Matrix4dc;
 
 public final class Matrix4dUtil {
-   public static float[] asFloatData(Matrix4d m) {
+   public static float[] asFloatData(Matrix4dc m) {
       return new float[]{
          (float)m.m00(),
          (float)m.m01(),

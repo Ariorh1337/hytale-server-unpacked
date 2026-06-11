@@ -6,6 +6,7 @@ import com.hypixel.hytale.server.npc.asset.builder.Builder;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.asset.builder.Feature;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.asset.builder.holder.AssetHolder;
 import com.hypixel.hytale.server.npc.asset.builder.validators.AssetValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.asset.BlockSetExistsValidator;
@@ -58,6 +59,7 @@ public class BuilderSensorChargeBlockCollisions extends BuilderSensorBase {
          null
       );
       this.provideFeature(Feature.BlockHits);
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
       return this;
    }
 

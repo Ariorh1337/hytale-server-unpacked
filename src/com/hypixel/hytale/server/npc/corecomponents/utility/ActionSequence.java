@@ -10,8 +10,8 @@ import com.hypixel.hytale.server.npc.corecomponents.ActionBase;
 import com.hypixel.hytale.server.npc.corecomponents.utility.builders.BuilderActionSequence;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.instructions.ActionList;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.util.IAnnotatedComponent;
 import com.hypixel.hytale.server.npc.util.IAnnotatedComponentCollection;
@@ -28,19 +28,31 @@ public class ActionSequence extends ActionBase implements IAnnotatedComponentCol
    }
 
    @Override
-   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      return super.canExecute(ref, role, sensorInfo, dt, store) && this.actions.canExecute(ref, role, sensorInfo, dt, store);
+   public boolean canExecute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
+      return super.canExecute(ref, executionSupport, sensorInfo, dt, store) && this.actions.canExecute(ref, executionSupport, sensorInfo, dt, store);
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      super.execute(ref, role, sensorInfo, dt, store);
-      return this.actions.execute(ref, role, sensorInfo, dt, store);
+   public boolean execute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
+      super.execute(ref, executionSupport, sensorInfo, dt, store);
+      return this.actions.execute(ref, executionSupport, sensorInfo, dt, store);
    }
 
    @Override
-   public void registerWithSupport(Role role) {
-      this.actions.registerWithSupport(role);
+   public void registerWithSupport(ExecutionSupport executionSupport) {
+      this.actions.registerWithSupport(executionSupport);
    }
 
    @Override
@@ -54,28 +66,28 @@ public class ActionSequence extends ActionBase implements IAnnotatedComponentCol
    }
 
    @Override
-   public void loaded(Role role) {
-      this.actions.loaded(role);
+   public void loaded(ExecutionSupport executionSupport) {
+      this.actions.loaded(executionSupport);
    }
 
    @Override
-   public void spawned(Role role) {
-      this.actions.spawned(role);
+   public void spawned(ExecutionSupport executionSupport) {
+      this.actions.spawned(executionSupport);
    }
 
    @Override
-   public void unloaded(Role role) {
-      this.actions.unloaded(role);
+   public void unloaded(ExecutionSupport executionSupport) {
+      this.actions.unloaded(executionSupport);
    }
 
    @Override
-   public void removed(Role role) {
-      this.actions.removed(role);
+   public void removed(ExecutionSupport executionSupport) {
+      this.actions.removed(executionSupport);
    }
 
    @Override
-   public void teleported(Role role, World from, World to) {
-      this.actions.teleported(role, from, to);
+   public void teleported(ExecutionSupport executionSupport, World from, World to) {
+      this.actions.teleported(executionSupport, from, to);
    }
 
    @Override

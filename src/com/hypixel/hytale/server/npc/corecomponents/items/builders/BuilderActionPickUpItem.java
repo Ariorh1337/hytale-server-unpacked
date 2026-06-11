@@ -4,6 +4,7 @@ import com.google.gson.JsonElement;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.asset.builder.Feature;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.asset.builder.holder.AssetArrayHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.DoubleHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.EnumHolder;
@@ -76,6 +77,7 @@ public class BuilderActionPickUpItem extends BuilderActionWithDelay {
          "A list of glob item patterns to match for hoover mode. If omitted, will match any item. Ignored outside hoover mode"
       );
       this.requireFeatureIf("Hoover", false, this.hoover, EnumSet.of(Feature.Drop));
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
       return this;
    }
 

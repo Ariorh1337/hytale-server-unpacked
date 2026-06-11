@@ -8,7 +8,7 @@ import com.hypixel.hytale.server.npc.blackboard.view.combat.CombatViewSystems;
 import com.hypixel.hytale.server.npc.blackboard.view.combat.InterpretedCombatData;
 import com.hypixel.hytale.server.npc.corecomponents.EntityFilterBase;
 import com.hypixel.hytale.server.npc.corecomponents.entity.filters.builders.BuilderEntityFilterCombat;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.EntityPositionProvider;
 import java.util.List;
 import java.util.function.Supplier;
@@ -31,7 +31,9 @@ public class EntityFilterCombat extends EntityFilterBase {
    }
 
    @Override
-   public boolean matchesEntity(@Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull Role role, @Nonnull Store<EntityStore> store) {
+   public boolean matchesEntity(
+      @Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull ExecutionSupport executionSupport, @Nonnull Store<EntityStore> store
+   ) {
       List<InterpretedCombatData> combatData = CombatViewSystems.getCombatData(targetRef, store);
 
       for (int i = 0; i < combatData.size(); i++) {

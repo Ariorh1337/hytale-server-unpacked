@@ -6,7 +6,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.ActionBase;
 import com.hypixel.hytale.server.npc.corecomponents.utility.builders.BuilderActionResetInstructions;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
+import com.hypixel.hytale.server.npc.instructions.IndexedInstructions;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -20,20 +21,31 @@ public class ActionResetInstructions extends ActionBase {
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      super.execute(ref, role, sensorInfo, dt, store);
-      role.addDeferredAction((_ref, _role, _dt, _store) -> this.resetInstructions(_role, _dt));
+   public boolean execute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
+      super.execute(ref, executionSupport, sensorInfo, dt, store);
+      executionSupport.getEntitySupport().addDeferredAction((var1x, _exec, var3x, var5) -> this.resetInstructions(_exec));
       return true;
    }
 
-   protected boolean resetInstructions(@Nonnull Role role, double dt) {
+   protected boolean resetInstructions(@Nonnull ExecutionSupport executionSupport) {
+      IndexedInstructions indexedInstructions = executionSupport.getIndexedInstructions();
+      if (indexedInstructions == null) {
+         return true;
+      }
+
       if (this.instructions.length == 0) {
-         role.resetAllInstructions();
+         indexedInstructions.resetAll();
          return true;
       }
 
       for (int instruction : this.instructions) {
-         role.resetInstruction(instruction);
+         indexedInstructions.reset(instruction);
       }
 
       return true;

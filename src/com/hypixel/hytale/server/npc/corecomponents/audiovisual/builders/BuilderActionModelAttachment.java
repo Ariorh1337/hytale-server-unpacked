@@ -3,6 +3,7 @@ package com.hypixel.hytale.server.npc.corecomponents.audiovisual.builders;
 import com.google.gson.JsonElement;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.asset.builder.holder.StringHolder;
 import com.hypixel.hytale.server.npc.asset.builder.validators.StringNotEmptyValidator;
 import com.hypixel.hytale.server.npc.corecomponents.audiovisual.ActionModelAttachment;
@@ -22,6 +23,7 @@ public class BuilderActionModelAttachment extends BuilderActionBase {
    public BuilderActionModelAttachment readConfig(@Nonnull JsonElement data) {
       this.requireString(data, "Slot", this.slot, StringNotEmptyValidator.get(), BuilderDescriptorState.Stable, "The attachment slot to set", null);
       this.requireString(data, "Attachment", this.attachment, null, BuilderDescriptorState.Stable, "The attachment to set, or empty to remove", null);
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
       return this;
    }
 

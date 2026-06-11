@@ -10,7 +10,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.audiovisual.ActionPlayAnimation;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import java.util.List;
 import javax.annotation.Nonnull;
@@ -25,20 +25,32 @@ public class ActionCompleteTask extends ActionPlayAnimation {
    }
 
    @Override
-   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      Ref<EntityStore> targetRef = role.getStateSupport().getInteractionIterationTarget();
+   public boolean canExecute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
+      Ref<EntityStore> targetRef = executionSupport.getStateSupport().getInteractionIterationTarget();
       boolean targetExists = targetRef != null && targetRef.isValid() && !store.getArchetype(targetRef).contains(DeathComponent.getComponentType());
-      return super.canExecute(ref, role, sensorInfo, dt, store) && targetExists;
+      return super.canExecute(ref, executionSupport, sensorInfo, dt, store) && targetExists;
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean execute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
       UUIDComponent parentUuidComponent = store.getComponent(ref, UUIDComponent.getComponentType());
       if (parentUuidComponent == null) {
          return false;
       }
 
-      Ref<EntityStore> targetPlayerReference = role.getStateSupport().getInteractionIterationTarget();
+      Ref<EntityStore> targetPlayerReference = executionSupport.getStateSupport().getInteractionIterationTarget();
       if (targetPlayerReference == null) {
          return false;
       }
@@ -48,7 +60,7 @@ public class ActionCompleteTask extends ActionPlayAnimation {
          return false;
       }
 
-      List<String> activeTasks = role.getEntitySupport().getTargetPlayerActiveTasks();
+      List<String> activeTasks = executionSupport.getPlayerTaskSupport().getTargetPlayerActiveTasks();
       String animation = null;
       if (activeTasks != null) {
          for (int i = 0; i < activeTasks.size(); i++) {
@@ -60,7 +72,7 @@ public class ActionCompleteTask extends ActionPlayAnimation {
 
       if (this.playAnimation && animation != null) {
          this.setAnimationId(animation);
-         super.execute(ref, role, sensorInfo, dt, store);
+         super.execute(ref, executionSupport, sensorInfo, dt, store);
       }
 
       return true;

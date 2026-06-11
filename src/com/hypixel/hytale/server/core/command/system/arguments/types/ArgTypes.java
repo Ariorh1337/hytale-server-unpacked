@@ -1,7 +1,6 @@
 package com.hypixel.hytale.server.core.command.system.arguments.types;
 
 import com.hypixel.hytale.common.util.StringCompareUtil;
-import com.hypixel.hytale.common.util.StringUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Rotation3fc;
@@ -41,7 +40,9 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.Pair;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -984,7 +985,7 @@ public final class ArgTypes {
       }
    };
    public static final SingleArgumentType<GameMode> GAME_MODE = new GameModeArgumentType();
-   private static final int MAX_BLOCK_SUGGESTIONS = 20;
+   private static final int MAX_BLOCK_SUGGESTIONS = 150;
 
    @Nonnull
    public static <E extends Enum<E>> SingleArgumentType<E> forEnum(String name, @Nonnull Class<E> enumType) {
@@ -1003,27 +1004,56 @@ public final class ArgTypes {
 
    private static void suggestBlockTypeKeys(@Nonnull String textAlreadyEntered, @Nonnull String prefix, @Nonnull SuggestionResult result) {
       Set<String> keys = BlockType.getAssetMap().getAssetMap().keySet();
-      if (textAlreadyEntered.isEmpty()) {
-         int count = 0;
+      if (!textAlreadyEntered.isEmpty()) {
+         String lowerEntered = textAlreadyEntered.toLowerCase(Locale.ENGLISH);
+         int minScore = textAlreadyEntered.length();
+         List<String> prefixMatches = new ObjectArrayList<>();
+         List<String> fuzzyMatches = new ObjectArrayList<>();
 
          for (String key : keys) {
-            result.suggest(prefix + key.toString());
-            if (++count >= 20) {
-               break;
+            String keyString = key.toString();
+            if (keyString.toLowerCase(Locale.ENGLISH).startsWith(lowerEntered)) {
+               prefixMatches.add(keyString);
+            } else if (StringCompareUtil.getFuzzyDistance(keyString, textAlreadyEntered, Locale.ENGLISH) >= minScore) {
+               fuzzyMatches.add(keyString);
+            }
+         }
+
+         prefixMatches.sort(Comparator.comparingInt(String::length).thenComparing(Comparator.naturalOrder()));
+         fuzzyMatches.sort(Comparator.<String>comparingInt(key -> StringCompareUtil.getFuzzyDistance(key, textAlreadyEntered, Locale.ENGLISH)).reversed());
+         int total = prefixMatches.size() + fuzzyMatches.size();
+         int count = 0;
+
+         for (String keyString : prefixMatches) {
+            result.suggest(prefix + keyString);
+            if (++count >= 150) {
+               if (total > 150) {
+                  result.markTruncated();
+               }
+
+               return;
+            }
+         }
+
+         for (String keyString : fuzzyMatches) {
+            result.suggest(prefix + keyString);
+            if (++count >= 150) {
+               if (total > 150) {
+                  result.markTruncated();
+               }
+
+               return;
             }
          }
       } else {
-         int minScore = textAlreadyEntered.length();
-         List<String> sorted = StringUtil.sortByFuzzyDistance(textAlreadyEntered, keys);
          int count = 0;
 
-         for (String key : sorted) {
-            if (StringCompareUtil.getFuzzyDistance(key.toString(), textAlreadyEntered, Locale.ENGLISH) < minScore) {
-               break;
-            }
-
-            result.suggest(prefix + key.toString());
-            if (++count >= 20) {
+         for (String key : keys) {
+            result.suggest(prefix + key);
+            if (++count >= 150) {
+               if (keys.size() > 150) {
+                  result.markTruncated();
+               }
                break;
             }
          }

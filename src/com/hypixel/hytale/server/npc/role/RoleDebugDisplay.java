@@ -25,7 +25,9 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.flock.FlockMembership;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.role.support.DebugSupport;
 import com.hypixel.hytale.server.npc.role.support.MarkedEntitySupport;
+import com.hypixel.hytale.server.npc.role.support.StateSupport;
 import com.hypixel.hytale.server.npc.util.InventoryHelper;
 import com.hypixel.hytale.server.spawning.util.LightRangePredicate;
 import java.time.temporal.ChronoField;
@@ -69,7 +71,9 @@ public class RoleDebugDisplay {
       }
 
       if (this.debugDisplayState) {
-         role.getStateSupport().appendStateName(this.debugDisplay);
+         StateSupport stateSupport = archetypeChunk.getComponent(index, StateSupport.getComponentType());
+         assert stateSupport != null;
+         stateSupport.appendStateName(this.debugDisplay);
       }
 
       if (this.debugDisplayFlock) {
@@ -116,7 +120,8 @@ public class RoleDebugDisplay {
       }
 
       if (this.debugDisplayLockedTarget) {
-         MarkedEntitySupport markedEntitySupport = role.getMarkedEntitySupport();
+         MarkedEntitySupport markedEntitySupport = archetypeChunk.getComponent(index, MarkedEntitySupport.getComponentType());
+         assert markedEntitySupport != null;
          int targetSlotCount = markedEntitySupport.getMarkedEntitySlotCount();
 
          for (int i = 0; i < targetSlotCount; i++) {
@@ -173,12 +178,14 @@ public class RoleDebugDisplay {
          }
       }
 
-      String displayPathfinderString = role.getDebugSupport().pollDisplayPathfinderString();
+      DebugSupport debugSupport = archetypeChunk.getComponent(index, DebugSupport.getComponentType());
+      assert debugSupport != null;
+      String displayPathfinderString = debugSupport.pollDisplayPathfinderString();
       if (this.debugDisplayPathFinder && displayPathfinderString != null && !displayPathfinderString.isEmpty()) {
          this.debugDisplay.append(!this.debugDisplay.isEmpty() ? " PF:" : "PF:").append(displayPathfinderString);
       }
 
-      String customString = role.getDebugSupport().pollDisplayCustomString();
+      String customString = debugSupport.pollDisplayCustomString();
       if (this.debugDisplayCustom && customString != null && !customString.isEmpty()) {
          if (!this.debugDisplay.isEmpty()) {
             this.debugDisplay.append(' ');
@@ -224,7 +231,8 @@ public class RoleDebugDisplay {
       }
 
       if (this.debugVisMarkedTargets) {
-         MarkedEntitySupport markedEntitySupport = role.getMarkedEntitySupport();
+         MarkedEntitySupport markedEntitySupport = archetypeChunk.getComponent(index, MarkedEntitySupport.getComponentType());
+         assert markedEntitySupport != null;
          Ref<EntityStore>[] entityTargets = markedEntitySupport.getEntityTargets();
 
          for (int slotIndex = 0; slotIndex < entityTargets.length; slotIndex++) {

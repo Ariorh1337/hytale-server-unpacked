@@ -5,7 +5,6 @@ import com.hypixel.hytale.server.core.asset.type.attitude.Attitude;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.npc.config.ItemAttitudeGroup;
-import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -20,12 +19,11 @@ public class ItemAttitudeMap {
    }
 
    @Nullable
-   public Attitude getAttitude(@Nonnull NPCEntity parent, @Nullable ItemStack item) {
+   public Attitude getAttitude(int group, @Nullable ItemStack item) {
       if (item == null) {
          return null;
       }
 
-      int group = parent.getRole().getWorldSupport().getItemAttitudeGroup();
       if (group == Integer.MIN_VALUE) {
          return null;
       }

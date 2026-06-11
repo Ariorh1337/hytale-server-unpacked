@@ -2,6 +2,7 @@ package com.hypixel.hytale.server.npc.role.support;
 
 import com.hypixel.hytale.assetstore.map.BlockTypeAssetMap;
 import com.hypixel.hytale.component.CommandBuffer;
+import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
@@ -9,6 +10,7 @@ import com.hypixel.hytale.function.consumer.DoubleQuadObjectConsumer;
 import com.hypixel.hytale.function.consumer.QuadConsumer;
 import com.hypixel.hytale.function.consumer.TriConsumer;
 import com.hypixel.hytale.function.predicate.QuadPredicate;
+import com.hypixel.hytale.function.predicate.TriPredicate;
 import com.hypixel.hytale.math.iterator.BlockIterator;
 import com.hypixel.hytale.math.random.RandomExtra;
 import com.hypixel.hytale.math.shape.Box;
@@ -30,7 +32,7 @@ import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.util.NPCPhysicsMath;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.IntSet;
@@ -49,7 +51,7 @@ import javax.annotation.Nullable;
 import org.joml.Vector2d;
 import org.joml.Vector3d;
 
-public class PositionCache {
+public class PositionCache implements Component<EntityStore> {
    public static final BiPredicate<Ref<EntityStore>, ComponentAccessor<EntityStore>> IS_VALID_PLAYER = (ref, componentAccessor) -> {
       Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
       if (playerComponent != null && !playerComponent.isWaitingForClientReady()) {
@@ -81,12 +83,13 @@ public class PositionCache {
    private double maxDroppedItemDistance;
    private double maxSpawnMarkerDistance;
    private int maxSpawnBeaconDistance;
-   @Nonnull
-   private final Role role;
+   @Nullable
+   private final RoleStats roleStats;
+   private int roleIndex = -1;
    private int opaqueBlockSet;
    protected EntityList players;
    protected EntityList npcs;
-   protected final List<Consumer<Role>> externalRegistrations = new ObjectArrayList<>();
+   protected final List<Consumer<ExecutionSupport>> externalRegistrations = new ObjectArrayList<>();
    private final List<Ref<EntityStore>> droppedItems = new ReferenceArrayList<>();
    private final List<Ref<EntityStore>> spawnMarkers = new ReferenceArrayList<>();
    private final List<Ref<EntityStore>> spawnBeacons = new ReferenceArrayList<>();
@@ -101,10 +104,35 @@ public class PositionCache {
    private boolean isConfiguring;
    private boolean couldBreathe = true;
 
-   public PositionCache(@Nonnull Role role) {
-      this.role = role;
+   @Nonnull
+   public static ComponentType<EntityStore, PositionCache> getComponentType() {
+      return NPCPlugin.get().getPositionCacheComponentType();
+   }
+
+   @Nonnull
+   public static PositionCache get(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> accessor) {
+      PositionCache support = accessor.getComponent(ref, getComponentType());
+      assert support != null : "Missing PositionCache on entity " + ref;
+      return support;
+   }
+
+   public PositionCache(@Nullable RoleStats roleStats) {
+      this.roleStats = roleStats;
       this.players = new EntityList(null, IS_VALID_PLAYER);
       this.npcs = new EntityList(null, IS_VALID_NPC);
+   }
+
+   public PositionCache() {
+      this(null);
+   }
+
+   public void setRoleIndex(int roleIndex) {
+      this.roleIndex = roleIndex;
+   }
+
+   @Nullable
+   public RoleStats getRoleStats() {
+      return this.roleStats;
    }
 
    public boolean isBenchmarking() {
@@ -147,12 +175,12 @@ public class PositionCache {
       return this.maxSpawnBeaconDistance;
    }
 
-   public void addExternalPositionCacheRegistration(Consumer<Role> registration) {
+   public void addExternalPositionCacheRegistration(Consumer<ExecutionSupport> registration) {
       this.externalRegistrations.add(registration);
    }
 
    @Nonnull
-   public List<Consumer<Role>> getExternalRegistrations() {
+   public List<Consumer<ExecutionSupport>> getExternalRegistrations() {
       return this.externalRegistrations;
    }
 
@@ -172,17 +200,16 @@ public class PositionCache {
       this.isConfiguring = false;
       this.npcs.finalizeConfiguration();
       this.players.finalizeConfiguration();
-      RoleStats roleStats = this.role.getRoleStats();
-      if (roleStats != null) {
-         roleStats.trackBuckets(false, this.npcs.getBucketRanges());
-         roleStats.trackBuckets(true, this.players.getBucketRanges());
+      if (this.roleStats != null) {
+         this.roleStats.trackBuckets(false, this.npcs.getBucketRanges());
+         this.roleStats.trackBuckets(true, this.players.getBucketRanges());
       }
    }
 
    public void clear(double tickTime) {
       this.clearLineOfSightCache(tickTime);
-      if (this.isBenchmarking) {
-         NPCPlugin.get().collectSensorSupportTickDone(this.role.getRoleIndex());
+      if (this.isBenchmarking && this.roleIndex >= 0) {
+         NPCPlugin.get().collectSensorSupportTickDone(this.roleIndex);
       }
 
       this.isBenchmarking = false;
@@ -223,13 +250,15 @@ public class PositionCache {
       double maxRange,
       boolean useProjectedDistance,
       Ref<EntityStore> ignoredEntityReference,
-      @Nonnull Role role,
-      @Nonnull QuadPredicate<S, Ref<EntityStore>, Role, T> filter,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nonnull QuadPredicate<S, Ref<EntityStore>, ExecutionSupport, T> filter,
       S s,
       T t,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
-      this.processEntitiesInRange(ref, this.npcs, minRange, maxRange, useProjectedDistance, ignoredEntityReference, role, filter, s, t, componentAccessor);
+      this.processEntitiesInRange(
+         ref, this.npcs, minRange, maxRange, useProjectedDistance, ignoredEntityReference, executionSupport, filter, s, t, componentAccessor
+      );
    }
 
    public <S, T> void processPlayersInRange(
@@ -238,13 +267,15 @@ public class PositionCache {
       double maxRange,
       boolean useProjectedDistance,
       Ref<EntityStore> ignoredEntityReference,
-      @Nonnull Role role,
-      @Nonnull QuadPredicate<S, Ref<EntityStore>, Role, T> filter,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nonnull QuadPredicate<S, Ref<EntityStore>, ExecutionSupport, T> filter,
       S s,
       T t,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
-      this.processEntitiesInRange(ref, this.players, minRange, maxRange, useProjectedDistance, ignoredEntityReference, role, filter, s, t, componentAccessor);
+      this.processEntitiesInRange(
+         ref, this.players, minRange, maxRange, useProjectedDistance, ignoredEntityReference, executionSupport, filter, s, t, componentAccessor
+      );
    }
 
    public <S, T> void processEntitiesInRange(
@@ -254,18 +285,28 @@ public class PositionCache {
       double maxRange,
       boolean useProjectedDistance,
       Ref<EntityStore> ignoredEntityReference,
-      @Nonnull Role role,
-      @Nonnull QuadPredicate<S, Ref<EntityStore>, Role, T> filter,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nonnull QuadPredicate<S, Ref<EntityStore>, ExecutionSupport, T> filter,
       S s,
       T t,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       if (useProjectedDistance) {
+         MotionContextSupport motionContextSupport = executionSupport.getMotionContextSupport();
          entities.getClosestEntityInRangeProjected(
-            ref, ignoredEntityReference, role.getActiveMotionController(), minRange, maxRange, filter, role, s, t, componentAccessor
+            ref,
+            ignoredEntityReference,
+            motionContextSupport.getActiveMotionController(),
+            minRange,
+            maxRange,
+            filter,
+            executionSupport,
+            s,
+            t,
+            componentAccessor
          );
       } else {
-         entities.getClosestEntityInRange(ignoredEntityReference, minRange, maxRange, filter, role, s, t, componentAccessor);
+         entities.getClosestEntityInRange(ignoredEntityReference, minRange, maxRange, filter, executionSupport, s, t, componentAccessor);
       }
    }
 
@@ -274,8 +315,7 @@ public class PositionCache {
       @Nonnull Ref<EntityStore> ref,
       double minRange,
       double maxRange,
-      @Nonnull QuadPredicate<S, Ref<EntityStore>, Role, ComponentAccessor<EntityStore>> filter,
-      Role role,
+      @Nonnull TriPredicate<S, Ref<EntityStore>, ComponentAccessor<EntityStore>> filter,
       S s,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
@@ -303,7 +343,7 @@ public class PositionCache {
                      break;
                   }
 
-                  if (filter.test(s, itemEntityRef, role, componentAccessor)) {
+                  if (filter.test(s, itemEntityRef, componentAccessor)) {
                      return itemEntityRef;
                   }
                }
@@ -320,20 +360,20 @@ public class PositionCache {
       int minCount,
       int maxCount,
       boolean findPlayers,
-      Role role,
-      @Nonnull QuadPredicate<S, Ref<EntityStore>, Role, ComponentAccessor<EntityStore>> filter,
+      int roleIndex,
+      @Nonnull QuadPredicate<S, Ref<EntityStore>, Integer, ComponentAccessor<EntityStore>> filter,
       S s,
       ComponentAccessor<EntityStore> componentAccessor
    ) {
       int count = 0;
       if (findPlayers) {
-         count = this.players.countEntitiesInRange(minRange, maxRange, maxCount + 1, filter, s, role, componentAccessor);
+         count = this.players.countEntitiesInRange(minRange, maxRange, maxCount + 1, filter, s, roleIndex, componentAccessor);
          if (count > maxCount) {
             return false;
          }
       }
 
-      count += this.npcs.countEntitiesInRange(minRange, maxRange, maxCount - count + 1, filter, s, role, componentAccessor);
+      count += this.npcs.countEntitiesInRange(minRange, maxRange, maxCount - count + 1, filter, s, roleIndex, componentAccessor);
       return count >= minCount && count <= maxCount;
    }
 
@@ -361,9 +401,8 @@ public class PositionCache {
       }
 
       this.players.requireDistanceSorted(value);
-      RoleStats roleStats = this.role.getRoleStats();
-      if (roleStats != null) {
-         roleStats.trackRange(true, RoleStats.RangeType.SORTED, value);
+      if (this.roleStats != null) {
+         this.roleStats.trackRange(true, RoleStats.RangeType.SORTED, value);
       }
    }
 
@@ -374,9 +413,8 @@ public class PositionCache {
       }
 
       this.players.requireDistanceUnsorted(value);
-      RoleStats roleStats = this.role.getRoleStats();
-      if (roleStats != null) {
-         roleStats.trackRange(true, RoleStats.RangeType.UNSORTED, value);
+      if (this.roleStats != null) {
+         this.roleStats.trackRange(true, RoleStats.RangeType.UNSORTED, value);
       }
    }
 
@@ -387,9 +425,8 @@ public class PositionCache {
       }
 
       this.players.requireDistanceAvoidance(value);
-      RoleStats roleStats = this.role.getRoleStats();
-      if (roleStats != null) {
-         roleStats.trackRange(true, RoleStats.RangeType.AVOIDANCE, value);
+      if (this.roleStats != null) {
+         this.roleStats.trackRange(true, RoleStats.RangeType.AVOIDANCE, value);
       }
    }
 
@@ -400,9 +437,8 @@ public class PositionCache {
       }
 
       this.npcs.requireDistanceSorted(value);
-      RoleStats roleStats = this.role.getRoleStats();
-      if (roleStats != null) {
-         roleStats.trackRange(false, RoleStats.RangeType.SORTED, value);
+      if (this.roleStats != null) {
+         this.roleStats.trackRange(false, RoleStats.RangeType.SORTED, value);
       }
    }
 
@@ -413,9 +449,8 @@ public class PositionCache {
       }
 
       this.npcs.requireDistanceUnsorted(value);
-      RoleStats roleStats = this.role.getRoleStats();
-      if (roleStats != null) {
-         roleStats.trackRange(false, RoleStats.RangeType.UNSORTED, value);
+      if (this.roleStats != null) {
+         this.roleStats.trackRange(false, RoleStats.RangeType.UNSORTED, value);
       }
    }
 
@@ -426,9 +461,8 @@ public class PositionCache {
       }
 
       value = this.npcs.requireDistanceAvoidance(value);
-      RoleStats roleStats = this.role.getRoleStats();
-      if (roleStats != null) {
-         roleStats.trackRange(false, RoleStats.RangeType.AVOIDANCE, value);
+      if (this.roleStats != null) {
+         this.roleStats.trackRange(false, RoleStats.RangeType.AVOIDANCE, value);
       }
    }
 
@@ -448,11 +482,6 @@ public class PositionCache {
       if (this.maxSpawnBeaconDistance < value) {
          this.maxSpawnBeaconDistance = value;
       }
-   }
-
-   @Nonnull
-   public Role getRole() {
-      return this.role;
    }
 
    public <T, U, V, R> void forEachNPCUnordered(
@@ -614,8 +643,8 @@ public class PositionCache {
    public boolean hasLineOfSight(@Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       boolean cached = this.lineOfSightCache.containsKey(targetRef);
       if (cached) {
-         if (this.isBenchmarking) {
-            NPCPlugin.get().collectSensorSupportLosTest(this.role.getRoleIndex(), true, 0L);
+         if (this.isBenchmarking && this.roleIndex >= 0) {
+            NPCPlugin.get().collectSensorSupportLosTest(this.roleIndex, true, 0L);
          }
 
          return this.lineOfSightCache.getByte(targetRef) != 0;
@@ -624,7 +653,9 @@ public class PositionCache {
          if (this.isBenchmarking) {
             long start = System.nanoTime();
             hasLineOfSight = this.hasLineOfSightInternal(ref, targetRef, componentAccessor);
-            NPCPlugin.get().collectSensorSupportLosTest(this.role.getRoleIndex(), false, System.nanoTime() - start);
+            if (this.roleIndex >= 0) {
+               NPCPlugin.get().collectSensorSupportLosTest(this.roleIndex, false, System.nanoTime() - start);
+            }
          } else {
             hasLineOfSight = this.hasLineOfSightInternal(ref, targetRef, componentAccessor);
          }
@@ -638,8 +669,8 @@ public class PositionCache {
       @Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       boolean cached = this.inverseLineOfSightCache.containsKey(targetRef);
-      if (this.isBenchmarking) {
-         NPCPlugin.get().collectSensorSupportInverseLosTest(this.role.getRoleIndex(), cached);
+      if (this.isBenchmarking && this.roleIndex >= 0) {
+         NPCPlugin.get().collectSensorSupportInverseLosTest(this.roleIndex, cached);
       }
 
       if (cached) {
@@ -655,8 +686,8 @@ public class PositionCache {
       @Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       boolean cached = this.friendlyFireCache.containsKey(targetRef);
-      if (this.isBenchmarking) {
-         NPCPlugin.get().collectSensorSupportFriendlyBlockingTest(this.role.getRoleIndex(), cached);
+      if (this.isBenchmarking && this.roleIndex >= 0) {
+         NPCPlugin.get().collectSensorSupportFriendlyBlockingTest(this.roleIndex, cached);
       }
 
       if (cached) {
@@ -708,8 +739,10 @@ public class PositionCache {
       @Nonnull ComponentAccessor<EntityStore> componentAccessor,
       double length2
    ) {
+      CombatSupport combat = componentAccessor.getComponent(ref, CombatSupport.getComponentType());
       return !targetRef.equals(ref)
-         && this.role.isFriendly(targetRef, componentAccessor)
+         && combat != null
+         && !combat.getCanCauseDamage(ref, targetRef, componentAccessor)
          && rayIsIntersectingEntity(targetRef, buffer.pos, buffer.dir, buffer.minMax, length2, componentAccessor);
    }
 
@@ -773,6 +806,11 @@ public class PositionCache {
    @Nonnull
    public List<Ref<EntityStore>> getSpawnBeaconList() {
       return this.spawnBeacons;
+   }
+
+   @Override
+   public Component<EntityStore> clone() {
+      return this;
    }
 
    private static class LineOfSightBuffer {

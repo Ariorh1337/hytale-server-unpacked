@@ -20,7 +20,7 @@ import com.hypixel.hytale.component.ArchetypeChunk;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.decisionmaker.core.Option;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.valuestore.ValueStore;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
@@ -95,7 +95,7 @@ public abstract class CombatActionOption extends Option implements JsonAssetWith
    }
 
    public abstract void execute(
-      int var1, ArchetypeChunk<EntityStore> var2, CommandBuffer<EntityStore> var3, Role var4, CombatActionEvaluator var5, ValueStore var6
+      int var1, ArchetypeChunk<EntityStore> var2, CommandBuffer<EntityStore> var3, ExecutionSupport var4, CombatActionEvaluator var5, ValueStore var6
    );
 
    public abstract boolean isBasicAttackAllowed(int var1, ArchetypeChunk<EntityStore> var2, CommandBuffer<EntityStore> var3, CombatActionEvaluator var4);
@@ -148,7 +148,7 @@ public abstract class CombatActionOption extends Option implements JsonAssetWith
          int index,
          ArchetypeChunk<EntityStore> archetypeChunk,
          CommandBuffer<EntityStore> commandBuffer,
-         Role role,
+         ExecutionSupport executionSupport,
          CombatActionEvaluator evaluator,
          ValueStore valueStore
       ) {

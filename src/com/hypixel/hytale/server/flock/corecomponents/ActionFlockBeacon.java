@@ -11,7 +11,7 @@ import com.hypixel.hytale.server.flock.corecomponents.builders.BuilderActionFloc
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.components.messaging.BeaconSupport;
 import com.hypixel.hytale.server.npc.corecomponents.ActionBase;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -36,16 +36,28 @@ public class ActionFlockBeacon extends ActionBase {
    }
 
    @Override
-   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      return !super.canExecute(ref, role, sensorInfo, dt, store)
+   public boolean canExecute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
+      return !super.canExecute(ref, executionSupport, sensorInfo, dt, store)
          ? false
          : store.getArchetype(ref).contains(FLOCK_MEMBERSHIP_COMPONENT_TYPE)
-            && (this.sendTargetSlot == Integer.MIN_VALUE || role.getMarkedEntitySupport().hasMarkedEntityInSlot(this.sendTargetSlot));
+            && (this.sendTargetSlot == Integer.MIN_VALUE || executionSupport.getMarkedEntitySupport().hasMarkedEntityInSlot(this.sendTargetSlot));
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      super.execute(ref, role, sensorInfo, dt, store);
+   public boolean execute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
+      super.execute(ref, executionSupport, sensorInfo, dt, store);
       FlockMembership flockMembership = store.getComponent(ref, FLOCK_MEMBERSHIP_COMPONENT_TYPE);
       Ref<EntityStore> flockReference = flockMembership != null ? flockMembership.getFlockRef() : null;
       if (flockReference != null && flockReference.isValid()) {
@@ -54,7 +66,7 @@ public class ActionFlockBeacon extends ActionBase {
             return true;
          }
 
-         Ref<EntityStore> targetRef = this.sendTargetSlot >= 0 ? role.getMarkedEntitySupport().getMarkedEntityRef(this.sendTargetSlot) : ref;
+         Ref<EntityStore> targetRef = this.sendTargetSlot >= 0 ? executionSupport.getMarkedEntitySupport().getMarkedEntityRef(this.sendTargetSlot) : ref;
          if (this.sendToLeaderOnly) {
             Ref<EntityStore> leaderReference = entityGroup.getLeaderRef();
             if ((this.sendToSelf || targetRef == null || !targetRef.equals(leaderReference)) && leaderReference.isValid()) {

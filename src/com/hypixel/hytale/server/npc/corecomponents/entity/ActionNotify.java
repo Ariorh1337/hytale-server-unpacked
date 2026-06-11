@@ -7,7 +7,7 @@ import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.components.messaging.BeaconSupport;
 import com.hypixel.hytale.server.npc.corecomponents.ActionBase;
 import com.hypixel.hytale.server.npc.corecomponents.entity.builders.BuilderActionNotify;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import javax.annotation.Nonnull;
 
@@ -24,11 +24,13 @@ public class ActionNotify extends ActionBase {
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      super.execute(ref, role, sensorInfo, dt, store);
+   public boolean execute(
+      @Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, @Nonnull InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store
+   ) {
+      super.execute(ref, executionSupport, sensorInfo, dt, store);
       Ref<EntityStore> targetRef;
       if (this.usedTargetSlot >= 0) {
-         targetRef = role.getMarkedEntitySupport().getMarkedEntityRef(this.usedTargetSlot);
+         targetRef = executionSupport.getMarkedEntitySupport().getMarkedEntityRef(this.usedTargetSlot);
       } else {
          targetRef = sensorInfo.getPositionProvider().getTarget();
       }

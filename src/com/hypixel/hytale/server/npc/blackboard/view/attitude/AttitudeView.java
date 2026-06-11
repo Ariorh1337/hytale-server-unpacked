@@ -11,7 +11,6 @@ import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.blackboard.Blackboard;
 import com.hypixel.hytale.server.npc.blackboard.view.PrioritisedProviderView;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.role.support.WorldSupport;
 import javax.annotation.Nonnull;
 
@@ -20,12 +19,14 @@ public class AttitudeView extends PrioritisedProviderView<IAttitudeProvider, Att
 
    public AttitudeView(World world) {
       this.world = world;
-      this.registerProvider(0, (ref, self, target, accessor) -> self.getWorldSupport().getOverriddenAttitude(target));
-      this.registerProvider(200, (ref, self, target, accessor) -> NPCPlugin.get().getAttitudeMap().getAttitude(self, target, accessor));
+      this.registerProvider(0, (ref, var1x, target, accessor) -> WorldSupport.get(ref, accessor).getOverriddenAttitude(target));
+      this.registerProvider(
+         200, (ref, sourceRoleIndex, target, accessor) -> NPCPlugin.get().getAttitudeMap().getAttitude(ref, sourceRoleIndex, target, accessor)
+      );
       this.registerProvider(
          Integer.MAX_VALUE,
-         (ref, self, target, accessor) -> {
-            WorldSupport worldSupport = self.getWorldSupport();
+         (ref, var1x, target, accessor) -> {
+            WorldSupport worldSupport = WorldSupport.get(ref, accessor);
             return accessor.getArchetype(target).contains(Player.getComponentType())
                ? worldSupport.getDefaultPlayerAttitude()
                : worldSupport.getDefaultNPCAttitude();
@@ -35,7 +36,7 @@ public class AttitudeView extends PrioritisedProviderView<IAttitudeProvider, Att
 
    @Nonnull
    public Attitude getAttitude(
-      @Nonnull Ref<EntityStore> ref, @Nonnull Role self, @Nonnull Ref<EntityStore> target, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+      @Nonnull Ref<EntityStore> ref, int sourceRoleIndex, @Nonnull Ref<EntityStore> target, @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       Attitude result = null;
       int pos = 0;
@@ -45,7 +46,7 @@ public class AttitudeView extends PrioritisedProviderView<IAttitudeProvider, Att
             return Attitude.NEUTRAL;
          }
 
-         result = this.providers.get(pos++).getProvider().getAttitude(ref, self, target, componentAccessor);
+         result = this.providers.get(pos++).getProvider().getAttitude(ref, sourceRoleIndex, target, componentAccessor);
       }
 
       return result;

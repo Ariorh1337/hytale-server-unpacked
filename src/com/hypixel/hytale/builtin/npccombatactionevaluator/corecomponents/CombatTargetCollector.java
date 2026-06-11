@@ -10,7 +10,7 @@ import com.hypixel.hytale.server.core.asset.type.attitude.Attitude;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.corecomponents.ISensorEntityCollector;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import it.unimi.dsi.fastutil.ints.Int2FloatOpenHashMap;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
@@ -21,26 +21,26 @@ public class CombatTargetCollector implements ISensorEntityCollector {
    @Nonnull
    private static final ComponentType<EntityStore, TransformComponent> TRANSFORM_COMPONENT_TYPE = TransformComponent.getComponentType();
    @Nullable
-   private Role role;
+   private ExecutionSupport executionSupport;
    @Nullable
    private TargetMemory targetMemory;
    private double closestHostileDistanceSquared = Double.MAX_VALUE;
 
    @Override
-   public void registerWithSupport(@Nonnull Role role) {
-      role.getWorldSupport().requireAttitudeCache();
+   public void registerWithSupport(@Nonnull ExecutionSupport executionSupport) {
+      executionSupport.getWorldSupport().requireAttitudeCache();
    }
 
    @Override
-   public void init(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+   public void init(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       this.targetMemory = componentAccessor.getComponent(ref, TargetMemory.getComponentType());
-      this.role = role;
+      this.executionSupport = executionSupport;
    }
 
    @Override
    public void collectMatching(@Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       if (this.targetMemory != null) {
-         Attitude attitude = this.role.getWorldSupport().getAttitude(ref, targetRef, componentAccessor);
+         Attitude attitude = this.executionSupport.getWorldSupport().getAttitude(ref, targetRef, componentAccessor);
          switch (attitude) {
             case IGNORE:
             case NEUTRAL:
@@ -93,7 +93,7 @@ public class CombatTargetCollector implements ISensorEntityCollector {
 
    @Override
    public void cleanup() {
-      this.role = null;
+      this.executionSupport = null;
       this.targetMemory = null;
       this.closestHostileDistanceSquared = Double.MAX_VALUE;
    }

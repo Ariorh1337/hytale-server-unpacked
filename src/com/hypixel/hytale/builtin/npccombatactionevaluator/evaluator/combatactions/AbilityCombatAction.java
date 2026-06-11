@@ -24,8 +24,8 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Roo
 import com.hypixel.hytale.server.core.modules.physics.util.PhysicsMath;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.interactions.NPCInteractionSimulationHandler;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.util.InventoryHelper;
 import com.hypixel.hytale.server.npc.valuestore.ValueStore;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
@@ -228,7 +228,7 @@ public class AbilityCombatAction extends CombatActionOption {
       int index,
       @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
       @Nonnull CommandBuffer<EntityStore> commandBuffer,
-      @Nonnull Role role,
+      @Nonnull ExecutionSupport executionSupport,
       @Nonnull CombatActionEvaluator evaluator,
       @Nonnull ValueStore valueStore
    ) {
@@ -243,7 +243,7 @@ public class AbilityCombatAction extends CombatActionOption {
       InventoryHelper.setHotbarSlot(ref, (byte)this.weaponSlot, commandBuffer);
       InventoryHelper.setOffHandSlot(ref, (byte)this.offhandSlot, commandBuffer);
       if (this.subState != null) {
-         role.getStateSupport().setSubState(this.subState);
+         executionSupport.getStateSupport().setSubState(this.subState);
          ctx = CombatActionEvaluator.LOGGER.at(Level.FINEST);
          if (ctx.isEnabled()) {
             ctx.log("%s: Set substate to %s", archetypeChunk.getReferenceTo(index), this.subState);
@@ -266,7 +266,7 @@ public class AbilityCombatAction extends CombatActionOption {
          context.setInteractionVarsGetter(this::getInteractionVars);
          InteractionChain chain = interactionManagerComponent.initChain(this.abilityType.interactionType, context, interaction, false);
          interactionManagerComponent.queueExecuteChain(chain);
-         role.getCombatSupport().setExecutingAttack(chain, false, 2.0);
+         executionSupport.getCombatSupport().setExecutingAttack(chain, false, 2.0);
          ctx = CombatActionEvaluator.LOGGER.at(Level.INFO);
          if (ctx.isEnabled()) {
             ctx.log("%s: Executed self-targeted ability %s", archetypeChunk.getReferenceTo(index), this.ability);

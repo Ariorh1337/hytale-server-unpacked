@@ -21,7 +21,8 @@ import com.hypixel.hytale.server.flock.FlockPlugin;
 import com.hypixel.hytale.server.flock.config.FlockAsset;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.role.support.MarkedEntitySupport;
+import com.hypixel.hytale.server.npc.role.support.StateSupport;
 import com.hypixel.hytale.server.npc.systems.NewSpawnStartTickingSystem;
 import com.hypixel.hytale.server.spawning.ISpawnableWithModel;
 import com.hypixel.hytale.server.spawning.SpawningContext;
@@ -173,11 +174,10 @@ public class SpawnBeacon extends Entity {
       Ref<EntityStore> targetRef,
       ComponentAccessor<EntityStore> componentAccessor
    ) {
-      Role role = npc.getRole();
-      role.getMarkedEntitySupport().setMarkedEntity(spawn.getTargetSlot(), targetRef);
+      MarkedEntitySupport.get(selfRef, componentAccessor).setMarkedEntity(spawn.getTargetSlot(), targetRef);
       String spawnState = spawn.getNpcSpawnState();
       if (spawnState != null) {
-         role.getStateSupport().setState(selfRef, spawnState, spawn.getNpcSpawnSubState(), componentAccessor);
+         StateSupport.get(selfRef, componentAccessor).setState(selfRef, spawnState, spawn.getNpcSpawnSubState(), componentAccessor);
       }
 
       NewSpawnStartTickingSystem.queueNewSpawn(selfRef, selfRef.getStore());

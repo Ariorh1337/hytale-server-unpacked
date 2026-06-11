@@ -2,9 +2,9 @@ package com.hypixel.hytale.server.npc.corecomponents;
 
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderBodyMotionBase;
 import com.hypixel.hytale.server.npc.instructions.BodyMotion;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.movement.constraints.RelaxedConstraint;
 import com.hypixel.hytale.server.npc.movement.controllers.ProbeMoveData;
-import com.hypixel.hytale.server.npc.role.Role;
 import java.util.EnumSet;
 import javax.annotation.Nonnull;
 
@@ -33,8 +33,8 @@ public abstract class BodyMotionBase extends MotionBase implements BodyMotion {
       return effectiveConstraints;
    }
 
-   protected static boolean applyEscapeConstraints(@Nonnull Role role, @Nonnull ProbeMoveData probeMoveData) {
-      if (!role.couldBreatheCached()) {
+   protected static boolean applyEscapeConstraints(@Nonnull ExecutionSupport executionSupport, @Nonnull ProbeMoveData probeMoveData) {
+      if (!executionSupport.getPositionCache().couldBreatheCached()) {
          probeMoveData.getRelaxedConstraints().add(RelaxedConstraint.BREATHE);
          probeMoveData.getRelaxedConstraints().add(RelaxedConstraint.WADE);
          return true;

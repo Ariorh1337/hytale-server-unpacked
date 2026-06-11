@@ -4,6 +4,7 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.sneakythrow.SneakyThrow;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.logging.Level;
@@ -12,6 +13,8 @@ import javax.annotation.Nullable;
 
 public class AsyncEventBusRegistry<KeyType, EventType extends IAsyncEvent<KeyType>>
    extends EventBusRegistry<KeyType, EventType, AsyncEventBusRegistry.AsyncEventConsumerMap<EventType>> {
+   @Nonnull
+   private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
    @Nonnull
    public static final IEventDispatcher NO_OP = new IEventDispatcher<IAsyncEvent, CompletableFuture<IAsyncEvent>>() {
       @Override
@@ -56,7 +59,7 @@ public class AsyncEventBusRegistry<KeyType, EventType extends IAsyncEvent<KeyTyp
       @Nonnull String consumerString
    ) {
       if (this.shutdown) {
-         throw new IllegalArgumentException("EventRegistry is shutdown!");
+         return this.deadRegistration("register");
       }
 
       KeyType k = (KeyType)(key != null ? key : NULL);
@@ -68,14 +71,12 @@ public class AsyncEventBusRegistry<KeyType, EventType extends IAsyncEvent<KeyTyp
    }
 
    private void unregister(@Nullable KeyType key, @Nonnull AsyncEventBusRegistry.AsyncEventConsumer<EventType> consumer) {
-      if (this.shutdown) {
-         throw new IllegalArgumentException("EventRegistry is shutdown!");
-      }
-
-      KeyType k = (KeyType)(key != null ? key : NULL);
-      AsyncEventBusRegistry.AsyncEventConsumerMap<EventType> eventMap = this.map.get(k);
-      if (eventMap != null && !eventMap.remove(consumer)) {
-         throw new IllegalArgumentException(String.valueOf(consumer));
+      if (!this.shutdown) {
+         KeyType k = (KeyType)(key != null ? key : NULL);
+         AsyncEventBusRegistry.AsyncEventConsumerMap<EventType> eventMap = this.map.get(k);
+         if (eventMap != null && !eventMap.remove(consumer)) {
+            throw new IllegalArgumentException(String.valueOf(consumer));
+         }
       }
    }
 
@@ -91,7 +92,7 @@ public class AsyncEventBusRegistry<KeyType, EventType extends IAsyncEvent<KeyTyp
       short priority, @Nonnull Function<CompletableFuture<EventType>, CompletableFuture<EventType>> function, @Nonnull String consumerString
    ) {
       if (this.shutdown) {
-         throw new IllegalArgumentException("EventRegistry is shutdown!");
+         return this.deadRegistration("registerGlobal");
       }
 
       AsyncEventBusRegistry.AsyncEventConsumer<EventType> eventConsumer = new AsyncEventBusRegistry.AsyncEventConsumer<>(priority, consumerString, function);
@@ -100,12 +101,10 @@ public class AsyncEventBusRegistry<KeyType, EventType extends IAsyncEvent<KeyTyp
    }
 
    private void unregisterGlobal(@Nonnull AsyncEventBusRegistry.AsyncEventConsumer<EventType> consumer) {
-      if (this.shutdown) {
-         throw new IllegalArgumentException("EventRegistry is shutdown!");
-      }
-
-      if (!this.global.remove(consumer)) {
-         throw new IllegalArgumentException(String.valueOf(consumer));
+      if (!this.shutdown) {
+         if (!this.global.remove(consumer)) {
+            throw new IllegalArgumentException(String.valueOf(consumer));
+         }
       }
    }
 
@@ -121,7 +120,7 @@ public class AsyncEventBusRegistry<KeyType, EventType extends IAsyncEvent<KeyTyp
       short priority, @Nonnull Function<CompletableFuture<EventType>, CompletableFuture<EventType>> function, @Nonnull String consumerString
    ) {
       if (this.shutdown) {
-         throw new IllegalArgumentException("EventRegistry is shutdown!");
+         return this.deadRegistration("registerUnhandled");
       }
 
       AsyncEventBusRegistry.AsyncEventConsumer<EventType> eventConsumer = new AsyncEventBusRegistry.AsyncEventConsumer<>(priority, consumerString, function);
@@ -130,12 +129,10 @@ public class AsyncEventBusRegistry<KeyType, EventType extends IAsyncEvent<KeyTyp
    }
 
    private void unregisterUnhandled(@Nonnull AsyncEventBusRegistry.AsyncEventConsumer<EventType> consumer) {
-      if (this.shutdown) {
-         throw new IllegalArgumentException("EventRegistry is shutdown!");
-      }
-
-      if (!this.unhandled.remove(consumer)) {
-         throw new IllegalArgumentException(String.valueOf(consumer));
+      if (!this.shutdown) {
+         if (!this.unhandled.remove(consumer)) {
+            throw new IllegalArgumentException(String.valueOf(consumer));
+         }
       }
    }
 
@@ -208,7 +205,8 @@ public class AsyncEventBusRegistry<KeyType, EventType extends IAsyncEvent<KeyTyp
    @Override
    public IEventDispatcher<EventType, CompletableFuture<EventType>> dispatchFor(@Nullable KeyType key) {
       if (this.shutdown) {
-         throw new IllegalArgumentException("EventRegistry is shutdown!");
+         LOGGER.at(Level.FINE).atMostEvery(1, TimeUnit.MINUTES).log("Ignoring dispatchFor on shut-down EventRegistry for %s", this.eventClass.getName());
+         return NO_OP;
       } else {
          KeyType k = (KeyType)(key != null ? key : NULL);
          AsyncEventBusRegistry.AsyncEventConsumerMap<EventType> eventMap = this.map.get(k);

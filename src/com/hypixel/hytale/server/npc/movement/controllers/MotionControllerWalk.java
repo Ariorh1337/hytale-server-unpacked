@@ -1597,7 +1597,7 @@ public class MotionControllerWalk extends MotionControllerBase {
             this.effectiveMoveConstraints.add(RelaxedConstraint.WADE);
          }
 
-         if (!role.couldBreatheCached()) {
+         if (!role.couldBreatheCached(ref, componentAccessor)) {
             this.effectiveMoveConstraints.add(RelaxedConstraint.BREATHE);
          }
 

@@ -8,7 +8,7 @@ import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.SensorBase;
 import com.hypixel.hytale.server.npc.corecomponents.combat.builders.BuilderSensorDamage;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.role.support.CombatSupport;
 import com.hypixel.hytale.server.npc.role.support.WorldSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.EntityPositionProvider;
@@ -36,15 +36,15 @@ public class SensorDamage extends SensorBase {
    }
 
    @Override
-   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, double dt, @Nonnull Store<EntityStore> store) {
-      if (!super.matches(ref, role, dt, store)) {
+   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, double dt, @Nonnull Store<EntityStore> store) {
+      if (!super.matches(ref, executionSupport, dt, store)) {
          this.positionProvider.clear();
          return false;
       }
 
       NPCEntity npcComponent = store.getComponent(ref, NPCEntity.getComponentType());
       assert npcComponent != null;
-      CombatSupport combatSupport = role.getCombatSupport();
+      CombatSupport combatSupport = executionSupport.getCombatSupport();
       DamageData damageData = npcComponent.getDamageData();
       if (this.combatDamage) {
          Ref<EntityStore> attackerRef = damageData.getMostDamagingAttacker();
@@ -62,7 +62,7 @@ public class SensorDamage extends SensorBase {
             }
 
             if (this.targetSlot >= 0) {
-               role.getMarkedEntitySupport().setMarkedEntity(this.targetSlot, attackerRef);
+               executionSupport.getMarkedEntitySupport().setMarkedEntity(this.targetSlot, attackerRef);
             }
 
             return true;

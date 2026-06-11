@@ -24,6 +24,7 @@ import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.ActionBase;
 import com.hypixel.hytale.server.npc.corecomponents.combat.builders.BuilderActionAttack;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.interactions.NPCInteractionSimulationHandler;
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.role.support.CombatSupport;
@@ -95,15 +96,27 @@ public class ActionAttack extends ActionBase {
    }
 
    @Override
-   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      return super.canExecute(ref, role, sensorInfo, dt, store) && !role.getCombatSupport().isExecutingAttack();
+   public boolean canExecute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
+      return super.canExecute(ref, executionSupport, sensorInfo, dt, store) && !executionSupport.getCombatSupport().isExecutingAttack();
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      super.execute(ref, role, sensorInfo, dt, store);
-      this.ownerRole = role;
-      CombatSupport combatSupport = role.getCombatSupport();
+   public boolean execute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
+      super.execute(ref, executionSupport, sensorInfo, dt, store);
+      this.ownerRole = executionSupport.getRole();
+      CombatSupport combatSupport = executionSupport.getCombatSupport();
       InteractionManager interactionManagerComponent = store.getComponent(ref, InteractionModule.get().getInteractionManagerComponent());
       assert interactionManagerComponent != null;
       NPCEntity npcComponent = store.getComponent(ref, NPCEntity.getComponentType());
@@ -221,8 +234,8 @@ public class ActionAttack extends ActionBase {
       }
 
       Ref<EntityStore> target = aimingData != null ? aimingData.getTarget() : null;
-      if (!this.checkLineOfSight || target != null && role.getPositionCache().hasLineOfSight(ref, target, store)) {
-         if (this.avoidFriendlyFire && target != null && role.getPositionCache().isFriendlyBlockingLineOfSight(ref, target, store)) {
+      if (!this.checkLineOfSight || target != null && executionSupport.getPositionCache().hasLineOfSight(ref, target, store)) {
+         if (this.avoidFriendlyFire && target != null && executionSupport.getPositionCache().isFriendlyBlockingLineOfSight(ref, target, store)) {
             aimingData.clearSolution();
             return true;
          }
@@ -251,8 +264,8 @@ public class ActionAttack extends ActionBase {
    }
 
    @Override
-   public void activate(Role role, @Nullable InfoProvider infoProvider) {
-      super.activate(role, infoProvider);
+   public void activate(ExecutionSupport executionSupport, @Nullable InfoProvider infoProvider) {
+      super.activate(executionSupport, infoProvider);
       if (infoProvider != null) {
          AimingData aimingData = infoProvider.getPassedExtraInfo(AimingData.class);
          if (aimingData != null) {
@@ -262,8 +275,8 @@ public class ActionAttack extends ActionBase {
    }
 
    @Override
-   public void deactivate(Role role, @Nullable InfoProvider infoProvider) {
-      super.deactivate(role, infoProvider);
+   public void deactivate(ExecutionSupport executionSupport, @Nullable InfoProvider infoProvider) {
+      super.deactivate(executionSupport, infoProvider);
       if (infoProvider != null) {
          AimingData aimingData = infoProvider.getPassedExtraInfo(AimingData.class);
          if (aimingData != null) {

@@ -4,6 +4,7 @@ import com.google.gson.JsonElement;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.asset.builder.holder.AssetHolder;
 import com.hypixel.hytale.server.npc.asset.builder.validators.AssetValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.DoubleRangeValidator;
@@ -101,6 +102,7 @@ public class BuilderActionDropItem extends BuilderActionWithDelay {
       );
       this.getBoolean(data, "PitchHigh", v -> this.highPitch = v, false, BuilderDescriptorState.Stable, "Whether to pitch high or pitch low instead", null);
       this.validateOneSetAsset(this.item, this.dropList);
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
       return this;
    }
 

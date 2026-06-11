@@ -197,7 +197,7 @@ public class BuilderObjectReferenceHelper<T> extends BuilderObjectHelper<T> {
 
    @Nullable
    public Builder<T> getBuilder(@Nonnull BuilderManager builderManager, @Nonnull BuilderSupport support, boolean nullable) {
-      Builder<T> builder = this.getBuilder(builderManager, support.getExecutionContext(), support.getParentSpawnable());
+      Builder<T> builder = this.getBuilder(builderManager, support.getExecutionContext(), support.getRootBuilder());
       if (!nullable && builder == null) {
          throw new NullPointerException(String.format("ReferenceHelper failed to get builder: %s", this.getClassType().getSimpleName()));
       } else {
@@ -206,7 +206,7 @@ public class BuilderObjectReferenceHelper<T> extends BuilderObjectHelper<T> {
    }
 
    @Nullable
-   public Builder<T> getBuilder(@Nonnull BuilderManager builderManager, ExecutionContext context, @Nullable Builder<?> parentSpawnable) {
+   public Builder<T> getBuilder(@Nonnull BuilderManager builderManager, ExecutionContext context, @Nullable Builder<?> rootBuilder) {
       if (this.builder != null) {
          return this.builder;
       }
@@ -232,8 +232,8 @@ public class BuilderObjectReferenceHelper<T> extends BuilderObjectHelper<T> {
 
          int idx = builderManager.getIndex(reference);
          if (idx >= 0) {
-            if (parentSpawnable != null) {
-               parentSpawnable.addDynamicDependency(idx);
+            if (rootBuilder != null) {
+               rootBuilder.addDynamicDependency(idx);
             }
 
             Builder<T> builder = builderManager.getCachedBuilder(idx, this.classType);

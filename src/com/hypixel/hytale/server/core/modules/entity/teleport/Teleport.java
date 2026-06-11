@@ -12,6 +12,7 @@ import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.joml.Vector3d;
+import org.joml.Vector3dc;
 
 public class Teleport implements Component<EntityStore> {
    @Nullable
@@ -30,16 +31,24 @@ public class Teleport implements Component<EntityStore> {
       return EntityModule.get().getTeleportComponentType();
    }
 
-   public Teleport(@Nullable World world, @Nonnull Vector3d position, @Nonnull Rotation3f rotation) {
+   public Teleport(@Nullable World world, @Nonnull Vector3dc position, @Nonnull Rotation3fc rotation) {
       this.world = world;
       this.position.set(position);
       this.rotation.set(rotation);
    }
 
-   public Teleport(@Nonnull Vector3d position, @Nonnull Rotation3f rotation) {
+   public Teleport(@Nonnull Vector3dc position, @Nonnull Rotation3fc rotation) {
       this.world = null;
       this.position.set(position);
       this.rotation.set(rotation);
+   }
+
+   public Teleport(@Nonnull Teleport t) {
+      this.world = t.world;
+      this.position.set(t.position);
+      this.rotation.set(t.rotation);
+      this.headRotation = t.headRotation == null ? null : new Rotation3f(t.headRotation);
+      this.resetVelocity = t.resetVelocity;
    }
 
    @Nonnull
@@ -50,14 +59,13 @@ public class Teleport implements Component<EntityStore> {
    }
 
    @Nonnull
-   public static Teleport createForPlayer(@Nullable World world, @Nonnull Vector3d position, @Nonnull Rotation3fc rotation) {
-      Rotation3f headRotation = new Rotation3f(rotation);
-      Rotation3f bodyRotation = new Rotation3f(0.0F, headRotation.yaw(), 0.0F);
-      return new Teleport(world, position, bodyRotation).setHeadRotation(headRotation);
+   public static Teleport createForPlayer(@Nullable World world, @Nonnull Vector3dc position, @Nonnull Rotation3fc rotation) {
+      Rotation3f bodyRotation = new Rotation3f(0.0F, rotation.yaw(), 0.0F);
+      return new Teleport(world, position, bodyRotation).setHeadRotation(rotation);
    }
 
    @Nonnull
-   public static Teleport createForPlayer(@Nonnull Vector3d position, @Nonnull Rotation3fc rotation) {
+   public static Teleport createForPlayer(@Nonnull Vector3dc position, @Nonnull Rotation3fc rotation) {
       return createForPlayer(null, position, rotation);
    }
 
@@ -67,29 +75,35 @@ public class Teleport implements Component<EntityStore> {
    }
 
    @Nonnull
-   public static Teleport createExact(@Nonnull Vector3d position, @Nonnull Rotation3f bodyRotation, @Nonnull Rotation3f headRotation) {
+   public static Teleport createExact(@Nonnull Vector3dc position, @Nonnull Rotation3fc bodyRotation, @Nonnull Rotation3fc headRotation) {
       return new Teleport(position, bodyRotation).setHeadRotation(headRotation);
    }
 
    @Nonnull
-   public static Teleport createExact(@Nonnull Vector3d position, @Nonnull Rotation3f bodyRotation) {
+   public static Teleport createExact(@Nonnull Vector3dc position, @Nonnull Rotation3fc bodyRotation) {
       return new Teleport(position, bodyRotation);
    }
 
-   public void setPosition(@Nonnull Vector3d position) {
+   public void setPosition(@Nonnull Vector3dc position) {
       this.position.set(position);
    }
 
-   public void setRotation(@Nonnull Rotation3f rotation) {
+   public void setRotation(@Nonnull Rotation3fc rotation) {
       this.rotation.set(rotation);
    }
 
    @Nonnull
-   public Teleport setHeadRotation(@Nonnull Rotation3f headRotation) {
-      this.headRotation = new Rotation3f(headRotation);
+   public Teleport setHeadRotation(@Nonnull Rotation3fc headRotation) {
+      if (this.headRotation == null) {
+         this.headRotation = new Rotation3f(headRotation);
+      } else {
+         this.headRotation.set(headRotation);
+      }
+
       return this;
    }
 
+   @Nonnull
    public Teleport withoutVelocityReset() {
       this.resetVelocity = false;
       return this;
@@ -129,9 +143,6 @@ public class Teleport implements Component<EntityStore> {
 
    @Nonnull
    public Teleport clone() {
-      Teleport clone = new Teleport(this.world, this.position, this.rotation);
-      clone.headRotation = this.headRotation != null ? new Rotation3f(this.headRotation) : null;
-      clone.resetVelocity = this.resetVelocity;
-      return clone;
+      return new Teleport(this);
    }
 }

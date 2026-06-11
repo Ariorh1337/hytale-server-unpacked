@@ -29,6 +29,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class GraphGeneratorAsset implements Cleanable, JsonAssetWithMap<String, DefaultAssetMap<String, GraphGeneratorAsset>> {
+   @Nonnull
    public static final GraphGeneratorAsset EMPTY = new GraphGeneratorAsset();
    @Nonnull
    private static final Map<String, GraphGeneratorAsset> exportedNodes = new ConcurrentHashMap<>();
@@ -57,7 +58,7 @@ public class GraphGeneratorAsset implements Cleanable, JsonAssetWithMap<String, 
       .append(new KeyedCodec<>("StatsLabel", Codec.STRING, true), (asset, value) -> asset.statsLabel = value, asset -> asset.statsLabel)
       .add()
       .<Integer>append(
-         new KeyedCodec<>("StatsSampleCount", Codec.INTEGER, true), (asset, value) -> asset.statsSampleCount = value, asset -> asset.statsSampleCount
+         new KeyedCodec<>("StatsPrintInterval", Codec.INTEGER, true), (asset, value) -> asset.statsPrintInterval = value, asset -> asset.statsPrintInterval
       )
       .addValidator(Validators.greaterThanOrEqual(0))
       .add()
@@ -83,7 +84,7 @@ public class GraphGeneratorAsset implements Cleanable, JsonAssetWithMap<String, 
    @Nonnull
    private String statsLabel = "UNNAMED";
    private boolean printStats = false;
-   private int statsSampleCount = 50;
+   private int statsPrintInterval = 50;
 
    @Nonnull
    public GraphGenerator build(@Nonnull GraphGeneratorAsset.Argument argument) {
@@ -98,7 +99,7 @@ public class GraphGeneratorAsset implements Cleanable, JsonAssetWithMap<String, 
          graphPasses.add(graphPass);
       }
 
-      return new GraphGenerator(graphPasses, this.printStats, this.statsSampleCount, this.statsLabel);
+      return new GraphGenerator(graphPasses, this.printStats, this.statsPrintInterval, this.statsLabel);
    }
 
    @Nonnull

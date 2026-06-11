@@ -7,8 +7,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.corecomponents.EntityFilterBase;
 import com.hypixel.hytale.server.npc.corecomponents.IEntityFilter;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.util.IAnnotatedComponent;
 import com.hypixel.hytale.server.npc.util.IAnnotatedComponentCollection;
 import java.util.List;
@@ -49,9 +49,9 @@ public abstract class EntityFilterMany extends EntityFilterBase implements IAnno
    }
 
    @Override
-   public void registerWithSupport(Role role) {
+   public void registerWithSupport(ExecutionSupport executionSupport) {
       for (IEntityFilter filter : this.filters) {
-         filter.registerWithSupport(role);
+         filter.registerWithSupport(executionSupport);
       }
    }
 
@@ -68,37 +68,37 @@ public abstract class EntityFilterMany extends EntityFilterBase implements IAnno
    }
 
    @Override
-   public void loaded(Role role) {
+   public void loaded(ExecutionSupport executionSupport) {
       for (IEntityFilter filter : this.filters) {
-         filter.loaded(role);
+         filter.loaded(executionSupport);
       }
    }
 
    @Override
-   public void spawned(Role role) {
+   public void spawned(ExecutionSupport executionSupport) {
       for (IEntityFilter filter : this.filters) {
-         filter.spawned(role);
+         filter.spawned(executionSupport);
       }
    }
 
    @Override
-   public void unloaded(Role role) {
+   public void unloaded(ExecutionSupport executionSupport) {
       for (IEntityFilter filter : this.filters) {
-         filter.unloaded(role);
+         filter.unloaded(executionSupport);
       }
    }
 
    @Override
-   public void removed(Role role) {
+   public void removed(ExecutionSupport executionSupport) {
       for (IEntityFilter filter : this.filters) {
-         filter.removed(role);
+         filter.removed(executionSupport);
       }
    }
 
    @Override
-   public void teleported(Role role, World from, World to) {
+   public void teleported(ExecutionSupport executionSupport, World from, World to) {
       for (IEntityFilter filter : this.filters) {
-         filter.teleported(role, from, to);
+         filter.teleported(executionSupport, from, to);
       }
    }
 

@@ -7,10 +7,10 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.corecomponents.MotionBase;
 import com.hypixel.hytale.server.npc.corecomponents.utility.builders.BuilderMotionSequence;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.instructions.Motion;
 import com.hypixel.hytale.server.npc.movement.Steering;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.util.IAnnotatedComponent;
 import com.hypixel.hytale.server.npc.util.IAnnotatedComponentCollection;
@@ -35,21 +35,21 @@ public abstract class MotionSequence<T extends Motion> extends MotionBase implem
    }
 
    @Override
-   public void activate(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+   public void activate(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       if (this.restartOnActivate) {
-         this.deactivate(ref, role, componentAccessor);
+         this.deactivate(ref, executionSupport, componentAccessor);
          this.restart();
       }
 
       if (!this.finished) {
-         this.doActivate(ref, role, componentAccessor);
+         this.doActivate(ref, executionSupport, componentAccessor);
       }
    }
 
    @Override
-   public void deactivate(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+   public void deactivate(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       if (this.activeMotion != null) {
-         this.activeMotion.deactivate(ref, role, componentAccessor);
+         this.activeMotion.deactivate(ref, executionSupport, componentAccessor);
          this.activeMotion = null;
       }
    }
@@ -57,7 +57,7 @@ public abstract class MotionSequence<T extends Motion> extends MotionBase implem
    @Override
    public boolean computeSteering(
       @Nonnull Ref<EntityStore> ref,
-      @Nonnull Role role,
+      @Nonnull ExecutionSupport executionSupport,
       @Nullable InfoProvider sensorInfo,
       double dt,
       @Nonnull Steering desiredSteering,
@@ -72,30 +72,30 @@ public abstract class MotionSequence<T extends Motion> extends MotionBase implem
 
       do {
          Objects.requireNonNull(this.activeMotion, "Active motion not set");
-         if (this.activeMotion.computeSteering(ref, role, sensorInfo, dt, desiredSteering, componentAccessor)) {
+         if (this.activeMotion.computeSteering(ref, executionSupport, sensorInfo, dt, desiredSteering, componentAccessor)) {
             return true;
          }
 
          if (this.index + 1 < this.steps.length) {
-            this.activateNext(ref, this.index + 1, role, componentAccessor);
+            this.activateNext(ref, this.index + 1, executionSupport, componentAccessor);
          } else {
             if (!this.looped) {
                break;
             }
 
-            this.activateNext(ref, 0, role, componentAccessor);
+            this.activateNext(ref, 0, executionSupport, componentAccessor);
          }
       } while (this.activeMotion != currentActiveMotion);
 
-      this.deactivate(ref, role, componentAccessor);
+      this.deactivate(ref, executionSupport, componentAccessor);
       this.finished = true;
       return false;
    }
 
    @Override
-   public void registerWithSupport(Role role) {
+   public void registerWithSupport(ExecutionSupport executionSupport) {
       for (T step : this.steps) {
-         step.registerWithSupport(role);
+         step.registerWithSupport(executionSupport);
       }
    }
 
@@ -112,37 +112,37 @@ public abstract class MotionSequence<T extends Motion> extends MotionBase implem
    }
 
    @Override
-   public void loaded(Role role) {
+   public void loaded(ExecutionSupport executionSupport) {
       for (T step : this.steps) {
-         step.loaded(role);
+         step.loaded(executionSupport);
       }
    }
 
    @Override
-   public void spawned(Role role) {
+   public void spawned(ExecutionSupport executionSupport) {
       for (T step : this.steps) {
-         step.spawned(role);
+         step.spawned(executionSupport);
       }
    }
 
    @Override
-   public void unloaded(Role role) {
+   public void unloaded(ExecutionSupport executionSupport) {
       for (T step : this.steps) {
-         step.unloaded(role);
+         step.unloaded(executionSupport);
       }
    }
 
    @Override
-   public void removed(Role role) {
+   public void removed(ExecutionSupport executionSupport) {
       for (T step : this.steps) {
-         step.removed(role);
+         step.removed(executionSupport);
       }
    }
 
    @Override
-   public void teleported(Role role, World from, World to) {
+   public void teleported(ExecutionSupport executionSupport, World from, World to) {
       for (T step : this.steps) {
-         step.teleported(role, from, to);
+         step.teleported(executionSupport, from, to);
       }
    }
 
@@ -168,7 +168,9 @@ public abstract class MotionSequence<T extends Motion> extends MotionBase implem
       this.finished = false;
    }
 
-   protected void doActivate(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+   protected void doActivate(
+      @Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
       if (this.steps.length == 0) {
          throw new IllegalArgumentException("Motion sequence must have steps!");
       }
@@ -176,7 +178,7 @@ public abstract class MotionSequence<T extends Motion> extends MotionBase implem
       if (this.index >= 0 && this.index < this.steps.length) {
          this.activeMotion = this.steps[this.index];
          Objects.requireNonNull(this.activeMotion, "Active motion must not be null");
-         this.activeMotion.activate(ref, role, componentAccessor);
+         this.activeMotion.activate(ref, executionSupport, componentAccessor);
       } else {
          throw new IndexOutOfBoundsException(
             String.format("Motion sequence index out of range (%s) must be less than size (%s)", this.index, this.steps.length)
@@ -184,9 +186,11 @@ public abstract class MotionSequence<T extends Motion> extends MotionBase implem
       }
    }
 
-   protected void activateNext(@Nonnull Ref<EntityStore> ref, int newIndex, @Nonnull Role role, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      this.activeMotion.deactivate(ref, role, componentAccessor);
+   protected void activateNext(
+      @Nonnull Ref<EntityStore> ref, int newIndex, @Nonnull ExecutionSupport executionSupport, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
+      this.activeMotion.deactivate(ref, executionSupport, componentAccessor);
       this.index = newIndex;
-      this.doActivate(ref, role, componentAccessor);
+      this.doActivate(ref, executionSupport, componentAccessor);
    }
 }

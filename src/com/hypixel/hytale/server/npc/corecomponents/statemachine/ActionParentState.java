@@ -8,7 +8,8 @@ import com.hypixel.hytale.server.npc.asset.builder.StatePair;
 import com.hypixel.hytale.server.npc.corecomponents.ActionBase;
 import com.hypixel.hytale.server.npc.corecomponents.statemachine.builders.BuilderActionParentState;
 import com.hypixel.hytale.server.npc.decisionmaker.stateevaluator.StateEvaluator;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
+import com.hypixel.hytale.server.npc.role.support.StateSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -29,13 +30,20 @@ public class ActionParentState extends ActionBase {
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      super.execute(ref, role, sensorInfo, dt, store);
+   public boolean execute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
+      super.execute(ref, executionSupport, sensorInfo, dt, store);
       StateEvaluator stateEvaluatorComponent = store.getComponent(ref, StateEvaluator.getComponentType());
       if (stateEvaluatorComponent == null || !stateEvaluatorComponent.isActive()) {
-         role.getStateSupport().setClearHeadMotion(this.clearHeadMotion);
-         role.getStateSupport().setClearBodyMotion(this.clearBodyMotion);
-         role.getStateSupport().setState(this.state, this.subState, true, false);
+         StateSupport stateSupport = executionSupport.getStateSupport();
+         stateSupport.setClearHeadMotion(this.clearHeadMotion);
+         stateSupport.setClearBodyMotion(this.clearBodyMotion);
+         stateSupport.setState(this.state, this.subState, true, false);
       }
 
       return true;

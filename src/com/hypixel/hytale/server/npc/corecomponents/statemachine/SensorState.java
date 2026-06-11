@@ -6,7 +6,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.SensorBase;
 import com.hypixel.hytale.server.npc.corecomponents.statemachine.builders.BuilderSensorState;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.role.support.StateSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.util.ComponentInfo;
@@ -29,11 +29,13 @@ public class SensorState extends SensorBase {
    }
 
    @Override
-   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, double dt, @Nonnull Store<EntityStore> store) {
-      StateSupport stateSupport = role.getStateSupport();
+   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, double dt, @Nonnull Store<EntityStore> store) {
+      StateSupport stateSupport = executionSupport.getStateSupport();
       return this.componentLocal
-         ? super.matches(ref, role, dt, store) && stateSupport.isComponentInState(this.componentIndex, this.state)
-         : super.matches(ref, role, dt, store) && stateSupport.inState(this.state) && (this.defaultSubState || stateSupport.inSubState(this.subState));
+         ? super.matches(ref, executionSupport, dt, store) && stateSupport.isComponentInState(this.componentIndex, this.state)
+         : super.matches(ref, executionSupport, dt, store)
+            && stateSupport.inState(this.state)
+            && (this.defaultSubState || stateSupport.inSubState(this.subState));
    }
 
    @Override
@@ -42,11 +44,11 @@ public class SensorState extends SensorBase {
    }
 
    @Override
-   public void getInfo(@Nonnull Role role, @Nonnull ComponentInfo holder) {
+   public void getInfo(@Nonnull ExecutionSupport executionSupport, @Nonnull ComponentInfo holder) {
       if (this.componentLocal) {
          holder.addField("Component local state: " + this.state);
       } else {
-         holder.addField("State: " + role.getStateSupport().getStateName(this.state, this.subState));
+         holder.addField("State: " + executionSupport.getStateSupport().getStateName(this.state, this.subState));
       }
    }
 }

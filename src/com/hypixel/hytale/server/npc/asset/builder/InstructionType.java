@@ -8,12 +8,14 @@ public enum InstructionType implements Supplier<String> {
    Interaction("the interaction instruction"),
    Death("the death instruction"),
    Component("a component"),
-   StateTransitions("state transition actions");
+   StateTransitions("state transition actions"),
+   Planning("a planning instruction not attached to an NPC");
 
    private final String description;
    public static final EnumSet<InstructionType> Any = EnumSet.allOf(InstructionType.class);
    public static final EnumSet<InstructionType> MotionAllowedInstructions = EnumSet.of(Default);
    public static final EnumSet<InstructionType> StateChangeAllowedInstructions = EnumSet.of(Default, Interaction, Death, Component);
+   public static final EnumSet<InstructionType> NPCOnlyInstructions = EnumSet.complementOf(EnumSet.of(Planning));
 
    InstructionType(String description) {
       this.description = description;

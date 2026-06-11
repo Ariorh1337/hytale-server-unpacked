@@ -5,7 +5,7 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.movement.builders.BuilderBodyMotionWander;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import javax.annotation.Nonnull;
 import org.joml.Vector3d;
 
@@ -17,7 +17,7 @@ public class BodyMotionWander extends BodyMotionWanderBase {
    @Override
    protected double constrainMove(
       @Nonnull Ref<EntityStore> ref,
-      @Nonnull Role role,
+      @Nonnull ExecutionSupport executionSupport,
       @Nonnull Vector3d probePosition,
       @Nonnull Vector3d targetPosition,
       double moveDist,

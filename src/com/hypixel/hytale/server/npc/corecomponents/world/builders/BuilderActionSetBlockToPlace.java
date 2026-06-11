@@ -3,6 +3,7 @@ package com.hypixel.hytale.server.npc.corecomponents.world.builders;
 import com.google.gson.JsonElement;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.asset.builder.holder.AssetHolder;
 import com.hypixel.hytale.server.npc.asset.builder.validators.asset.ItemExistsValidator;
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderActionBase;
@@ -39,6 +40,7 @@ public class BuilderActionSetBlockToPlace extends BuilderActionBase {
    @Nonnull
    public BuilderActionSetBlockToPlace readConfig(@Nonnull JsonElement data) {
       this.requireAsset(data, "Block", this.block, ItemExistsValidator.requireBlock(), BuilderDescriptorState.Stable, "The block item type", null);
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
       return this;
    }
 

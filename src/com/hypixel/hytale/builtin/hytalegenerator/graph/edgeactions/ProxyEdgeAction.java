@@ -4,6 +4,7 @@ import com.hypixel.hytale.builtin.hytalegenerator.VectorUtil;
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3d;
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
 import com.hypixel.hytale.builtin.hytalegenerator.graph.GraphSpace;
+import com.hypixel.hytale.builtin.hytalegenerator.graph.contentsuppliers.ContentSupplier;
 import com.hypixel.hytale.builtin.hytalegenerator.graph.nodeselectors.NodeSelector;
 import com.hypixel.hytale.builtin.hytalegenerator.rng.RngField;
 import com.hypixel.hytale.builtin.hytalegenerator.vectorproviders.VectorProvider;
@@ -25,7 +26,7 @@ public class ProxyEdgeAction extends EdgeAction {
    @Nonnull
    private final Density distanceDensity;
    @Nonnull
-   private final GraphSpace.Content proxyContent;
+   private final ContentSupplier proxyContent;
    private final double maxProxyDistance;
    @Nonnull
    private final FastRandom random;
@@ -38,7 +39,7 @@ public class ProxyEdgeAction extends EdgeAction {
       @Nonnull Density angleToNormalDensity,
       @Nonnull Density spinAngleDensity,
       @Nonnull Density proxyDistanceDensity,
-      @Nonnull GraphSpace.Content proxyContent,
+      @Nonnull ContentSupplier proxyContent,
       double maxProxyDistance,
       int seed
    ) {
@@ -116,7 +117,8 @@ public class ProxyEdgeAction extends EdgeAction {
       proxyPosition.add(hostNode.position());
       graphSpace.deleteEdge(initialEdge);
       GraphSpace.Node proxyNode = graphSpace.createNode(proxyPosition);
-      proxyNode.setContent(this.proxyContent);
+      GraphSpace.Content content = this.proxyContent.get(proxyNode);
+      proxyNode.setContent(content);
       graphSpace.getOrCreateEdge(hostNode, proxyNode);
       GraphSpace.Edge otherEdge = graphSpace.getOrCreateEdge(otherNode, proxyNode);
       assert otherEdge != null;
@@ -135,6 +137,6 @@ public class ProxyEdgeAction extends EdgeAction {
 
    @Override
    public void viewAllPossibleContent(@NonNullDecl Consumer<GraphSpace.Content> consumer) {
-      consumer.accept(this.proxyContent);
+      this.proxyContent.viewAllPossibleContent(consumer);
    }
 }

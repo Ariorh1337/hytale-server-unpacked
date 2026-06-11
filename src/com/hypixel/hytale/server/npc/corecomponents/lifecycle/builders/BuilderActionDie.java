@@ -1,7 +1,9 @@
 package com.hypixel.hytale.server.npc.corecomponents.lifecycle.builders;
 
+import com.google.gson.JsonElement;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderActionBase;
 import com.hypixel.hytale.server.npc.corecomponents.lifecycle.ActionDie;
 import javax.annotation.Nonnull;
@@ -28,5 +30,11 @@ public class BuilderActionDie extends BuilderActionBase {
    @Override
    public BuilderDescriptorState getBuilderDescriptorState() {
       return BuilderDescriptorState.Stable;
+   }
+
+   @Nonnull
+   public BuilderActionDie readConfig(@Nonnull JsonElement data) {
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
+      return this;
    }
 }

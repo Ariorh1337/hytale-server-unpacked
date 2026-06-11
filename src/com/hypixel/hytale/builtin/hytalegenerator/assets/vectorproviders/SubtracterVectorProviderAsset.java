@@ -13,23 +13,15 @@ public class SubtracterVectorProviderAsset extends VectorProviderAsset {
    public static final BuilderCodec<SubtracterVectorProviderAsset> CODEC = BuilderCodec.builder(
          SubtracterVectorProviderAsset.class, SubtracterVectorProviderAsset::new, VectorProviderAsset.ABSTRACT_CODEC
       )
-      .append(
-         new KeyedCodec<>("VectorProviderA", VectorProviderAsset.CODEC, true),
-         (asset, value) -> asset.vectorProviderAssetA = value,
-         asset -> asset.vectorProviderAssetA
-      )
+      .append(new KeyedCodec<>("Minuend", VectorProviderAsset.CODEC, true), (asset, value) -> asset.minuendAsset = value, asset -> asset.minuendAsset)
       .add()
-      .append(
-         new KeyedCodec<>("VectorProviderB", VectorProviderAsset.CODEC, true),
-         (asset, value) -> asset.vectorProviderAssetB = value,
-         asset -> asset.vectorProviderAssetB
-      )
+      .append(new KeyedCodec<>("Subtrahend", VectorProviderAsset.CODEC, true), (asset, value) -> asset.subtrahendAsset = value, asset -> asset.subtrahendAsset)
       .add()
       .build();
    @Nonnull
-   private VectorProviderAsset vectorProviderAssetA = ConstantVectorProviderAsset.INSTANCE;
+   private VectorProviderAsset minuendAsset = ConstantVectorProviderAsset.INSTANCE;
    @Nonnull
-   private VectorProviderAsset vectorProviderAssetB = ConstantVectorProviderAsset.INSTANCE;
+   private VectorProviderAsset subtrahendAsset = ConstantVectorProviderAsset.INSTANCE;
 
    @Nonnull
    @Override
@@ -38,14 +30,14 @@ public class SubtracterVectorProviderAsset extends VectorProviderAsset {
          return new ConstantVectorProvider(new Vector3d());
       }
 
-      VectorProvider vectorProviderA = this.vectorProviderAssetA.build(argument);
-      VectorProvider vectorProviderB = this.vectorProviderAssetB.build(argument);
-      return new SubtracterVectorProvider(vectorProviderA, vectorProviderB);
+      VectorProvider minuend = this.minuendAsset.build(argument);
+      VectorProvider subtrahend = this.subtrahendAsset.build(argument);
+      return new SubtracterVectorProvider(minuend, subtrahend);
    }
 
    @Override
    public void cleanUp() {
-      this.vectorProviderAssetA.cleanUp();
-      this.vectorProviderAssetB.cleanUp();
+      this.minuendAsset.cleanUp();
+      this.subtrahendAsset.cleanUp();
    }
 }

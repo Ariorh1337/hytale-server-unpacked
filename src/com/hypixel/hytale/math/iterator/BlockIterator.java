@@ -1,20 +1,20 @@
 package com.hypixel.hytale.math.iterator;
 
 import javax.annotation.Nonnull;
-import org.joml.Vector3d;
-import org.joml.Vector3i;
+import org.joml.Vector3dc;
+import org.joml.Vector3ic;
 
 public final class BlockIterator {
    private BlockIterator() {
       throw new UnsupportedOperationException("This is a utilitiy class. Do not instantiate.");
    }
 
-   public static boolean iterateFromTo(@Nonnull Vector3d origin, @Nonnull Vector3d target, @Nonnull BlockIterator.BlockIteratorProcedure procedure) {
-      return iterateFromTo(origin.x, origin.y, origin.z, target.x, target.y, target.z, procedure);
+   public static boolean iterateFromTo(@Nonnull Vector3dc origin, @Nonnull Vector3dc target, @Nonnull BlockIterator.BlockIteratorProcedure procedure) {
+      return iterateFromTo(origin.x(), origin.y(), origin.z(), target.x(), target.y(), target.z(), procedure);
    }
 
-   public static boolean iterateFromTo(@Nonnull Vector3i origin, @Nonnull Vector3i target, @Nonnull BlockIterator.BlockIteratorProcedure procedure) {
-      return iterateFromTo(origin.x, origin.y, origin.z, target.x, target.y, target.z, procedure);
+   public static boolean iterateFromTo(@Nonnull Vector3ic origin, @Nonnull Vector3ic target, @Nonnull BlockIterator.BlockIteratorProcedure procedure) {
+      return iterateFromTo(origin.x(), origin.y(), origin.z(), target.x(), target.y(), target.z(), procedure);
    }
 
    public static boolean iterateFromTo(
@@ -38,9 +38,9 @@ public final class BlockIterator {
    }
 
    public static boolean iterate(
-      @Nonnull Vector3d origin, @Nonnull Vector3d direction, double maxDistance, @Nonnull BlockIterator.BlockIteratorProcedure procedure
+      @Nonnull Vector3dc origin, @Nonnull Vector3dc direction, double maxDistance, @Nonnull BlockIterator.BlockIteratorProcedure procedure
    ) {
-      return iterate(origin.x, origin.y, origin.z, direction.x, direction.y, direction.z, maxDistance, procedure);
+      return iterate(origin.x(), origin.y(), origin.z(), direction.x(), direction.y(), direction.z(), maxDistance, procedure);
    }
 
    public static boolean iterate(

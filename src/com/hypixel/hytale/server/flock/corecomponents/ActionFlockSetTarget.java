@@ -7,7 +7,7 @@ import com.hypixel.hytale.server.flock.FlockPlugin;
 import com.hypixel.hytale.server.flock.corecomponents.builders.BuilderActionFlockSetTarget;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.ActionBase;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -23,8 +23,14 @@ public class ActionFlockSetTarget extends ActionBase {
    }
 
    @Override
-   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      if (!super.canExecute(ref, role, sensorInfo, dt, store) || !FlockPlugin.isFlockMember(ref, store)) {
+   public boolean canExecute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
+      if (!super.canExecute(ref, executionSupport, sensorInfo, dt, store) || !FlockPlugin.isFlockMember(ref, store)) {
          return false;
       }
 
@@ -37,14 +43,16 @@ public class ActionFlockSetTarget extends ActionBase {
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      super.execute(ref, role, sensorInfo, dt, store);
+   public boolean execute(
+      @Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, @Nonnull InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store
+   ) {
+      super.execute(ref, executionSupport, sensorInfo, dt, store);
       if (this.clear) {
-         role.getMarkedEntitySupport().flockSetTarget(this.targetSlot, null, store);
+         executionSupport.getMarkedEntitySupport().flockSetTarget(ref, this.targetSlot, null, store);
          return true;
       } else {
          Ref<EntityStore> targetRef = sensorInfo.getPositionProvider().getTarget();
-         role.getMarkedEntitySupport().flockSetTarget(this.targetSlot, targetRef, store);
+         executionSupport.getMarkedEntitySupport().flockSetTarget(ref, this.targetSlot, targetRef, store);
          return true;
       }
    }

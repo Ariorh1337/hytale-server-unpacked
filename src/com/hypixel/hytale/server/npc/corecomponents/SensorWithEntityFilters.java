@@ -8,8 +8,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderSensorBase;
 import com.hypixel.hytale.server.npc.corecomponents.entity.filters.EntityFilterViewSector;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.util.IAnnotatedComponent;
 import com.hypixel.hytale.server.npc.util.IAnnotatedComponentCollection;
 import javax.annotation.Nonnull;
@@ -26,9 +26,9 @@ public abstract class SensorWithEntityFilters extends SensorBase implements IAnn
    }
 
    @Override
-   public void registerWithSupport(Role role) {
+   public void registerWithSupport(ExecutionSupport executionSupport) {
       for (IEntityFilter filter : this.filters) {
-         filter.registerWithSupport(role);
+         filter.registerWithSupport(executionSupport);
       }
    }
 
@@ -45,37 +45,37 @@ public abstract class SensorWithEntityFilters extends SensorBase implements IAnn
    }
 
    @Override
-   public void loaded(Role role) {
+   public void loaded(ExecutionSupport executionSupport) {
       for (IEntityFilter filter : this.filters) {
-         filter.loaded(role);
+         filter.loaded(executionSupport);
       }
    }
 
    @Override
-   public void spawned(Role role) {
+   public void spawned(ExecutionSupport executionSupport) {
       for (IEntityFilter filter : this.filters) {
-         filter.spawned(role);
+         filter.spawned(executionSupport);
       }
    }
 
    @Override
-   public void unloaded(Role role) {
+   public void unloaded(ExecutionSupport executionSupport) {
       for (IEntityFilter filter : this.filters) {
-         filter.unloaded(role);
+         filter.unloaded(executionSupport);
       }
    }
 
    @Override
-   public void removed(Role role) {
+   public void removed(ExecutionSupport executionSupport) {
       for (IEntityFilter filter : this.filters) {
-         filter.removed(role);
+         filter.removed(executionSupport);
       }
    }
 
    @Override
-   public void teleported(Role role, World from, World to) {
+   public void teleported(ExecutionSupport executionSupport, World from, World to) {
       for (IEntityFilter filter : this.filters) {
-         filter.teleported(role, from, to);
+         filter.teleported(executionSupport, from, to);
       }
    }
 
@@ -98,9 +98,11 @@ public abstract class SensorWithEntityFilters extends SensorBase implements IAnn
       }
    }
 
-   protected boolean matchesFilters(@Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull Role role, @Nonnull Store<EntityStore> store) {
+   protected boolean matchesFilters(
+      @Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull ExecutionSupport executionSupport, @Nonnull Store<EntityStore> store
+   ) {
       for (IEntityFilter filter : this.filters) {
-         if (!filter.matchesEntity(ref, targetRef, role, store)) {
+         if (!filter.matchesEntity(ref, targetRef, executionSupport, store)) {
             return false;
          }
       }

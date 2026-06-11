@@ -3,6 +3,7 @@ package com.hypixel.hytale.server.npc.corecomponents.entity.builders;
 import com.google.gson.JsonElement;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.asset.builder.holder.StringHolder;
 import com.hypixel.hytale.server.npc.asset.builder.validators.StringNotEmptyValidator;
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderActionBase;
@@ -47,6 +48,7 @@ public class BuilderActionIgnoreForAvoidance extends BuilderActionBase {
          "The target slot containing the entity to be ignored",
          null
       );
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
       return this;
    }
 

@@ -12,6 +12,7 @@ import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.BodyMotionBase;
 import com.hypixel.hytale.server.npc.corecomponents.movement.builders.BuilderBodyMotionFindBase;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.movement.NavState;
 import com.hypixel.hytale.server.npc.movement.Steering;
 import com.hypixel.hytale.server.npc.movement.constraints.RelaxedConstraint;
@@ -26,7 +27,6 @@ import com.hypixel.hytale.server.npc.navigation.AStarNodePoolProvider;
 import com.hypixel.hytale.server.npc.navigation.AStarNodePoolProviderSimple;
 import com.hypixel.hytale.server.npc.navigation.IWaypoint;
 import com.hypixel.hytale.server.npc.navigation.PathFollower;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.role.RoleDebugFlags;
 import com.hypixel.hytale.server.npc.role.support.DebugSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
@@ -140,11 +140,11 @@ public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotion
    }
 
    @Override
-   public void activate(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+   public void activate(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       TransformComponent transformComponent = componentAccessor.getComponent(ref, TransformComponent.getComponentType());
       assert transformComponent != null;
-      MotionController activeMotionController = role.getActiveMotionController();
-      DebugSupport debugSupport = role.getDebugSupport();
+      MotionController activeMotionController = executionSupport.getMotionContextSupport().getActiveMotionController();
+      DebugSupport debugSupport = executionSupport.getDebugSupport();
       this.sharedNodePoolProvider = componentAccessor.getResource(AStarNodePoolProviderSimple.getResourceType());
       this.dbgDisplayString = debugSupport.getDebugFlags().contains(RoleDebugFlags.Pathfinder);
       this.visPath = debugSupport.isVisPath();
@@ -153,14 +153,14 @@ public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotion
       this.setNavStateInit(activeMotionController);
       this.wasSteering = false;
       this.wasAvoidingBlockDamage = !this.cachedEffectiveConstraints.contains(RelaxedConstraint.DAMAGE) && activeMotionController.isAvoidingBlockDamage();
-      this.wasUnableToBreathe = !role.couldBreatheCached();
+      this.wasUnableToBreathe = !executionSupport.getPositionCache().couldBreatheCached();
       this.aStar.setStartPosition(transformComponent.getPosition());
    }
 
    @Override
-   public void deactivate(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      role.getDebugSupport().removeDebugFlagsListener(this);
-      role.getDebugSupport().clearPathVisualization();
+   public void deactivate(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      executionSupport.getDebugSupport().removeDebugFlagsListener(this);
+      executionSupport.getDebugSupport().clearPathVisualization();
       this.cachedDebugSupport = null;
       this.lastSeekVisTarget.x = this.lastSeekVisTarget.y = this.lastSeekVisTarget.z = Double.NaN;
       this.pathFollower.clearPath();
@@ -170,18 +170,18 @@ public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotion
    @Override
    public boolean computeSteering(
       @Nonnull Ref<EntityStore> ref,
-      @Nonnull Role role,
+      @Nonnull ExecutionSupport executionSupport,
       @Nullable InfoProvider infoProvider,
       double dt,
       @Nonnull Steering desiredSteering,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       desiredSteering.clear();
-      MotionController activeMotionController = role.getActiveMotionController();
+      MotionController activeMotionController = executionSupport.getMotionContextSupport().getActiveMotionController();
       TransformComponent transformComponent = componentAccessor.getComponent(ref, TransformComponent.getComponentType());
       assert transformComponent != null;
       Vector3d position = transformComponent.getPosition();
-      if (!this.canComputeMotion(ref, role, infoProvider, componentAccessor)) {
+      if (!this.canComputeMotion(ref, executionSupport, infoProvider, componentAccessor)) {
          this.setNavStateAborted(activeMotionController);
          this.wasSteering = false;
          return false;
@@ -189,9 +189,9 @@ public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotion
 
       activeMotionController.setRelaxedMoveConstraints(this.cachedEffectiveConstraints);
       this.probeMoveData.setRelaxedConstraints(this.cachedEffectiveConstraints);
-      applyEscapeConstraints(role, this.probeMoveData);
+      applyEscapeConstraints(executionSupport, this.probeMoveData);
       if (this.isGoalReached(ref, activeMotionController, position, componentAccessor)) {
-         this.setNavStateAtGoal(role.getActiveMotionController());
+         this.setNavStateAtGoal(executionSupport.getMotionContextSupport().getActiveMotionController());
          this.wasSteering = false;
          if (this.dbgMotionState) {
             NPCPlugin.get().getLogger().at(Level.INFO).every(100).log("MotionFindBase: At Goal");
@@ -236,8 +236,8 @@ public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotion
          if (this.pathFollower.getCurrentWaypoint() == null && !this.aStar.isComputing() && this.useSteering) {
             if (unobstructed
                && (this.wasSteering || !this.canSkipSteering || !this.shouldSkipSteering(ref, activeMotionController, position, componentAccessor))
-               && this.computeSteering(ref, role, position, desiredSteering, componentAccessor)) {
-               this.setNavStateSteering(role.getActiveMotionController());
+               && this.computeSteering(ref, executionSupport, position, desiredSteering, componentAccessor)) {
+               this.setNavStateSteering(executionSupport.getMotionContextSupport().getActiveMotionController());
                this.onSteering(activeMotionController, ref, componentAccessor);
                this.wasSteering = true;
                if (this.visPath && this.cachedDebugSupport != null) {
@@ -257,7 +257,7 @@ public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotion
             }
 
             if (!this.usePathfinder) {
-               this.setNavStateBlocked(role.getActiveMotionController());
+               this.setNavStateBlocked(executionSupport.getMotionContextSupport().getActiveMotionController());
                this.wasSteering = false;
                if (this.dbgMotionState) {
                   NPCPlugin.get().getLogger().at(Level.INFO).every(100).log("MotionFindBase: Blocked");
@@ -274,7 +274,7 @@ public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotion
          }
 
          this.wasSteering = false;
-         boolean mustRecomputePath = this.mustRecomputePath(activeMotionController);
+         boolean mustRecomputePath = this.mustRecomputePath(ref, activeMotionController, componentAccessor);
          boolean forceRecomputePath = activeMotionController.isForceRecomputePath();
          if (mustRecomputePath || forceRecomputePath) {
             if (this.dbgMotionState) {
@@ -322,7 +322,7 @@ public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotion
                      return true;
                   }
 
-                  if (!this.startPathFinder(ref, position, role, activeMotionController, componentAccessor)) {
+                  if (!this.startPathFinder(ref, position, executionSupport, activeMotionController, componentAccessor)) {
                      this.onNoPathFound(activeMotionController);
                      this.setNavStateAborted(activeMotionController);
                      if (this.dbgMotionState) {
@@ -342,7 +342,7 @@ public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotion
                if (targetPosition.distanceSquared(position) < 1.0) {
                   this.pathFollower.setWaypointFrozen(false);
                   if (this.canSkipSteering && this.shouldSkipSteering(ref, activeMotionController, targetPosition, componentAccessor)) {
-                     this.startPathFinder(ref, position, role, activeMotionController, componentAccessor);
+                     this.startPathFinder(ref, position, executionSupport, activeMotionController, componentAccessor);
                      if (this.dbgMotionState) {
                         NPCPlugin.get().getLogger().at(Level.INFO).every(100).log("MotionFindBase: Early start path computation");
                      }
@@ -401,13 +401,13 @@ public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotion
    protected boolean startPathFinder(
       @Nonnull Ref<EntityStore> ref,
       @Nonnull Vector3d position,
-      Role role,
+      ExecutionSupport executionSupport,
       @Nonnull MotionController activeMotionController,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       if (this.dbgProfile) {
          long time = System.nanoTime();
-         AStarBase.Progress progress = this.startComputePath(ref, role, activeMotionController, position, componentAccessor);
+         AStarBase.Progress progress = this.startComputePath(ref, executionSupport, activeMotionController, position, componentAccessor);
          if (progress == AStarBase.Progress.COMPUTING) {
             progress = this.aStar.computePath(ref, activeMotionController, this.probeMoveData, Integer.MAX_VALUE, componentAccessor);
          }
@@ -423,7 +423,7 @@ public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotion
             this.aStarDebug.dumpMap(true, activeMotionController);
          }
       } else {
-         AStarBase.Progress progress = this.startComputePath(ref, role, activeMotionController, position, componentAccessor);
+         AStarBase.Progress progress = this.startComputePath(ref, executionSupport, activeMotionController, position, componentAccessor);
          if (progress != AStarBase.Progress.COMPUTING) {
             if (this.dbgStatus) {
                NPCPlugin.get().getLogger().at(Level.INFO).log("Path computation start failed %s", progress.toString());
@@ -533,7 +533,11 @@ public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotion
    }
 
    protected boolean computeSteering(
-      @Nonnull Ref<EntityStore> ref, Role role, Vector3d position, Steering desiredSteering, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+      @Nonnull Ref<EntityStore> ref,
+      ExecutionSupport executionSupport,
+      Vector3d position,
+      Steering desiredSteering,
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       return false;
    }
@@ -545,19 +549,19 @@ public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotion
 
    protected boolean scaleSteering(
       @Nonnull Ref<EntityStore> ref,
-      @Nonnull Role role,
+      @Nonnull ExecutionSupport executionSupport,
       @Nonnull SteeringForceWithTarget steeringForce,
       @Nonnull Steering desiredSteering,
       double desiredAltitudeWeight,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
-      MotionController motionController = role.getActiveMotionController();
+      MotionController motionController = executionSupport.getMotionContextSupport().getActiveMotionController();
       boolean approachDesiredHeight = !motionController.is2D() && desiredAltitudeWeight > 0.0;
       boolean withinRange = approachDesiredHeight && motionController.getDesiredVerticalRange(ref, componentAccessor).isWithinRange();
       if (withinRange) {
-         steeringForce.setComponentSelector(role.getActiveMotionController().getPlanarComponentSelector());
+         steeringForce.setComponentSelector(executionSupport.getMotionContextSupport().getActiveMotionController().getPlanarComponentSelector());
       } else {
-         steeringForce.setComponentSelector(role.getActiveMotionController().getComponentSelector());
+         steeringForce.setComponentSelector(executionSupport.getMotionContextSupport().getActiveMotionController().getComponentSelector());
       }
 
       if (!steeringForce.compute(desiredSteering)) {
@@ -614,14 +618,14 @@ public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotion
       }
 
       activeMotionController.setNavState(state, this.throttleTime, this.targetDeltaSquared);
-      if (this.dbgDisplayString) {
+      if (this.dbgDisplayString && this.cachedDebugSupport != null) {
          if (this.debugString == null) {
             this.debugString = new StringBuilder();
          }
 
          this.debugString.append(label).append(" TC:").append(this.throttleCount).append(" TT:").append(MathUtil.floor(this.throttleTime * 10.0) / 10.0);
          this.decorateDebugString(this.debugString);
-         activeMotionController.getRole().getDebugSupport().setDisplayPathfinderString(this.debugString.toString());
+         this.cachedDebugSupport.setDisplayPathfinderString(this.debugString.toString());
          this.debugString.setLength(0);
       }
    }
@@ -693,7 +697,7 @@ public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotion
 
    protected AStarBase.Progress startComputePath(
       @Nonnull Ref<EntityStore> ref,
-      Role role,
+      ExecutionSupport executionSupport,
       @Nonnull MotionController activeMotionController,
       @Nonnull Vector3d position,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
@@ -706,12 +710,17 @@ public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotion
    }
 
    protected boolean canComputeMotion(
-      @Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider positionProvider, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider positionProvider,
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       return true;
    }
 
-   protected boolean mustRecomputePath(@Nonnull MotionController activeMotionController) {
+   protected boolean mustRecomputePath(
+      @Nonnull Ref<EntityStore> ref, @Nonnull MotionController activeMotionController, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
       if (this.dbgRebuild) {
          return true;
       }
@@ -733,7 +742,7 @@ public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotion
 
             return true;
          } else {
-            boolean cannotBreathe = !activeMotionController.getRole().couldBreatheCached();
+            boolean cannotBreathe = !activeMotionController.getRole().couldBreatheCached(ref, componentAccessor);
             if (this.wasUnableToBreathe && !cannotBreathe) {
                this.wasUnableToBreathe = false;
                if (this.dbgStatus) {

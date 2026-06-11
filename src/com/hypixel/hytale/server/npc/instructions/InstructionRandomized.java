@@ -8,7 +8,6 @@ import com.hypixel.hytale.math.random.RandomExtra;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.instructions.builders.BuilderInstructionRandomized;
-import com.hypixel.hytale.server.npc.role.Role;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -41,7 +40,7 @@ public class InstructionRandomized extends Instruction {
    }
 
    @Override
-   public void execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, double dt, @Nonnull Store<EntityStore> store) {
+   public void execute(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, double dt, @Nonnull Store<EntityStore> store) {
       if (this.instructionList.length != 0) {
          this.timeout -= dt;
          if (this.timeout <= 0.0 || this.current == null) {
@@ -51,10 +50,10 @@ public class InstructionRandomized extends Instruction {
          }
 
          Instruction instruction = this.current.instruction;
-         if (instruction.matches(ref, role, dt, store)) {
-            instruction.onMatched(role);
-            instruction.execute(ref, role, dt, store);
-            instruction.onCompleted(role);
+         if (instruction.matches(ref, executionSupport, dt, store)) {
+            instruction.onMatched(executionSupport);
+            instruction.execute(ref, executionSupport, dt, store);
+            instruction.onCompleted(executionSupport);
          }
       }
    }

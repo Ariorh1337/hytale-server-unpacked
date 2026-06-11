@@ -4,6 +4,7 @@ import com.google.gson.JsonElement;
 import com.hypixel.hytale.server.flock.corecomponents.ActionFlockBeacon;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.asset.builder.holder.StringHolder;
 import com.hypixel.hytale.server.npc.asset.builder.validators.DoubleOrValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.StringNotEmptyValidator;
@@ -81,6 +82,7 @@ public class BuilderActionFlockBeacon extends BuilderActionBase {
          "Only send the message to the leader of the flock",
          null
       );
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
       return this;
    }
 

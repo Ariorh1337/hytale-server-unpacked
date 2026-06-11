@@ -26,6 +26,7 @@ import com.hypixel.hytale.server.flock.StoredFlock;
 import com.hypixel.hytale.server.npc.components.SpawnBeaconReference;
 import com.hypixel.hytale.server.npc.components.SpawnMarkerReference;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.role.support.StateSupport;
 import com.hypixel.hytale.server.spawning.SpawningPlugin;
 import com.hypixel.hytale.server.spawning.assets.spawnmarker.config.SpawnMarker;
 import com.hypixel.hytale.server.spawning.beacons.LegacySpawnBeaconEntity;
@@ -349,7 +350,7 @@ public class SpawnReferenceSystems {
                Ref<EntityStore> spawnBeaconRef = spawnReferenceComponent.getReference().getEntity(commandBuffer);
                if (spawnBeaconRef != null) {
                   spawnReferenceComponent.refreshTimeoutCounter();
-               } else if (npcComponent.getRole().getStateSupport().isInBusyState()) {
+               } else if (StateSupport.get(archetypeChunk.getReferenceTo(index), commandBuffer).isInBusyState()) {
                   spawnReferenceComponent.refreshTimeoutCounter();
                } else {
                   npcComponent.setToDespawn();
@@ -424,7 +425,7 @@ public class SpawnReferenceSystems {
                   assert spawnMarkerComponent != null;
                   spawnReferenceComponent.refreshTimeoutCounter();
                   spawnMarkerComponent.refreshTimeout();
-               } else if (npcComponent.getRole().getStateSupport().isInBusyState()) {
+               } else if (StateSupport.get(archetypeChunk.getReferenceTo(index), commandBuffer).isInBusyState()) {
                   spawnReferenceComponent.refreshTimeoutCounter();
                } else {
                   npcComponent.setToDespawn();

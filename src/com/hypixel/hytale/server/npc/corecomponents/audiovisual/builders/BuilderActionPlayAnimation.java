@@ -4,6 +4,7 @@ import com.google.gson.JsonElement;
 import com.hypixel.hytale.server.npc.animations.NPCAnimationSlot;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.asset.builder.holder.StringHolder;
 import com.hypixel.hytale.server.npc.corecomponents.audiovisual.ActionPlayAnimation;
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderActionBase;
@@ -43,6 +44,7 @@ public class BuilderActionPlayAnimation extends BuilderActionBase {
    public BuilderActionPlayAnimation readConfig(@Nonnull JsonElement data) {
       this.requireEnum(data, "Slot", e -> this.slot = e, NPCAnimationSlot.class, BuilderDescriptorState.Stable, "The animation slot to play on", null);
       this.getString(data, "Animation", this.animationId, null, null, BuilderDescriptorState.Stable, "The animation ID to play", null);
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
       return this;
    }
 

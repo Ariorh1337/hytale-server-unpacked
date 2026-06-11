@@ -10,9 +10,9 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.flock.FlockMembership;
 import com.hypixel.hytale.server.flock.corecomponents.builders.BuilderBodyMotionFlock;
 import com.hypixel.hytale.server.npc.corecomponents.BodyMotionBase;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.movement.GroupSteeringAccumulator;
 import com.hypixel.hytale.server.npc.movement.Steering;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -31,7 +31,7 @@ public class BodyMotionFlock extends BodyMotionBase {
    @Override
    public boolean computeSteering(
       @Nonnull Ref<EntityStore> ref,
-      @Nonnull Role role,
+      @Nonnull ExecutionSupport executionSupport,
       @Nullable InfoProvider sensorInfo,
       double dt,
       @Nonnull Steering desiredSteering,
@@ -41,9 +41,9 @@ public class BodyMotionFlock extends BodyMotionBase {
       Ref<EntityStore> flockReference = flockMembership != null ? flockMembership.getFlockRef() : null;
       if (flockReference != null && flockReference.isValid()) {
          EntityGroup entityGroup = componentAccessor.getComponent(flockReference, ENTITY_GROUP_COMPONENT_TYPE);
-         Vector3d componentSelector = role.getActiveMotionController().getComponentSelector();
+         Vector3d componentSelector = executionSupport.getMotionContextSupport().getActiveMotionController().getComponentSelector();
          this.groupSteeringAccumulator.setComponentSelector(componentSelector);
-         this.groupSteeringAccumulator.setMaxRange(role.getFlockInfluenceRange());
+         this.groupSteeringAccumulator.setMaxRange(executionSupport.getRole().getFlockInfluenceRange());
          this.groupSteeringAccumulator.begin(ref, componentAccessor);
          entityGroup.forEachMemberExcludingSelf(
             (iGroupEntity, _entity, _groupSteeringAccumulator, _store) -> _groupSteeringAccumulator.processEntity(iGroupEntity, _store),

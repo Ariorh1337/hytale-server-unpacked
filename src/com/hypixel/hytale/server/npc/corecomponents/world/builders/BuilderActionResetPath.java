@@ -1,7 +1,9 @@
 package com.hypixel.hytale.server.npc.corecomponents.world.builders;
 
+import com.google.gson.JsonElement;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderActionBase;
 import com.hypixel.hytale.server.npc.corecomponents.world.ActionResetPath;
 import com.hypixel.hytale.server.npc.instructions.Action;
@@ -29,5 +31,11 @@ public class BuilderActionResetPath extends BuilderActionBase {
    @Override
    public BuilderDescriptorState getBuilderDescriptorState() {
       return BuilderDescriptorState.Stable;
+   }
+
+   @Nonnull
+   public BuilderActionResetPath readConfig(@Nonnull JsonElement data) {
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
+      return this;
    }
 }

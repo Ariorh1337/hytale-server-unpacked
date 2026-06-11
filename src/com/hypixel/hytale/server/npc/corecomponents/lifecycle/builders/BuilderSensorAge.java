@@ -5,10 +5,12 @@ import com.hypixel.hytale.server.core.modules.time.WorldTimeResource;
 import com.hypixel.hytale.server.npc.asset.builder.Builder;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.asset.builder.holder.TemporalArrayHolder;
 import com.hypixel.hytale.server.npc.asset.builder.validators.TemporalSequenceValidator;
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderSensorBase;
 import com.hypixel.hytale.server.npc.corecomponents.lifecycle.SensorAge;
+import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.instructions.Sensor;
 import java.time.Duration;
 import java.time.Instant;
@@ -57,12 +59,15 @@ public class BuilderSensorAge extends BuilderSensorBase {
          "The age range within which to trigger",
          null
       );
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
       return this;
    }
 
    @Nonnull
    public Instant[] getAgeRange(@Nonnull BuilderSupport support) {
-      Instant spawnInstant = support.getEntity().getSpawnInstant();
+      NPCEntity npcComponent = support.getHolder().getComponent(NPCEntity.getComponentType());
+      assert npcComponent != null : "NPC component null in age sensor construction!";
+      Instant spawnInstant = npcComponent.getSpawnInstant();
       LocalDateTime spawnTime = LocalDateTime.ofInstant(spawnInstant, WorldTimeResource.ZONE_OFFSET);
       TemporalAmount[] range = this.ageRange.getTemporalArray(support.getExecutionContext());
       Instant[] ageInstants = new Instant[range.length];

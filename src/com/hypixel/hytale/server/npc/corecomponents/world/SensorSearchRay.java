@@ -15,7 +15,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.SensorBase;
 import com.hypixel.hytale.server.npc.corecomponents.world.builders.BuilderSensorSearchRay;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.sensorinfo.PositionProvider;
 import com.hypixel.hytale.server.npc.util.RayBlockHitTest;
@@ -49,8 +49,8 @@ public class SensorSearchRay extends SensorBase {
    }
 
    @Override
-   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, double dt, @Nonnull Store<EntityStore> store) {
-      if (!super.matches(ref, role, dt, store)) {
+   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, double dt, @Nonnull Store<EntityStore> store) {
+      if (!super.matches(ref, executionSupport, dt, store)) {
          this.positionProvider.clear();
          return false;
       }
@@ -61,7 +61,7 @@ public class SensorSearchRay extends SensorBase {
       assert headRotationComponent != null;
       Vector3d position = transformComponent.getPosition();
       Rotation3f headRotation = headRotationComponent.getRotation();
-      Vector3d cachedPosition = role.getWorldSupport().getCachedSearchRayPosition(this.id);
+      Vector3d cachedPosition = executionSupport.getWorldSupport().getCachedSearchRayPosition(this.id);
       if (!cachedPosition.equals(Vector3dUtil.MIN)) {
          ChunkStore chunkStore = store.getExternalData().getWorld().getChunkStore();
          long chunkIndex = ChunkUtil.indexChunkFromBlock(cachedPosition.x, cachedPosition.z);

@@ -8,8 +8,8 @@ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponen
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.corecomponents.IEntityFilter;
 import com.hypixel.hytale.server.npc.corecomponents.ISensorEntityPrioritiser;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.util.IEntityByPriorityFilter;
 import java.util.List;
 import javax.annotation.Nonnull;
@@ -37,22 +37,31 @@ public class SensorEntityPrioritiserDefault implements ISensorEntityPrioritiser 
    @Override
    public Ref<EntityStore> pickTarget(
       Ref<EntityStore> ref,
-      @Nonnull Role role,
+      @Nonnull ExecutionSupport executionSupport,
       @Nonnull Vector3d position,
       @Nonnull Ref<EntityStore> playerRef,
       @Nonnull Ref<EntityStore> npcRef,
       boolean useProjectedDistance,
       @Nonnull Store<EntityStore> store
    ) {
-      MotionController motionController = role.getActiveMotionController();
       TransformComponent playerTransformComponent = store.getComponent(playerRef, TRANSFORM_COMPONENT_TYPE);
       assert playerTransformComponent != null;
       TransformComponent npcTransformComponent = store.getComponent(npcRef, TRANSFORM_COMPONENT_TYPE);
       assert npcTransformComponent != null;
-      return motionController.getSquaredDistance(position, playerTransformComponent.getPosition(), useProjectedDistance)
-            <= motionController.getSquaredDistance(position, npcTransformComponent.getPosition(), useProjectedDistance)
-         ? playerRef
-         : npcRef;
+      Vector3d playerPos = playerTransformComponent.getPosition();
+      Vector3d npcPos = npcTransformComponent.getPosition();
+      double playerDistance;
+      double npcDistance;
+      if (useProjectedDistance) {
+         MotionController motionController = executionSupport.getMotionContextSupport().getActiveMotionController();
+         playerDistance = motionController.getSquaredDistance(position, playerPos, true);
+         npcDistance = motionController.getSquaredDistance(position, npcPos, true);
+      } else {
+         playerDistance = position.distanceSquared(playerPos);
+         npcDistance = position.distanceSquared(npcPos);
+      }
+
+      return playerDistance <= npcDistance ? playerRef : npcRef;
    }
 
    @Override
@@ -72,7 +81,7 @@ public class SensorEntityPrioritiserDefault implements ISensorEntityPrioritiser 
       }
 
       @Override
-      public void init(Role role) {
+      public void init(ExecutionSupport executionSupport) {
       }
 
       @Nullable

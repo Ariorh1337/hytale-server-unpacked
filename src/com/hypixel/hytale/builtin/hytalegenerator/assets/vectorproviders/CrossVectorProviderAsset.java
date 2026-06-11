@@ -14,13 +14,13 @@ public class CrossVectorProviderAsset extends VectorProviderAsset {
          CrossVectorProviderAsset.class, CrossVectorProviderAsset::new, VectorProviderAsset.ABSTRACT_CODEC
       )
       .append(
-         new KeyedCodec<>("VectorProviderA", VectorProviderAsset.CODEC, true),
+         new KeyedCodec<>("VectorA", VectorProviderAsset.CODEC, true),
          (asset, value) -> asset.vectorProviderAssetA = value,
          asset -> asset.vectorProviderAssetA
       )
       .add()
       .append(
-         new KeyedCodec<>("VectorProviderB", VectorProviderAsset.CODEC, true),
+         new KeyedCodec<>("VectorB", VectorProviderAsset.CODEC, true),
          (asset, value) -> asset.vectorProviderAssetB = value,
          asset -> asset.vectorProviderAssetB
       )

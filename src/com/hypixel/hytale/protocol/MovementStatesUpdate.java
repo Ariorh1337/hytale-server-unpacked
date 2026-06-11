@@ -9,10 +9,10 @@ import javax.annotation.Nonnull;
 
 public class MovementStatesUpdate extends ComponentUpdate {
    public static final int NULLABLE_BIT_FIELD_SIZE = 0;
-   public static final int FIXED_BLOCK_SIZE = 23;
+   public static final int FIXED_BLOCK_SIZE = 24;
    public static final int VARIABLE_FIELD_COUNT = 0;
-   public static final int VARIABLE_BLOCK_START = 23;
-   public static final int MAX_SIZE = 23;
+   public static final int VARIABLE_BLOCK_START = 24;
+   public static final int MAX_SIZE = 24;
    @Nonnull
    public MovementStates movementStates = new MovementStates();
 
@@ -29,8 +29,8 @@ public class MovementStatesUpdate extends ComponentUpdate {
 
    @Nonnull
    public static MovementStatesUpdate deserialize(@Nonnull ByteBuf buf, int offset) {
-      if (buf.readableBytes() - offset < 23) {
-         throw ProtocolException.bufferTooSmall("MovementStatesUpdate", 23, buf.readableBytes() - offset);
+      if (buf.readableBytes() - offset < 24) {
+         throw ProtocolException.bufferTooSmall("MovementStatesUpdate", 24, buf.readableBytes() - offset);
       }
 
       MovementStatesUpdate obj = new MovementStatesUpdate();
@@ -39,11 +39,11 @@ public class MovementStatesUpdate extends ComponentUpdate {
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
-      return 23;
+      return 24;
    }
 
    public static boolean isBufferTooSmall(MemorySegment mem) {
-      return mem.byteSize() < 23L;
+      return mem.byteSize() < 24L;
    }
 
    public static MovementStates getMovementStates(MemorySegment mem) {
@@ -59,8 +59,8 @@ public class MovementStatesUpdate extends ComponentUpdate {
    }
 
    public static MovementStatesUpdate toObject(MemorySegment mem, int offset) {
-      if (offset + 23 > mem.byteSize()) {
-         throw ProtocolException.bufferTooSmall("MovementStatesUpdate", offset + 23, (int)mem.byteSize());
+      if (offset + 24 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("MovementStatesUpdate", offset + 24, (int)mem.byteSize());
       } else {
          return new MovementStatesUpdate(MovementStates.toObject(mem, offset + 0));
       }
@@ -76,16 +76,16 @@ public class MovementStatesUpdate extends ComponentUpdate {
    @Override
    public int serialize(@Nonnull MemorySegment mem, int offset) {
       this.movementStates.serialize(mem, offset + 0);
-      return 23;
+      return 24;
    }
 
    @Override
    public int computeSize() {
-      return 23;
+      return 24;
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 23 ? ValidationResult.error("Buffer too small: expected at least 23 bytes") : ValidationResult.OK;
+      return buffer.readableBytes() - offset < 24 ? ValidationResult.error("Buffer too small: expected at least 24 bytes") : ValidationResult.OK;
    }
 
    public MovementStatesUpdate clone() {

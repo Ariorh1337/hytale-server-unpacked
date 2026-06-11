@@ -74,6 +74,13 @@ public class BlockMovementSettings implements NetworkSerializable<com.hypixel.hy
          blockMovementSettings -> blockMovementSettings.jumpForceMultiplier
       )
       .add()
+      .<Boolean>append(
+         new KeyedCodec<>("DisableAutoStep", Codec.BOOLEAN),
+         (blockMovementSettings, o) -> blockMovementSettings.disableAutoStep = o,
+         blockMovementSettings -> blockMovementSettings.disableAutoStep
+      )
+      .documentation("If this block's hitbox permits auto-stepping, then this setting can disable it for this block.")
+      .add()
       .build();
    private boolean isClimbable;
    private boolean isBouncy;
@@ -86,6 +93,7 @@ public class BlockMovementSettings implements NetworkSerializable<com.hypixel.hy
    private float terminalVelocityModifier = 1.0F;
    private float horizontalSpeedMultiplier = 1.0F;
    private float jumpForceMultiplier = 1.0F;
+   private boolean disableAutoStep;
 
    public BlockMovementSettings(
       boolean isClimbable,
@@ -98,7 +106,8 @@ public class BlockMovementSettings implements NetworkSerializable<com.hypixel.hy
       float climbLateralSpeedMultiplier,
       float terminalVelocityModifier,
       float horizontalSpeedMultiplier,
-      float jumpForceMultiplier
+      float jumpForceMultiplier,
+      boolean disableAutoStep
    ) {
       this.isClimbable = isClimbable;
       this.isBouncy = isBouncy;
@@ -111,6 +120,7 @@ public class BlockMovementSettings implements NetworkSerializable<com.hypixel.hy
       this.terminalVelocityModifier = terminalVelocityModifier;
       this.horizontalSpeedMultiplier = horizontalSpeedMultiplier;
       this.jumpForceMultiplier = jumpForceMultiplier;
+      this.disableAutoStep = disableAutoStep;
    }
 
    protected BlockMovementSettings() {
@@ -130,6 +140,7 @@ public class BlockMovementSettings implements NetworkSerializable<com.hypixel.hy
       packet.terminalVelocityModifier = this.terminalVelocityModifier;
       packet.horizontalSpeedMultiplier = this.horizontalSpeedMultiplier;
       packet.jumpForceMultiplier = this.jumpForceMultiplier;
+      packet.disableAutoStep = this.disableAutoStep;
       return packet;
    }
 
@@ -177,6 +188,10 @@ public class BlockMovementSettings implements NetworkSerializable<com.hypixel.hy
       return this.jumpForceMultiplier;
    }
 
+   public boolean isDisableAutoStep() {
+      return this.disableAutoStep;
+   }
+
    @Nonnull
    @Override
    public String toString() {
@@ -202,6 +217,8 @@ public class BlockMovementSettings implements NetworkSerializable<com.hypixel.hy
          + this.horizontalSpeedMultiplier
          + ", jumpForceMultiplier="
          + this.jumpForceMultiplier
+         + ", disableAutoStep="
+         + this.disableAutoStep
          + "}";
    }
 }

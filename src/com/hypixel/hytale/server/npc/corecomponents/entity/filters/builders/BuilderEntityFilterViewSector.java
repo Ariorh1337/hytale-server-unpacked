@@ -53,6 +53,7 @@ public class BuilderEntityFilterViewSector extends BuilderEntityFilterBase {
          null
       );
       this.requireContext(InstructionType.Any, ComponentContext.NotSelfEntitySensor);
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
       return this;
    }
 

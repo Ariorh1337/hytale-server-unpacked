@@ -19,9 +19,7 @@ public class NormalizerVectorProviderAsset extends VectorProviderAsset {
       .append(new KeyedCodec<>("Magnitude", DensityAsset.CODEC, true), (asset, value) -> asset.magnitudeAsset = value, asset -> asset.magnitudeAsset)
       .add()
       .append(
-         new KeyedCodec<>("VectorProvider", VectorProviderAsset.CODEC, true),
-         (asset, value) -> asset.vectorProviderAsset = value,
-         asset -> asset.vectorProviderAsset
+         new KeyedCodec<>("Vector", VectorProviderAsset.CODEC, true), (asset, value) -> asset.vectorProviderAsset = value, asset -> asset.vectorProviderAsset
       )
       .add()
       .build();

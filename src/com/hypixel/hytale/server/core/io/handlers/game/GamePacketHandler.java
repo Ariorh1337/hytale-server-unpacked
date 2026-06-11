@@ -91,6 +91,7 @@ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponen
 import com.hypixel.hytale.server.core.modules.entity.player.PlayerCreativeSettings;
 import com.hypixel.hytale.server.core.modules.entity.player.PlayerInput;
 import com.hypixel.hytale.server.core.modules.entity.player.PlayerSettings;
+import com.hypixel.hytale.server.core.modules.entity.player.PlayerVoiceSettings;
 import com.hypixel.hytale.server.core.modules.entity.teleport.PendingTeleport;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.modules.entity.tracker.EntityTrackerSystems;
@@ -556,7 +557,8 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
             packet.hideHelmet,
             packet.hideCuirass,
             packet.hideGauntlets,
-            packet.hidePants
+            packet.hidePants,
+            new PlayerVoiceSettings(packet.voiceChat, packet.voiceInput, packet.voiceInputMode)
          )
       );
       InventoryComponent.Armor armorComponent = store.getComponent(ref, InventoryComponent.Armor.getComponentType());

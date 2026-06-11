@@ -14,7 +14,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.ActionBase;
 import com.hypixel.hytale.server.npc.corecomponents.world.builders.BuilderActionPlaceBlock;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.CachedPositionProvider;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.util.BlockPlacementHelper;
@@ -35,9 +35,15 @@ public class ActionPlaceBlock extends ActionBase {
    }
 
    @Override
-   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      if (super.canExecute(ref, role, sensorInfo, dt, store) && sensorInfo != null && sensorInfo.hasPosition()) {
-         String blockToPlace = role.getWorldSupport().getBlockToPlace();
+   public boolean canExecute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
+      if (super.canExecute(ref, executionSupport, sensorInfo, dt, store) && sensorInfo != null && sensorInfo.hasPosition()) {
+         String blockToPlace = executionSupport.getWorldSupport().getBlockToPlace();
          if (blockToPlace == null) {
             return false;
          }
@@ -75,12 +81,21 @@ public class ActionPlaceBlock extends ActionBase {
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      super.execute(ref, role, sensorInfo, dt, store);
+   public boolean execute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
+      super.execute(ref, executionSupport, sensorInfo, dt, store);
       World world = store.getExternalData().getWorld();
       WorldChunk chunk = world.getNonTickingChunk(ChunkUtil.indexChunkFromBlock(this.target.x(), this.target.z()));
       chunk.setBlock(
-         MathUtil.floor(this.target.x()), MathUtil.floor(this.target.y()), MathUtil.floor(this.target.z()), role.getWorldSupport().getBlockToPlace()
+         MathUtil.floor(this.target.x()),
+         MathUtil.floor(this.target.y()),
+         MathUtil.floor(this.target.z()),
+         executionSupport.getWorldSupport().getBlockToPlace()
       );
       return true;
    }

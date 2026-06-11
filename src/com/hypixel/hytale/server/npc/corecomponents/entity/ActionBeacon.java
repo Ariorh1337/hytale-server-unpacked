@@ -14,9 +14,9 @@ import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.components.messaging.BeaconSupport;
 import com.hypixel.hytale.server.npc.corecomponents.ActionBase;
 import com.hypixel.hytale.server.npc.corecomponents.entity.builders.BuilderActionBeacon;
-import com.hypixel.hytale.server.npc.entities.NPCEntity;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.role.RoleDebugFlags;
+import com.hypixel.hytale.server.npc.role.support.DebugSupport;
 import com.hypixel.hytale.server.npc.role.support.PositionCache;
 import com.hypixel.hytale.server.npc.role.support.WorldSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
@@ -51,29 +51,41 @@ public class ActionBeacon extends ActionBase {
    }
 
    @Override
-   public void registerWithSupport(@Nonnull Role role) {
-      role.getPositionCache().requireEntityDistanceUnsorted(this.range);
+   public void registerWithSupport(@Nonnull ExecutionSupport executionSupport) {
+      executionSupport.getPositionCache().requireEntityDistanceUnsorted(this.range);
    }
 
    @Override
-   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      return !super.canExecute(ref, role, sensorInfo, dt, store)
+   public boolean canExecute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
+      return !super.canExecute(ref, executionSupport, sensorInfo, dt, store)
          ? false
-         : this.targetToSendSlot == Integer.MIN_VALUE || role.getMarkedEntitySupport().hasMarkedEntityInSlot(this.targetToSendSlot);
+         : this.targetToSendSlot == Integer.MIN_VALUE || executionSupport.getMarkedEntitySupport().hasMarkedEntityInSlot(this.targetToSendSlot);
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-      super.execute(ref, role, sensorInfo, dt, store);
-      Ref<EntityStore> target = this.targetToSendSlot >= 0 ? role.getMarkedEntitySupport().getMarkedEntityRef(this.targetToSendSlot) : ref;
-      PositionCache positionCache = role.getPositionCache();
+   public boolean execute(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Store<EntityStore> store
+   ) {
+      super.execute(ref, executionSupport, sensorInfo, dt, store);
+      Ref<EntityStore> target = this.targetToSendSlot >= 0 ? executionSupport.getMarkedEntitySupport().getMarkedEntityRef(this.targetToSendSlot) : ref;
+      PositionCache positionCache = executionSupport.getPositionCache();
       if (this.sendCount <= 0) {
          positionCache.forEachNPCUnordered(
             this.range,
             ActionBeacon::filterNPCs,
             (_ref, _this, _target, _self) -> _this.sendNPCMessage(_self, _ref, _target, _self.getStore()),
             this,
-            role,
+            executionSupport,
             target,
             ref,
             store
@@ -86,7 +98,7 @@ public class ActionBeacon extends ActionBase {
          ActionBeacon::filterNPCs,
          (npcEntity, _this, _sendList, _self) -> RandomExtra.reservoirSample(npcEntity, _this.sendCount, _sendList),
          this,
-         role,
+         executionSupport,
          this.sendList,
          ref,
          store
@@ -101,10 +113,13 @@ public class ActionBeacon extends ActionBase {
    }
 
    protected static boolean filterNPCs(
-      @Nonnull Ref<EntityStore> ref, @Nonnull ActionBeacon _this, @Nonnull Role role, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ActionBeacon _this,
+      @Nonnull ExecutionSupport executionSupport,
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       return ref.getStore().getComponent(ref, BeaconSupport.getComponentType()) != null
-         && WorldSupport.isGroupMember(role.getRoleIndex(), ref, _this.targetGroups, componentAccessor);
+         && WorldSupport.isGroupMember(executionSupport.getRoleIndex(), ref, _this.targetGroups, componentAccessor);
    }
 
    protected void sendNPCMessage(
@@ -113,10 +128,7 @@ public class ActionBeacon extends ActionBase {
       @Nonnull Ref<EntityStore> target,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
-      NPCEntity npcComponent = componentAccessor.getComponent(self, NPCEntity.getComponentType());
-      assert npcComponent != null;
-      Role role = npcComponent.getRole();
-      if (role.getDebugSupport().isDebugFlagSet(RoleDebugFlags.BeaconMessages)) {
+      if (DebugSupport.get(self, componentAccessor).isDebugFlagSet(RoleDebugFlags.BeaconMessages)) {
          NPCPlugin.get()
             .getLogger()
             .atInfo()

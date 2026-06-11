@@ -4,8 +4,8 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderSensorBase;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.instructions.Sensor;
-import com.hypixel.hytale.server.npc.role.Role;
 import javax.annotation.Nonnull;
 
 public abstract class SensorBase extends AnnotatedComponentBase implements Sensor {
@@ -17,7 +17,7 @@ public abstract class SensorBase extends AnnotatedComponentBase implements Senso
    }
 
    @Override
-   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, double dt, @Nonnull Store<EntityStore> store) {
       return !this.once || !this.triggered;
    }
 

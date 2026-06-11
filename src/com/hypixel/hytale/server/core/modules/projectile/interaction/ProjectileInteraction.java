@@ -43,8 +43,30 @@ public class ProjectileInteraction extends SimpleInstantInteraction implements B
       .addValidator(ProjectileConfig.VALIDATOR_CACHE.getValidator().late())
       .documentation("The ID of the projectile config asset to use for the projectile.")
       .add()
+      .<Boolean>appendInherited(
+         new KeyedCodec<>("IgnorePitch", Codec.BOOLEAN), (o, i) -> o.ignorePitch = i, o -> o.ignorePitch, (o, p) -> o.ignorePitch = p.ignorePitch
+      )
+      .documentation(
+         "If true, the shooter's pitch is set to 0 before the launch direction is computed, so the projectile's pitch is fixed by the projectile config's SpawnRotationOffset."
+      )
+      .add()
+      .<Boolean>appendInherited(new KeyedCodec<>("IgnoreYaw", Codec.BOOLEAN), (o, i) -> o.ignoreYaw = i, o -> o.ignoreYaw, (o, p) -> o.ignoreYaw = p.ignoreYaw)
+      .documentation(
+         "If true, the shooter's yaw is set to 0 before the launch direction is computed, so the projectile's yaw is fixed by the projectile config's SpawnRotationOffset."
+      )
+      .add()
+      .<Boolean>appendInherited(
+         new KeyedCodec<>("IgnoreRoll", Codec.BOOLEAN), (o, i) -> o.ignoreRoll = i, o -> o.ignoreRoll, (o, p) -> o.ignoreRoll = p.ignoreRoll
+      )
+      .documentation(
+         "If true, the shooter's roll is set to 0 before the launch direction is computed, so the projectile's roll is fixed by the projectile config's SpawnRotationOffset."
+      )
+      .add()
       .build();
    protected String config;
+   protected boolean ignorePitch;
+   protected boolean ignoreYaw;
+   protected boolean ignoreRoll;
 
    @Nullable
    public ProjectileConfig getConfig() {
@@ -82,6 +104,19 @@ public class ProjectileInteraction extends SimpleInstantInteraction implements B
          }
 
          Transform spawnTransform = this.getProjectileSpawnSource(clientState, context);
+         Rotation3f rotation = spawnTransform.getRotation();
+         if (this.ignorePitch) {
+            rotation.setPitch(0.0F);
+         }
+
+         if (this.ignoreYaw) {
+            rotation.setYaw(0.0F);
+         }
+
+         if (this.ignoreRoll) {
+            rotation.setRoll(0.0F);
+         }
+
          ProjectileModule.get().spawnProjectile(generatedUUID, ref, commandBuffer, config, spawnTransform.getPosition(), spawnTransform.getDirection());
       }
    }
@@ -114,6 +149,9 @@ public class ProjectileInteraction extends SimpleInstantInteraction implements B
       }
 
       p.configId = this.config;
+      p.ignorePitch = this.ignorePitch;
+      p.ignoreYaw = this.ignoreYaw;
+      p.ignoreRoll = this.ignoreRoll;
    }
 
    @Nonnull

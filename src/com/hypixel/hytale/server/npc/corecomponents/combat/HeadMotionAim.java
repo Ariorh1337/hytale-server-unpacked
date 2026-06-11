@@ -20,8 +20,8 @@ import com.hypixel.hytale.server.core.util.TargetUtil;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.HeadMotionBase;
 import com.hypixel.hytale.server.npc.corecomponents.combat.builders.BuilderHeadMotionAim;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.movement.Steering;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.role.RoleDebugFlags;
 import com.hypixel.hytale.server.npc.role.support.DebugSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.IPositionProvider;
@@ -62,21 +62,23 @@ public class HeadMotionAim extends HeadMotionBase implements DebugSupport.DebugF
    }
 
    @Override
-   public void preComputeSteering(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, @Nonnull Store<EntityStore> store) {
+   public void preComputeSteering(
+      @Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, @Nullable InfoProvider sensorInfo, @Nonnull Store<EntityStore> store
+   ) {
       if (sensorInfo != null) {
          sensorInfo.passExtraInfo(this.aimingData);
       }
    }
 
    @Override
-   public void activate(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+   public void activate(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       this.aimingData.setHaveAttacked(true);
    }
 
    @Override
    public boolean computeSteering(
       @Nonnull Ref<EntityStore> ref,
-      @Nonnull Role support,
+      @Nonnull ExecutionSupport executionSupport,
       @Nullable InfoProvider sensorInfo,
       double dt,
       @Nonnull Steering desiredSteering,
@@ -239,9 +241,9 @@ public class HeadMotionAim extends HeadMotionBase implements DebugSupport.DebugF
    }
 
    @Override
-   public void registerWithSupport(Role role) {
-      super.registerWithSupport(role);
-      role.getDebugSupport().registerDebugFlagsListener(this);
+   public void registerWithSupport(ExecutionSupport executionSupport) {
+      super.registerWithSupport(executionSupport);
+      executionSupport.getDebugSupport().registerDebugFlagsListener(this);
    }
 
    @Override

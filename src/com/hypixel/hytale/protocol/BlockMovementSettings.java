@@ -10,10 +10,10 @@ import javax.annotation.Nonnull;
 
 public class BlockMovementSettings {
    public static final int NULLABLE_BIT_FIELD_SIZE = 0;
-   public static final int FIXED_BLOCK_SIZE = 42;
+   public static final int FIXED_BLOCK_SIZE = 43;
    public static final int VARIABLE_FIELD_COUNT = 0;
-   public static final int VARIABLE_BLOCK_START = 42;
-   public static final int MAX_SIZE = 42;
+   public static final int VARIABLE_BLOCK_START = 43;
+   public static final int MAX_SIZE = 43;
    public boolean isClimbable;
    public float climbUpSpeedMultiplier;
    public float climbDownSpeedMultiplier;
@@ -26,6 +26,7 @@ public class BlockMovementSettings {
    public float horizontalSpeedMultiplier;
    public float acceleration;
    public float jumpForceMultiplier;
+   public boolean disableAutoStep;
 
    public BlockMovementSettings() {
    }
@@ -42,7 +43,8 @@ public class BlockMovementSettings {
       float terminalVelocityModifier,
       float horizontalSpeedMultiplier,
       float acceleration,
-      float jumpForceMultiplier
+      float jumpForceMultiplier,
+      boolean disableAutoStep
    ) {
       this.isClimbable = isClimbable;
       this.climbUpSpeedMultiplier = climbUpSpeedMultiplier;
@@ -56,6 +58,7 @@ public class BlockMovementSettings {
       this.horizontalSpeedMultiplier = horizontalSpeedMultiplier;
       this.acceleration = acceleration;
       this.jumpForceMultiplier = jumpForceMultiplier;
+      this.disableAutoStep = disableAutoStep;
    }
 
    public BlockMovementSettings(@Nonnull BlockMovementSettings other) {
@@ -71,12 +74,13 @@ public class BlockMovementSettings {
       this.horizontalSpeedMultiplier = other.horizontalSpeedMultiplier;
       this.acceleration = other.acceleration;
       this.jumpForceMultiplier = other.jumpForceMultiplier;
+      this.disableAutoStep = other.disableAutoStep;
    }
 
    @Nonnull
    public static BlockMovementSettings deserialize(@Nonnull ByteBuf buf, int offset) {
-      if (buf.readableBytes() - offset < 42) {
-         throw ProtocolException.bufferTooSmall("BlockMovementSettings", 42, buf.readableBytes() - offset);
+      if (buf.readableBytes() - offset < 43) {
+         throw ProtocolException.bufferTooSmall("BlockMovementSettings", 43, buf.readableBytes() - offset);
       }
 
       BlockMovementSettings obj = new BlockMovementSettings();
@@ -92,15 +96,16 @@ public class BlockMovementSettings {
       obj.horizontalSpeedMultiplier = buf.getFloatLE(offset + 30);
       obj.acceleration = buf.getFloatLE(offset + 34);
       obj.jumpForceMultiplier = buf.getFloatLE(offset + 38);
+      obj.disableAutoStep = buf.getByte(offset + 42) != 0;
       return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
-      return 42;
+      return 43;
    }
 
    public static boolean isBufferTooSmall(MemorySegment mem) {
-      return mem.byteSize() < 42L;
+      return mem.byteSize() < 43L;
    }
 
    public static boolean getIsClimbable(MemorySegment mem) {
@@ -199,13 +204,21 @@ public class BlockMovementSettings {
       return mem.get(PacketIO.PROTO_FLOAT, offset + 38);
    }
 
+   public static boolean getDisableAutoStep(MemorySegment mem) {
+      return getDisableAutoStep(mem, 0);
+   }
+
+   public static boolean getDisableAutoStep(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 42);
+   }
+
    public static BlockMovementSettings toObject(MemorySegment mem) {
       return toObject(mem, 0);
    }
 
    public static BlockMovementSettings toObject(MemorySegment mem, int offset) {
-      if (offset + 42 > mem.byteSize()) {
-         throw ProtocolException.bufferTooSmall("BlockMovementSettings", offset + 42, (int)mem.byteSize());
+      if (offset + 43 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BlockMovementSettings", offset + 43, (int)mem.byteSize());
       } else {
          return new BlockMovementSettings(
             mem.get(PacketIO.PROTO_BOOL, offset + 0),
@@ -219,7 +232,8 @@ public class BlockMovementSettings {
             mem.get(PacketIO.PROTO_FLOAT, offset + 26),
             mem.get(PacketIO.PROTO_FLOAT, offset + 30),
             mem.get(PacketIO.PROTO_FLOAT, offset + 34),
-            mem.get(PacketIO.PROTO_FLOAT, offset + 38)
+            mem.get(PacketIO.PROTO_FLOAT, offset + 38),
+            mem.get(PacketIO.PROTO_BOOL, offset + 42)
          );
       }
    }
@@ -237,6 +251,7 @@ public class BlockMovementSettings {
       buf.writeFloatLE(this.horizontalSpeedMultiplier);
       buf.writeFloatLE(this.acceleration);
       buf.writeFloatLE(this.jumpForceMultiplier);
+      buf.writeByte(this.disableAutoStep ? 1 : 0);
    }
 
    public int serialize(@Nonnull MemorySegment mem, int offset) {
@@ -252,15 +267,16 @@ public class BlockMovementSettings {
       mem.set(PacketIO.PROTO_FLOAT, offset + 30, this.horizontalSpeedMultiplier);
       mem.set(PacketIO.PROTO_FLOAT, offset + 34, this.acceleration);
       mem.set(PacketIO.PROTO_FLOAT, offset + 38, this.jumpForceMultiplier);
-      return 42;
+      mem.set(PacketIO.PROTO_BOOL, offset + 42, this.disableAutoStep);
+      return 43;
    }
 
    public int computeSize() {
-      return 42;
+      return 43;
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 42 ? ValidationResult.error("Buffer too small: expected at least 42 bytes") : ValidationResult.OK;
+      return buffer.readableBytes() - offset < 43 ? ValidationResult.error("Buffer too small: expected at least 43 bytes") : ValidationResult.OK;
    }
 
    public BlockMovementSettings clone() {
@@ -277,6 +293,7 @@ public class BlockMovementSettings {
       copy.horizontalSpeedMultiplier = this.horizontalSpeedMultiplier;
       copy.acceleration = this.acceleration;
       copy.jumpForceMultiplier = this.jumpForceMultiplier;
+      copy.disableAutoStep = this.disableAutoStep;
       return copy;
    }
 
@@ -298,7 +315,8 @@ public class BlockMovementSettings {
                && this.terminalVelocityModifier == other.terminalVelocityModifier
                && this.horizontalSpeedMultiplier == other.horizontalSpeedMultiplier
                && this.acceleration == other.acceleration
-               && this.jumpForceMultiplier == other.jumpForceMultiplier;
+               && this.jumpForceMultiplier == other.jumpForceMultiplier
+               && this.disableAutoStep == other.disableAutoStep;
       }
    }
 
@@ -316,7 +334,8 @@ public class BlockMovementSettings {
          this.terminalVelocityModifier,
          this.horizontalSpeedMultiplier,
          this.acceleration,
-         this.jumpForceMultiplier
+         this.jumpForceMultiplier,
+         this.disableAutoStep
       );
    }
 }

@@ -217,9 +217,18 @@ public class NPCSystems {
    public static class AddedSystem extends RefSystem<EntityStore> {
       @Nonnull
       private final ComponentType<EntityStore, NPCEntity> npcComponentType;
+      @Nonnull
+      private final Set<Dependency<EntityStore>> dependencies;
 
       public AddedSystem(@Nonnull ComponentType<EntityStore, NPCEntity> npcComponentType) {
          this.npcComponentType = npcComponentType;
+         this.dependencies = Set.of(new SystemDependency<>(Order.AFTER, RoleSystems.RoleActivateSystem.class));
+      }
+
+      @Nonnull
+      @Override
+      public Set<Dependency<EntityStore>> getDependencies() {
+         return this.dependencies;
       }
 
       @Override
@@ -234,7 +243,7 @@ public class NPCSystems {
             commandBuffer.removeEntity(ref, RemoveReason.REMOVE);
          } else {
             npcComponent.initBlockChangeBlackboardView(ref, commandBuffer);
-            role.loaded();
+            role.loaded(ref, commandBuffer);
             commandBuffer.ensureComponent(ref, PrefabCopyableComponent.getComponentType());
             commandBuffer.ensureComponent(ref, NPCMarkerComponent.getComponentType());
             commandBuffer.ensureComponent(ref, PositionDataComponent.getComponentType());
@@ -261,10 +270,10 @@ public class NPCSystems {
          switch (reason) {
             case REMOVE:
             case BUILDER_TOOLS_UNDO:
-               npcComponent.getRole().removed();
+               npcComponent.getRole().removed(ref, commandBuffer);
                break;
             case UNLOAD:
-               npcComponent.getRole().unloaded();
+               npcComponent.getRole().unloaded(ref, commandBuffer);
          }
       }
 
@@ -562,7 +571,7 @@ public class NPCSystems {
          World worldTo = component.getWorld();
          Role role = npcComponent.getRole();
          assert role != null;
-         role.teleported(world, worldTo == null ? world : worldTo);
+         role.teleported(ref, commandBuffer, world, worldTo == null ? world : worldTo);
       }
 
       public void onComponentSet(

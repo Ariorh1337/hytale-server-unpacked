@@ -8,7 +8,7 @@ import com.hypixel.hytale.server.npc.asset.builder.BuilderManager;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.SensorBase;
 import com.hypixel.hytale.server.npc.corecomponents.entity.builders.BuilderSensorCount;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.role.support.WorldSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import javax.annotation.Nonnull;
@@ -39,24 +39,34 @@ public class SensorCount extends SensorBase {
    }
 
    @Override
-   public void registerWithSupport(@Nonnull Role role) {
+   public void registerWithSupport(@Nonnull ExecutionSupport executionSupport) {
       if (this.haveIncludeGroups) {
          this.findPlayers = groupListHasPlayer(this.includeGroups);
       } else {
          this.findPlayers = !this.haveExcludeGroups || !groupListHasPlayer(this.excludeGroups);
       }
 
-      role.getPositionCache().requireEntityDistanceSorted(this.maxRange);
+      executionSupport.getPositionCache().requireEntityDistanceSorted(this.maxRange);
       if (this.findPlayers) {
-         role.getPositionCache().requirePlayerDistanceSorted(this.maxRange);
+         executionSupport.getPositionCache().requirePlayerDistanceSorted(this.maxRange);
       }
    }
 
    @Override
-   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, double dt, @Nonnull Store<EntityStore> store) {
-      return super.matches(ref, role, dt, store)
-         && role.getPositionCache()
-            .isEntityCountInRange(this.minRange, this.maxRange, this.minCount, this.maxCount, this.findPlayers, role, SensorCount::filterNPC, this, store);
+   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, double dt, @Nonnull Store<EntityStore> store) {
+      return super.matches(ref, executionSupport, dt, store)
+         && executionSupport.getPositionCache()
+            .isEntityCountInRange(
+               this.minRange,
+               this.maxRange,
+               this.minCount,
+               this.maxCount,
+               this.findPlayers,
+               executionSupport.getRoleIndex(),
+               SensorCount::filterNPC,
+               this,
+               store
+            );
    }
 
    @Override
@@ -74,8 +84,7 @@ public class SensorCount extends SensorBase {
       return false;
    }
 
-   protected boolean filterNPC(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      int roleIndex = role.getRoleIndex();
+   protected boolean filterNPC(@Nonnull Ref<EntityStore> ref, @Nonnull Integer roleIndex, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       return (!this.haveIncludeGroups || WorldSupport.isGroupMember(roleIndex, ref, this.includeGroups, componentAccessor))
          && (!this.haveExcludeGroups || !WorldSupport.isGroupMember(roleIndex, ref, this.excludeGroups, componentAccessor));
    }

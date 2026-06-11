@@ -116,7 +116,7 @@ public class Bounds3d implements MemInstrument {
    }
 
    @Nonnull
-   public Bounds3d offset(@Nonnull Vector3d vector) {
+   public Bounds3d offset(@Nonnull Vector3dc vector) {
       this.min.add(vector);
       this.max.add(vector);
       return this;

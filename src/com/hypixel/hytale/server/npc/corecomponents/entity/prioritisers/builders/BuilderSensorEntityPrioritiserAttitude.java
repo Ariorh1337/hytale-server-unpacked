@@ -4,6 +4,7 @@ import com.google.gson.JsonElement;
 import com.hypixel.hytale.server.core.asset.type.attitude.Attitude;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.asset.builder.holder.EnumArrayHolder;
 import com.hypixel.hytale.server.npc.asset.builder.validators.EnumArrayNoDuplicatesValidator;
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderSensorEntityPrioritiserBase;
@@ -54,6 +55,7 @@ public class BuilderSensorEntityPrioritiserAttitude extends BuilderSensorEntityP
          "A prioritised list of attitudes",
          null
       );
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
       return this;
    }
 

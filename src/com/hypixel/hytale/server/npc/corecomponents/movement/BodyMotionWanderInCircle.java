@@ -10,8 +10,8 @@ import com.hypixel.hytale.server.flock.FlockPlugin;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.movement.builders.BuilderBodyMotionWanderInCircle;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.util.NPCPhysicsMath;
 import javax.annotation.Nonnull;
 import org.joml.Vector3d;
@@ -33,7 +33,7 @@ public class BodyMotionWanderInCircle extends BodyMotionWanderBase {
    @Override
    protected double constrainMove(
       @Nonnull Ref<EntityStore> ref,
-      @Nonnull Role role,
+      @Nonnull ExecutionSupport executionSupport,
       @Nonnull Vector3d probePosition,
       @Nonnull Vector3d targetPosition,
       double moveDist,
@@ -41,7 +41,7 @@ public class BodyMotionWanderInCircle extends BodyMotionWanderBase {
    ) {
       Vector3d referencePoint = this.getReferencePoint(ref, componentAccessor);
       double r2 = this.radius * this.radius;
-      MotionController activeMotionController = role.getActiveMotionController();
+      MotionController activeMotionController = executionSupport.getMotionContextSupport().getActiveMotionController();
       if (this.useSphere) {
          double endDist2 = activeMotionController.waypointDistanceSquared(targetPosition, referencePoint);
          if (endDist2 <= r2) {

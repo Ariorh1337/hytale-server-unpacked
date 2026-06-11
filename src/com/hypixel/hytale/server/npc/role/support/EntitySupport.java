@@ -1,21 +1,18 @@
 package com.hypixel.hytale.server.npc.role.support;
 
+import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentAccessor;
-import com.hypixel.hytale.component.Holder;
+import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.server.core.Message;
-import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
-import com.hypixel.hytale.server.core.modules.entity.component.DisplayNameComponent;
-import com.hypixel.hytale.server.core.modules.entity.component.PersistentDisplayName;
+import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.modules.entitystats.EntityStatValue;
 import com.hypixel.hytale.server.core.modules.entitystats.EntityStatsModule;
 import com.hypixel.hytale.server.core.modules.entitystats.asset.DefaultEntityStatTypes;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
-import com.hypixel.hytale.server.npc.instructions.Instruction;
-import com.hypixel.hytale.server.npc.role.builders.BuilderRole;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.util.IComponentExecutionControl;
 import com.hypixel.hytale.server.npc.util.expression.StdLib;
 import com.hypixel.hytale.server.npc.util.expression.StdScope;
@@ -23,66 +20,26 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.List;
 import java.util.Objects;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
-public class EntitySupport {
-   protected final NPCEntity parent;
-   @Nullable
-   protected final String[] displayNames;
-   @Nullable
-   protected String nominatedDisplayName;
+public class EntitySupport implements Component<EntityStore> {
    protected StdScope sensorScope;
-   @Nullable
-   protected Instruction nextBodyMotionStep;
-   @Nullable
-   protected Instruction nextHeadMotionStep;
    protected final List<IComponentExecutionControl> delayingComponents = new ObjectArrayList<>();
-   @Nullable
-   protected List<String> targetPlayerActiveTasks;
+   protected final List<EntitySupport.DeferredAction> deferredActions = new ObjectArrayList<>();
 
-   public EntitySupport(NPCEntity parent, @Nonnull BuilderRole builder) {
-      this.parent = parent;
-      this.displayNames = builder.getDisplayNames();
+   @Nonnull
+   public static ComponentType<EntityStore, EntitySupport> getComponentType() {
+      return NPCPlugin.get().getEntitySupportComponentType();
+   }
+
+   @Nonnull
+   public static EntitySupport get(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> accessor) {
+      EntitySupport support = accessor.getComponent(ref, getComponentType());
+      assert support != null : "Missing EntitySupport on entity " + ref;
+      return support;
    }
 
    public StdScope getSensorScope() {
       return this.sensorScope;
-   }
-
-   @Nullable
-   public Instruction getNextBodyMotionStep() {
-      return this.nextBodyMotionStep;
-   }
-
-   public boolean setNextBodyMotionStep(Instruction step) {
-      if (this.nextBodyMotionStep != null) {
-         return false;
-      }
-
-      this.nextBodyMotionStep = step;
-      return true;
-   }
-
-   public void clearNextBodyMotionStep() {
-      this.nextBodyMotionStep = null;
-   }
-
-   @Nullable
-   public Instruction getNextHeadMotionStep() {
-      return this.nextHeadMotionStep;
-   }
-
-   public boolean setNextHeadMotionStep(Instruction step) {
-      if (this.nextHeadMotionStep != null) {
-         return false;
-      }
-
-      this.nextHeadMotionStep = step;
-      return true;
-   }
-
-   public void clearNextHeadMotionStep() {
-      this.nextHeadMotionStep = null;
    }
 
    public void postRoleBuilt(@Nonnull BuilderSupport builderSupport) {
@@ -102,109 +59,34 @@ public class EntitySupport {
       }
    }
 
-   public void handleNominatedDisplayName(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      if (this.nominatedDisplayName != null) {
-         setDisplayName(ref, this.nominatedDisplayName, componentAccessor);
-      }
-
-      this.nominatedDisplayName = null;
-   }
-
-   public void nominateDisplayName(@Nonnull String displayName) {
-      this.nominatedDisplayName = displayName;
-   }
-
-   public void pickRandomDisplayName(@Nonnull Holder<EntityStore> holder, boolean override) {
-      if (this.displayNames != null && this.displayNames.length != 0) {
-         setDisplayName(holder, this.displayNames[MathUtil.randomInt(0, this.displayNames.length)], override);
-      }
-   }
-
-   public static void setDisplayName(@Nonnull Holder<EntityStore> holder, @Nonnull String displayName) {
-      setDisplayName(holder, displayName, true);
-   }
-
-   public static void setDisplayName(@Nonnull Holder<EntityStore> holder, @Nullable String displayName, boolean override) {
-      PersistentDisplayName persistentDisplayName = holder.getComponent(PersistentDisplayName.getComponentType());
-      if (persistentDisplayName != null) {
-         Message existing = persistentDisplayName.getDisplayName();
-         if (existing != null && !existing.getAnsiMessage().isEmpty() && !override) {
-            return;
-         }
-      }
-
-      Message message = displayName != null ? Message.raw(displayName) : null;
-      holder.putComponent(PersistentDisplayName.getComponentType(), new PersistentDisplayName(message));
-      holder.putComponent(DisplayNameComponent.getComponentType(), new DisplayNameComponent(message));
-      if (displayName != null) {
-         Nameplate nameplateComponent = holder.ensureAndGetComponent(Nameplate.getComponentType());
-         nameplateComponent.setText(displayName);
-      } else {
-         holder.removeComponent(Nameplate.getComponentType());
-      }
-   }
-
-   public void pickRandomDisplayName(@Nonnull Ref<EntityStore> ref, boolean override, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      setRandomDisplayName(ref, this.displayNames, override, componentAccessor);
-   }
-
-   public static void setRandomDisplayName(
-      @Nonnull Ref<EntityStore> ref, @Nullable String[] names, boolean override, @Nonnull ComponentAccessor<EntityStore> componentAccessor
-   ) {
-      if (names != null && names.length != 0) {
-         setDisplayName(ref, names[MathUtil.randomInt(0, names.length)], override, componentAccessor);
-      }
-   }
-
-   public static void setDisplayName(@Nonnull Ref<EntityStore> ref, @Nonnull String displayName, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      setDisplayName(ref, displayName, true, componentAccessor);
-   }
-
-   public static void setDisplayName(
-      @Nonnull Ref<EntityStore> ref, @Nullable String displayName, boolean override, @Nonnull ComponentAccessor<EntityStore> componentAccessor
-   ) {
-      if (ref.isValid()) {
-         PersistentDisplayName persistentDisplayName = componentAccessor.getComponent(ref, PersistentDisplayName.getComponentType());
-         if (persistentDisplayName != null) {
-            Message existing = persistentDisplayName.getDisplayName();
-            if (existing != null && !existing.getAnsiMessage().isEmpty() && !override) {
-               return;
-            }
-         }
-
-         Message message = displayName != null ? Message.raw(displayName) : null;
-         componentAccessor.putComponent(ref, PersistentDisplayName.getComponentType(), new PersistentDisplayName(message));
-         componentAccessor.putComponent(ref, DisplayNameComponent.getComponentType(), new DisplayNameComponent(message));
-         if (displayName != null) {
-            Nameplate nameplateComponent = componentAccessor.ensureAndGetComponent(ref, Nameplate.getComponentType());
-            nameplateComponent.setText(displayName);
-         } else {
-            componentAccessor.removeComponent(ref, Nameplate.getComponentType());
-         }
-      }
-   }
-
-   public void addTargetPlayerActiveTask(@Nonnull String task) {
-      if (this.targetPlayerActiveTasks == null) {
-         this.targetPlayerActiveTasks = new ObjectArrayList<>();
-      }
-
-      this.targetPlayerActiveTasks.add(task);
-   }
-
-   public void clearTargetPlayerActiveTasks() {
-      if (this.targetPlayerActiveTasks != null) {
-         this.targetPlayerActiveTasks.clear();
-      }
-   }
-
-   @Nullable
-   public List<String> getTargetPlayerActiveTasks() {
-      return this.targetPlayerActiveTasks;
-   }
-
    public void registerDelay(@Nonnull IComponentExecutionControl component) {
       this.delayingComponents.add(component);
+   }
+
+   public void addDeferredAction(@Nonnull EntitySupport.DeferredAction handler) {
+      this.deferredActions.add(handler);
+   }
+
+   public void tickDeferredActions(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, double dt, @Nonnull Store<EntityStore> store) {
+      int i = 0;
+
+      while (i < this.deferredActions.size()) {
+         EntitySupport.DeferredAction action = this.deferredActions.get(i);
+         if (action.tick(ref, executionSupport, dt, store)) {
+            this.deferredActions.remove(i);
+         } else {
+            i++;
+         }
+      }
+   }
+
+   public void unloaded() {
+      this.deferredActions.clear();
+   }
+
+   @Nonnull
+   public static StdScope createScope() {
+      return new StdScope(StdLib.getInstance());
    }
 
    @Nonnull
@@ -216,5 +98,15 @@ public class EntitySupport {
          return Objects.requireNonNull(healthStat).asPercentage();
       });
       return scope;
+   }
+
+   @Override
+   public Component<EntityStore> clone() {
+      return this;
+   }
+
+   @FunctionalInterface
+   public interface DeferredAction {
+      boolean tick(@Nonnull Ref<EntityStore> var1, @Nonnull ExecutionSupport var2, double var3, @Nonnull Store<EntityStore> var5);
    }
 }

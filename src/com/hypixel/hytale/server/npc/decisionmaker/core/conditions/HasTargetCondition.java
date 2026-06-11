@@ -10,7 +10,7 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.decisionmaker.core.EvaluationContext;
 import com.hypixel.hytale.server.npc.decisionmaker.core.conditions.base.SimpleCondition;
-import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.role.support.MarkedEntitySupport;
 import javax.annotation.Nonnull;
 
 public class HasTargetCondition extends SimpleCondition {
@@ -44,9 +44,9 @@ public class HasTargetCondition extends SimpleCondition {
       CommandBuffer<EntityStore> commandBuffer,
       EvaluationContext context
    ) {
-      NPCEntity npcComponent = archetypeChunk.getComponent(selfIndex, NPCEntity.getComponentType());
-      assert npcComponent != null;
-      return npcComponent.getRole().getMarkedEntitySupport().hasMarkedEntityInSlot(this.targetSlot);
+      MarkedEntitySupport markedEntitySupport = archetypeChunk.getComponent(selfIndex, MarkedEntitySupport.getComponentType());
+      assert markedEntitySupport != null;
+      return markedEntitySupport.hasMarkedEntityInSlot(this.targetSlot);
    }
 
    @Nonnull

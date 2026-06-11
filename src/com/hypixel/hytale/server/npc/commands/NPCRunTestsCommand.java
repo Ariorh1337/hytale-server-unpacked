@@ -170,7 +170,9 @@ public class NPCRunTestsCommand extends AbstractPlayerCommand {
          entityGroupComponent.forEachMember((index, memberx, list) -> list.add(memberx), members);
 
          for (Ref<EntityStore> member : members) {
-            store.removeEntity(member, RemoveReason.REMOVE);
+            if (!member.equals(ref)) {
+               store.removeEntity(member, RemoveReason.REMOVE);
+            }
          }
       }
 

@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
+import com.hypixel.hytale.protocol.packets.voice.VoiceInputMode;
 import io.netty.buffer.ByteBuf;
 import java.lang.foreign.MemorySegment;
 import java.util.Objects;
@@ -18,10 +19,10 @@ public class SyncPlayerPreferences implements Packet, ToServerPacket {
    public static final int PACKET_ID = 116;
    public static final boolean IS_COMPRESSED = false;
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
-   public static final int FIXED_BLOCK_SIZE = 19;
+   public static final int FIXED_BLOCK_SIZE = 22;
    public static final int VARIABLE_FIELD_COUNT = 1;
-   public static final int VARIABLE_BLOCK_START = 19;
-   public static final int MAX_SIZE = 16384024;
+   public static final int VARIABLE_BLOCK_START = 22;
+   public static final int MAX_SIZE = 16384027;
    public boolean showEntityMarkers;
    @Nonnull
    public PickupLocation armorItemsPreferredPickupLocation = PickupLocation.Hotbar;
@@ -44,6 +45,10 @@ public class SyncPlayerPreferences implements Packet, ToServerPacket {
    public int creativeInteractionDistance;
    public boolean showBuilderToolNotifications;
    public boolean noPhysics;
+   public boolean voiceChat;
+   public boolean voiceInput;
+   @Nonnull
+   public VoiceInputMode voiceInputMode = VoiceInputMode.VoiceActivity;
 
    @Override
    public int getId() {
@@ -74,7 +79,10 @@ public class SyncPlayerPreferences implements Packet, ToServerPacket {
       @Nullable String placeMode,
       int creativeInteractionDistance,
       boolean showBuilderToolNotifications,
-      boolean noPhysics
+      boolean noPhysics,
+      boolean voiceChat,
+      boolean voiceInput,
+      @Nonnull VoiceInputMode voiceInputMode
    ) {
       this.showEntityMarkers = showEntityMarkers;
       this.armorItemsPreferredPickupLocation = armorItemsPreferredPickupLocation;
@@ -92,6 +100,9 @@ public class SyncPlayerPreferences implements Packet, ToServerPacket {
       this.creativeInteractionDistance = creativeInteractionDistance;
       this.showBuilderToolNotifications = showBuilderToolNotifications;
       this.noPhysics = noPhysics;
+      this.voiceChat = voiceChat;
+      this.voiceInput = voiceInput;
+      this.voiceInputMode = voiceInputMode;
    }
 
    public SyncPlayerPreferences(@Nonnull SyncPlayerPreferences other) {
@@ -111,12 +122,15 @@ public class SyncPlayerPreferences implements Packet, ToServerPacket {
       this.creativeInteractionDistance = other.creativeInteractionDistance;
       this.showBuilderToolNotifications = other.showBuilderToolNotifications;
       this.noPhysics = other.noPhysics;
+      this.voiceChat = other.voiceChat;
+      this.voiceInput = other.voiceInput;
+      this.voiceInputMode = other.voiceInputMode;
    }
 
    @Nonnull
    public static SyncPlayerPreferences deserialize(@Nonnull ByteBuf buf, int offset) {
-      if (buf.readableBytes() - offset < 19) {
-         throw ProtocolException.bufferTooSmall("SyncPlayerPreferences", 19, buf.readableBytes() - offset);
+      if (buf.readableBytes() - offset < 22) {
+         throw ProtocolException.bufferTooSmall("SyncPlayerPreferences", 22, buf.readableBytes() - offset);
       }
 
       SyncPlayerPreferences obj = new SyncPlayerPreferences();
@@ -136,7 +150,10 @@ public class SyncPlayerPreferences implements Packet, ToServerPacket {
       obj.creativeInteractionDistance = buf.getIntLE(offset + 13);
       obj.showBuilderToolNotifications = buf.getByte(offset + 17) != 0;
       obj.noPhysics = buf.getByte(offset + 18) != 0;
-      int pos = offset + 19;
+      obj.voiceChat = buf.getByte(offset + 19) != 0;
+      obj.voiceInput = buf.getByte(offset + 20) != 0;
+      obj.voiceInputMode = VoiceInputMode.fromValue(buf.getByte(offset + 21));
+      int pos = offset + 22;
       if ((nullBits & 1) != 0) {
          int placeModeLen = VarInt.peek(buf, pos);
          if (placeModeLen < 0) {
@@ -161,7 +178,7 @@ public class SyncPlayerPreferences implements Packet, ToServerPacket {
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte nullBits = buf.getByte(offset);
-      int pos = offset + 19;
+      int pos = offset + 22;
       if ((nullBits & 1) != 0) {
          int sl = VarInt.peek(buf, pos);
          pos += VarInt.size(sl) + sl;
@@ -171,7 +188,7 @@ public class SyncPlayerPreferences implements Packet, ToServerPacket {
    }
 
    public static boolean isBufferTooSmall(MemorySegment mem) {
-      return mem.byteSize() < 19L;
+      return mem.byteSize() < 22L;
    }
 
    public static boolean getShowEntityMarkers(MemorySegment mem) {
@@ -277,7 +294,7 @@ public class SyncPlayerPreferences implements Packet, ToServerPacket {
 
    @Nullable
    public static String getPlaceMode(MemorySegment mem, int offset) {
-      return hasPlaceMode(mem, offset) ? PacketIO.readVarString("PlaceMode", mem, offset + 19, 4096000, PacketIO.UTF8) : null;
+      return hasPlaceMode(mem, offset) ? PacketIO.readVarString("PlaceMode", mem, offset + 22, 4096000, PacketIO.UTF8) : null;
    }
 
    public static int getCreativeInteractionDistance(MemorySegment mem) {
@@ -304,6 +321,30 @@ public class SyncPlayerPreferences implements Packet, ToServerPacket {
       return mem.get(PacketIO.PROTO_BOOL, offset + 18);
    }
 
+   public static boolean getVoiceChat(MemorySegment mem) {
+      return getVoiceChat(mem, 0);
+   }
+
+   public static boolean getVoiceChat(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 19);
+   }
+
+   public static boolean getVoiceInput(MemorySegment mem) {
+      return getVoiceInput(mem, 0);
+   }
+
+   public static boolean getVoiceInput(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 20);
+   }
+
+   public static VoiceInputMode getVoiceInputMode(MemorySegment mem) {
+      return getVoiceInputMode(mem, 0);
+   }
+
+   public static VoiceInputMode getVoiceInputMode(MemorySegment mem, int offset) {
+      return VoiceInputMode.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 21));
+   }
+
    public static boolean hasPlaceMode(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
       return (b & 1) != 0;
@@ -314,8 +355,8 @@ public class SyncPlayerPreferences implements Packet, ToServerPacket {
    }
 
    public static SyncPlayerPreferences toObject(MemorySegment mem, int offset) {
-      if (offset + 19 > mem.byteSize()) {
-         throw ProtocolException.bufferTooSmall("SyncPlayerPreferences", offset + 19, (int)mem.byteSize());
+      if (offset + 22 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("SyncPlayerPreferences", offset + 22, (int)mem.byteSize());
       } else {
          return new SyncPlayerPreferences(
             mem.get(PacketIO.PROTO_BOOL, offset + 1),
@@ -330,10 +371,13 @@ public class SyncPlayerPreferences implements Packet, ToServerPacket {
             mem.get(PacketIO.PROTO_BOOL, offset + 10),
             mem.get(PacketIO.PROTO_BOOL, offset + 11),
             mem.get(PacketIO.PROTO_BOOL, offset + 12),
-            hasPlaceMode(mem, offset) ? PacketIO.readVarString("PlaceMode", mem, offset + 19, 4096000, PacketIO.UTF8) : null,
+            hasPlaceMode(mem, offset) ? PacketIO.readVarString("PlaceMode", mem, offset + 22, 4096000, PacketIO.UTF8) : null,
             mem.get(PacketIO.PROTO_INT, offset + 13),
             mem.get(PacketIO.PROTO_BOOL, offset + 17),
-            mem.get(PacketIO.PROTO_BOOL, offset + 18)
+            mem.get(PacketIO.PROTO_BOOL, offset + 18),
+            mem.get(PacketIO.PROTO_BOOL, offset + 19),
+            mem.get(PacketIO.PROTO_BOOL, offset + 20),
+            VoiceInputMode.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 21))
          );
       }
    }
@@ -361,6 +405,9 @@ public class SyncPlayerPreferences implements Packet, ToServerPacket {
       buf.writeIntLE(this.creativeInteractionDistance);
       buf.writeByte(this.showBuilderToolNotifications ? 1 : 0);
       buf.writeByte(this.noPhysics ? 1 : 0);
+      buf.writeByte(this.voiceChat ? 1 : 0);
+      buf.writeByte(this.voiceInput ? 1 : 0);
+      buf.writeByte(this.voiceInputMode.getValue());
       if (this.placeMode != null) {
          PacketIO.writeVarString(buf, this.placeMode, 4096000);
       }
@@ -389,7 +436,10 @@ public class SyncPlayerPreferences implements Packet, ToServerPacket {
       mem.set(PacketIO.PROTO_INT, offset + 13, this.creativeInteractionDistance);
       mem.set(PacketIO.PROTO_BOOL, offset + 17, this.showBuilderToolNotifications);
       mem.set(PacketIO.PROTO_BOOL, offset + 18, this.noPhysics);
-      int varOffset = offset + 19;
+      mem.set(PacketIO.PROTO_BOOL, offset + 19, this.voiceChat);
+      mem.set(PacketIO.PROTO_BOOL, offset + 20, this.voiceInput);
+      mem.set(PacketIO.PROTO_BYTE, offset + 21, (byte)this.voiceInputMode.getValue());
+      int varOffset = offset + 22;
       if (this.placeMode != null) {
          varOffset += PacketIO.writeVarString(mem, varOffset, this.placeMode, 4096000);
       }
@@ -399,7 +449,7 @@ public class SyncPlayerPreferences implements Packet, ToServerPacket {
 
    @Override
    public int computeSize() {
-      int size = 19;
+      int size = 22;
       if (this.placeMode != null) {
          size += PacketIO.stringSize(this.placeMode);
       }
@@ -408,8 +458,8 @@ public class SyncPlayerPreferences implements Packet, ToServerPacket {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      if (buffer.readableBytes() - offset < 19) {
-         return ValidationResult.error("Buffer too small: expected at least 19 bytes");
+      if (buffer.readableBytes() - offset < 22) {
+         return ValidationResult.error("Buffer too small: expected at least 22 bytes");
       }
 
       byte nullBits = buffer.getByte(offset);
@@ -438,7 +488,12 @@ public class SyncPlayerPreferences implements Packet, ToServerPacket {
          return ValidationResult.error("Invalid PickupLocation value for MiscItemsPreferredPickupLocation");
       }
 
-      v = offset + 19;
+      v = buffer.getByte(offset + 21) & 255;
+      if (v >= 3) {
+         return ValidationResult.error("Invalid VoiceInputMode value for VoiceInputMode");
+      }
+
+      v = offset + 22;
       if ((nullBits & 1) != 0) {
          int placeModeLen = VarInt.peek(buffer, v);
          if (placeModeLen < 0) {
@@ -477,6 +532,9 @@ public class SyncPlayerPreferences implements Packet, ToServerPacket {
       copy.creativeInteractionDistance = this.creativeInteractionDistance;
       copy.showBuilderToolNotifications = this.showBuilderToolNotifications;
       copy.noPhysics = this.noPhysics;
+      copy.voiceChat = this.voiceChat;
+      copy.voiceInput = this.voiceInput;
+      copy.voiceInputMode = this.voiceInputMode;
       return copy;
    }
 
@@ -502,7 +560,10 @@ public class SyncPlayerPreferences implements Packet, ToServerPacket {
                && Objects.equals(this.placeMode, other.placeMode)
                && this.creativeInteractionDistance == other.creativeInteractionDistance
                && this.showBuilderToolNotifications == other.showBuilderToolNotifications
-               && this.noPhysics == other.noPhysics;
+               && this.noPhysics == other.noPhysics
+               && this.voiceChat == other.voiceChat
+               && this.voiceInput == other.voiceInput
+               && Objects.equals(this.voiceInputMode, other.voiceInputMode);
       }
    }
 
@@ -524,7 +585,10 @@ public class SyncPlayerPreferences implements Packet, ToServerPacket {
          this.placeMode,
          this.creativeInteractionDistance,
          this.showBuilderToolNotifications,
-         this.noPhysics
+         this.noPhysics,
+         this.voiceChat,
+         this.voiceInput,
+         this.voiceInputMode
       );
    }
 }

@@ -2,8 +2,9 @@ package com.hypixel.hytale.builtin.hytalegenerator.assets.graph.edgeactions;
 
 import com.hypixel.hytale.builtin.hytalegenerator.assets.density.ConstantDensityAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.density.DensityAsset;
-import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.GraphContentAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.GraphGeneratorAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.contentsuppliers.ConstantContentSupplierAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.contentsuppliers.ContentSupplierAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.nodeselectors.AllNodeSelectorAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.nodeselectors.NodeSelectorAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.vectorproviders.ConstantVectorProviderAsset;
@@ -56,7 +57,9 @@ public class ProxyEdgeActionAsset extends EdgeActionAsset {
       .addValidator(Validators.greaterThanOrEqual(0.0))
       .add()
       .append(
-         new KeyedCodec<>("ProxyContent", GraphContentAsset.CODEC, true), (asset, value) -> asset.proxyContentAsset = value, asset -> asset.proxyContentAsset
+         new KeyedCodec<>("ProxyContent", ContentSupplierAsset.CODEC, true),
+         (asset, value) -> asset.contentSupplierAsset = value,
+         asset -> asset.contentSupplierAsset
       )
       .add()
       .append(new KeyedCodec<>("Seed", Codec.STRING, true), (asset, value) -> asset.seed = value, asset -> asset.seed)
@@ -74,7 +77,7 @@ public class ProxyEdgeActionAsset extends EdgeActionAsset {
    private DensityAsset proxyDistanceDensityAsset = ConstantDensityAsset.ZERO_INSTANCE;
    private double maxProxyDistance = 0.0;
    @Nonnull
-   private GraphContentAsset proxyContentAsset = GraphContentAsset.INSTANCE;
+   private ContentSupplierAsset contentSupplierAsset = ConstantContentSupplierAsset.INSTANCE;
    @Nonnull
    private String seed = "";
 
@@ -88,7 +91,7 @@ public class ProxyEdgeActionAsset extends EdgeActionAsset {
          this.angleToNormalDensityAsset.build(densityArgument),
          this.spinAngleDensityAsset.build(densityArgument),
          this.proxyDistanceDensityAsset.build(densityArgument),
-         this.proxyContentAsset.build(argument),
+         this.contentSupplierAsset.build(argument),
          this.maxProxyDistance,
          argument.parentSeed.child(this.seed).createSupplier().get()
       );
@@ -101,6 +104,6 @@ public class ProxyEdgeActionAsset extends EdgeActionAsset {
       this.angleToNormalDensityAsset.cleanUp();
       this.spinAngleDensityAsset.cleanUp();
       this.proxyDistanceDensityAsset.cleanUp();
-      this.proxyContentAsset.cleanUp();
+      this.contentSupplierAsset.cleanUp();
    }
 }

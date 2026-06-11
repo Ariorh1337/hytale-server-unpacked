@@ -11,9 +11,9 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.BodyMotionBase;
 import com.hypixel.hytale.server.npc.corecomponents.combat.builders.BuilderBodyMotionAimCharge;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.movement.Steering;
 import com.hypixel.hytale.server.npc.movement.controllers.ProbeMoveData;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.util.AimingData;
 import javax.annotation.Nonnull;
@@ -33,7 +33,9 @@ public class BodyMotionAimCharge extends BodyMotionBase {
    }
 
    @Override
-   public void preComputeSteering(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, @Nonnull Store<EntityStore> store) {
+   public void preComputeSteering(
+      @Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, @Nullable InfoProvider sensorInfo, @Nonnull Store<EntityStore> store
+   ) {
       if (sensorInfo != null) {
          sensorInfo.passExtraInfo(this.aimingData);
       }
@@ -42,7 +44,7 @@ public class BodyMotionAimCharge extends BodyMotionBase {
    @Override
    public boolean computeSteering(
       @Nonnull Ref<EntityStore> ref,
-      @Nonnull Role role,
+      @Nonnull ExecutionSupport executionSupport,
       @Nullable InfoProvider sensorInfo,
       double dt,
       @Nonnull Steering desiredSteering,
@@ -50,7 +52,7 @@ public class BodyMotionAimCharge extends BodyMotionBase {
    ) {
       if (sensorInfo != null && sensorInfo.getPositionProvider().providePosition(this.direction)) {
          if (this.aimingData.isHaveAttacked()) {
-            if (role.getCombatSupport().isExecutingAttack()) {
+            if (executionSupport.getCombatSupport().isExecutingAttack()) {
                desiredSteering.clear();
                return true;
             }
@@ -59,7 +61,7 @@ public class BodyMotionAimCharge extends BodyMotionBase {
          }
 
          Vector3d selfPosition = componentAccessor.getComponent(ref, TRANSFORM_COMPONENT_TYPE).getPosition();
-         double distanceToTarget = role.getActiveMotionController().waypointDistance(selfPosition, this.direction);
+         double distanceToTarget = executionSupport.getMotionContextSupport().getActiveMotionController().waypointDistance(selfPosition, this.direction);
          if (distanceToTarget > this.aimingData.getChargeDistance()) {
             this.aimingData.clearSolution();
             return true;
@@ -81,7 +83,9 @@ public class BodyMotionAimCharge extends BodyMotionBase {
                this.aimingData.clearSolution();
                return true;
             } else {
-               double distance = role.getActiveMotionController().probeMove(ref, selfPosition, this.direction, this.probeMoveData, componentAccessor);
+               double distance = executionSupport.getMotionContextSupport()
+                  .getActiveMotionController()
+                  .probeMove(ref, selfPosition, this.direction, this.probeMoveData, componentAccessor);
                if (distance < distanceToTarget - 1.0E-6) {
                   this.aimingData.clearSolution();
                   return true;

@@ -3,7 +3,6 @@ package com.hypixel.hytale.server.npc.instructions;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.util.ComponentInfo;
 import com.hypixel.hytale.server.npc.util.IAnnotatedComponent;
@@ -12,7 +11,7 @@ import javax.annotation.Nullable;
 
 public class NullSensor implements Sensor {
    @Override
-   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull ExecutionSupport executionSupport, double dt, @Nonnull Store<EntityStore> store) {
       return true;
    }
 
@@ -40,7 +39,7 @@ public class NullSensor implements Sensor {
    }
 
    @Override
-   public void getInfo(Role role, ComponentInfo holder) {
+   public void getInfo(ExecutionSupport executionSupport, ComponentInfo holder) {
    }
 
    @Override

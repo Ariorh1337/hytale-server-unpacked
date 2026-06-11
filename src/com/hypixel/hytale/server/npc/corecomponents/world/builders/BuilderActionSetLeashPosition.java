@@ -4,6 +4,7 @@ import com.google.gson.JsonElement;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.asset.builder.Feature;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderActionBase;
 import com.hypixel.hytale.server.npc.corecomponents.world.ActionSetLeashPosition;
 import javax.annotation.Nonnull;
@@ -42,6 +43,7 @@ public class BuilderActionSetLeashPosition extends BuilderActionBase {
       this.getBoolean(data, "ToTarget", b -> this.toTarget = b, false, BuilderDescriptorState.Stable, "Set to the target position.", null);
       this.validateAny("ToCurrent", this.toCurrent, "ToTarget", this.toTarget);
       this.requireFeatureIf("ToTarget", true, this.toTarget, Feature.AnyEntity);
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
       return this;
    }
 

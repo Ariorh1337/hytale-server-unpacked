@@ -18,7 +18,8 @@ import com.hypixel.hytale.server.npc.asset.builder.StateMappingHelper;
 import com.hypixel.hytale.server.npc.decisionmaker.core.EvaluationContext;
 import com.hypixel.hytale.server.npc.decisionmaker.core.Evaluator;
 import com.hypixel.hytale.server.npc.decisionmaker.core.Option;
-import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
+import com.hypixel.hytale.server.npc.role.support.StateSupport;
 import com.hypixel.hytale.server.npc.valuestore.ValueStore;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.doubles.DoubleList;
@@ -87,14 +88,14 @@ public class CombatActionEvaluator extends Evaluator<CombatActionOption> impleme
    }
 
    public CombatActionEvaluator(
-      @Nonnull Role role, @Nonnull CombatActionEvaluatorConfig config, @Nonnull CombatActionEvaluatorSystems.CombatConstructionData data
+      @Nonnull StateSupport stateSupport, @Nonnull CombatActionEvaluatorConfig config, @Nonnull CombatActionEvaluatorSystems.CombatConstructionData data
    ) {
       this.runOption = new CombatActionEvaluator.RunOption(config.getRunConditions());
       this.runOption.sortConditions();
       this.minRunUtility = config.getMinRunUtility();
       this.minActionUtility = config.getMinActionUtility();
       this.predictability = (float)RandomExtra.randomRange(config.getPredictabilityRange());
-      StateMappingHelper stateHelper = role.getStateSupport().getStateHelper();
+      StateMappingHelper stateHelper = stateSupport.getStateHelper();
       String activeState = data.getCombatState();
       this.runInState = stateHelper.getStateIndex(activeState);
       this.markedTargetSlot = data.getMarkedTargetSlot();
@@ -351,7 +352,11 @@ public class CombatActionEvaluator extends Evaluator<CombatActionOption> impleme
    }
 
    public void selectNextCombatAction(
-      int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, CommandBuffer<EntityStore> commandBuffer, @Nonnull Role role, ValueStore valueStore
+      int index,
+      @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
+      CommandBuffer<EntityStore> commandBuffer,
+      @Nonnull ExecutionSupport executionSupport,
+      ValueStore valueStore
    ) {
       this.evaluationContext.setPredictability(this.predictability);
       this.evaluationContext.setMinimumUtility(this.minActionUtility);
@@ -366,11 +371,11 @@ public class CombatActionEvaluator extends Evaluator<CombatActionOption> impleme
             }
 
             this.primaryTarget = targetRef;
-            role.getMarkedEntitySupport().setMarkedEntity(this.markedTargetSlot, this.primaryTarget);
+            executionSupport.getMarkedEntitySupport().setMarkedEntity(this.markedTargetSlot, this.primaryTarget);
          }
 
          this.currentAction = option;
-         ((CombatActionOption)this.currentAction.getOption()).execute(index, archetypeChunk, commandBuffer, role, this, valueStore);
+         ((CombatActionOption)this.currentAction.getOption()).execute(index, archetypeChunk, commandBuffer, executionSupport, this, valueStore);
          if (((CombatActionOption)option.getOption()).cancelBasicAttackOnSelect()) {
             this.clearCurrentBasicAttack();
          }
@@ -414,11 +419,11 @@ public class CombatActionEvaluator extends Evaluator<CombatActionOption> impleme
    }
 
    @Override
-   public void setupNPC(Role role) {
+   public void setupNPC(ExecutionSupport executionSupport) {
       for (List<Evaluator<CombatActionOption>.OptionHolder> optionList : this.optionsBySubState.values()) {
          for (Evaluator<CombatActionOption>.OptionHolder option : optionList) {
             CombatActionOption opt = (CombatActionOption)option.getOption();
-            opt.setupNPC(role);
+            opt.setupNPC(executionSupport);
          }
       }
    }

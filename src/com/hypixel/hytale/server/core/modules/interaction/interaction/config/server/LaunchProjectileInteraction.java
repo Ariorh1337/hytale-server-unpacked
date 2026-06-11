@@ -10,10 +10,12 @@ import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
+import com.hypixel.hytale.protocol.Direction;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.asset.type.gameplay.BrokenPenalties;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.projectile.config.Projectile;
+import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.entity.ItemUtils;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
@@ -48,8 +50,35 @@ public class LaunchProjectileInteraction extends SimpleInstantInteraction implem
       .addValidator(Validators.nonNull())
       .addValidator(Projectile.VALIDATOR_CACHE.getValidator().late())
       .add()
+      .<Boolean>appendInherited(
+         new KeyedCodec<>("IgnorePitch", Codec.BOOLEAN), (i, o) -> i.ignorePitch = o, i -> i.ignorePitch, (i, p) -> i.ignorePitch = p.ignorePitch
+      )
+      .documentation("If true, the shooter's pitch is set to 0 before the launch direction is computed, so the projectile's pitch is fixed by RotationOffset.")
+      .add()
+      .<Boolean>appendInherited(new KeyedCodec<>("IgnoreYaw", Codec.BOOLEAN), (i, o) -> i.ignoreYaw = o, i -> i.ignoreYaw, (i, p) -> i.ignoreYaw = p.ignoreYaw)
+      .documentation("If true, the shooter's yaw is set to 0 before the launch direction is computed, so the projectile's yaw is fixed by RotationOffset.")
+      .add()
+      .<Boolean>appendInherited(
+         new KeyedCodec<>("IgnoreRoll", Codec.BOOLEAN), (i, o) -> i.ignoreRoll = o, i -> i.ignoreRoll, (i, p) -> i.ignoreRoll = p.ignoreRoll
+      )
+      .documentation("If true, the shooter's roll is set to 0 before the launch direction is computed, so the projectile's roll is fixed by RotationOffset.")
+      .add()
+      .<Direction>appendInherited(new KeyedCodec<>("RotationOffset", ProtocolCodecs.DIRECTION), (i, o) -> {
+         i.rotationOffset = o;
+         i.rotationOffset.yaw *= (float) (Math.PI / 180.0);
+         i.rotationOffset.pitch *= (float) (Math.PI / 180.0);
+         i.rotationOffset.roll *= (float) (Math.PI / 180.0);
+      }, i -> i.rotationOffset, (i, p) -> i.rotationOffset = p.rotationOffset)
+      .addValidator(Validators.nonNull())
+      .documentation("A fixed rotation offset (in degrees) added to the launch rotation after any ignored axes are zeroed.")
+      .add()
       .build();
    protected String projectileId;
+   protected boolean ignorePitch;
+   protected boolean ignoreYaw;
+   protected boolean ignoreRoll;
+   @Nonnull
+   protected Direction rotationOffset = new Direction(0.0F, 0.0F, 0.0F);
 
    public String getProjectileId() {
       return this.projectileId;
@@ -70,6 +99,19 @@ public class LaunchProjectileInteraction extends SimpleInstantInteraction implem
       Transform lookVec = TargetUtil.getLook(sourceRef, commandBuffer);
       Vector3d lookPosition = lookVec.getPosition();
       Rotation3f lookRotation = lookVec.getRotation();
+      if (this.ignorePitch) {
+         lookRotation.setPitch(0.0F);
+      }
+
+      if (this.ignoreYaw) {
+         lookRotation.setYaw(0.0F);
+      }
+
+      if (this.ignoreRoll) {
+         lookRotation.setRoll(0.0F);
+      }
+
+      lookRotation.add(this.rotationOffset.pitch, this.rotationOffset.yaw, this.rotationOffset.roll);
       UUIDComponent sourceUuidComponent = commandBuffer.getComponent(sourceRef, UUIDComponent.getComponentType());
       if (sourceUuidComponent != null) {
          UUID sourceUuid = sourceUuidComponent.getUuid();

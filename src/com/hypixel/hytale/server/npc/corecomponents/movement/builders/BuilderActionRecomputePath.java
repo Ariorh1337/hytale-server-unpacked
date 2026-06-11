@@ -4,6 +4,7 @@ import com.google.gson.JsonElement;
 import com.hypixel.hytale.server.npc.asset.builder.Builder;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
+import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderActionBase;
 import com.hypixel.hytale.server.npc.corecomponents.movement.ActionRecomputePath;
 import com.hypixel.hytale.server.npc.instructions.Action;
@@ -17,6 +18,7 @@ public class BuilderActionRecomputePath extends BuilderActionBase implements Bui
 
    @Nonnull
    public BuilderActionRecomputePath readConfig(JsonElement data) {
+      this.requireInstructionType(InstructionType.NPCOnlyInstructions);
       return this;
    }
 

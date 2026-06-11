@@ -1,7 +1,8 @@
 package com.hypixel.hytale.builtin.hytalegenerator.assets.graph.edgeactions;
 
-import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.GraphContentAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.GraphGeneratorAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.contentsuppliers.ConstantContentSupplierAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.graph.contentsuppliers.ContentSupplierAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.graph.edgeactions.EdgeAction;
 import com.hypixel.hytale.builtin.hytalegenerator.graph.edgeactions.SplitterEdgeAction;
 import com.hypixel.hytale.codec.Codec;
@@ -19,22 +20,26 @@ public class SplitterEdgeActionAsset extends EdgeActionAsset {
       .append(new KeyedCodec<>("NodeCount", Codec.INTEGER, true), (asset, value) -> asset.nodeCount = value, asset -> asset.nodeCount)
       .addValidator(Validators.greaterThanOrEqual(0))
       .add()
-      .append(new KeyedCodec<>("Content", GraphContentAsset.CODEC, true), (asset, value) -> asset.contentAsset = value, asset -> asset.contentAsset)
+      .append(
+         new KeyedCodec<>("Content", ContentSupplierAsset.CODEC, true),
+         (asset, value) -> asset.contentSupplierAsset = value,
+         asset -> asset.contentSupplierAsset
+      )
       .add()
       .build();
    private int nodeCount = 0;
    @Nonnull
-   private GraphContentAsset contentAsset = GraphContentAsset.INSTANCE;
+   private ContentSupplierAsset contentSupplierAsset = ConstantContentSupplierAsset.INSTANCE;
 
    @Nonnull
    @Override
    public EdgeAction build(@Nonnull GraphGeneratorAsset.Argument argument) {
       assert this.nodeCount >= 0;
-      return new SplitterEdgeAction(this.contentAsset.build(argument), this.nodeCount);
+      return new SplitterEdgeAction(this.contentSupplierAsset.build(argument), this.nodeCount);
    }
 
    @Override
    public void cleanUp() {
-      this.contentAsset.cleanUp();
+      this.contentSupplierAsset.cleanUp();
    }
 }

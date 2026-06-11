@@ -51,6 +51,8 @@ import com.hypixel.hytale.server.npc.decisionmaker.stateevaluator.StateEvaluator
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.role.SpawnEffect;
+import com.hypixel.hytale.server.npc.role.support.RoleStats;
+import com.hypixel.hytale.server.npc.storage.AlarmStore;
 import com.hypixel.hytale.server.npc.util.expression.ExecutionContext;
 import com.hypixel.hytale.server.npc.valuestore.ValueStore;
 import it.unimi.dsi.fastutil.ints.IntSet;
@@ -101,6 +103,13 @@ public class RoleBuilderSystem extends HolderSystem<EntityStore> {
       NPCEntity npcComponent = holder.getComponent(this.npcComponentType);
       assert npcComponent != null;
       if (npcComponent.getRole() == null) {
+         if (holder.getComponent(AlarmStore.getComponentType()) == null) {
+            AlarmStore legacy = npcComponent.takeLegacyAlarmStore();
+            if (legacy != null) {
+               holder.putComponent(AlarmStore.getComponentType(), legacy);
+            }
+         }
+
          NPCPlugin npcPlugin = NPCPlugin.get();
          int roleIndex = npcComponent.getRoleIndex();
          if (roleIndex == Integer.MIN_VALUE) {
@@ -127,11 +136,14 @@ public class RoleBuilderSystem extends HolderSystem<EntityStore> {
             this.fail(holder);
             npcPlugin.getLogger().at(Level.SEVERE).log("Attempting to spawn un-spawnable (abstract) role: %s", npcComponent.getRoleName());
          } else {
-            BuilderSupport builderSupport = new BuilderSupport(npcPlugin.getBuilderManager(), npcComponent, holder, new ExecutionContext(), roleBuilder, null);
+            RoleStats roleStats = npcComponent.shouldCollectSensorStats() ? new RoleStats() : null;
+            BuilderSupport builderSupport = new BuilderSupport(
+               npcPlugin.getBuilderManager(), npcComponent, holder, new ExecutionContext(), roleBuilder, roleStats
+            );
 
             Role role;
             try {
-               role = NPCPlugin.buildRole(roleBuilder, builderInfo, builderSupport, roleIndex);
+               role = NPCPlugin.buildRole(holder, roleBuilder, builderInfo, builderSupport, roleIndex);
             } catch (SkipSentryException e) {
                this.fail(holder);
                npcPlugin.getLogger().at(Level.SEVERE).log("Error: %s for NPC %s", e.getMessage(), npcComponent.getRole());
