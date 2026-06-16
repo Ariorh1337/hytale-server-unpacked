@@ -8,6 +8,7 @@ import com.hypixel.hytale.codec.codecs.EnumCodec;
 import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Vector3fUtil;
 import com.hypixel.hytale.protocol.InteractionState;
@@ -16,11 +17,14 @@ import com.hypixel.hytale.protocol.MountController;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInstantInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.util.InteractionValidation;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import org.joml.Vector3f;
 
 public class MountInteraction extends SimpleInstantInteraction {
+   private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
    public static final BuilderCodec<MountInteraction> CODEC = BuilderCodec.builder(
          MountInteraction.class, MountInteraction::new, SimpleInstantInteraction.CODEC
       )
@@ -54,6 +58,10 @@ public class MountInteraction extends SimpleInstantInteraction {
          MountedComponent mounted = commandBuffer.getComponent(self, MountedComponent.getComponentType());
          if (mounted != null) {
             commandBuffer.removeComponent(self, MountedComponent.getComponentType());
+            context.getState().state = InteractionState.Failed;
+         } else if (!InteractionValidation.canPlayerInteractWithEntity(self, commandBuffer, context.getHeldItem(), target)) {
+            LOGGER.at(Level.WARNING)
+               .log("Entity %d failed mount interaction distance check for target entity %d", (int)self.getIndex(), (int)target.getIndex());
             context.getState().state = InteractionState.Failed;
          } else {
             MountedByComponent mountedBy = commandBuffer.getComponent(target, MountedByComponent.getComponentType());

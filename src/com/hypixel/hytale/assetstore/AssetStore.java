@@ -348,10 +348,12 @@ public abstract class AssetStore<K, T extends JsonAssetWithMap<K, M>, M extends 
 
       Objects.requireNonNull(paths, "paths can't be null");
       long start = System.nanoTime();
+      List<Path> explicitPaths = new ArrayList<>(paths.size());
       Set<Path> documents = new HashSet<>();
 
       for (Path path : paths) {
          Path normalize = path.toAbsolutePath().normalize();
+         explicitPaths.add(normalize);
          Set<K> keys = this.assetMap.getKeys(normalize);
          if (keys != null) {
             for (K key : keys) {
@@ -360,13 +362,24 @@ public abstract class AssetStore<K, T extends JsonAssetWithMap<K, M>, M extends 
          }
 
          documents.add(normalize);
-         this.loadAllChildren(documents, this.decodeFilePathKey(path));
+         this.loadAllChildren(documents, this.decodeFilePathKey(normalize));
       }
 
       List<RawAsset<K>> rawAssets = new ArrayList<>(documents.size());
+      Set<K> rawAssetKeys = new HashSet<>(documents.size());
+
+      for (Path p : explicitPaths) {
+         K key = this.decodeFilePathKey(p);
+         if (rawAssetKeys.add(key)) {
+            rawAssets.add(new RawAsset<>(key, p));
+         }
+      }
 
       for (Path p : documents) {
-         rawAssets.add(new RawAsset<>(this.decodeFilePathKey(p), p));
+         K key = this.decodeFilePathKey(p);
+         if (rawAssetKeys.add(key)) {
+            rawAssets.add(new RawAsset<>(key, p));
+         }
       }
 
       Map<K, T> loadedAssets = Collections.synchronizedMap(new Object2ObjectLinkedOpenHashMap<>());
@@ -397,8 +410,10 @@ public abstract class AssetStore<K, T extends JsonAssetWithMap<K, M>, M extends 
    ) {
       long start = System.nanoTime();
       Set<Path> documents = new HashSet<>();
+      Set<K> rawAssetKeys = new HashSet<>(preLoaded.size());
 
       for (RawAsset<K> document : preLoaded) {
+         rawAssetKeys.add(document.getKey());
          this.loadAllChildren(documents, document.getKey());
       }
 
@@ -406,7 +421,10 @@ public abstract class AssetStore<K, T extends JsonAssetWithMap<K, M>, M extends 
       rawAssets.addAll(preLoaded);
 
       for (Path p : documents) {
-         rawAssets.add(new RawAsset<>(this.decodeFilePathKey(p), p));
+         K key = this.decodeFilePathKey(p);
+         if (rawAssetKeys.add(key)) {
+            rawAssets.add(new RawAsset<>(key, p));
+         }
       }
 
       Map<K, T> loadedAssets = Collections.synchronizedMap(new Object2ObjectLinkedOpenHashMap<>());
@@ -454,7 +472,10 @@ public abstract class AssetStore<K, T extends JsonAssetWithMap<K, M>, M extends 
       List<RawAsset<K>> rawAssets = new ArrayList<>(documents.size());
 
       for (Path p : documents) {
-         rawAssets.add(new RawAsset<>(this.decodeFilePathKey(p), p));
+         K key = this.decodeFilePathKey(p);
+         if (!loadedAssets.containsKey(key)) {
+            rawAssets.add(new RawAsset<>(key, p));
+         }
       }
 
       Map<K, Path> loadedKeyToPathMap = new ConcurrentHashMap<>();
@@ -506,7 +527,10 @@ public abstract class AssetStore<K, T extends JsonAssetWithMap<K, M>, M extends 
       List<RawAsset<K>> rawAssets = new ArrayList<>(documents.size());
 
       for (Path p : documents) {
-         rawAssets.add(new RawAsset<>(this.decodeFilePathKey(p), p));
+         K key = this.decodeFilePathKey(p);
+         if (!loadedAssets.containsKey(key)) {
+            rawAssets.add(new RawAsset<>(key, p));
+         }
       }
 
       Map<K, Path> loadedKeyToPathMap = new ConcurrentHashMap<>();

@@ -34,6 +34,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
 import java.nio.file.DirectoryStream;
@@ -243,7 +244,9 @@ public class I18nModule extends JavaPlugin {
          Properties properties = new Properties();
 
          try {
-            properties.load(Files.newInputStream(fallbackPath));
+            try (InputStream in = Files.newInputStream(fallbackPath)) {
+               properties.load(in);
+            }
 
             for (Entry<Object, Object> entry : properties.entrySet()) {
                this.fallbacks.put((String)entry.getKey(), (String)entry.getValue());
@@ -424,104 +427,114 @@ public class I18nModule extends JavaPlugin {
       public void accept(Map<Path, EventKind> map) {
          Map<String, Map<String, String>> removed = new Object2ObjectOpenHashMap<>();
          Map<String, Map<String, String>> changed = new Object2ObjectOpenHashMap<>();
+         Iterator players = map.entrySet().iterator();
 
-         for (Entry<Path, EventKind> entry : map.entrySet()) {
-            Path path = entry.getKey();
-            EventKind eventKind = entry.getValue();
-            Path normalized = path.toAbsolutePath().normalize();
-            Path relativized = this.languagesPath.relativize(normalized);
-            if (I18nModule.FALLBACK_LANG_PATH.equals(relativized)) {
-               Properties properties = new Properties();
+         while (true) {
+            Properties properties;
+            while (true) {
+               if (!players.hasNext()) {
+                  if (removed.isEmpty() && changed.isEmpty()) {
+                     return;
+                  }
 
-               try {
-                  properties.load(Files.newInputStream(path));
-               } catch (IOException e) {
-                  I18nModule.this.getLogger().at(Level.SEVERE).withCause(e).log("Failed to load fallback languages from: %s", path);
-                  continue;
-               }
+                  for (Entry<String, Map<String, String>> changedLang : changed.entrySet()) {
+                     Map<String, String> messages = I18nModule.this.languages.computeIfAbsent(changedLang.getKey(), k -> new ConcurrentHashMap<>());
+                     messages.putAll(changedLang.getValue());
+                     I18nModule.this.cachedLanguages.remove(changedLang.getKey());
+                  }
 
-               I18nModule.this.fallbacks.clear();
-               properties.forEach((keyx, value) -> I18nModule.this.fallbacks.put((String)keyx, value));
-            } else {
-               String languageKey = relativized.getName(0).toString();
-               Path langPath = this.languagesPath.resolve(languageKey).toAbsolutePath().normalize();
-               String prefix = I18nModule.this.getPrefix(langPath, normalized);
-               switch (eventKind) {
-                  case ENTRY_MODIFY:
-                  case ENTRY_DELETE:
-                     String prefixWithDot = prefix + ".";
-                     Map<String, String> removedMessages = removed.computeIfAbsent(languageKey, k -> new Object2ObjectOpenHashMap<>());
-                     Map<String, String> messages = I18nModule.this.languages.computeIfAbsent(languageKey, k -> new ConcurrentHashMap<>());
-                     Iterator<String> iterator = messages.keySet().iterator();
+                  for (Entry<String, Map<String, String>> removedLang : removed.entrySet()) {
+                     I18nModule.this.cachedLanguages.remove(removedLang.getKey());
+                     Map<String, String> orig = I18nModule.this.getMessages(removedLang.getKey());
+                     Map<String, String> changedMessages = changed.computeIfAbsent(removedLang.getKey(), k -> new Object2ObjectOpenHashMap<>());
+                     Iterator<String> iterator = removedLang.getValue().keySet().iterator();
 
                      while (iterator.hasNext()) {
-                        String key = iterator.next();
-                        if (key.startsWith(prefixWithDot)) {
-                           removedMessages.put(key, "");
+                        String removedKey = iterator.next();
+                        if (changedMessages.containsKey(removedKey)) {
                            iterator.remove();
+                        } else {
+                           String fallback = orig.get(removedKey);
+                           if (fallback != null) {
+                              iterator.remove();
+                              changedMessages.put(removedKey, fallback);
+                           }
                         }
                      }
+                  }
 
-                     if (eventKind == EventKind.ENTRY_DELETE) {
-                        break;
+                  Collection<PlayerRef> playersx = Universe.get().getPlayers();
+                  Map<String, UpdateTranslations[]> updatePackets = new Object2ObjectOpenHashMap<>();
+
+                  for (PlayerRef playerRef : playersx) {
+                     PacketHandler handler = playerRef.getPacketHandler();
+                     String languageKey = playerRef.getLanguage();
+                     UpdateTranslations[] packets = updatePackets.get(languageKey);
+                     if (packets == null) {
+                        packets = I18nModule.this.getUpdatePacketsForChanges(languageKey, changed, removed);
+                        updatePackets.put(languageKey, packets);
                      }
-                  case ENTRY_CREATE:
-                     Map<String, String> changedMessages = changed.computeIfAbsent(languageKey, k -> new Object2ObjectOpenHashMap<>());
-                     I18nModule.this.loadMessagesFrom(changedMessages, prefix, path);
+
+                     if (packets.length != 0) {
+                        handler.write(packets);
+                     }
+                  }
+
+                  IEventDispatcher<MessagesUpdated, MessagesUpdated> dispatch = HytaleServer.get().getEventBus().dispatchFor(MessagesUpdated.class);
+                  if (dispatch.hasListener()) {
+                     dispatch.dispatch(new MessagesUpdated(changed, removed));
+                  }
+
+                  I18nModule.this.getLogger().at(Level.INFO).log("Handled language changes for: %s", changed.keySet());
+                  return;
                }
-            }
-         }
 
-         if (!removed.isEmpty() || !changed.isEmpty()) {
-            for (Entry<String, Map<String, String>> changedLang : changed.entrySet()) {
-               Map<String, String> messages = I18nModule.this.languages.computeIfAbsent(changedLang.getKey(), k -> new ConcurrentHashMap<>());
-               messages.putAll(changedLang.getValue());
-               I18nModule.this.cachedLanguages.remove(changedLang.getKey());
-            }
+               Entry<Path, EventKind> entry = (Entry<Path, EventKind>)players.next();
+               Path path = entry.getKey();
+               EventKind eventKind = entry.getValue();
+               Path normalized = path.toAbsolutePath().normalize();
+               Path relativized = this.languagesPath.relativize(normalized);
+               if (I18nModule.FALLBACK_LANG_PATH.equals(relativized)) {
+                  properties = new Properties();
 
-            for (Entry<String, Map<String, String>> removedLang : removed.entrySet()) {
-               I18nModule.this.cachedLanguages.remove(removedLang.getKey());
-               Map<String, String> orig = I18nModule.this.getMessages(removedLang.getKey());
-               Map<String, String> changedMessages = changed.computeIfAbsent(removedLang.getKey(), k -> new Object2ObjectOpenHashMap<>());
-               Iterator<String> iterator = removedLang.getValue().keySet().iterator();
+                  try (InputStream in = Files.newInputStream(path)) {
+                     properties.load(in);
+                     break;
+                  } catch (IOException e) {
+                     I18nModule.this.getLogger().at(Level.SEVERE).withCause(e).log("Failed to load fallback languages from: %s", path);
+                  }
+               } else {
+                  String languageKey = relativized.getName(0).toString();
+                  Path langPath = this.languagesPath.resolve(languageKey).toAbsolutePath().normalize();
+                  String prefix = I18nModule.this.getPrefix(langPath, normalized);
+                  switch (eventKind) {
+                     case ENTRY_MODIFY:
+                     case ENTRY_DELETE:
+                        String prefixWithDot = prefix + ".";
+                        Map<String, String> removedMessages = removed.computeIfAbsent(languageKey, k -> new Object2ObjectOpenHashMap<>());
+                        Map<String, String> messages = I18nModule.this.languages.computeIfAbsent(languageKey, k -> new ConcurrentHashMap<>());
+                        Iterator<String> iterator = messages.keySet().iterator();
 
-               while (iterator.hasNext()) {
-                  String removedKey = iterator.next();
-                  if (changedMessages.containsKey(removedKey)) {
-                     iterator.remove();
-                  } else {
-                     String fallback = orig.get(removedKey);
-                     if (fallback != null) {
-                        iterator.remove();
-                        changedMessages.put(removedKey, fallback);
-                     }
+                        while (iterator.hasNext()) {
+                           String key = iterator.next();
+                           if (key.startsWith(prefixWithDot)) {
+                              removedMessages.put(key, "");
+                              iterator.remove();
+                           }
+                        }
+
+                        if (eventKind == EventKind.ENTRY_DELETE) {
+                           break;
+                        }
+                     case ENTRY_CREATE:
+                        Map<String, String> changedMessages = changed.computeIfAbsent(languageKey, k -> new Object2ObjectOpenHashMap<>());
+                        I18nModule.this.loadMessagesFrom(changedMessages, prefix, path);
                   }
                }
             }
 
-            Collection<PlayerRef> players = Universe.get().getPlayers();
-            Map<String, UpdateTranslations[]> updatePackets = new Object2ObjectOpenHashMap<>();
-
-            for (PlayerRef playerRef : players) {
-               PacketHandler handler = playerRef.getPacketHandler();
-               String languageKey = playerRef.getLanguage();
-               UpdateTranslations[] packets = updatePackets.get(languageKey);
-               if (packets == null) {
-                  packets = I18nModule.this.getUpdatePacketsForChanges(languageKey, changed, removed);
-                  updatePackets.put(languageKey, packets);
-               }
-
-               if (packets.length != 0) {
-                  handler.write(packets);
-               }
-            }
-
-            IEventDispatcher<MessagesUpdated, MessagesUpdated> dispatch = HytaleServer.get().getEventBus().dispatchFor(MessagesUpdated.class);
-            if (dispatch.hasListener()) {
-               dispatch.dispatch(new MessagesUpdated(changed, removed));
-            }
-
-            I18nModule.this.getLogger().at(Level.INFO).log("Handled language changes for: %s", changed.keySet());
+            I18nModule.this.fallbacks.clear();
+            properties.forEach((keyx, value) -> I18nModule.this.fallbacks.put((String)keyx, value));
          }
       }
    }

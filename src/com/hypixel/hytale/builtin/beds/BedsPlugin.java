@@ -57,7 +57,7 @@ public class BedsPlugin extends JavaPlugin {
       );
       entityStoreRegistry.registerSystem(new StartSlumberSystem(this.playerSomnolenceComponentType, this.worldSomnolenceResourceType, worldTimeResourceType));
       entityStoreRegistry.registerSystem(
-         new UpdateWorldSlumberSystem(this.playerSomnolenceComponentType, this.worldSomnolenceResourceType, worldTimeResourceType)
+         new UpdateWorldSlumberSystem(this.playerSomnolenceComponentType, this.worldSomnolenceResourceType, worldTimeResourceType, mountedComponentType)
       );
       entityStoreRegistry.registerSystem(new SleepNotificationSystem());
       Interaction.CODEC.register("Bed", BedInteraction.class, BedInteraction.CODEC);

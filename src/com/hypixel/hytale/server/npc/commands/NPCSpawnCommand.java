@@ -2,10 +2,7 @@ package com.hypixel.hytale.server.npc.commands;
 
 import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.common.util.RandomUtil;
-import com.hypixel.hytale.component.AddReason;
-import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.function.consumer.TriConsumer;
 import com.hypixel.hytale.math.shape.Box;
@@ -49,7 +46,6 @@ import com.hypixel.hytale.server.spawning.ISpawnableWithModel;
 import com.hypixel.hytale.server.spawning.SpawnTestResult;
 import com.hypixel.hytale.server.spawning.SpawningContext;
 import it.unimi.dsi.fastutil.Pair;
-import java.util.EnumSet;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Level;
@@ -125,7 +121,12 @@ public class NPCSpawnCommand extends AbstractPlayerCommand {
       int count = this.countArg.provided(context) ? this.countArg.get(context) : 1;
       double radius = this.radiusArg.provided(context) ? this.radiusArg.get(context) : 8.0;
       String flagsString = this.flagsArg.provided(context) ? this.flagsArg.get(context) : null;
-      EnumSet<RoleDebugFlags> flags = flagsString != null ? RoleDebugFlags.getFlags(flagsString.split(",")) : RoleDebugFlags.getPreset("none");
+      if (flagsString != null) {
+         RoleDebugFlags.getFlags(flagsString.split(","));
+      } else {
+         RoleDebugFlags.getPreset("none");
+      }
+
       Vector3d velocity = new Vector3d(Vector3dUtil.ZERO);
       if (this.speedArg.provided(context)) {
          PhysicsMath.vectorFromAngles(playerHeadRotation.yaw(), playerHeadRotation.pitch(), velocity);
@@ -281,14 +282,6 @@ public class NPCSpawnCommand extends AbstractPlayerCommand {
 
                if (frozen) {
                   store.ensureComponent(npcRef, Frozen.getComponentType());
-               }
-
-               EnumSet<RoleDebugFlags> debugFlags = npc.getRoleDebugFlags().clone();
-               debugFlags.addAll(flags);
-               if (!debugFlags.isEmpty()) {
-                  Holder<EntityStore> holder = store.removeEntity(npcRef, RemoveReason.UNLOAD);
-                  npc.setRoleDebugFlags(debugFlags);
-                  store.addEntity(holder, AddReason.LOAD);
                }
 
                NPCPlugin.get()

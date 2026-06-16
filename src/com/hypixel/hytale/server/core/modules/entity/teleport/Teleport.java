@@ -129,6 +129,9 @@ public class Teleport implements Component<EntityStore> {
 
    @Nonnull
    public Teleport clone() {
-      return new Teleport(this.world, this.position, this.rotation);
+      Teleport clone = new Teleport(this.world, this.position, this.rotation);
+      clone.headRotation = this.headRotation != null ? new Rotation3f(this.headRotation) : null;
+      clone.resetVelocity = this.resetVelocity;
+      return clone;
    }
 }

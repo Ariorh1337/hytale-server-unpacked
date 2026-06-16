@@ -7,7 +7,6 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.fallingblocks.
 import com.hypixel.hytale.server.core.entity.entities.BlockEntity;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.entity.component.BoundingBox;
-import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.physics.component.PhysicsValues;
 import com.hypixel.hytale.server.core.modules.physics.component.Velocity;
@@ -34,7 +33,6 @@ public class FallingBlocksPlugin extends JavaPlugin {
       ComponentRegistryProxy<EntityStore> entityStoreRegistry = this.getEntityStoreRegistry();
       this.fallingBlockComponentType = entityStoreRegistry.registerComponent(FallingBlock.class, "FallingBlock", FallingBlock.CODEC);
       ComponentType<EntityStore, TransformComponent> transformComponentType = TransformComponent.getComponentType();
-      ComponentType<EntityStore, HeadRotation> headRotationComponentType = HeadRotation.getComponentType();
       ComponentType<EntityStore, Velocity> velocityComponentType = Velocity.getComponentType();
       ComponentType<EntityStore, PhysicsValues> physicsValuesComponentType = PhysicsValues.getComponentType();
       ComponentType<EntityStore, BoundingBox> boundingBoxComponentType = EntityModule.get().getBoundingBoxComponentType();
@@ -43,7 +41,6 @@ public class FallingBlocksPlugin extends JavaPlugin {
          new FallingBlockTickingSystem(
             this.fallingBlockComponentType,
             transformComponentType,
-            headRotationComponentType,
             velocityComponentType,
             physicsValuesComponentType,
             boundingBoxComponentType,

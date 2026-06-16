@@ -7,6 +7,7 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Rotation3fc;
 import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.protocol.AnimationSlot;
 import com.hypixel.hytale.protocol.BlockRotation;
@@ -85,6 +86,7 @@ import com.hypixel.hytale.server.core.io.handlers.IPacketHandler;
 import com.hypixel.hytale.server.core.io.handlers.IWorldPacketHandler;
 import com.hypixel.hytale.server.core.io.handlers.SubPacketHandler;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
+import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.player.PlayerCreativeSettings;
 import com.hypixel.hytale.server.core.modules.entity.player.PlayerInput;
@@ -776,11 +778,17 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
          playerRef.sendMessage(Message.translation("server.general.disconnect.teleportToCoordinatesNotAllowed"));
       } else {
          world.getChunkStore().getChunkReferenceAsync(ChunkUtil.indexChunkFromBlock(packet.x, packet.y)).thenAcceptAsync(chunkRef -> {
-            BlockChunk blockChunkComponent = world.getChunkStore().getStore().getComponent((Ref<ChunkStore>)chunkRef, BlockChunk.getComponentType());
-            assert blockChunkComponent != null;
-            Vector3d position = new Vector3d(packet.x, blockChunkComponent.getHeight(packet.x, packet.y) + 2, packet.y);
-            Teleport teleportComponent = Teleport.createForPlayer(null, position, new Rotation3f(0.0F, 0.0F, 0.0F));
-            world.getEntityStore().getStore().addComponent(playerRef.getReference(), Teleport.getComponentType(), teleportComponent);
+            if (ref.isValid()) {
+               Store<EntityStore> entityStore = ref.getStore();
+               Store<ChunkStore> chunkStore = chunkRef.getStore();
+               BlockChunk blockChunkComponent = chunkStore.getComponent((Ref<ChunkStore>)chunkRef, BlockChunk.getComponentType());
+               assert blockChunkComponent != null;
+               Vector3d position = new Vector3d(packet.x, blockChunkComponent.getHeight(packet.x, packet.y) + 2, packet.y);
+               HeadRotation headRotation = entityStore.getComponent(ref, HeadRotation.getComponentType());
+               Rotation3fc rotation = headRotation != null ? headRotation.getRotation() : Rotation3f.ZERO;
+               Teleport teleportComponent = Teleport.createForPlayer(null, position, rotation);
+               entityStore.addComponent(ref, Teleport.getComponentType(), teleportComponent);
+            }
          }, world);
       }
    }

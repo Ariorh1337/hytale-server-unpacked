@@ -8,7 +8,6 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 
@@ -38,6 +37,6 @@ public class SetDensity extends SequenceBrushOperation {
       @Nonnull BrushConfigCommandExecutor brushConfigCommandExecutor,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
-      brushConfig.setDensity(MathUtil.clamp(this.density, 1, 100));
+      brushConfig.setDensity(this.density);
    }
 }

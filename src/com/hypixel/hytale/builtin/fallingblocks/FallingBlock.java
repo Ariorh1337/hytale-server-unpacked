@@ -19,7 +19,6 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.fallingblocks.
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.BlockEntity;
 import com.hypixel.hytale.server.core.modules.entity.component.BoundingBox;
-import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.hitboxcollision.HitboxCollision;
 import com.hypixel.hytale.server.core.modules.entity.hitboxcollision.HitboxCollisionConfig;
@@ -104,10 +103,10 @@ public class FallingBlock implements Component<EntityStore> {
          holder.addComponent(getComponentType(), new FallingBlock(fallingBlockSettings));
          BlockEntity blockEntityComponent = new BlockEntity(blockType.getId());
          holder.addComponent(BlockEntity.getComponentType(), blockEntityComponent);
-         holder.addComponent(TransformComponent.getComponentType(), new TransformComponent(position, new Rotation3f()));
          holder.addComponent(
-            HeadRotation.getComponentType(),
-            new HeadRotation(
+            TransformComponent.getComponentType(),
+            new TransformComponent(
+               position,
                new Rotation3f((float)rotation.pitch().getRadians(), (float)rotation.yaw().getRadians() + (float) Math.PI, (float)rotation.roll().getRadians())
             )
          );

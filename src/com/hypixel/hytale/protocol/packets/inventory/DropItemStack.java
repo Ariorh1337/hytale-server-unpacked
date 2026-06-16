@@ -52,13 +52,17 @@ public class DropItemStack implements Packet, ToServerPacket {
    public static DropItemStack deserialize(@Nonnull ByteBuf buf, int offset) {
       if (buf.readableBytes() - offset < 12) {
          throw ProtocolException.bufferTooSmall("DropItemStack", 12, buf.readableBytes() - offset);
+      } else {
+         DropItemStack obj = new DropItemStack();
+         obj.inventorySectionId = buf.getIntLE(offset + 0);
+         obj.slotId = buf.getIntLE(offset + 4);
+         obj.quantity = buf.getIntLE(offset + 8);
+         if (obj.quantity < 1) {
+            throw ProtocolException.valueBelowMinimum("Quantity", obj.quantity, 1.0);
+         } else {
+            return obj;
+         }
       }
-
-      DropItemStack obj = new DropItemStack();
-      obj.inventorySectionId = buf.getIntLE(offset + 0);
-      obj.slotId = buf.getIntLE(offset + 4);
-      obj.quantity = buf.getIntLE(offset + 8);
-      return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -109,6 +113,10 @@ public class DropItemStack implements Packet, ToServerPacket {
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeIntLE(this.inventorySectionId);
       buf.writeIntLE(this.slotId);
+      if (this.quantity < 1) {
+         throw ProtocolException.valueBelowMinimum("Quantity", this.quantity, 1.0);
+      }
+
       buf.writeIntLE(this.quantity);
    }
 
@@ -126,7 +134,12 @@ public class DropItemStack implements Packet, ToServerPacket {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 12 ? ValidationResult.error("Buffer too small: expected at least 12 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 12) {
+         return ValidationResult.error("Buffer too small: expected at least 12 bytes");
+      }
+
+      int quantityVal = buffer.getIntLE(offset + 8);
+      return quantityVal < 1 ? ValidationResult.error("Quantity value out of range") : ValidationResult.OK;
    }
 
    public DropItemStack clone() {

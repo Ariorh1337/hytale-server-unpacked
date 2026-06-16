@@ -250,27 +250,30 @@ public class FarmingSystems {
             assert coopBlockComponent != null;
             BlockModule.BlockStateInfo blockStateInfoComponent = commandBuffer.getComponent(ref, this.blockStateInfoComponentType);
             assert blockStateInfoComponent != null;
-            int index = blockStateInfoComponent.getIndex();
-            int x = ChunkUtil.xFromBlockInColumn(index);
-            int y = ChunkUtil.yFromBlockInColumn(index);
-            int z = ChunkUtil.zFromBlockInColumn(index);
-            BlockChunk blockChunkComponent = commandBuffer.getComponent(blockStateInfoComponent.getChunkRef(), BlockChunk.getComponentType());
-            assert blockChunkComponent != null;
-            ChunkColumn chunkColumnComponent = commandBuffer.getComponent(blockStateInfoComponent.getChunkRef(), ChunkColumn.getComponentType());
-            assert chunkColumnComponent != null;
-            Ref<ChunkStore> sectionRef = chunkColumnComponent.getSection(ChunkUtil.chunkCoordinate(y));
-            assert sectionRef != null;
-            BlockSection blockSectionComponent = commandBuffer.getComponent(sectionRef, BlockSection.getComponentType());
-            assert blockSectionComponent != null;
-            ChunkSection chunkSectionComponent = commandBuffer.getComponent(sectionRef, ChunkSection.getComponentType());
-            assert chunkSectionComponent != null;
-            int worldX = ChunkUtil.worldCoordFromLocalCoord(chunkSectionComponent.getX(), x);
-            int worldY = ChunkUtil.worldCoordFromLocalCoord(chunkSectionComponent.getY(), y);
-            int worldZ = ChunkUtil.worldCoordFromLocalCoord(chunkSectionComponent.getZ(), z);
-            World world = commandBuffer.getExternalData().getWorld();
-            Store<EntityStore> entityStore = world.getEntityStore().getStore();
-            WorldTimeResource worldTimeResource = entityStore.getResource(WorldTimeResource.getResourceType());
-            coopBlockComponent.handleBlockBroken(world, worldTimeResource, entityStore, worldX, worldY, worldZ);
+            Ref<ChunkStore> chunkRef = blockStateInfoComponent.getChunkRef();
+            if (chunkRef.isValid()) {
+               int index = blockStateInfoComponent.getIndex();
+               int x = ChunkUtil.xFromBlockInColumn(index);
+               int y = ChunkUtil.yFromBlockInColumn(index);
+               int z = ChunkUtil.zFromBlockInColumn(index);
+               BlockChunk blockChunkComponent = commandBuffer.getComponent(chunkRef, BlockChunk.getComponentType());
+               assert blockChunkComponent != null;
+               ChunkColumn chunkColumnComponent = commandBuffer.getComponent(chunkRef, ChunkColumn.getComponentType());
+               assert chunkColumnComponent != null;
+               Ref<ChunkStore> sectionRef = chunkColumnComponent.getSection(ChunkUtil.chunkCoordinate(y));
+               assert sectionRef != null;
+               BlockSection blockSectionComponent = commandBuffer.getComponent(sectionRef, BlockSection.getComponentType());
+               assert blockSectionComponent != null;
+               ChunkSection chunkSectionComponent = commandBuffer.getComponent(sectionRef, ChunkSection.getComponentType());
+               assert chunkSectionComponent != null;
+               int worldX = ChunkUtil.worldCoordFromLocalCoord(chunkSectionComponent.getX(), x);
+               int worldY = ChunkUtil.worldCoordFromLocalCoord(chunkSectionComponent.getY(), y);
+               int worldZ = ChunkUtil.worldCoordFromLocalCoord(chunkSectionComponent.getZ(), z);
+               World world = commandBuffer.getExternalData().getWorld();
+               Store<EntityStore> entityStore = world.getEntityStore().getStore();
+               WorldTimeResource worldTimeResource = entityStore.getResource(WorldTimeResource.getResourceType());
+               coopBlockComponent.handleBlockBroken(world, worldTimeResource, entityStore, worldX, worldY, worldZ);
+            }
          }
       }
 
@@ -646,59 +649,62 @@ public class FarmingSystems {
       private static void tickCoop(@Nonnull CommandBuffer<ChunkStore> commandBuffer, @Nonnull Ref<ChunkStore> blockRef, @Nonnull CoopBlock coopBlock) {
          BlockModule.BlockStateInfo blockStateInfoComponent = commandBuffer.getComponent(blockRef, BlockModule.BlockStateInfo.getComponentType());
          assert blockStateInfoComponent != null;
-         Store<EntityStore> store = commandBuffer.getExternalData().getWorld().getEntityStore().getStore();
-         WorldTimeResource worldTimeResource = store.getResource(WorldTimeResource.getResourceType());
-         FarmingCoopAsset coopAsset = coopBlock.getCoopAsset();
-         if (coopAsset != null) {
-            int index = blockStateInfoComponent.getIndex();
-            int x = ChunkUtil.xFromBlockInColumn(index);
-            int y = ChunkUtil.yFromBlockInColumn(index);
-            int z = ChunkUtil.zFromBlockInColumn(index);
-            BlockChunk blockChunkComponent = commandBuffer.getComponent(blockStateInfoComponent.getChunkRef(), BlockChunk.getComponentType());
-            assert blockChunkComponent != null;
-            ChunkColumn chunkColumnComponent = commandBuffer.getComponent(blockStateInfoComponent.getChunkRef(), ChunkColumn.getComponentType());
-            assert chunkColumnComponent != null;
-            Ref<ChunkStore> sectionRef = chunkColumnComponent.getSection(ChunkUtil.chunkCoordinate(y));
-            assert sectionRef != null;
-            BlockSection blockSectionComponent = commandBuffer.getComponent(sectionRef, BlockSection.getComponentType());
-            assert blockSectionComponent != null;
-            ChunkSection chunkSectionComponent = commandBuffer.getComponent(sectionRef, ChunkSection.getComponentType());
-            assert chunkSectionComponent != null;
-            int worldX = ChunkUtil.worldCoordFromLocalCoord(chunkSectionComponent.getX(), x);
-            int worldY = ChunkUtil.worldCoordFromLocalCoord(chunkSectionComponent.getY(), y);
-            int worldZ = ChunkUtil.worldCoordFromLocalCoord(chunkSectionComponent.getZ(), z);
+         Ref<ChunkStore> chunkRef = blockStateInfoComponent.getChunkRef();
+         if (chunkRef.isValid()) {
             World world = commandBuffer.getExternalData().getWorld();
-            long chunkIndex = ChunkUtil.indexChunkFromBlock(worldX, worldZ);
-            WorldChunk chunk = world.getChunkIfInMemory(chunkIndex);
-            double blockRotation = chunk.getRotation(worldX, worldY, worldZ).yaw().getRadians();
-            Vector3d spawnOffset = new Vector3d().set(coopAsset.getResidentSpawnOffset()).rotateY((float)blockRotation);
-            Vector3i coopLocation = new Vector3i(worldX, worldY, worldZ);
-            boolean tryCapture = coopAsset.getCaptureWildNPCsInRange();
-            float captureRange = coopAsset.getWildCaptureRadius();
-            if (tryCapture && captureRange >= 0.0F) {
-               world.execute(() -> {
-                  for (Ref<EntityStore> entity : TargetUtil.getAllEntitiesInSphere(Vector3iUtil.toVector3d(coopLocation), captureRange, store)) {
-                     coopBlock.tryPutWildResidentFromWild(store, entity, worldTimeResource, coopLocation);
-                  }
-               });
-            }
+            Store<EntityStore> store = world.getEntityStore().getStore();
+            WorldTimeResource worldTimeResource = store.getResource(WorldTimeResource.getResourceType());
+            FarmingCoopAsset coopAsset = coopBlock.getCoopAsset();
+            if (coopAsset != null) {
+               int index = blockStateInfoComponent.getIndex();
+               int x = ChunkUtil.xFromBlockInColumn(index);
+               int y = ChunkUtil.yFromBlockInColumn(index);
+               int z = ChunkUtil.zFromBlockInColumn(index);
+               BlockChunk blockChunkComponent = commandBuffer.getComponent(chunkRef, BlockChunk.getComponentType());
+               assert blockChunkComponent != null;
+               ChunkColumn chunkColumnComponent = commandBuffer.getComponent(chunkRef, ChunkColumn.getComponentType());
+               assert chunkColumnComponent != null;
+               Ref<ChunkStore> sectionRef = chunkColumnComponent.getSection(ChunkUtil.chunkCoordinate(y));
+               assert sectionRef != null;
+               BlockSection blockSectionComponent = commandBuffer.getComponent(sectionRef, BlockSection.getComponentType());
+               assert blockSectionComponent != null;
+               ChunkSection chunkSectionComponent = commandBuffer.getComponent(sectionRef, ChunkSection.getComponentType());
+               assert chunkSectionComponent != null;
+               int worldX = ChunkUtil.worldCoordFromLocalCoord(chunkSectionComponent.getX(), x);
+               int worldY = ChunkUtil.worldCoordFromLocalCoord(chunkSectionComponent.getY(), y);
+               int worldZ = ChunkUtil.worldCoordFromLocalCoord(chunkSectionComponent.getZ(), z);
+               WorldChunk worldChunkComponent = commandBuffer.getComponent(chunkRef, WorldChunk.getComponentType());
+               assert worldChunkComponent != null;
+               double blockRotation = blockSectionComponent.getRotation(x, y, z).yaw().getRadians();
+               Vector3d spawnOffset = new Vector3d().set(coopAsset.getResidentSpawnOffset()).rotateY((float)blockRotation);
+               Vector3i coopLocation = new Vector3i(worldX, worldY, worldZ);
+               boolean tryCapture = coopAsset.getCaptureWildNPCsInRange();
+               float captureRange = coopAsset.getWildCaptureRadius();
+               if (tryCapture && captureRange >= 0.0F) {
+                  world.execute(() -> {
+                     for (Ref<EntityStore> entity : TargetUtil.getAllEntitiesInSphere(Vector3iUtil.toVector3d(coopLocation), captureRange, store)) {
+                        coopBlock.tryPutWildResidentFromWild(store, entity, worldTimeResource, coopLocation);
+                     }
+                  });
+               }
 
-            if (coopBlock.shouldResidentsBeInCoop(worldTimeResource)) {
-               world.execute(() -> coopBlock.ensureNoResidentsInWorld(store));
-            } else {
-               world.execute(() -> {
-                  coopBlock.ensureSpawnResidentsInWorld(world, store, Vector3iUtil.toVector3d(coopLocation), spawnOffset);
-                  coopBlock.generateProduceToInventory(worldTimeResource);
-                  Vector3i blockPos = new Vector3i(worldX, worldY, worldZ);
-                  BlockType currentBlockType = world.getBlockType(blockPos);
-                  assert currentBlockType != null;
-                  chunk.setBlockInteractionState(blockPos, currentBlockType, coopBlock.hasProduce() ? "Produce_Ready" : "default");
-               });
-            }
+               if (coopBlock.shouldResidentsBeInCoop(worldTimeResource)) {
+                  world.execute(() -> coopBlock.ensureNoResidentsInWorld(store));
+               } else {
+                  world.execute(() -> {
+                     coopBlock.ensureSpawnResidentsInWorld(world, store, Vector3iUtil.toVector3d(coopLocation), spawnOffset);
+                     coopBlock.generateProduceToInventory(worldTimeResource);
+                     Vector3i blockPos = new Vector3i(worldX, worldY, worldZ);
+                     BlockType currentBlockType = BlockType.getAssetMap().getAsset(blockSectionComponent.get(x, y, z));
+                     assert currentBlockType != null;
+                     worldChunkComponent.setBlockInteractionState(blockPos, currentBlockType, coopBlock.hasProduce() ? "Produce_Ready" : "default");
+                  });
+               }
 
-            Instant nextTickInstant = coopBlock.getNextScheduledTick(worldTimeResource);
-            if (nextTickInstant != null) {
-               blockSectionComponent.scheduleTick(ChunkUtil.indexBlock(x, y, z), nextTickInstant);
+               Instant nextTickInstant = coopBlock.getNextScheduledTick(worldTimeResource);
+               if (nextTickInstant != null) {
+                  blockSectionComponent.scheduleTick(ChunkUtil.indexBlock(x, y, z), nextTickInstant);
+               }
             }
          }
       }

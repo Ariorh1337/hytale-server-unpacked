@@ -457,7 +457,7 @@ public class AssetSpecificFunctionality {
       camera.cameraPosition = new Vector3f(-translation.x, -translation.y, 0.0F);
       Vector3f rotation = iconProperties.getRotation() != null ? iconProperties.getRotation() : defaultIconProperties.getRotation();
       camera.cameraOrientation = new Vector3f((float)(-Math.toRadians(rotation.x)), (float)(-Math.toRadians(rotation.y)), (float)(-Math.toRadians(rotation.z)));
-      if (item.getBlockId() != null) {
+      if (item.getModel() == null && item.getBlockId() != null) {
          BlockType blockType = (BlockType)((BlockTypeAssetMap)BlockType.getAssetStore().getAssetMap()).getAsset(item.getBlockId());
          if (blockType != null) {
             camera.modelScale = camera.modelScale * blockType.getCustomModelScale();

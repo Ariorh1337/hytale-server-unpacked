@@ -32,11 +32,9 @@ public class DeathMarkerProvider implements WorldMapManager.MarkerProvider {
 
    private static void addDeathMarker(@Nonnull MarkersCollector collector, @Nonnull PlayerDeathPositionData deathPosition) {
       Transform transform = deathPosition.getTransform();
-      if (collector.isInViewDistance(transform)) {
-         int deathDay = deathPosition.getDay();
-         Message name = Message.translation("server.map.markers.death").param("day", deathDay);
-         MapMarkerBuilder builder = new MapMarkerBuilder(deathPosition.getMarkerId(), "Death.png", transform).withName(name);
-         collector.addIgnoreViewDistance(builder.build());
-      }
+      int deathDay = deathPosition.getDay();
+      Message name = Message.translation("server.map.markers.death").param("day", deathDay);
+      MapMarkerBuilder builder = new MapMarkerBuilder(deathPosition.getMarkerId(), "Death.png", transform).withName(name);
+      collector.addIgnoreViewDistance(builder.build());
    }
 }

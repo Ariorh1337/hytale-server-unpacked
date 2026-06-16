@@ -5,12 +5,14 @@ import com.hypixel.hytale.builtin.beds.sleep.components.PlayerSomnolence;
 import com.hypixel.hytale.builtin.beds.sleep.resources.WorldSleep;
 import com.hypixel.hytale.builtin.beds.sleep.resources.WorldSlumber;
 import com.hypixel.hytale.builtin.beds.sleep.resources.WorldSomnolence;
+import com.hypixel.hytale.builtin.mounts.MountedComponent;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.ResourceType;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.system.tick.TickingSystem;
+import com.hypixel.hytale.protocol.MountController;
 import com.hypixel.hytale.server.core.modules.time.WorldTimeResource;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -27,15 +29,19 @@ public class UpdateWorldSlumberSystem extends TickingSystem<EntityStore> {
    private final ResourceType<EntityStore, WorldSomnolence> worldSomnolenceResourceType;
    @Nonnull
    private final ResourceType<EntityStore, WorldTimeResource> worldTimeResourceType;
+   @Nonnull
+   private final ComponentType<EntityStore, MountedComponent> mountedComponentType;
 
    public UpdateWorldSlumberSystem(
       @Nonnull ComponentType<EntityStore, PlayerSomnolence> playerSomnolenceComponentType,
       @Nonnull ResourceType<EntityStore, WorldSomnolence> worldSomnolenceResourceType,
-      @Nonnull ResourceType<EntityStore, WorldTimeResource> worldTimeResourceType
+      @Nonnull ResourceType<EntityStore, WorldTimeResource> worldTimeResourceType,
+      @Nonnull ComponentType<EntityStore, MountedComponent> mountedComponentType
    ) {
       this.playerSomnolenceComponentType = playerSomnolenceComponentType;
       this.worldSomnolenceResourceType = worldSomnolenceResourceType;
       this.worldTimeResourceType = worldTimeResourceType;
+      this.mountedComponentType = mountedComponentType;
    }
 
    @Override
@@ -60,6 +66,10 @@ public class UpdateWorldSlumberSystem extends TickingSystem<EntityStore> {
                   Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
                   PlayerSomnolence sleepComponent = PlayerSleep.MorningWakeUp.createComponent(itsMorningTimeToWAKEUP ? now : null);
                   commandBuffer.putComponent(ref, this.playerSomnolenceComponentType, sleepComponent);
+                  MountedComponent mounted = archetypeChunk.getComponent(index, this.mountedComponentType);
+                  if (mounted != null && mounted.getControllerType() == MountController.BlockMount) {
+                     commandBuffer.tryRemoveComponent(ref, this.mountedComponentType);
+                  }
                }
             });
          }

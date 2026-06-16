@@ -17,7 +17,6 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.fallingblocks.FallingBlockSettings;
 import com.hypixel.hytale.server.core.entity.entities.BlockEntity;
 import com.hypixel.hytale.server.core.modules.entity.component.BoundingBox;
-import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.item.ItemPrePhysicsSystem;
 import com.hypixel.hytale.server.core.modules.physics.SimplePhysicsProvider;
@@ -36,8 +35,6 @@ public class FallingBlockTickingSystem extends EntityTickingSystem<EntityStore> 
    @Nonnull
    private final ComponentType<EntityStore, TransformComponent> transformComponentType;
    @Nonnull
-   private final ComponentType<EntityStore, HeadRotation> headRotationComponentType;
-   @Nonnull
    private final ComponentType<EntityStore, Velocity> velocityComponentType;
    @Nonnull
    private final ComponentType<EntityStore, PhysicsValues> physicsValuesComponentType;
@@ -51,7 +48,6 @@ public class FallingBlockTickingSystem extends EntityTickingSystem<EntityStore> 
    public FallingBlockTickingSystem(
       @Nonnull ComponentType<EntityStore, FallingBlock> fallingBlockComponentType,
       @Nonnull ComponentType<EntityStore, TransformComponent> transformComponentType,
-      @Nonnull ComponentType<EntityStore, HeadRotation> headRotationComponentType,
       @Nonnull ComponentType<EntityStore, Velocity> velocityComponentType,
       @Nonnull ComponentType<EntityStore, PhysicsValues> physicsValuesComponentType,
       @Nonnull ComponentType<EntityStore, BoundingBox> boundingBoxComponentType,
@@ -59,7 +55,6 @@ public class FallingBlockTickingSystem extends EntityTickingSystem<EntityStore> 
    ) {
       this.fallingBlockComponentType = fallingBlockComponentType;
       this.transformComponentType = transformComponentType;
-      this.headRotationComponentType = headRotationComponentType;
       this.velocityComponentType = velocityComponentType;
       this.physicsValuesComponentType = physicsValuesComponentType;
       this.boundingBoxComponentType = boundingBoxComponentType;
@@ -67,7 +62,6 @@ public class FallingBlockTickingSystem extends EntityTickingSystem<EntityStore> 
       this.query = Query.and(
          fallingBlockComponentType,
          transformComponentType,
-         headRotationComponentType,
          velocityComponentType,
          physicsValuesComponentType,
          boundingBoxComponentType,
@@ -119,10 +113,8 @@ public class FallingBlockTickingSystem extends EntityTickingSystem<EntityStore> 
             if (physicsProvider.isOnGround()) {
                String blockTypeKey = blockEntityComponent.getBlockTypeKey();
                BlockType blockType = BlockType.getAssetMap().getAsset(blockTypeKey);
-               HeadRotation headRotationComponent = archetypeChunk.getComponent(index, this.headRotationComponentType);
-               assert headRotationComponent != null;
                if (blockType != null && blockType.getMaterial() != BlockMaterial.Empty) {
-                  Rotation3f transformRotation = headRotationComponent.getRotation();
+                  Rotation3f transformRotation = transformComponent.getRotation();
                   RotationTuple rotationTuple = RotationTuple.of(
                      Rotation.closestOfDegrees((float)Math.toDegrees(transformRotation.y - (float) Math.PI)),
                      Rotation.closestOfDegrees((float)Math.toDegrees(transformRotation.x)),

@@ -8,9 +8,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -59,6 +61,12 @@ public abstract class EventBusRegistry<KeyType, EventType extends IBaseEvent<Key
 
    public boolean isAlive() {
       return !this.shutdown;
+   }
+
+   @Nonnull
+   protected EventRegistration<KeyType, EventType> deadRegistration(@Nonnull String operation) {
+      this.logger.at(Level.FINE).atMostEvery(1, TimeUnit.MINUTES).log("Ignoring %s on shut-down EventRegistry for %s", operation, this.eventClass.getName());
+      return new EventRegistration<>(this.eventClass, this::isAlive, () -> {});
    }
 
    public abstract EventRegistration<KeyType, EventType> register(short var1, @Nullable KeyType var2, @Nonnull Consumer<EventType> var3);

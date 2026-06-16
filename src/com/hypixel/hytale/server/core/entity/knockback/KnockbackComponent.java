@@ -14,7 +14,7 @@ import org.joml.Vector3d;
 
 public class KnockbackComponent implements Component<EntityStore> {
    @Nonnull
-   private Vector3d velocity;
+   private final Vector3d velocity = new Vector3d();
    private ChangeVelocityType velocityType = ChangeVelocityType.Add;
    @Nullable
    private VelocityConfig velocityConfig;
@@ -33,7 +33,7 @@ public class KnockbackComponent implements Component<EntityStore> {
    }
 
    public void setVelocity(@Nonnull Vector3d velocity) {
-      this.velocity = velocity;
+      this.velocity.set(velocity);
    }
 
    public ChangeVelocityType getVelocityType() {
@@ -89,11 +89,12 @@ public class KnockbackComponent implements Component<EntityStore> {
    @Override
    public Component<EntityStore> clone() {
       KnockbackComponent component = new KnockbackComponent();
-      component.velocity = this.velocity;
+      component.velocity.set(this.velocity);
       component.velocityType = this.velocityType;
       component.velocityConfig = this.velocityConfig;
       component.duration = this.duration;
       component.timer = this.timer;
+      component.modifiers = new DoubleArrayList(this.modifiers);
       return component;
    }
 }

@@ -67,7 +67,7 @@ public class EffectControllerComponent implements Component<EntityStore> {
       this.changes.addAll(effectControllerComponent.changes);
       ActiveEntityEffect[] activeEntityEffects = effectControllerComponent.getAllActiveEntityEffects();
       if (activeEntityEffects != null) {
-         effectControllerComponent.addActiveEntityEffects(activeEntityEffects);
+         this.addActiveEntityEffects(activeEntityEffects);
       }
    }
 

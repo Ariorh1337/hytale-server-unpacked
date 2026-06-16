@@ -64,6 +64,10 @@ public class SmartMoveItemStack implements Packet, ToServerPacket, ToClientPacke
       obj.fromSectionId = buf.getIntLE(offset + 0);
       obj.fromSlotId = buf.getIntLE(offset + 4);
       obj.quantity = buf.getIntLE(offset + 8);
+      if (obj.quantity < 1) {
+         throw ProtocolException.valueBelowMinimum("Quantity", obj.quantity, 1.0);
+      }
+
       obj.moveType = SmartMoveType.fromValue(buf.getByte(offset + 12));
       return obj;
    }
@@ -129,6 +133,10 @@ public class SmartMoveItemStack implements Packet, ToServerPacket, ToClientPacke
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeIntLE(this.fromSectionId);
       buf.writeIntLE(this.fromSlotId);
+      if (this.quantity < 1) {
+         throw ProtocolException.valueBelowMinimum("Quantity", this.quantity, 1.0);
+      }
+
       buf.writeIntLE(this.quantity);
       buf.writeByte(this.moveType.getValue());
    }
@@ -152,8 +160,13 @@ public class SmartMoveItemStack implements Packet, ToServerPacket, ToClientPacke
          return ValidationResult.error("Buffer too small: expected at least 13 bytes");
       }
 
-      int v = buffer.getByte(offset + 12) & 255;
-      return v >= 3 ? ValidationResult.error("Invalid SmartMoveType value for MoveType") : ValidationResult.OK;
+      int quantityVal = buffer.getIntLE(offset + 8);
+      if (quantityVal < 1) {
+         return ValidationResult.error("Quantity value out of range");
+      }
+
+      quantityVal = buffer.getByte(offset + 12) & 255;
+      return quantityVal >= 3 ? ValidationResult.error("Invalid SmartMoveType value for MoveType") : ValidationResult.OK;
    }
 
    public SmartMoveItemStack clone() {

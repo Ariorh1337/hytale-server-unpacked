@@ -24,24 +24,27 @@ public class EntitySnapshotHistoryCommand extends AbstractWorldCommand {
    @Override
    protected void execute(@Nonnull CommandContext context, @Nonnull World world, @Nonnull Store<EntityStore> store) {
       ComponentType<EntityStore, SnapshotBuffer> snapshotBufferComponentType = SnapshotBuffer.getComponentType();
-      store.forEachChunk(snapshotBufferComponentType, (chunk, cmdBuffer) -> {
-         for (int idx = 0; idx < chunk.size(); idx++) {
-            SnapshotBuffer snapshotBufferComponent = chunk.getComponent(idx, snapshotBufferComponentType);
-            assert snapshotBufferComponent != null;
-            if (!snapshotBufferComponent.isInitialized()) {
-               return;
-            }
-
-            for (int i = snapshotBufferComponent.getOldestTickIndex(); i <= snapshotBufferComponent.getCurrentTickIndex(); i++) {
-               EntitySnapshot snapshot = snapshotBufferComponent.getSnapshot(i);
-               assert snapshot != null;
-               Vector3d pos = snapshot.getPosition();
-               SpatialResource<Ref<EntityStore>, EntityStore> playerSpatialResource = cmdBuffer.getResource(EntityModule.get().getPlayerSpatialResourceType());
-               List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
-               playerSpatialResource.getSpatialStructure().collect(pos, 75.0, results);
-               ParticleUtil.spawnParticleEffect("Example_Simple", pos.x, pos.y, pos.z, results, cmdBuffer);
+      store.forEachChunk(
+         snapshotBufferComponentType,
+         (chunk, cmdBuffer) -> {
+            for (int idx = 0; idx < chunk.size(); idx++) {
+               SnapshotBuffer snapshotBufferComponent = chunk.getComponent(idx, snapshotBufferComponentType);
+               assert snapshotBufferComponent != null;
+               if (snapshotBufferComponent.isInitialized()) {
+                  for (int i = snapshotBufferComponent.getOldestTickIndex(); i <= snapshotBufferComponent.getCurrentTickIndex(); i++) {
+                     EntitySnapshot snapshot = snapshotBufferComponent.getSnapshot(i);
+                     assert snapshot != null;
+                     Vector3d pos = snapshot.getPosition();
+                     SpatialResource<Ref<EntityStore>, EntityStore> playerSpatialResource = cmdBuffer.getResource(
+                        EntityModule.get().getPlayerSpatialResourceType()
+                     );
+                     List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+                     playerSpatialResource.getSpatialStructure().collect(pos, 75.0, results);
+                     ParticleUtil.spawnParticleEffect("Example_Simple", pos.x, pos.y, pos.z, results, cmdBuffer);
+                  }
+               }
             }
          }
-      });
+      );
    }
 }

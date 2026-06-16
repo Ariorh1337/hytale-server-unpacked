@@ -11,6 +11,7 @@ import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.RootInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInstantInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.util.InteractionValidation;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.blackboard.Blackboard;
@@ -21,6 +22,7 @@ import java.util.logging.Level;
 import javax.annotation.Nonnull;
 
 public class UseNPCInteraction extends SimpleInstantInteraction {
+   private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
    public static final BuilderCodec<UseNPCInteraction> CODEC = BuilderCodec.<SimpleInstantInteraction>builder(
          UseNPCInteraction.class, UseNPCInteraction::new, SimpleInstantInteraction.CODEC
       )
@@ -47,6 +49,10 @@ public class UseNPCInteraction extends SimpleInstantInteraction {
       } else {
          Ref<EntityStore> targetRef = context.getTargetEntity();
          if (targetRef == null) {
+            context.getState().state = InteractionState.Failed;
+         } else if (!InteractionValidation.canPlayerInteractWithEntity(context.getEntity(), commandBuffer, context.getHeldItem(), targetRef)) {
+            LOGGER.at(Level.WARNING)
+               .log("Entity %d failed use NPC interaction distance check for target entity %d", (int)context.getEntity().getIndex(), (int)targetRef.getIndex());
             context.getState().state = InteractionState.Failed;
          } else {
             NPCEntity npcComponent = commandBuffer.getComponent(targetRef, NPCEntity.getComponentType());

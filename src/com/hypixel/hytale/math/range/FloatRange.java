@@ -17,7 +17,7 @@ public class FloatRange {
    public FloatRange(float inclusiveMin, float inclusiveMax) {
       this.inclusiveMin = inclusiveMin;
       this.inclusiveMax = inclusiveMax;
-      this.range = inclusiveMax - inclusiveMin + 1.0F;
+      this.range = inclusiveMax - inclusiveMin;
    }
 
    public float getInclusiveMin() {
@@ -30,12 +30,12 @@ public class FloatRange {
 
    public void setInclusiveMin(float inclusiveMin) {
       this.inclusiveMin = inclusiveMin;
-      this.range = this.inclusiveMax - inclusiveMin + 1.0F;
+      this.range = this.inclusiveMax - inclusiveMin;
    }
 
    public void setInclusiveMax(float inclusiveMax) {
       this.inclusiveMax = inclusiveMax;
-      this.range = inclusiveMax - this.inclusiveMin + 1.0F;
+      this.range = inclusiveMax - this.inclusiveMin;
    }
 
    public float getFloat(float factor) {
