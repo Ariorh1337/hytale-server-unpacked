@@ -876,15 +876,17 @@ public class EntityTrackerSystems {
 
          while (iterator.hasNext()) {
             Ref<EntityStore> targetRef = iterator.next();
-            BoundingBox targetBoundingBoxComponent = commandBuffer.getComponent(targetRef, this.boundingBoxComponentType);
-            if (targetBoundingBoxComponent != null) {
-               TransformComponent targetTransformComponent = commandBuffer.getComponent(targetRef, TransformComponent.getComponentType());
-               if (targetTransformComponent != null) {
-                  double distanceSq = targetTransformComponent.getPosition().distanceSquared(position);
-                  double maximumThickness = targetBoundingBoxComponent.getBoundingBox().getMaximumThickness();
-                  if (maximumThickness < ENTITY_LOD_RATIO * distanceSq) {
-                     entityViewerComponent.lodExcludedCount++;
-                     iterator.remove();
+            if (targetRef.isValid()) {
+               BoundingBox targetBoundingBoxComponent = commandBuffer.getComponent(targetRef, this.boundingBoxComponentType);
+               if (targetBoundingBoxComponent != null) {
+                  TransformComponent targetTransformComponent = commandBuffer.getComponent(targetRef, TransformComponent.getComponentType());
+                  if (targetTransformComponent != null) {
+                     double distanceSq = targetTransformComponent.getPosition().distanceSquared(position);
+                     double maximumThickness = targetBoundingBoxComponent.getBoundingBox().getMaximumThickness();
+                     if (maximumThickness < ENTITY_LOD_RATIO * distanceSq) {
+                        entityViewerComponent.lodExcludedCount++;
+                        iterator.remove();
+                     }
                   }
                }
             }

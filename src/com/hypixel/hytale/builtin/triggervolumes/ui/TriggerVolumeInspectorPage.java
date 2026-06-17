@@ -1,5 +1,6 @@
 package com.hypixel.hytale.builtin.triggervolumes.ui;
 
+import com.hypixel.hytale.assetstore.AssetPack;
 import com.hypixel.hytale.assetstore.AssetRegistry;
 import com.hypixel.hytale.assetstore.AssetStore;
 import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
@@ -41,8 +42,8 @@ import com.hypixel.hytale.protocol.packets.player.HideTriggerVolumePastePrefabPr
 import com.hypixel.hytale.protocol.packets.player.ShowTriggerVolumePastePrefabPreview;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeShapeType;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolSelection;
+import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Message;
-import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.asset.type.buildertool.config.PrefabListAsset;
 import com.hypixel.hytale.server.core.asset.type.environment.config.Environment;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
@@ -56,6 +57,9 @@ import com.hypixel.hytale.server.core.ui.DropdownEntryInfo;
 import com.hypixel.hytale.server.core.ui.LocalizableString;
 import com.hypixel.hytale.server.core.ui.PatchStyle;
 import com.hypixel.hytale.server.core.ui.Value;
+import com.hypixel.hytale.server.core.ui.browser.AssetPackSaveBrowser;
+import com.hypixel.hytale.server.core.ui.browser.AssetPackSaveBrowserConfig;
+import com.hypixel.hytale.server.core.ui.browser.AssetPackSaveBrowserEventData;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
@@ -66,7 +70,6 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import com.hypixel.hytale.server.core.util.BsonUtil;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -224,6 +227,8 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
    private String assetPickerSearchQuery = "";
    @Nonnull
    private final Set<String> missingOptionLangKeys = new HashSet<>();
+   @Nonnull
+   private final AssetPackSaveBrowser presetPackBrowser = new AssetPackSaveBrowser(AssetPackSaveBrowserConfig.defaults());
 
    public TriggerVolumeInspectorPage(
       @Nonnull PlayerRef playerRef,
@@ -263,6 +268,7 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
 
       this.buildSelectedPane(cmd, evt);
       this.bindStaticEvents(evt);
+      this.presetPackBrowser.buildUI(cmd, evt);
    }
 
    @Override
@@ -281,7 +287,15 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
    }
 
    public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull TriggerVolumeInspectorPage.PageData data) {
-      if (data.action != null) {
+      AssetPackSaveBrowser.ActionResult packResult = this.presetPackBrowser
+         .handleAction(data.action != null ? data.action.name() : null, data.packBrowserData, "#PresetSavePage #SelectedPackLabel");
+      if (packResult != null) {
+         if (packResult.errorKey() != null) {
+            this.playerRef.sendMessage(Message.translation(packResult.errorKey()));
+         }
+
+         this.sendUpdate(packResult.commandBuilder(), packResult.eventBuilder(), false);
+      } else if (data.action != null) {
          switch (data.action) {
             case Select:
                this.onSelect(data);
@@ -912,6 +926,7 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
       evt.addEventBinding(
          CustomUIEventBindingType.Activating, "#LoadPresetButton", new EventData().append("Action", TriggerVolumeInspectorPage.Action.OpenPresetLoad.name())
       );
+      this.presetPackBrowser.buildEventBindings(evt, "#BrowsePackButton");
       evt.addEventBinding(
          CustomUIEventBindingType.ValueChanged,
          "#PresetName #Input",
@@ -2769,6 +2784,10 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
       cmd.set("#PresetSavePage.Visible", true);
       cmd.set("#PresetName #Input.Value", "");
       cmd.set("#ConfirmSavePresetButton.Disabled", true);
+      if (this.presetPackBrowser.hasSelectedPack()) {
+         cmd.set("#PresetSavePage #SelectedPackLabel.Text", this.presetPackBrowser.getSelectedPackDisplayName());
+      }
+
       this.sendUpdate(cmd);
    }
 
@@ -2780,28 +2799,48 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
 
    private void onConfirmSavePreset(@Nonnull TriggerVolumeInspectorPage.PageData data) {
       if (data.presetName != null && !data.presetName.isBlank()) {
-         try {
-            Path assetRoot = AssetModule.get().getAssetPacks().get(0).getRoot();
-            Path path = assetRoot.resolve("Server").resolve("TriggerVolumes").resolve("Effects").resolve(data.presetName + ".json");
-            Files.createDirectories(path.getParent());
-            TriggerEffectAsset asset = TriggerEffectAsset.create(
-               data.presetName,
-               this.currentConditions().toArray(TriggerCondition[]::new),
-               this.currentEffects(TriggerVolumeInspectorPage.EffectListKind.EFFECT).toArray(TriggerEffect[]::new),
-               this.currentEffects(TriggerVolumeInspectorPage.EffectListKind.REJECTION_EFFECT).toArray(TriggerEffect[]::new),
-               this.currentConditionTiming()
-            );
-            BsonUtil.writeSync(path, TriggerEffectAsset.CODEC, asset, LOGGER);
-            this.playerRef.sendMessage(Message.translation("server.customUI.triggerVolumeEffectEditor.presetSaved").param("name", data.presetName));
-         } catch (Exception exception) {
-            LOGGER.at(Level.SEVERE).log("Failed to save effect preset '%s'", data.presetName, exception);
-            this.playerRef.sendMessage(Message.translation("server.customUI.triggerVolumeEffectEditor.presetSaveError").param("error", exception.getMessage()));
+         String presetName = data.presetName.trim();
+         if (!presetName.contains("..") && !presetName.contains("/") && !presetName.contains("\\")) {
+            AssetPack targetPack = this.presetPackBrowser.getSelectedPack();
+            if (targetPack == null) {
+               this.playerRef.sendMessage(Message.translation("server.customUI.assetPackBrowser.packRequired"));
+            } else {
+               AssetStore<String, TriggerEffectAsset, DefaultAssetMap<String, TriggerEffectAsset>> store = AssetRegistry.getAssetStore(TriggerEffectAsset.class);
+               if (store != null) {
+                  TriggerEffectAsset asset = TriggerEffectAsset.create(
+                     presetName,
+                     this.currentConditions().toArray(TriggerCondition[]::new),
+                     this.currentEffects(TriggerVolumeInspectorPage.EffectListKind.EFFECT).toArray(TriggerEffect[]::new),
+                     this.currentEffects(TriggerVolumeInspectorPage.EffectListKind.REJECTION_EFFECT).toArray(TriggerEffect[]::new),
+                     this.currentConditionTiming()
+                  );
+                  Path effectsDir = targetPack.getRoot().resolve("Server").resolve("TriggerVolumes").resolve("Effects");
+                  UICommandBuilder cmd = new UICommandBuilder();
+                  cmd.set("#PresetSavePage.Visible", false);
+                  cmd.set("#MainPage.Visible", true);
+                  this.sendUpdate(cmd);
+                  HytaleServer.SCHEDULED_EXECUTOR
+                     .execute(
+                        () -> {
+                           try {
+                              Files.createDirectories(effectsDir);
+                              store.writeAssetToDisk(targetPack, Map.of(Path.of(presetName + ".json"), asset));
+                              this.playerRef
+                                 .sendMessage(Message.translation("server.customUI.triggerVolumeEffectEditor.presetSaved").param("name", presetName));
+                           } catch (Exception exception) {
+                              LOGGER.at(Level.SEVERE).log("Failed to save effect preset '%s'", presetName, exception);
+                              this.playerRef
+                                 .sendMessage(
+                                    Message.translation("server.customUI.triggerVolumeEffectEditor.presetSaveError").param("error", exception.getMessage())
+                                 );
+                           }
+                        }
+                     );
+               }
+            }
+         } else {
+            this.playerRef.sendMessage(Message.translation("server.customUI.triggerVolumeEffectEditor.presetInvalidName"));
          }
-
-         UICommandBuilder cmd = new UICommandBuilder();
-         cmd.set("#PresetSavePage.Visible", false);
-         cmd.set("#MainPage.Visible", true);
-         this.sendUpdate(cmd);
       }
    }
 
@@ -4031,7 +4070,15 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
       AssetPickerSelect,
       ConfirmAssetPicker,
       PreviewSound,
-      CancelAssetPicker;
+      CancelAssetPicker,
+      OpenPackBrowser,
+      ConfirmPackBrowser,
+      CancelPackBrowser,
+      OpenCreatePack,
+      CreatePack,
+      CancelCreatePack,
+      PackSearch,
+      PackSelect;
    }
 
    private enum EffectListKind {
@@ -4131,6 +4178,40 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
          .add()
          .append(new KeyedCodec<>("AssetPickerSelection", Codec.STRING, false), (o, v) -> o.assetPickerSelection = v, o -> o.assetPickerSelection)
          .add()
+         .append(new KeyedCodec<>("Pack", Codec.STRING, false), (o, v) -> o.packBrowserData.pack = v, o -> o.packBrowserData.pack)
+         .add()
+         .append(new KeyedCodec<>("@PackSearch", Codec.STRING, false), (o, v) -> o.packBrowserData.search = v, o -> o.packBrowserData.search)
+         .add()
+         .append(new KeyedCodec<>("@CreateName", Codec.STRING, false), (o, v) -> o.packBrowserData.createName = v, o -> o.packBrowserData.createName)
+         .add()
+         .append(new KeyedCodec<>("@CreateGroup", Codec.STRING, false), (o, v) -> o.packBrowserData.createGroup = v, o -> o.packBrowserData.createGroup)
+         .add()
+         .append(
+            new KeyedCodec<>("@CreateDescription", Codec.STRING, false),
+            (o, v) -> o.packBrowserData.createDescription = v,
+            o -> o.packBrowserData.createDescription
+         )
+         .add()
+         .append(new KeyedCodec<>("@CreateVersion", Codec.STRING, false), (o, v) -> o.packBrowserData.createVersion = v, o -> o.packBrowserData.createVersion)
+         .add()
+         .append(new KeyedCodec<>("@CreateWebsite", Codec.STRING, false), (o, v) -> o.packBrowserData.createWebsite = v, o -> o.packBrowserData.createWebsite)
+         .add()
+         .append(
+            new KeyedCodec<>("@CreateAuthorName", Codec.STRING, false),
+            (o, v) -> o.packBrowserData.createAuthorName = v,
+            o -> o.packBrowserData.createAuthorName
+         )
+         .add()
+         .append(new KeyedCodec<>("ValidateCreate", Codec.STRING, false), (o, v) -> o.packBrowserData.validateCreate = v, o -> o.packBrowserData.validateCreate)
+         .add()
+         .append(
+            new KeyedCodec<>("@CreateTargetDir", Codec.STRING, false), (o, v) -> o.packBrowserData.createTargetDir = v, o -> o.packBrowserData.createTargetDir
+         )
+         .add()
+         .append(
+            new KeyedCodec<>("@DirectoryFilter", Codec.STRING, false), (o, v) -> o.packBrowserData.directoryFilter = v, o -> o.packBrowserData.directoryFilter
+         )
+         .add()
          .build();
       public TriggerVolumeInspectorPage.Action action;
       public String id;
@@ -4159,6 +4240,7 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
       public String presetId;
       public String assetPickerQuery;
       public String assetPickerSelection;
+      public final AssetPackSaveBrowserEventData packBrowserData = new AssetPackSaveBrowserEventData();
    }
 
    private record RowEntry(@Nonnull String id, boolean isGroup, int listIndex) {

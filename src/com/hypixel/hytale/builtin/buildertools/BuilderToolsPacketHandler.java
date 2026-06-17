@@ -1257,7 +1257,7 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
                         if (hitboxCollisionConfig != null) {
                            HitboxCollision existing = componentAccessor.getComponent(targetRef, HitboxCollision.getComponentType());
                            if (existing != null) {
-                              existing.setHitboxCollisionConfigIndex(HitboxCollisionConfig.getAssetMap().getIndexOrDefault(packet.collisionType, -1));
+                              existing.setHitboxCollisionConfig(hitboxCollisionConfig);
                            } else {
                               componentAccessor.addComponent(targetRef, HitboxCollision.getComponentType(), new HitboxCollision(hitboxCollisionConfig));
                            }
