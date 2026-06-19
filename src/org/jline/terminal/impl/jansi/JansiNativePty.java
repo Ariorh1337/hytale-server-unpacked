@@ -8,6 +8,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import org.fusesource.jansi.internal.CLibrary;
 import org.fusesource.jansi.internal.Kernel32;
+import org.fusesource.jansi.internal.CLibrary.Termios;
+import org.fusesource.jansi.internal.CLibrary.WinSize;
+import org.fusesource.jansi.internal.Kernel32.CONSOLE_SCREEN_BUFFER_INFO;
 import org.jline.terminal.Attributes;
 import org.jline.terminal.Size;
 import org.jline.terminal.impl.AbstractPty;
@@ -138,20 +141,20 @@ public abstract class JansiNativePty extends AbstractPty implements Pty {
 
    @Override
    public Attributes getAttr() throws IOException {
-      CLibrary.Termios tios = new CLibrary.Termios();
+      Termios tios = new Termios();
       CLibrary.tcgetattr(this.slave, tios);
       return this.toAttributes(tios);
    }
 
    @Override
    protected void doSetAttr(Attributes attr) throws IOException {
-      CLibrary.Termios tios = this.toTermios(attr);
+      Termios tios = this.toTermios(attr);
       CLibrary.tcsetattr(this.slave, CLibrary.TCSANOW, tios);
    }
 
    @Override
    public Size getSize() throws IOException {
-      CLibrary.WinSize sz = new CLibrary.WinSize();
+      WinSize sz = new WinSize();
       int res = CLibrary.ioctl(this.slave, CLibrary.TIOCGWINSZ, sz);
       if (res != 0) {
          throw new IOException("Error calling ioctl(TIOCGWINSZ): return code is " + res);
@@ -162,16 +165,16 @@ public abstract class JansiNativePty extends AbstractPty implements Pty {
 
    @Override
    public void setSize(Size size) throws IOException {
-      CLibrary.WinSize sz = new CLibrary.WinSize((short)size.getRows(), (short)size.getColumns());
+      WinSize sz = new WinSize((short)size.getRows(), (short)size.getColumns());
       int res = CLibrary.ioctl(this.slave, CLibrary.TIOCSWINSZ, sz);
       if (res != 0) {
          throw new IOException("Error calling ioctl(TIOCSWINSZ): return code is " + res);
       }
    }
 
-   protected abstract CLibrary.Termios toTermios(Attributes var1);
+   protected abstract Termios toTermios(Attributes var1);
 
-   protected abstract Attributes toAttributes(CLibrary.Termios var1);
+   protected abstract Attributes toAttributes(Termios var1);
 
    @Override
    public String toString() {
@@ -189,12 +192,12 @@ public abstract class JansiNativePty extends AbstractPty implements Pty {
    public static int systemStreamWidth(SystemStream systemStream) {
       try {
          if (OSUtils.IS_WINDOWS) {
-            Kernel32.CONSOLE_SCREEN_BUFFER_INFO info = new Kernel32.CONSOLE_SCREEN_BUFFER_INFO();
+            CONSOLE_SCREEN_BUFFER_INFO info = new CONSOLE_SCREEN_BUFFER_INFO();
             long outConsole = JansiWinSysTerminal.getConsole(systemStream);
             Kernel32.GetConsoleScreenBufferInfo(outConsole, info);
             return info.windowWidth();
          } else {
-            CLibrary.WinSize sz = new CLibrary.WinSize();
+            WinSize sz = new WinSize();
             int res = CLibrary.ioctl(fd(systemStream), CLibrary.TIOCGWINSZ, sz);
             if (res != 0) {
                throw new IOException("Error calling ioctl(TIOCGWINSZ): return code is " + res);

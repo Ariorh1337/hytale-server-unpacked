@@ -6,7 +6,6 @@ import com.hypixel.hytale.builtin.triggervolumes.effect.TriggerContext;
 import com.hypixel.hytale.builtin.triggervolumes.effect.TriggerVolumeCodecs;
 import com.hypixel.hytale.builtin.triggervolumes.manager.TriggerVolumeManager;
 import com.hypixel.hytale.builtin.triggervolumes.manager.VolumeEntry;
-import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
@@ -85,9 +84,9 @@ public final class TaggedVolumeEffectUtil {
    @Nonnull
    private static Vector3d resolveCenter(@Nonnull TriggerContext context, @Nonnull TaggedVolumeEffectUtil.Center center) {
       if (center == TaggedVolumeEffectUtil.Center.ENTITY) {
-         TransformComponent transform = context.getStore().getComponent(context.getEntityRef(), TransformComponent.getComponentType());
-         if (transform != null) {
-            return new Vector3d(transform.getPosition());
+         Vector3d actorPosition = context.getActorPosition();
+         if (actorPosition != null) {
+            return actorPosition;
          }
       }
 

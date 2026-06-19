@@ -47,6 +47,15 @@ public class ModelParticle implements NetworkSerializable<com.hypixel.hytale.pro
       )
       .documentation("To indicate if the spawned particle should be attached to the model and follow it, or spawn in world space.")
       .add()
+      .<Boolean>append(
+         new KeyedCodec<>("ClearParticlesOnRemove", Codec.BOOLEAN),
+         (modelParticle, aBoolean) -> modelParticle.clearParticlesOnRemove = aBoolean,
+         modelParticle -> modelParticle.clearParticlesOnRemove
+      )
+      .documentation(
+         "When the owning entity is removed, clear this effect's already-emitted particles instantly instead of letting them finish their lifespan."
+      )
+      .add()
       .build();
    public static final ArrayCodec<ModelParticle> ARRAY_CODEC = new ArrayCodec<>(CODEC, ModelParticle[]::new);
    protected String systemId;
@@ -58,6 +67,7 @@ public class ModelParticle implements NetworkSerializable<com.hypixel.hytale.pro
    protected Vector3f positionOffset;
    protected Direction rotationOffset;
    protected boolean detachedFromModel;
+   protected boolean clearParticlesOnRemove;
 
    public ModelParticle(
       String systemId,
@@ -67,7 +77,8 @@ public class ModelParticle implements NetworkSerializable<com.hypixel.hytale.pro
       float scale,
       Vector3f positionOffset,
       Direction rotationOffset,
-      boolean detachedFromModel
+      boolean detachedFromModel,
+      boolean clearParticlesOnRemove
    ) {
       this.systemId = systemId;
       this.targetEntityPart = targetEntityPart;
@@ -77,6 +88,7 @@ public class ModelParticle implements NetworkSerializable<com.hypixel.hytale.pro
       this.positionOffset = positionOffset;
       this.rotationOffset = rotationOffset;
       this.detachedFromModel = detachedFromModel;
+      this.clearParticlesOnRemove = clearParticlesOnRemove;
    }
 
    public ModelParticle(ModelParticle other) {
@@ -88,6 +100,7 @@ public class ModelParticle implements NetworkSerializable<com.hypixel.hytale.pro
       this.positionOffset = other.positionOffset;
       this.rotationOffset = other.rotationOffset;
       this.detachedFromModel = other.detachedFromModel;
+      this.clearParticlesOnRemove = other.clearParticlesOnRemove;
    }
 
    public ModelParticle() {
@@ -104,6 +117,7 @@ public class ModelParticle implements NetworkSerializable<com.hypixel.hytale.pro
       packet.positionOffset = this.positionOffset;
       packet.rotationOffset = this.rotationOffset;
       packet.detachedFromModel = this.detachedFromModel;
+      packet.clearParticlesOnRemove = this.clearParticlesOnRemove;
       return packet;
    }
 
@@ -155,6 +169,14 @@ public class ModelParticle implements NetworkSerializable<com.hypixel.hytale.pro
       this.detachedFromModel = detachedFromModel;
    }
 
+   public boolean isClearParticlesOnRemove() {
+      return this.clearParticlesOnRemove;
+   }
+
+   public void setClearParticlesOnRemove(boolean clearParticlesOnRemove) {
+      this.clearParticlesOnRemove = clearParticlesOnRemove;
+   }
+
    public ModelParticle scale(float scale) {
       this.scale *= scale;
       if (this.positionOffset != null) {
@@ -185,6 +207,8 @@ public class ModelParticle implements NetworkSerializable<com.hypixel.hytale.pro
          + this.rotationOffset
          + ", detachedFromModel="
          + this.detachedFromModel
+         + ", clearParticlesOnRemove="
+         + this.clearParticlesOnRemove
          + "}";
    }
 

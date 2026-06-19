@@ -12,12 +12,17 @@ import javax.annotation.Nullable;
 public class EntityPositionProvider extends PositionProvider {
    @Nullable
    private Ref<EntityStore> target;
+   private boolean includeDead;
 
    public EntityPositionProvider() {
    }
 
    public EntityPositionProvider(ParameterProvider parameterProvider) {
       super(parameterProvider);
+   }
+
+   public void setIncludeDead(boolean includeDead) {
+      this.includeDead = includeDead;
    }
 
    @Override
@@ -28,7 +33,7 @@ public class EntityPositionProvider extends PositionProvider {
 
    @Override
    public Ref<EntityStore> setTarget(@Nullable Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      return this.target = super.setTarget(ref, componentAccessor);
+      return this.target = super.setTarget(ref, componentAccessor, this.includeDead);
    }
 
    @Nullable
@@ -39,7 +44,7 @@ public class EntityPositionProvider extends PositionProvider {
       }
 
       Store<EntityStore> store = this.target.getStore();
-      if (!this.target.isValid() || store.getArchetype(this.target).contains(DeathComponent.getComponentType())) {
+      if (!this.target.isValid() || !this.includeDead && store.getArchetype(this.target).contains(DeathComponent.getComponentType())) {
          this.clear();
       }
 

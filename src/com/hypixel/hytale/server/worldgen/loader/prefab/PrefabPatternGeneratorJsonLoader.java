@@ -212,7 +212,7 @@ public class PrefabPatternGeneratorJsonLoader extends JsonLoader<SeedStringResou
             try {
                prefabRotations[i] = PrefabRotation.valueOf(name);
             } catch (Throwable e) {
-               throw new Error("Could not find rotation \"" + name + "\". Allowed: " + Arrays.toString(PrefabRotation.VALUES));
+               throw new Error("Could not find rotation \"" + name + "\". Allowed: " + Arrays.toString(PrefabRotation.VALUES), e);
             }
          }
       } else {
@@ -226,7 +226,7 @@ public class PrefabPatternGeneratorJsonLoader extends JsonLoader<SeedStringResou
          try {
             prefabRotations[0] = PrefabRotation.valueOf(name);
          } catch (Throwable e) {
-            throw new Error("Could not find rotation \"" + name + "\". Allowed: " + Arrays.toString(PrefabRotation.VALUES));
+            throw new Error("Could not find rotation \"" + name + "\". Allowed: " + Arrays.toString(PrefabRotation.VALUES), e);
          }
       }
 

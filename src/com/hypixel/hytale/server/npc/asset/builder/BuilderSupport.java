@@ -98,6 +98,16 @@ public class BuilderSupport {
       this(builderManager, holder, executionContext, builder, builder.getStateMappingHelper(), roleStats, EntitySupport.createScope(npcEntity));
    }
 
+   public BuilderSupport(
+      @Nonnull BuilderManager builderManager,
+      @Nullable Holder<EntityStore> holder,
+      @Nonnull ExecutionContext executionContext,
+      @Nonnull Builder<?> builder,
+      @Nullable RoleStats roleStats
+   ) {
+      this(builderManager, holder, executionContext, builder, builder.getStateMappingHelper(), roleStats, EntitySupport.createScope());
+   }
+
    private BuilderSupport(
       @Nonnull BuilderManager builderManager,
       @Nullable Holder<EntityStore> holder,

@@ -9,9 +9,10 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.blackboard.Blackboard;
+import com.hypixel.hytale.server.npc.blackboard.BlackboardSubscription;
 import com.hypixel.hytale.server.npc.blackboard.view.PrioritisedProviderView;
-import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.role.support.WorldSupport;
+import com.hypixel.hytale.server.spawning.SpawnLineage;
 import javax.annotation.Nonnull;
 
 public class AttitudeView extends PrioritisedProviderView<IAttitudeProvider, AttitudeView> {
@@ -20,6 +21,20 @@ public class AttitudeView extends PrioritisedProviderView<IAttitudeProvider, Att
    public AttitudeView(World world) {
       this.world = world;
       this.registerProvider(0, (ref, var1x, target, accessor) -> WorldSupport.get(ref, accessor).getOverriddenAttitude(target));
+      this.registerProvider(100, (ref, var1x, target, accessor) -> {
+         SpawnLineage sourceLineage = accessor.getComponent(ref, SpawnLineage.getComponentType());
+         if (sourceLineage == null) {
+            return null;
+         }
+
+         SpawnLineage targetLineage = accessor.getComponent(target, SpawnLineage.getComponentType());
+         if (targetLineage == null) {
+            return null;
+         }
+
+         String sourceId = sourceLineage.getLineageId();
+         return sourceId != null && sourceId.equals(targetLineage.getLineageId()) ? Attitude.FRIENDLY : null;
+      });
       this.registerProvider(
          200, (ref, sourceRoleIndex, target, accessor) -> NPCPlugin.get().getAttitudeMap().getAttitude(ref, sourceRoleIndex, target, accessor)
       );
@@ -68,7 +83,7 @@ public class AttitudeView extends PrioritisedProviderView<IAttitudeProvider, Att
    }
 
    @Override
-   public void initialiseEntity(@Nonnull Ref<EntityStore> ref, @Nonnull NPCEntity npcComponent) {
+   public void initialiseEntity(@Nonnull Ref<EntityStore> ref, @Nonnull BlackboardSubscription subscription) {
    }
 
    @Override

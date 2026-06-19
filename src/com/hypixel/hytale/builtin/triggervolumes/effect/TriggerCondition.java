@@ -1,5 +1,6 @@
 package com.hypixel.hytale.builtin.triggervolumes.effect;
 
+import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.EmptyExtraInfo;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
@@ -21,8 +22,11 @@ public abstract class TriggerCondition {
          TriggerCondition::getEventType
       )
       .add()
+      .append(new KeyedCodec<>("Entry", Codec.INTEGER, false), TriggerCondition::setEntry, condition -> condition.entry != 0 ? condition.entry : null)
+      .add()
       .build();
    private TriggerEventType eventType;
+   private int entry = 0;
 
    @Nonnull
    public static TriggerCondition deepCopy(@Nonnull TriggerCondition condition) {
@@ -52,6 +56,14 @@ public abstract class TriggerCondition {
 
    public void setEventType(@Nonnull TriggerEventType eventType) {
       this.eventType = eventType;
+   }
+
+   public int getEntry() {
+      return this.entry;
+   }
+
+   public void setEntry(int entry) {
+      this.entry = entry;
    }
 
    public abstract boolean test(@Nonnull TriggerContext var1);

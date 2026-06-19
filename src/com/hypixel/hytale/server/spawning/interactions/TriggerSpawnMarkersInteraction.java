@@ -58,7 +58,7 @@ public class TriggerSpawnMarkersInteraction extends SimpleInstantInteraction {
             if (spawnMarkerRef != null) {
                SpawnMarkerEntity spawnMarkerEntityComponent = commandBuffer.getComponent(spawnMarkerRef, SpawnMarkerEntity.getComponentType());
                assert spawnMarkerEntityComponent != null;
-               commandBuffer.run(store -> spawnMarkerEntityComponent.trigger(spawnMarkerRef, store));
+               commandBuffer.run(store -> spawnMarkerEntityComponent.trigger(spawnMarkerRef, null, store));
             }
          }
       } else {
@@ -76,7 +76,7 @@ public class TriggerSpawnMarkersInteraction extends SimpleInstantInteraction {
             Ref<EntityStore> spawnMarkerRef = triggerList.get(i);
             SpawnMarkerEntity spawnMarkerEntityComponent = commandBuffer.getComponent(spawnMarkerRef, SpawnMarkerEntity.getComponentType());
             assert spawnMarkerEntityComponent != null;
-            commandBuffer.run(store -> spawnMarkerEntityComponent.trigger(spawnMarkerRef, store));
+            commandBuffer.run(store -> spawnMarkerEntityComponent.trigger(spawnMarkerRef, null, store));
          }
       }
    }

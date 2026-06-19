@@ -27,7 +27,7 @@ public class BlockPattern {
    private static final Pattern FILLER_TEMP_REMOVER_PATTERN = Pattern.compile("(Filler=-?\\d+),(-?\\d+),(-?\\d+)");
    private static final String BLOCK_SEPARATOR = ",";
    private static final String ALT_BLOCK_SEPARATOR = ";";
-   private static final String CHANCE_SUFFIX = "%";
+   public static final String CHANCE_SUFFIX = "%";
    private static final double DEFAULT_CHANCE = 100.0;
    private final IWeightedMap<String> weightedMap;
    private final transient String toString0;

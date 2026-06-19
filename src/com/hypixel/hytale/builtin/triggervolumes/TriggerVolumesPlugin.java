@@ -21,6 +21,7 @@ import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.ItemCondition;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.ModifyTagsEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.PastePrefabEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.PlaceBlockEffect;
+import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.PlayAnimationEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.PlaySoundEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.PlayVfxEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.ReplaceBlockTypeEffect;
@@ -31,10 +32,13 @@ import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.SetMusicEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.SetVelocityEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.SetWeatherEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.ShowEventTitleEffect;
+import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.SpawnNpcEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.TeleportEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.TriggerNpcMarkersEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.conditions.BlockTypeCondition;
+import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.conditions.BlockUsedCondition;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.conditions.CooldownCondition;
+import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.conditions.EntityCountCondition;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.conditions.GameModeCondition;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.conditions.PermissionCondition;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.conditions.PlayerCountCondition;
@@ -51,6 +55,8 @@ import com.hypixel.hytale.builtin.triggervolumes.prefab.TriggerVolumePrefabContr
 import com.hypixel.hytale.builtin.triggervolumes.prefab.TriggerVolumePrefabPasteRemapSystem;
 import com.hypixel.hytale.builtin.triggervolumes.prefab.TriggerVolumeWorldGenHandler;
 import com.hypixel.hytale.builtin.triggervolumes.system.TriggerVolumeBlockEventSystems;
+import com.hypixel.hytale.builtin.triggervolumes.system.TriggerVolumeDeathSystem;
+import com.hypixel.hytale.builtin.triggervolumes.system.TriggerVolumeEntityRemoveSystem;
 import com.hypixel.hytale.builtin.triggervolumes.system.TriggerVolumeTickingSystem;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.ComponentRegistry;
@@ -64,6 +70,7 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.buildertool.config.PrefabListAsset;
 import com.hypixel.hytale.server.core.asset.type.entityeffect.config.EntityEffect;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
+import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
 import com.hypixel.hytale.server.core.asset.type.musiccontainer.config.MusicContainer;
 import com.hypixel.hytale.server.core.asset.type.particle.config.ParticleSystem;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
@@ -85,6 +92,11 @@ import com.hypixel.hytale.server.core.universe.world.events.RemoveWorldEvent;
 import com.hypixel.hytale.server.core.universe.world.events.StartWorldEvent;
 import com.hypixel.hytale.server.core.universe.world.events.WorldGenChunksClearedEvent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.npc.NPCPlugin;
+import com.hypixel.hytale.server.npc.asset.builder.Builder;
+import com.hypixel.hytale.server.npc.asset.builder.BuilderInfo;
+import com.hypixel.hytale.server.npc.util.expression.ExecutionContext;
+import com.hypixel.hytale.server.spawning.ISpawnableWithModel;
 import com.hypixel.hytale.server.spawning.assets.spawnmarker.config.SpawnMarker;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -119,6 +131,7 @@ public class TriggerVolumesPlugin extends JavaPlugin {
    private ComponentType<EntityStore, TriggerVolumeGroup> triggerVolumeGroupComponentType;
    private final Map<String, AssetSourceProvider> assetSources = new LinkedHashMap<>();
    private final Map<TriggerVolumesPlugin.AssetFieldKey, String> assetFieldMappings = new HashMap<>();
+   private final Map<String, String> roleModelNameCache = new ConcurrentHashMap<>();
    private final Map<UUID, TriggerVolumesPlugin.PastePrefabPreviewState> pastePrefabPreviewStates = new ConcurrentHashMap<>();
    private final Map<UUID, EnumSet<TriggerVolumeManager.ViewSource>> pendingTransferSources = new ConcurrentHashMap<>();
 
@@ -225,11 +238,15 @@ public class TriggerVolumesPlugin extends JavaPlugin {
       this.triggerVolumeComponentType = entityStoreRegistry.registerComponent(TriggerVolume.class, "TriggerVolume", TriggerVolume.CODEC);
       this.triggerVolumeGroupComponentType = entityStoreRegistry.registerComponent(TriggerVolumeGroup.class, "TriggerVolumeGroup", TriggerVolumeGroup.CODEC);
       EntityModule entityModule = EntityModule.get();
-      entityStoreRegistry.registerSystem(
-         new TriggerVolumeTickingSystem(this.managerResourceType, entityModule.getPlayerSpatialResourceType(), entityModule.getEntitySpatialResourceType())
+      TriggerVolumeTickingSystem tickingSystem = new TriggerVolumeTickingSystem(
+         this.managerResourceType, entityModule.getPlayerSpatialResourceType(), entityModule.getEntitySpatialResourceType()
       );
+      entityStoreRegistry.registerSystem(tickingSystem);
+      entityStoreRegistry.registerSystem(new TriggerVolumeEntityRemoveSystem(tickingSystem, this.managerResourceType));
       entityStoreRegistry.registerSystem(new TriggerVolumeBlockEventSystems.BlockPlaced(this.managerResourceType));
       entityStoreRegistry.registerSystem(new TriggerVolumeBlockEventSystems.BlockBroken(this.managerResourceType));
+      entityStoreRegistry.registerSystem(new TriggerVolumeBlockEventSystems.BlockUsed(this.managerResourceType));
+      entityStoreRegistry.registerSystem(new TriggerVolumeDeathSystem(this.managerResourceType));
       entityStoreRegistry.registerSystem(
          new TriggerVolumePasteHandler(this.managerResourceType, this.triggerVolumeComponentType, this.triggerVolumeGroupComponentType)
       );
@@ -357,6 +374,8 @@ public class TriggerVolumesPlugin extends JavaPlugin {
       TriggerCondition.CODEC.register("PlayerCountCondition", PlayerCountCondition.class, PlayerCountCondition.CODEC);
       TriggerCondition.CODEC.register("TagCondition", TagCondition.class, TagCondition.CODEC);
       TriggerCondition.CODEC.register("BlockTypeCondition", BlockTypeCondition.class, BlockTypeCondition.CODEC);
+      TriggerCondition.CODEC.register("BlockUsedCondition", BlockUsedCondition.class, BlockUsedCondition.CODEC);
+      TriggerCondition.CODEC.register("EntityCountCondition", EntityCountCondition.class, EntityCountCondition.CODEC);
       TriggerEffect.CODEC.register("Teleport", TeleportEffect.class, TeleportEffect.CODEC);
       TriggerEffect.CODEC.register("SendMessage", SendMessageEffect.class, SendMessageEffect.CODEC);
       TriggerEffect.CODEC.register("PlaySound", PlaySoundEffect.class, PlaySoundEffect.CODEC);
@@ -379,7 +398,10 @@ public class TriggerVolumesPlugin extends JavaPlugin {
       TriggerEffect.CODEC.register("ModifyTags", ModifyTagsEffect.class, ModifyTagsEffect.CODEC);
       TriggerEffect.CODEC.register("PlaceBlock", PlaceBlockEffect.class, PlaceBlockEffect.CODEC);
       TriggerEffect.CODEC.register("ReplaceBlockType", ReplaceBlockTypeEffect.class, ReplaceBlockTypeEffect.CODEC);
+      TriggerEffect.CODEC.register("SpawnNpc", SpawnNpcEffect.class, SpawnNpcEffect.CODEC);
+      TriggerEffect.CODEC.register("PlayAnimation", PlayAnimationEffect.class, PlayAnimationEffect.CODEC);
       this.registerAssetSource("BlockType", () -> BlockType.getAssetMap().getAssetMap().keySet());
+      this.registerAssetSource("UsableBlockType", TriggerVolumesPlugin::collectUsableBlockTypeIds);
       this.registerAssetSource("EntityEffect", () -> EntityEffect.getAssetMap().getAssetMap().keySet());
       this.registerAssetSource("Item", () -> Item.getAssetMap().getAssetMap().keySet());
       this.registerAssetSource("SoundEvent", () -> SoundEvent.getAssetMap().getAssetMap().keySet());
@@ -394,6 +416,9 @@ public class TriggerVolumesPlugin extends JavaPlugin {
       this.registerAssetSource("ManualSpawnMarker", TriggerVolumesPlugin::collectManualSpawnMarkerIds);
       this.registerAssetSource("RootInteraction", () -> RootInteraction.getAssetMap().getAssetMap().keySet());
       this.registerAssetSource("MusicContainer", () -> MusicContainer.getAssetMap().getAssetMap().keySet());
+      this.registerAssetSource("NpcRole", () -> NPCPlugin.get().getRoleTemplateNames(true));
+      this.registerAssetSource("Animation", TriggerVolumesPlugin::collectAnimationIds);
+      this.registerAssetSource("AnimationApplyOn", this::collectApplyOnIds);
       this.registerAssetField("EntityEffect", "Effect", "EntityEffect");
       this.registerAssetField("PlaySound", "SoundEvent", "SoundEvent");
       this.registerAssetField("SetWeather", "Weather", "Weather");
@@ -409,6 +434,174 @@ public class TriggerVolumesPlugin extends JavaPlugin {
       this.registerAssetField("ReplaceBlockType", "ToBlockType", "BlockType");
       this.registerAssetField("ItemCondition", "Item", "Item");
       this.registerAssetField("BlockTypeCondition", "BlockType", "BlockType");
+      this.registerAssetField("BlockUsedCondition", "BlockType", "UsableBlockType");
+      this.registerAssetField("EntityCountCondition", "EntityType", "NpcRole");
+      this.registerAssetField("SpawnNpc", "NpcType", "NpcRole");
+      this.registerAssetField("PlayAnimation", "Animation", "Animation");
+      this.registerAssetField("PlayAnimation", "NpcType", "AnimationApplyOn");
+   }
+
+   @Nonnull
+   private static Collection<String> collectAnimationIds() {
+      TreeSet<String> ids = new TreeSet<>();
+
+      for (ModelAsset modelAsset : ModelAsset.getAssetMap().getAssetMap().values()) {
+         if (modelAsset != null) {
+            ids.addAll(modelAsset.getAnimationSetMap().keySet());
+         }
+      }
+
+      return ids;
+   }
+
+   @Nonnull
+   private Collection<String> collectApplyOnIds() {
+      ArrayList<String> ids = new ArrayList<>();
+      ids.add("Player");
+      ids.add("Everyone");
+      ids.addAll(NPCPlugin.get().getRoleTemplateNames(true));
+      return ids;
+   }
+
+   @Nonnull
+   public Collection<String> collectAnimationIdsForApplyOn(@Nonnull String applyOn) {
+      if (applyOn.isBlank()) {
+         return collectAnimationIds();
+      }
+
+      if ("Everyone".equals(applyOn)) {
+         return this.collectCommonAnimationIds();
+      }
+
+      ModelAsset modelAsset = this.resolveConcreteModel(applyOn);
+      return modelAsset == null ? collectAnimationIds() : new TreeSet<>(modelAsset.getAnimationSetMap().keySet());
+   }
+
+   @Nonnull
+   public Collection<String> collectApplyOnIdsForAnimation(@Nonnull String animationKey) {
+      ArrayList<String> ids = new ArrayList<>();
+      ModelAsset playerModel = ModelAsset.getAssetMap().getAsset("Player");
+      if (playerModel != null && playerModel.getAnimationSetMap().containsKey(animationKey)) {
+         ids.add("Player");
+      }
+
+      if (this.collectCommonAnimationIds().contains(animationKey)) {
+         ids.add("Everyone");
+      }
+
+      for (String roleName : NPCPlugin.get().getRoleTemplateNames(true)) {
+         String modelName = this.resolveRoleModelName(roleName);
+         if (modelName != null) {
+            ModelAsset modelAsset = ModelAsset.getAssetMap().getAsset(modelName);
+            if (modelAsset != null && modelAsset.getAnimationSetMap().containsKey(animationKey)) {
+               ids.add(roleName);
+            }
+         }
+      }
+
+      return ids;
+   }
+
+   public boolean isLoopingAnimation(@Nonnull String applyOn, @Nonnull String animationKey) {
+      ModelAsset modelAsset = this.resolveConcreteModel(applyOn);
+      if (modelAsset == null) {
+         return false;
+      }
+
+      ModelAsset.AnimationSet animationSet = modelAsset.getAnimationSetMap().get(animationKey);
+      if (animationSet != null && animationSet.getAnimations() != null) {
+         for (ModelAsset.Animation animation : animationSet.getAnimations()) {
+            if (animation.isLooping()) {
+               return true;
+            }
+         }
+
+         return false;
+      } else {
+         return false;
+      }
+   }
+
+   @Nullable
+   private ModelAsset resolveConcreteModel(@Nonnull String applyOn) {
+      if ("Player".equals(applyOn)) {
+         return ModelAsset.getAssetMap().getAsset("Player");
+      }
+
+      String modelName = this.resolveRoleModelName(applyOn);
+      return modelName != null ? ModelAsset.getAssetMap().getAsset(modelName) : null;
+   }
+
+   @Nonnull
+   private Collection<String> collectCommonAnimationIds() {
+      TreeSet<String> intersection = null;
+      ModelAsset playerModel = ModelAsset.getAssetMap().getAsset("Player");
+      if (playerModel != null) {
+         intersection = new TreeSet<>(playerModel.getAnimationSetMap().keySet());
+      }
+
+      for (String roleName : NPCPlugin.get().getRoleTemplateNames(true)) {
+         String modelName = this.resolveRoleModelName(roleName);
+         if (modelName != null) {
+            ModelAsset modelAsset = ModelAsset.getAssetMap().getAsset(modelName);
+            if (modelAsset != null) {
+               Set<String> keys = modelAsset.getAnimationSetMap().keySet();
+               if (intersection == null) {
+                  intersection = new TreeSet<>(keys);
+               } else {
+                  intersection.retainAll(keys);
+               }
+
+               if (intersection.isEmpty()) {
+                  break;
+               }
+            }
+         }
+      }
+
+      return intersection == null ? collectAnimationIds() : intersection;
+   }
+
+   @Nullable
+   private String resolveRoleModelName(@Nonnull String roleName) {
+      String cached = this.roleModelNameCache.computeIfAbsent(roleName, this::computeRoleModelName);
+      return cached.isEmpty() ? null : cached;
+   }
+
+   @Nonnull
+   private String computeRoleModelName(@Nonnull String roleName) {
+      NPCPlugin npcPlugin = NPCPlugin.get();
+      BuilderInfo info = npcPlugin.getRoleBuilderInfo(npcPlugin.getIndex(roleName));
+      if (info == null) {
+         return "";
+      }
+
+      Builder<?> builder = info.getBuilder();
+      if (builder.isSpawnable() && builder instanceof ISpawnableWithModel spawnable) {
+         try {
+            ExecutionContext context = new ExecutionContext(builder.getBuilderParameters().createScope());
+            String modelName = spawnable.getSpawnModelName(context, spawnable.createModifierScope(context));
+            return modelName != null ? modelName : "";
+         } catch (RuntimeException exception) {
+            return "";
+         }
+      } else {
+         return "";
+      }
+   }
+
+   @Nonnull
+   private static Collection<String> collectUsableBlockTypeIds() {
+      TreeSet<String> ids = new TreeSet<>();
+
+      for (Entry<String, BlockType> entry : BlockType.getAssetMap().getAssetMap().entrySet()) {
+         BlockType blockType = entry.getValue();
+         if (blockType != null && blockType.getFlags() != null && blockType.getFlags().isUsable) {
+            ids.add(entry.getKey());
+         }
+      }
+
+      return ids;
    }
 
    @Nonnull

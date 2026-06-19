@@ -176,40 +176,37 @@ public class ExtraInfo {
    public void readUnknownKey(@Nonnull RawJsonReader reader) throws IOException {
       if (!this.consumeIgnoredUnknownKey(reader)) {
          String key = reader.readString();
-         if (this.keysSize == 0) {
-            this.unknownKeys.add(key);
-         } else {
-            this.unknownKeys.add(this.peekKey() + "." + key);
+         if (!isIgnoredMetadataKey(key)) {
+            if (this.keysSize == 0) {
+               this.unknownKeys.add(key);
+            } else {
+               this.unknownKeys.add(this.peekKey() + "." + key);
+            }
          }
       }
    }
 
    public void addUnknownKey(@Nonnull String key) {
-      switch (key) {
-         case "$Title":
-         case "$Comment":
-         case "$TODO":
-         case "$Author":
-         case "$Position":
-         case "$FloatingFunctionNodes":
-         case "$Groups":
-         case "$WorkspaceID":
-         case "$NodeEditorMetadata":
-         case "$NodeId":
-            return;
-         default:
-            if (!this.consumeIgnoredUnknownKey(key)) {
-               if (this.keysSize == 0) {
-                  if ("Parent".equals(key)) {
-                     return;
-                  }
-
-                  this.unknownKeys.add(key);
-               } else {
-                  this.unknownKeys.add(this.peekKey() + "." + key);
+      if (!this.consumeIgnoredUnknownKey(key)) {
+         if (!isIgnoredMetadataKey(key)) {
+            if (this.keysSize == 0) {
+               if ("Parent".equals(key)) {
+                  return;
                }
+
+               this.unknownKeys.add(key);
+            } else {
+               this.unknownKeys.add(this.peekKey() + "." + key);
             }
+         }
       }
+   }
+
+   private static boolean isIgnoredMetadataKey(@Nonnull String key) {
+      return switch (key) {
+         case "$Title", "$Comment", "$TODO", "$Author", "$Position", "$FloatingFunctionNodes", "$Groups", "$WorkspaceID", "$NodeEditorMetadata", "$NodeId" -> true;
+         default -> false;
+      };
    }
 
    public String peekKey() {

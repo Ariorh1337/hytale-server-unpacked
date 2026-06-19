@@ -37,9 +37,14 @@ public class PositionProvider extends InfoProviderBase implements IPositionProvi
 
    @Nullable
    public Ref<EntityStore> setTarget(@Nullable Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      return this.setTarget(ref, componentAccessor, false);
+   }
+
+   @Nullable
+   public Ref<EntityStore> setTarget(@Nullable Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor, boolean includeDead) {
       if (ref == null) {
          return null;
-      } else if (ref.isValid() && !componentAccessor.getArchetype(ref).contains(DeathComponent.getComponentType())) {
+      } else if (ref.isValid() && (includeDead || !componentAccessor.getArchetype(ref).contains(DeathComponent.getComponentType()))) {
          TransformComponent transformComponent = componentAccessor.getComponent(ref, TransformComponent.getComponentType());
          assert transformComponent != null;
          this.setTarget(transformComponent.getPosition());

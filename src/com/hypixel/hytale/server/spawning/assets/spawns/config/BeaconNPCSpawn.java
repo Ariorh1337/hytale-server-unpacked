@@ -205,6 +205,11 @@ public class BeaconNPCSpawn extends NPCSpawn implements JsonAssetWithMap<String,
       .addValidator(Validators.nonNull())
       .addValidator(Validators.nonEmptyString())
       .add()
+      .<Boolean>appendInherited(
+         new KeyedCodec<>("Rebind", Codec.BOOLEAN), (spawn, b) -> spawn.rebind = b, spawn -> spawn.rebind, (spawn, parent) -> spawn.rebind = parent.rebind
+      )
+      .documentation("Whether the target slot rebinds to the entity, so it survives short reloads or role changes.")
+      .add()
       .<String>appendInherited(
          new KeyedCodec<>("SpawnSuppression", Codec.STRING),
          (spawn, s) -> spawn.spawnSuppression = s,
@@ -276,6 +281,7 @@ public class BeaconNPCSpawn extends NPCSpawn implements JsonAssetWithMap<String,
    protected String npcSpawnState;
    protected String npcSpawnSubState;
    protected String targetSlot = "LockedTarget";
+   protected boolean rebind;
    protected String spawnSuppression;
    protected ScaledXYResponseCurve maxSpawnsScalingCurve;
    protected ScaledXYResponseCurve concurrentSpawnsScalingCurve;
@@ -382,6 +388,10 @@ public class BeaconNPCSpawn extends NPCSpawn implements JsonAssetWithMap<String,
 
    public String getTargetSlot() {
       return this.targetSlot;
+   }
+
+   public boolean isRebind() {
+      return this.rebind;
    }
 
    public ScaledXYResponseCurve getMaxSpawnsScalingCurve() {

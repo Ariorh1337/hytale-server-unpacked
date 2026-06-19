@@ -1,9 +1,5 @@
 package com.hypixel.hytale.server.core.asset.type.model;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.server.core.asset.common.CommonAsset;
@@ -12,6 +8,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.bson.BsonArray;
+import org.bson.BsonDocument;
+import org.bson.BsonValue;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
@@ -43,7 +42,7 @@ public class BlockyModelBoundsParser {
             return null;
          }
 
-         JsonObject json = JsonParser.parseString(new String(bytes, StandardCharsets.UTF_8)).getAsJsonObject();
+         BsonDocument json = BsonDocument.parse(new String(bytes, StandardCharsets.UTF_8));
          return computeBoundsFromJson(json);
       } catch (Exception e) {
          LOGGER.at(Level.WARNING).withCause(e).log("Failed to compute bounds for blockymodel: %s", asset.getName());
@@ -52,8 +51,8 @@ public class BlockyModelBoundsParser {
    }
 
    @Nullable
-   private static Box computeBoundsFromJson(@Nonnull JsonObject root) {
-      JsonArray nodesArray = root.getAsJsonArray("nodes");
+   private static Box computeBoundsFromJson(@Nonnull BsonDocument root) {
+      BsonArray nodesArray = getArray(root, "nodes");
       if (nodesArray != null && !nodesArray.isEmpty()) {
          float minX = Float.MAX_VALUE;
          float minY = Float.MAX_VALUE;
@@ -64,9 +63,9 @@ public class BlockyModelBoundsParser {
          boolean hasPoints = false;
          float[] minMax = new float[]{minX, minY, minZ, maxX, maxY, maxZ};
 
-         for (JsonElement nodeElement : nodesArray) {
-            if (nodeElement.isJsonObject()) {
-               hasPoints |= accumulateNodeBounds(nodeElement.getAsJsonObject(), new Vector3f(0.0F, 0.0F, 0.0F), new Quaternionf(), minMax);
+         for (BsonValue nodeElement : nodesArray) {
+            if (nodeElement.isDocument()) {
+               hasPoints |= accumulateNodeBounds(nodeElement.asDocument(), new Vector3f(0.0F, 0.0F, 0.0F), new Quaternionf(), minMax);
             }
          }
 
@@ -79,17 +78,17 @@ public class BlockyModelBoundsParser {
    }
 
    private static boolean accumulateNodeBounds(
-      @Nonnull JsonObject node, @Nonnull Vector3f parentPosition, @Nonnull Quaternionf parentOrientation, @Nonnull float[] minMax
+      @Nonnull BsonDocument node, @Nonnull Vector3f parentPosition, @Nonnull Quaternionf parentOrientation, @Nonnull float[] minMax
    ) {
-      JsonObject shape = node.getAsJsonObject("shape");
-      boolean visible = shape == null || !shape.has("visible") || shape.get("visible").getAsBoolean();
+      BsonDocument shape = getDocument(node, "shape");
+      boolean visible = shape == null || !shape.containsKey("visible") || shape.get("visible").asBoolean().getValue();
       if (!visible) {
          return false;
       }
 
-      Vector3f position = readVec3(node.getAsJsonObject("position"), 0.0F, 0.0F, 0.0F);
-      Quaternionf orientation = readQuat(node.getAsJsonObject("orientation"));
-      Vector3f offset = shape != null ? readVec3(shape.getAsJsonObject("offset"), 0.0F, 0.0F, 0.0F) : new Vector3f();
+      Vector3f position = readVec3(getDocument(node, "position"), 0.0F, 0.0F, 0.0F);
+      Quaternionf orientation = readQuat(getDocument(node, "orientation"));
+      Vector3f offset = shape != null ? readVec3(getDocument(shape, "offset"), 0.0F, 0.0F, 0.0F) : new Vector3f();
       Vector3f localPosition = new Vector3f(offset);
       localPosition.rotate(orientation);
       localPosition.add(position);
@@ -100,11 +99,11 @@ public class BlockyModelBoundsParser {
       worldOrientation.mul(orientation);
       boolean hasPoints = false;
       if (shape != null) {
-         String type = shape.has("type") ? shape.get("type").getAsString() : "none";
+         String type = shape.containsKey("type") ? shape.get("type").asString().getValue() : "none";
          if ("box".equals(type) || "quad".equals(type)) {
-            JsonObject settings = shape.getAsJsonObject("settings");
-            Vector3f size = settings != null ? readVec3(settings.getAsJsonObject("size"), 0.0F, 0.0F, 0.0F) : new Vector3f();
-            Vector3f stretch = readVec3(shape.getAsJsonObject("stretch"), 1.0F, 1.0F, 1.0F);
+            BsonDocument settings = getDocument(shape, "settings");
+            Vector3f size = settings != null ? readVec3(getDocument(settings, "size"), 0.0F, 0.0F, 0.0F) : new Vector3f();
+            Vector3f stretch = readVec3(getDocument(shape, "stretch"), 1.0F, 1.0F, 1.0F);
             float sx = size.x * stretch.x;
             float sy = size.y * stretch.y;
             float sz = size.z * stretch.z;
@@ -126,11 +125,11 @@ public class BlockyModelBoundsParser {
          }
       }
 
-      JsonArray children = node.getAsJsonArray("children");
+      BsonArray children = getArray(node, "children");
       if (children != null) {
-         for (JsonElement childElement : children) {
-            if (childElement.isJsonObject()) {
-               hasPoints |= accumulateNodeBounds(childElement.getAsJsonObject(), worldPosition, worldOrientation, minMax);
+         for (BsonValue childElement : children) {
+            if (childElement.isDocument()) {
+               hasPoints |= accumulateNodeBounds(childElement.asDocument(), worldPosition, worldOrientation, minMax);
             }
          }
       }
@@ -138,9 +137,9 @@ public class BlockyModelBoundsParser {
       return hasPoints;
    }
 
-   private static Vector3f[] getQuadCorners(@Nonnull JsonObject shape) {
-      JsonObject settings = shape.getAsJsonObject("settings");
-      String normal = settings != null && settings.has("normal") ? settings.get("normal").getAsString() : "+Z";
+   private static Vector3f[] getQuadCorners(@Nonnull BsonDocument shape) {
+      BsonDocument settings = getDocument(shape, "settings");
+      String normal = settings != null && settings.containsKey("normal") ? settings.get("normal").asString().getValue() : "+Z";
 
       return switch (normal) {
          case "+X", "-X" -> new Vector3f[]{
@@ -156,27 +155,43 @@ public class BlockyModelBoundsParser {
    }
 
    @Nonnull
-   private static Vector3f readVec3(@Nullable JsonObject obj, float defX, float defY, float defZ) {
+   private static Vector3f readVec3(@Nullable BsonDocument obj, float defX, float defY, float defZ) {
       if (obj == null) {
          return new Vector3f(defX, defY, defZ);
       }
 
-      float x = obj.has("x") ? obj.get("x").getAsFloat() : defX;
-      float y = obj.has("y") ? obj.get("y").getAsFloat() : defY;
-      float z = obj.has("z") ? obj.get("z").getAsFloat() : defZ;
+      float x = obj.containsKey("x") ? readFloat(obj.get("x")) : defX;
+      float y = obj.containsKey("y") ? readFloat(obj.get("y")) : defY;
+      float z = obj.containsKey("z") ? readFloat(obj.get("z")) : defZ;
       return new Vector3f(x, y, z);
    }
 
    @Nonnull
-   private static Quaternionf readQuat(@Nullable JsonObject obj) {
+   private static Quaternionf readQuat(@Nullable BsonDocument obj) {
       if (obj == null) {
          return new Quaternionf();
       }
 
-      float x = obj.has("x") ? obj.get("x").getAsFloat() : 0.0F;
-      float y = obj.has("y") ? obj.get("y").getAsFloat() : 0.0F;
-      float z = obj.has("z") ? obj.get("z").getAsFloat() : 0.0F;
-      float w = obj.has("w") ? obj.get("w").getAsFloat() : 1.0F;
+      float x = obj.containsKey("x") ? readFloat(obj.get("x")) : 0.0F;
+      float y = obj.containsKey("y") ? readFloat(obj.get("y")) : 0.0F;
+      float z = obj.containsKey("z") ? readFloat(obj.get("z")) : 0.0F;
+      float w = obj.containsKey("w") ? readFloat(obj.get("w")) : 1.0F;
       return new Quaternionf(x, y, z, w);
+   }
+
+   private static float readFloat(@Nonnull BsonValue value) {
+      return (float)value.asNumber().doubleValue();
+   }
+
+   @Nullable
+   private static BsonDocument getDocument(@Nonnull BsonDocument obj, @Nonnull String key) {
+      BsonValue value = obj.get(key);
+      return value != null && value.isDocument() ? value.asDocument() : null;
+   }
+
+   @Nullable
+   private static BsonArray getArray(@Nonnull BsonDocument obj, @Nonnull String key) {
+      BsonValue value = obj.get(key);
+      return value != null && value.isArray() ? value.asArray() : null;
    }
 }

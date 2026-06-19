@@ -31,6 +31,7 @@ import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.block.BlockModule;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.modules.entity.damage.DeathComponent;
 import com.hypixel.hytale.server.core.modules.entity.teleport.PendingTeleport;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
@@ -141,112 +142,115 @@ public class TeleportInstanceInteraction extends SimpleInstantInteraction {
       CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
       assert commandBuffer != null;
       Ref<EntityStore> ref = context.getEntity();
-      Player playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
-      if (playerComponent != null && !playerComponent.isWaitingForClientReady()) {
-         Archetype<EntityStore> archetype = commandBuffer.getArchetype(ref);
-         if (!archetype.contains(Teleport.getComponentType()) && !archetype.contains(PendingTeleport.getComponentType())) {
-            World world = commandBuffer.getExternalData().getWorld();
-            InstancesPlugin module = InstancesPlugin.get();
-            Universe universe = Universe.get();
-            CompletableFuture<World> targetWorldFuture = null;
-            Transform returnPoint = null;
-            World targetWorld;
-            if (this.instanceKey != null) {
-               targetWorld = universe.getWorld(this.instanceKey);
-               if (targetWorld == null) {
-                  returnPoint = this.makeReturnPoint(ref, context, commandBuffer);
-                  targetWorldFuture = module.spawnInstance(this.instanceName, this.instanceKey, world, returnPoint);
-               }
-            } else {
-               BlockPosition targetBlock = context.getTargetBlock();
-               if (targetBlock == null) {
-                  return;
-               }
-
-               ChunkStore chunkStore = world.getChunkStore();
-               long chunkIndex = ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z);
-               Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(chunkIndex);
-               if (chunkRef == null || !chunkRef.isValid()) {
-                  return;
-               }
-
-               BlockComponentChunk blockComponentChunk = chunkStore.getStore().getComponent(chunkRef, BlockComponentChunk.getComponentType());
-               assert blockComponentChunk != null;
-               int index = ChunkUtil.indexBlockInColumn(targetBlock.x, targetBlock.y, targetBlock.z);
-               Ref<ChunkStore> blockRef = blockComponentChunk.getEntityReference(index);
-               InstanceBlock instanceState;
-               if (blockRef == null) {
-                  Holder<ChunkStore> holder = ChunkStore.REGISTRY.newHolder();
-                  instanceState = holder.ensureAndGetComponent(InstanceBlock.getComponentType());
-                  holder.addComponent(BlockModule.BlockStateInfo.getComponentType(), new BlockModule.BlockStateInfo(index, chunkRef));
-                  blockRef = chunkStore.getStore().addEntity(holder, AddReason.SPAWN);
-                  instanceState.setCloseOnRemove(this.closeOnBlockRemove);
+      DeathComponent deathComponent = commandBuffer.getComponent(ref, DeathComponent.getComponentType());
+      if (deathComponent == null) {
+         Player playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
+         if (playerComponent != null && !playerComponent.isWaitingForClientReady()) {
+            Archetype<EntityStore> archetype = commandBuffer.getArchetype(ref);
+            if (!archetype.contains(Teleport.getComponentType()) && !archetype.contains(PendingTeleport.getComponentType())) {
+               World world = commandBuffer.getExternalData().getWorld();
+               InstancesPlugin module = InstancesPlugin.get();
+               Universe universe = Universe.get();
+               CompletableFuture<World> targetWorldFuture = null;
+               Transform returnPoint = null;
+               World targetWorld;
+               if (this.instanceKey != null) {
+                  targetWorld = universe.getWorld(this.instanceKey);
+                  if (targetWorld == null) {
+                     returnPoint = this.makeReturnPoint(ref, context, commandBuffer);
+                     targetWorldFuture = module.spawnInstance(this.instanceName, this.instanceKey, world, returnPoint);
+                  }
                } else {
-                  instanceState = chunkStore.getStore().getComponent(chunkRef, InstanceBlock.getComponentType());
-               }
+                  BlockPosition targetBlock = context.getTargetBlock();
+                  if (targetBlock == null) {
+                     return;
+                  }
 
-               if (blockRef == null) {
-                  return;
-               }
+                  ChunkStore chunkStore = world.getChunkStore();
+                  long chunkIndex = ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z);
+                  Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(chunkIndex);
+                  if (chunkRef == null || !chunkRef.isValid()) {
+                     return;
+                  }
 
-               if (instanceState == null) {
-                  instanceState = chunkStore.getStore().ensureAndGetComponent(blockRef, InstanceBlock.getComponentType());
-                  instanceState.setCloseOnRemove(this.closeOnBlockRemove);
-               }
-
-               UUID worldName = instanceState.getWorldUUID();
-               targetWorldFuture = instanceState.getWorldFuture();
-               targetWorld = worldName != null ? universe.getWorld(worldName) : null;
-               if (targetWorld == null && targetWorldFuture == null) {
-                  returnPoint = this.makeReturnPoint(ref, context, commandBuffer);
-                  targetWorldFuture = module.spawnInstance(this.instanceName, world, returnPoint);
-                  instanceState.setWorldFuture(targetWorldFuture);
-                  Ref<ChunkStore> finalBlockRef = blockRef;
-                  InstanceBlock finalInstanceState = instanceState;
-                  targetWorldFuture.thenAccept(instanceWorld -> {
-                     if (finalBlockRef.isValid()) {
-                        finalInstanceState.setWorldFuture(null);
-                        finalInstanceState.setWorldUUID(instanceWorld.getWorldConfig().getUuid());
-                        blockComponentChunk.markNeedsSaving();
-                     }
-                  });
-               }
-            }
-
-            if (targetWorldFuture != null) {
-               Transform personalReturnPoint = this.getPersonalReturnPoint(ref, context, returnPoint, commandBuffer);
-               InstancesPlugin.teleportPlayerToLoadingInstance(ref, commandBuffer, targetWorldFuture, personalReturnPoint);
-            } else if (targetWorld != null) {
-               Transform personalReturnPoint = this.getPersonalReturnPoint(ref, context, returnPoint, commandBuffer);
-               InstancesPlugin.teleportPlayerToInstance(ref, commandBuffer, targetWorld, personalReturnPoint);
-            }
-
-            if (this.removeBlockAfter >= 0.0) {
-               BlockPosition targetBlock = context.getTargetBlock();
-               if (targetBlock != null) {
-                  if (this.removeBlockAfter == 0.0) {
-                     ChunkStore chunkStore = world.getChunkStore();
-                     Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z));
-                     if (chunkRef != null && chunkRef.isValid()) {
-                        WorldChunk worldChunkComponent = chunkStore.getStore().getComponent(chunkRef, WorldChunk.getComponentType());
-                        if (worldChunkComponent != null) {
-                           worldChunkComponent.setBlock(targetBlock.x, targetBlock.y, targetBlock.z, 0, 256);
-                        }
-                     }
+                  BlockComponentChunk blockComponentChunk = chunkStore.getStore().getComponent(chunkRef, BlockComponentChunk.getComponentType());
+                  assert blockComponentChunk != null;
+                  int index = ChunkUtil.indexBlockInColumn(targetBlock.x, targetBlock.y, targetBlock.z);
+                  Ref<ChunkStore> blockRef = blockComponentChunk.getEntityReference(index);
+                  InstanceBlock instanceState;
+                  if (blockRef == null) {
+                     Holder<ChunkStore> holder = ChunkStore.REGISTRY.newHolder();
+                     instanceState = holder.ensureAndGetComponent(InstanceBlock.getComponentType());
+                     holder.addComponent(BlockModule.BlockStateInfo.getComponentType(), new BlockModule.BlockStateInfo(index, chunkRef));
+                     blockRef = chunkStore.getStore().addEntity(holder, AddReason.SPAWN);
+                     instanceState.setCloseOnRemove(this.closeOnBlockRemove);
                   } else {
-                     int block = world.getBlock(targetBlock.x, targetBlock.y, targetBlock.z);
-                     new CompletableFuture().completeOnTimeout(null, (long)(this.removeBlockAfter * 1.0E9), TimeUnit.NANOSECONDS).thenRunAsync(() -> {
-                        if (world.getBlock(targetBlock.x, targetBlock.y, targetBlock.z) == block) {
-                           ChunkStore chunkStore = world.getChunkStore();
-                           Ref<ChunkStore> chunkRefx = chunkStore.getChunkReference(ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z));
-                           if (chunkRefx != null && chunkRefx.isValid()) {
-                              WorldChunk worldChunkComponentx = chunkStore.getStore().getComponent(chunkRefx, WorldChunk.getComponentType());
-                              if (worldChunkComponentx != null) {
-                                 worldChunkComponentx.setBlock(targetBlock.x, targetBlock.y, targetBlock.z, 0, 256);
-                              }
+                     instanceState = chunkStore.getStore().getComponent(chunkRef, InstanceBlock.getComponentType());
+                  }
+
+                  if (blockRef == null) {
+                     return;
+                  }
+
+                  if (instanceState == null) {
+                     instanceState = chunkStore.getStore().ensureAndGetComponent(blockRef, InstanceBlock.getComponentType());
+                     instanceState.setCloseOnRemove(this.closeOnBlockRemove);
+                  }
+
+                  UUID worldName = instanceState.getWorldUUID();
+                  targetWorldFuture = instanceState.getWorldFuture();
+                  targetWorld = worldName != null ? universe.getWorld(worldName) : null;
+                  if (targetWorld == null && targetWorldFuture == null) {
+                     returnPoint = this.makeReturnPoint(ref, context, commandBuffer);
+                     targetWorldFuture = module.spawnInstance(this.instanceName, world, returnPoint);
+                     instanceState.setWorldFuture(targetWorldFuture);
+                     Ref<ChunkStore> finalBlockRef = blockRef;
+                     InstanceBlock finalInstanceState = instanceState;
+                     targetWorldFuture.thenAccept(instanceWorld -> {
+                        if (finalBlockRef.isValid()) {
+                           finalInstanceState.setWorldFuture(null);
+                           finalInstanceState.setWorldUUID(instanceWorld.getWorldConfig().getUuid());
+                           blockComponentChunk.markNeedsSaving();
+                        }
+                     });
+                  }
+               }
+
+               if (targetWorldFuture != null) {
+                  Transform personalReturnPoint = this.getPersonalReturnPoint(ref, context, returnPoint, commandBuffer);
+                  InstancesPlugin.teleportPlayerToLoadingInstance(ref, commandBuffer, targetWorldFuture, personalReturnPoint);
+               } else if (targetWorld != null) {
+                  Transform personalReturnPoint = this.getPersonalReturnPoint(ref, context, returnPoint, commandBuffer);
+                  InstancesPlugin.teleportPlayerToInstance(ref, commandBuffer, targetWorld, personalReturnPoint);
+               }
+
+               if (this.removeBlockAfter >= 0.0) {
+                  BlockPosition targetBlock = context.getTargetBlock();
+                  if (targetBlock != null) {
+                     if (this.removeBlockAfter == 0.0) {
+                        ChunkStore chunkStore = world.getChunkStore();
+                        Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z));
+                        if (chunkRef != null && chunkRef.isValid()) {
+                           WorldChunk worldChunkComponent = chunkStore.getStore().getComponent(chunkRef, WorldChunk.getComponentType());
+                           if (worldChunkComponent != null) {
+                              worldChunkComponent.setBlock(targetBlock.x, targetBlock.y, targetBlock.z, 0, 256);
                            }
                         }
-                     }, world);
+                     } else {
+                        int block = world.getBlock(targetBlock.x, targetBlock.y, targetBlock.z);
+                        new CompletableFuture().completeOnTimeout(null, (long)(this.removeBlockAfter * 1.0E9), TimeUnit.NANOSECONDS).thenRunAsync(() -> {
+                           if (world.getBlock(targetBlock.x, targetBlock.y, targetBlock.z) == block) {
+                              ChunkStore chunkStore = world.getChunkStore();
+                              Ref<ChunkStore> chunkRefx = chunkStore.getChunkReference(ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z));
+                              if (chunkRefx != null && chunkRefx.isValid()) {
+                                 WorldChunk worldChunkComponentx = chunkStore.getStore().getComponent(chunkRefx, WorldChunk.getComponentType());
+                                 if (worldChunkComponentx != null) {
+                                    worldChunkComponentx.setBlock(targetBlock.x, targetBlock.y, targetBlock.z, 0, 256);
+                                 }
+                              }
+                           }
+                        }, world);
+                     }
                   }
                }
             }

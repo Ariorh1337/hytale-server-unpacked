@@ -5,6 +5,7 @@ import com.hypixel.hytale.server.npc.asset.builder.Builder;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.asset.builder.Feature;
+import com.hypixel.hytale.server.npc.asset.builder.holder.BooleanHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.DoubleHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.EnumHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.StringHolder;
@@ -19,6 +20,7 @@ public abstract class BuilderSensorEvent extends BuilderSensorBase {
    protected final DoubleHolder range = new DoubleHolder();
    protected final EnumHolder<SensorEvent.EventSearchType> searchType = new EnumHolder<>();
    protected final StringHolder lockOnTargetSlot = new StringHolder();
+   protected final BooleanHolder lockRebind = new BooleanHolder();
 
    @Nonnull
    @Override
@@ -44,6 +46,15 @@ public abstract class BuilderSensorEvent extends BuilderSensorBase {
          "A target slot to place the target in. If omitted, no slot will be used",
          null
       );
+      this.getBoolean(
+         data,
+         "Rebind",
+         this.lockRebind,
+         false,
+         BuilderDescriptorState.Stable,
+         "Whether the target slot rebinds to the entity, so it survives short reloads or role changes.",
+         null
+      );
       this.provideFeature(Feature.LiveEntity);
       return this;
    }
@@ -59,5 +70,9 @@ public abstract class BuilderSensorEvent extends BuilderSensorBase {
    public int getLockOnTargetSlot(@Nonnull BuilderSupport support) {
       String slot = this.lockOnTargetSlot.get(support.getExecutionContext());
       return slot == null ? Integer.MIN_VALUE : support.getTargetSlot(slot);
+   }
+
+   public boolean isLockRebind(@Nonnull BuilderSupport support) {
+      return this.lockRebind.get(support.getExecutionContext());
    }
 }

@@ -27,6 +27,7 @@ public class SensorTarget extends SensorWithEntityFilters {
       this.targetSlot = builderSensorTarget.getTargetSlot(support);
       this.range = builderSensorTarget.getRange(support);
       this.autoUnlockTarget = builderSensorTarget.getAutoUnlockTarget(support);
+      this.positionProvider.setIncludeDead(this.hasDeathFilter());
    }
 
    @Override

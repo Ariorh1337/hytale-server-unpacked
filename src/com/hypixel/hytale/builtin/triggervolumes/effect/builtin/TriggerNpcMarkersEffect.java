@@ -84,9 +84,9 @@ public class TriggerNpcMarkersEffect extends TriggerEffect {
                         && markerComponent.isManualTrigger()
                         && (this.markerType == null || this.markerType.equals(markerComponent.getSpawnMarkerId()))) {
                         TransformComponent transform = store.getComponent(markerRef, TransformComponent.getComponentType());
-                        if (transform != null && matchesArea(shape, origin, transform.getPosition(), rangeSquared) && markerComponent.trigger(markerRef, store)
-                           )
-                         {
+                        if (transform != null
+                           && matchesArea(shape, origin, transform.getPosition(), rangeSquared)
+                           && markerComponent.trigger(markerRef, null, store)) {
                            triggered++;
                         }
                      }

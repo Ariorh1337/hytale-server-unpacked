@@ -14,12 +14,12 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.blackboard.Blackboard;
+import com.hypixel.hytale.server.npc.blackboard.BlackboardSubscription;
 import com.hypixel.hytale.server.npc.blackboard.view.blocktype.BlockTypeView;
 import com.hypixel.hytale.server.npc.blackboard.view.resource.ResourceView;
 import com.hypixel.hytale.server.npc.corecomponents.BlockTarget;
 import com.hypixel.hytale.server.npc.corecomponents.SensorBase;
 import com.hypixel.hytale.server.npc.corecomponents.world.builders.BuilderSensorBlock;
-import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.sensorinfo.PositionProvider;
@@ -55,8 +55,8 @@ public class SensorBlock extends SensorBase {
       TransformComponent transformComponent = store.getComponent(ref, TransformComponent.getComponentType());
       assert transformComponent != null;
       Vector3d entityPos = transformComponent.getPosition();
-      NPCEntity npcComponent = store.getComponent(ref, NPCEntity.getComponentType());
-      assert npcComponent != null;
+      BlackboardSubscription subscription = store.getComponent(ref, BlackboardSubscription.getComponentType());
+      assert subscription != null;
       BlockTarget target = executionSupport.getWorldSupport().getCachedBlockTarget(this.blockSet);
       Vector3d position = target.getPosition();
       if (!position.equals(Vector3dUtil.MIN)) {
@@ -85,7 +85,7 @@ public class SensorBlock extends SensorBase {
          target.reset(ref);
       }
 
-      BlockTypeView blackboard = npcComponent.getBlockTypeBlackboardView(ref, store);
+      BlockTypeView blackboard = subscription.getBlockTypeBlackboardView(ref, store);
       IBlockPositionData blockData = blackboard.findBlock(this.blockSet, this.range, this.yRange, this.pickRandom, ref, store);
       if (blockData == null) {
          this.positionProvider.clear();
@@ -102,10 +102,10 @@ public class SensorBlock extends SensorBase {
             .getView(ResourceView.class, ResourceView.indexViewFromWorldPosition(position));
          resourceView.reserveBlock(ref, blockData.getX(), blockData.getY(), blockData.getZ());
          target.setReservationHolder(resourceView);
-         Blackboard.LOGGER.at(Level.FINE).log("Entity %s reserved block from set %s at %s", npcComponent.getRoleName(), this.blockSet, position);
+         Blackboard.LOGGER.at(Level.FINE).log("Entity %s reserved block from set %s at %s", ref, this.blockSet, position);
       }
 
-      Blackboard.LOGGER.at(Level.FINE).log("Entity %s found block from set %s at %s", npcComponent.getRoleName(), this.blockSet, position);
+      Blackboard.LOGGER.at(Level.FINE).log("Entity %s found block from set %s at %s", ref, this.blockSet, position);
       this.positionProvider.setTarget(position);
       return true;
    }

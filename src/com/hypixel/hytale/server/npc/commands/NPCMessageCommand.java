@@ -38,11 +38,10 @@ public class NPCMessageCommand extends AbstractPlayerCommand {
       String msg = this.messageArg.get(context);
       double expiration = this.expirationTimeArg.provided(context) ? this.expirationTimeArg.get(context) : 1.0;
       if (this.allArg.get(context)) {
-         store.forEachEntityParallel(NPCEntity.getComponentType(), (index, archetypeChunk, commandBuffer) -> {
+         store.forEachEntityParallel(BeaconSupport.getComponentType(), (index, archetypeChunk, commandBuffer) -> {
             BeaconSupport beaconSupport = archetypeChunk.getComponent(index, BeaconSupport.getComponentType());
-            if (beaconSupport != null) {
-               beaconSupport.postMessage(msg, ref, expiration);
-            }
+            assert beaconSupport != null;
+            beaconSupport.postMessage(msg, ref, expiration);
          });
       } else {
          Pair<Ref<EntityStore>, NPCEntity> targetNpcPair = NPCCommandUtils.getTargetNpc(context, this.entityArg, store);

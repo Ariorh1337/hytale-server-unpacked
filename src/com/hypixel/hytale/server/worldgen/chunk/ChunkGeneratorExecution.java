@@ -18,6 +18,7 @@ import com.hypixel.hytale.server.worldgen.chunk.populator.PrefabPopulator;
 import com.hypixel.hytale.server.worldgen.chunk.populator.WaterPopulator;
 import com.hypixel.hytale.server.worldgen.util.BlockFluidEntry;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class ChunkGeneratorExecution {
    @Nonnull
@@ -237,7 +238,7 @@ public class ChunkGeneratorExecution {
       return this.setBlock(x, y, z, type, block, holder, -1, 0, 0);
    }
 
-   public boolean setBlock(int x, int y, int z, byte type, int block, Holder<ChunkStore> holder, int supportValue, int rotation, int filler) {
+   public boolean setBlock(int x, int y, int z, byte type, int block, @Nullable Holder<ChunkStore> holder, int supportValue, int rotation, int filler) {
       if (y >= 0 && y < 320) {
          byte newPriority = (byte)(type & 31);
          byte newFlags = (byte)(type & -32);
@@ -283,7 +284,7 @@ public class ChunkGeneratorExecution {
    }
 
    public boolean setFluid(int x, int y, int z, byte type, int fluid) {
-      return this.setFluid(x, y, z, type, fluid, (byte)Fluid.getAssetMap().getAsset(fluid).getMaxFluidLevel());
+      return this.setFluid(x, y, z, type, fluid, (byte)Fluid.getAssetMap().getAssetOrDefault(fluid, Fluid.EMPTY).getMaxFluidLevel());
    }
 
    public boolean setFluid(int x, int y, int z, byte type, int fluid, byte fluidLevel) {

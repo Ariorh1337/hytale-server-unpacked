@@ -11,6 +11,7 @@ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponen
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
+import com.hypixel.hytale.server.npc.components.messaging.BeaconReceiverProvider;
 import com.hypixel.hytale.server.npc.components.messaging.BeaconSupport;
 import com.hypixel.hytale.server.npc.corecomponents.ActionBase;
 import com.hypixel.hytale.server.npc.corecomponents.entity.builders.BuilderActionBeacon;
@@ -30,6 +31,7 @@ import org.joml.Vector3d;
 import org.joml.Vector3f;
 
 public class ActionBeacon extends ActionBase {
+   private static final ThreadLocal<List<Ref<EntityStore>>> PROVIDED_RECEIVERS = ThreadLocal.withInitial(ReferenceArrayList::new);
    protected final String message;
    protected final double range;
    protected final int[] targetGroups;
@@ -90,6 +92,7 @@ public class ActionBeacon extends ActionBase {
             ref,
             store
          );
+         this.sendToProvidedReceivers(ref, executionSupport, target, store);
          return true;
       }
 
@@ -103,6 +106,7 @@ public class ActionBeacon extends ActionBase {
          ref,
          store
       );
+      this.sendToProvidedReceivers(ref, executionSupport, target, store);
 
       for (int i = 0; i < this.sendList.size(); i++) {
          this.sendNPCMessage(ref, this.sendList.get(i), target, store);
@@ -110,6 +114,37 @@ public class ActionBeacon extends ActionBase {
 
       this.sendList.clear();
       return true;
+   }
+
+   private void sendToProvidedReceivers(
+      @Nonnull Ref<EntityStore> self, @Nonnull ExecutionSupport executionSupport, @Nonnull Ref<EntityStore> target, @Nonnull Store<EntityStore> store
+   ) {
+      List<BeaconReceiverProvider> providers = NPCPlugin.get().getBeaconReceiverProviders();
+      if (!providers.isEmpty()) {
+         TransformComponent transformComponent = store.getComponent(self, TransformComponent.getComponentType());
+         if (transformComponent != null) {
+            Vector3d origin = transformComponent.getPosition();
+            List<Ref<EntityStore>> receivers = PROVIDED_RECEIVERS.get();
+            receivers.clear();
+
+            for (int i = 0; i < providers.size(); i++) {
+               providers.get(i).collectInRange(origin, this.range, store, receivers);
+            }
+
+            for (int i = 0; i < receivers.size(); i++) {
+               Ref<EntityStore> candidate = receivers.get(i);
+               if (!candidate.equals(self) && filterNPCs(candidate, this, executionSupport, store)) {
+                  if (this.sendCount <= 0) {
+                     this.sendNPCMessage(self, candidate, target, store);
+                  } else {
+                     RandomExtra.reservoirSample(candidate, this.sendCount, this.sendList);
+                  }
+               }
+            }
+
+            receivers.clear();
+         }
+      }
    }
 
    protected static boolean filterNPCs(

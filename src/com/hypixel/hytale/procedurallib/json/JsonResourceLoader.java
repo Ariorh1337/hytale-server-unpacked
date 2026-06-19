@@ -10,6 +10,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import javax.annotation.Nonnull;
@@ -32,7 +33,7 @@ public class JsonResourceLoader<T extends JsonElement> implements AssetLoader<T>
 
    @Nonnull
    public T load(@Nonnull InputStream in) throws IOException {
-      try (JsonReader reader = new JsonReader(new BufferedReader(new InputStreamReader(in)))) {
+      try (JsonReader reader = new JsonReader(new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8)))) {
          reader.setStrictness(Strictness.LENIENT);
          JsonElement el = JsonParser.parseReader(reader);
          if (el == JsonNull.INSTANCE) {

@@ -3,17 +3,25 @@ package com.hypixel.hytale.builtin.triggervolumes.effect.builtin;
 import com.hypixel.hytale.builtin.triggervolumes.effect.TriggerCondition;
 import com.hypixel.hytale.builtin.triggervolumes.effect.TriggerContext;
 import com.hypixel.hytale.builtin.triggervolumes.effect.TriggerEventType;
+import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.conditions.PlayerCountCondition;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.EnumCodec;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.ActiveSlotInventoryComponent;
 import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.bson.BsonDocument;
+import org.bson.BsonString;
+import org.bson.BsonValue;
 
 public class ItemCondition extends TriggerCondition {
    @Nonnull
@@ -30,6 +38,30 @@ public class ItemCondition extends TriggerCondition {
       .add()
       .append(new KeyedCodec<>("Consume", Codec.BOOLEAN, false), (condition, consume) -> condition.consume = consume, condition -> condition.consume)
       .add()
+      .append(
+         new KeyedCodec<>("Comparison", new EnumCodec<>(PlayerCountCondition.Comparison.class), false),
+         (condition, comparison) -> condition.comparison = comparison,
+         condition -> condition.comparison
+      )
+      .add()
+      .append(
+         new KeyedCodec<>("EmptyInventory", Codec.BOOLEAN, false),
+         (condition, emptyInventory) -> condition.emptyInventory = emptyInventory,
+         condition -> condition.emptyInventory
+      )
+      .add()
+      .append(
+         new KeyedCodec<>("MetadataKey", Codec.STRING, false),
+         (condition, metadataKey) -> condition.metadataKey = metadataKey,
+         condition -> condition.metadataKey
+      )
+      .add()
+      .append(
+         new KeyedCodec<>("MetadataValue", Codec.STRING, false),
+         (condition, metadataValue) -> condition.metadataValue = metadataValue,
+         condition -> condition.metadataValue
+      )
+      .add()
       .build();
    @Nullable
    private String itemId;
@@ -37,6 +69,13 @@ public class ItemCondition extends TriggerCondition {
    private ItemCondition.Location location = ItemCondition.Location.IN_HAND;
    private int quantity = 1;
    private boolean consume;
+   @Nonnull
+   private PlayerCountCondition.Comparison comparison = PlayerCountCondition.Comparison.AT_LEAST;
+   private boolean emptyInventory;
+   @Nonnull
+   private String metadataKey = "";
+   @Nonnull
+   private String metadataValue = "";
 
    @Nonnull
    public static ItemCondition create(@Nonnull TriggerEventType eventType, @Nonnull String itemId, @Nonnull ItemCondition.Location location, int quantity) {
@@ -50,33 +89,47 @@ public class ItemCondition extends TriggerCondition {
 
    @Override
    public boolean test(@Nonnull TriggerContext context) {
+      Store<EntityStore> store = context.getStore();
+      Ref<EntityStore> ref = context.getEntityRef();
+      if (store.getComponent(ref, Player.getComponentType()) == null) {
+         return false;
+      }
+
+      if (this.emptyInventory) {
+         CombinedItemContainer combined = InventoryComponent.getCombined(store, ref, InventoryComponent.EVERYTHING);
+         return combined.countItemStacks(stack -> !ItemStack.isEmpty(stack)) == 0;
+      }
+
       if (this.itemId != null && !this.itemId.isBlank()) {
-         if (context.getStore().getComponent(context.getEntityRef(), Player.getComponentType()) == null) {
-            return false;
-         }
-
          int requiredQuantity = Math.max(0, this.quantity);
-         if (requiredQuantity == 0) {
-            return true;
-         }
 
-         return switch (this.location != null ? this.location : ItemCondition.Location.IN_HAND) {
-            case IN_HAND -> this.countStack(InventoryComponent.getItemInHand(context.getStore(), context.getEntityRef())) >= requiredQuantity;
+         int count = switch (this.location != null ? this.location : ItemCondition.Location.IN_HAND) {
+            case IN_HAND -> this.countStack(InventoryComponent.getItemInHand(store, ref));
             case HOTBAR -> {
-               InventoryComponent.Hotbar hotbar = context.getStore().getComponent(context.getEntityRef(), InventoryComponent.Hotbar.getComponentType());
-               yield hotbar != null && this.countStacks(hotbar.getInventory()) >= requiredQuantity;
+               InventoryComponent.Hotbar hotbar = store.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+               yield hotbar != null ? this.countStacks(hotbar.getInventory()) : 0;
             }
-            case INVENTORY -> this.countStacks(InventoryComponent.getCombined(context.getStore(), context.getEntityRef(), InventoryComponent.EVERYTHING))
-               >= requiredQuantity;
+            case INVENTORY -> this.countStacks(InventoryComponent.getCombined(store, ref, InventoryComponent.EVERYTHING));
          };
+         return this.matches(count, requiredQuantity);
       } else {
          return true;
       }
    }
 
+   private boolean matches(int count, int requiredQuantity) {
+      return switch (this.comparison) {
+         case AT_LEAST -> count >= requiredQuantity;
+         case AT_MOST -> count <= requiredQuantity;
+         case EXACTLY -> count == requiredQuantity;
+         case MORE_THAN -> count > requiredQuantity;
+         case LESS_THAN -> count < requiredQuantity;
+      };
+   }
+
    @Override
    public void applyOnAccept(@Nonnull TriggerContext context) {
-      if (this.consume && this.itemId != null && !this.itemId.isBlank()) {
+      if (this.consume && !this.emptyInventory && this.itemId != null && !this.itemId.isBlank()) {
          int requiredQuantity = Math.max(0, this.quantity);
          if (requiredQuantity != 0) {
             this.consumeMatchedItems(context, requiredQuantity);
@@ -127,11 +180,34 @@ public class ItemCondition extends TriggerCondition {
    }
 
    private int countStacks(@Nonnull ItemContainer container) {
-      return container.countItemStacks(stack -> this.itemId.equals(stack.getItemId()));
+      return container.countItemStacks(stack -> this.itemId.equals(stack.getItemId()) && this.matchesMetadata(stack));
    }
 
    private int countStack(@Nullable ItemStack stack) {
-      return !ItemStack.isEmpty(stack) && this.itemId.equals(stack.getItemId()) ? stack.getQuantity() : 0;
+      return !ItemStack.isEmpty(stack) && this.itemId.equals(stack.getItemId()) && this.matchesMetadata(stack) ? stack.getQuantity() : 0;
+   }
+
+   private boolean matchesMetadata(@Nonnull ItemStack stack) {
+      if (this.metadataKey.isBlank()) {
+         return true;
+      }
+
+      BsonDocument metadata = stack.getMetadata();
+      if (metadata == null) {
+         return false;
+      }
+
+      BsonValue value = metadata.get(this.metadataKey);
+      if (value == null) {
+         return false;
+      }
+
+      if (this.metadataValue.isBlank()) {
+         return true;
+      }
+
+      String actual = value instanceof BsonString bsonString ? bsonString.getValue() : value.toString();
+      return this.metadataValue.equals(actual);
    }
 
    public enum Location {

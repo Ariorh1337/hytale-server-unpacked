@@ -7,6 +7,7 @@ import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.blackboard.Blackboard;
+import com.hypixel.hytale.server.npc.blackboard.BlackboardSubscription;
 import com.hypixel.hytale.server.npc.blackboard.view.PrioritisedProviderView;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import java.util.UUID;
@@ -47,7 +48,7 @@ public class InteractionView extends PrioritisedProviderView<ReservationProvider
    }
 
    @Override
-   public void initialiseEntity(@Nonnull Ref<EntityStore> ref, @Nonnull NPCEntity npcComponent) {
+   public void initialiseEntity(@Nonnull Ref<EntityStore> ref, @Nonnull BlackboardSubscription subscription) {
    }
 
    @Override

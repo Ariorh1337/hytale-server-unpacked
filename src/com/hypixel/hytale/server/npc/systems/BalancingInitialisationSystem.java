@@ -62,7 +62,9 @@ public class BalancingInitialisationSystem extends HolderSystem<EntityStore> {
       EntityStatType asset = EntityStatType.getAssetMap().getAsset(statIndex);
       StaticModifier modifier = new StaticModifier(Modifier.ModifierTarget.MAX, StaticModifier.CalculationType.ADDITIVE, initialMaxHealth - asset.getMax());
       entityStatMapComponent.putModifier(statIndex, "NPC_Max", modifier);
-      entityStatMapComponent.maximizeStatValue(statIndex);
+      if (reason == AddReason.SPAWN) {
+         entityStatMapComponent.maximizeStatValue(statIndex);
+      }
    }
 
    @Override

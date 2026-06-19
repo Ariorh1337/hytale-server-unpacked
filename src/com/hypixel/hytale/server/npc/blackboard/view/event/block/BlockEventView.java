@@ -15,10 +15,10 @@ import com.hypixel.hytale.server.core.modules.entity.player.PlayerSettings;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.blackboard.Blackboard;
+import com.hypixel.hytale.server.npc.blackboard.BlackboardSubscription;
 import com.hypixel.hytale.server.npc.blackboard.view.event.EventNotification;
 import com.hypixel.hytale.server.npc.blackboard.view.event.EventTypeRegistration;
 import com.hypixel.hytale.server.npc.blackboard.view.event.EventView;
-import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import javax.annotation.Nonnull;
 import org.joml.Vector3i;
@@ -32,7 +32,11 @@ public class BlockEventView extends EventView<BlockEventView, BlockEventType, Ev
          this.entityMapsByEventType
             .put(
                eventType,
-               new EventTypeRegistration<>(eventType, (set, blockId) -> BlockSetModule.getInstance().blockInSet(set, blockId), NPCEntity::notifyBlockChange)
+               new EventTypeRegistration<>(
+                  eventType,
+                  (set, blockId) -> BlockSetModule.getInstance().blockInSet(set, blockId),
+                  (blackboardSubscription, ref, accessor, type, notification) -> BlackboardSubscription.notifyBlockChange(ref, accessor, type, notification)
+               )
             );
       }
    }
@@ -48,10 +52,10 @@ public class BlockEventView extends EventView<BlockEventView, BlockEventType, Ev
    }
 
    @Override
-   public void initialiseEntity(@Nonnull Ref<EntityStore> ref, @Nonnull NPCEntity npcComponent) {
+   public void initialiseEntity(@Nonnull Ref<EntityStore> ref, @Nonnull BlackboardSubscription subscription) {
       for (int i = 0; i < BlockEventType.VALUES.length; i++) {
          BlockEventType type = BlockEventType.VALUES[i];
-         IntSet eventSets = npcComponent.getBlackboardBlockChangeSet(type);
+         IntSet eventSets = subscription.getBlockChangeSet(type);
          if (eventSets != null) {
             this.entityMapsByEventType.get(type).initialiseEntity(ref, eventSets);
          }

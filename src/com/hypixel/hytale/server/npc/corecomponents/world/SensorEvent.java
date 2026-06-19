@@ -22,6 +22,7 @@ public abstract class SensorEvent extends SensorBase {
    protected final double range;
    protected final SensorEvent.EventSearchType searchType;
    protected final int lockOnTargetSlot;
+   protected final boolean lockRebind;
    protected int playerEventMessageSlot;
    protected int npcEventMessageSlot;
    protected final EntityPositionProvider positionProvider = new EntityPositionProvider();
@@ -31,6 +32,7 @@ public abstract class SensorEvent extends SensorBase {
       this.range = builder.getRange(support);
       this.searchType = builder.getEventSearchType(support);
       this.lockOnTargetSlot = builder.getLockOnTargetSlot(support);
+      this.lockRebind = builder.isLockRebind(support);
    }
 
    @Override
@@ -83,7 +85,7 @@ public abstract class SensorEvent extends SensorBase {
       }
 
       if (this.lockOnTargetSlot >= 0) {
-         support.setMarkedEntity(this.lockOnTargetSlot, set);
+         support.setMarkedEntity(this.lockOnTargetSlot, set, this.lockRebind, componentAccessor);
       }
 
       return true;

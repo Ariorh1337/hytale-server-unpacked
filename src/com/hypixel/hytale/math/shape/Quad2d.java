@@ -139,9 +139,9 @@ public class Quad2d {
 
       double pq = 1.0 - p - q;
       if (random.nextBoolean()) {
-         vec.set(-this.a.x * pq + this.b.x * p + this.c.x * q, -this.a.y * pq + this.b.y * p + this.c.y * q);
+         vec.set(this.a.x * pq + this.b.x * p + this.c.x * q, this.a.y * pq + this.b.y * p + this.c.y * q);
       } else {
-         vec.set(-this.a.x * pq + this.c.x * p + this.d.x * q, -this.a.y * pq + this.c.y * p + this.d.y * q);
+         vec.set(this.a.x * pq + this.c.x * p + this.d.x * q, this.a.y * pq + this.c.y * p + this.d.y * q);
       }
 
       return vec;

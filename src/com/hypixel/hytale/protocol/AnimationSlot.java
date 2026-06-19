@@ -7,7 +7,8 @@ public enum AnimationSlot {
    Status(1),
    Action(2),
    Face(3),
-   Emote(4);
+   Emote(4),
+   ServerAction(5);
 
    public static final AnimationSlot[] VALUES = values();
    private final int value;

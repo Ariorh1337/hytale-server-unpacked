@@ -358,8 +358,8 @@ public class PrefabPopulator {
 
       for (UniquePrefabContainer.UniquePrefabEntry unique : uniquePrefabs) {
          if (priority < unique.getCategory().priority()) {
-            long dx = x - unique.getPosition().x();
-            long dz = z - unique.getPosition().z();
+            long dx = (long)x - unique.getPosition().x();
+            long dz = (long)z - unique.getPosition().z();
             if (dx * dx + dz * dz <= radius2) {
                return true;
             }

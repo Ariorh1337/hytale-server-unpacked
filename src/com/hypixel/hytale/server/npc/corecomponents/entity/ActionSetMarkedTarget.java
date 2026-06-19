@@ -14,10 +14,12 @@ import javax.annotation.Nullable;
 
 public class ActionSetMarkedTarget extends ActionBase {
    protected final int targetSlot;
+   protected final boolean rebind;
 
    public ActionSetMarkedTarget(@Nonnull BuilderActionSetMarkedTarget builder, @Nonnull BuilderSupport support) {
       super(builder);
       this.targetSlot = builder.getTargetSlot(support);
+      this.rebind = builder.isRebind(support);
    }
 
    @Override
@@ -31,7 +33,7 @@ public class ActionSetMarkedTarget extends ActionBase {
       super.execute(ref, executionSupport, sensorInfo, dt, store);
       IPositionProvider positionProvider = sensorInfo != null ? sensorInfo.getPositionProvider() : null;
       Ref<EntityStore> target = positionProvider != null ? positionProvider.getTarget() : null;
-      executionSupport.getMarkedEntitySupport().setMarkedEntity(this.targetSlot, target);
+      executionSupport.getMarkedEntitySupport().setMarkedEntity(this.targetSlot, target, this.rebind, store);
       return true;
    }
 }

@@ -40,6 +40,7 @@ public abstract class SensorEntityBase extends SensorWithEntityFilters {
    protected final double minRange;
    protected final boolean useProjectedDistance;
    protected final boolean lockOnTarget;
+   protected final boolean lockRebind;
    protected final boolean autoUnlockTarget;
    protected final boolean onlyLockedTarget;
    protected final int lockedTargetSlot;
@@ -53,12 +54,14 @@ public abstract class SensorEntityBase extends SensorWithEntityFilters {
    protected final EntityPositionProvider positionProvider = new EntityPositionProvider();
    protected int currentVisSensorColorIndex = -1;
    protected final float visViewAngle;
+   protected final boolean includeDead;
 
    public SensorEntityBase(@Nonnull BuilderSensorEntityBase builder, ISensorEntityPrioritiser prioritiser, @Nonnull BuilderSupport builderSupport) {
       super(builder, builder.getFilters(builderSupport, prioritiser, ComponentContext.SensorEntity));
       this.range = builder.getRange(builderSupport);
       this.minRange = builder.getMinRange(builderSupport);
       this.lockOnTarget = builder.isLockOnTarget(builderSupport);
+      this.lockRebind = builder.isLockRebind(builderSupport);
       this.autoUnlockTarget = builder.isAutoUnlockTarget(builderSupport);
       this.onlyLockedTarget = builder.isOnlyLockedTarget(builderSupport);
       this.useProjectedDistance = builder.isUseProjectedDistance(builderSupport);
@@ -67,6 +70,8 @@ public abstract class SensorEntityBase extends SensorWithEntityFilters {
       this.prioritiser = prioritiser;
       this.collector = builder.getCollector(builderSupport);
       this.visViewAngle = this.findViewAngleFromFilters();
+      this.includeDead = this.hasDeathFilter();
+      this.positionProvider.setIncludeDead(this.includeDead);
    }
 
    @Override
@@ -116,7 +121,7 @@ public abstract class SensorEntityBase extends SensorWithEntityFilters {
 
       this.positionProvider.setTarget(targetRef, store);
       if (this.lockOnTarget) {
-         executionSupport.getMarkedEntitySupport().setMarkedEntity(this.lockedTargetSlot, targetRef);
+         executionSupport.getMarkedEntitySupport().setMarkedEntity(this.lockedTargetSlot, targetRef, this.lockRebind, store);
       }
 
       return true;
@@ -272,7 +277,7 @@ public abstract class SensorEntityBase extends SensorWithEntityFilters {
    protected boolean filterEntity(
       @Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull ExecutionSupport executionSupport, @Nonnull Store<EntityStore> store
    ) {
-      if (store.getArchetype(targetRef).contains(DEATH_COMPONENT_TYPE)) {
+      if (!this.includeDead && store.getArchetype(targetRef).contains(DEATH_COMPONENT_TYPE)) {
          return false;
       }
 

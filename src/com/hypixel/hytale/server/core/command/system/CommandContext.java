@@ -95,7 +95,9 @@ public final class CommandContext {
       try {
          return senderType.cast(this.sender);
       } catch (ClassCastException e) {
-         throw new SenderTypeException(senderType);
+         SenderTypeException exception = new SenderTypeException(senderType);
+         exception.initCause(e);
+         throw exception;
       }
    }
 

@@ -42,15 +42,16 @@ public class TriggerVolumeEffectsCommand extends AbstractPlayerCommand {
             volumeName = manager.getPlayerSelection(context.sender().getUuid());
          }
 
-         if (volumeName == null) {
-            context.sendMessage(Message.translation("server.commands.triggervolume.effects.noSelection"));
-         } else {
-            VolumeEntry entry = manager.getVolume(volumeName);
-            if (entry == null) {
-               context.sendMessage(Message.translation("server.commands.triggervolume.notFound").param("name", volumeName));
+         Player playerComponent = store.getComponent(ref, Player.getComponentType());
+         if (playerComponent != null) {
+            if (volumeName == null) {
+               playerComponent.getPageManager()
+                  .openCustomPage(ref, store, new TriggerVolumeInspectorPage(playerRef, worldName, null, TriggerVolumeInspectorPage.InspectorTab.EFFECTS));
             } else {
-               Player playerComponent = store.getComponent(ref, Player.getComponentType());
-               if (playerComponent != null) {
+               VolumeEntry entry = manager.getVolume(volumeName);
+               if (entry == null) {
+                  context.sendMessage(Message.translation("server.commands.triggervolume.notFound").param("name", volumeName));
+               } else {
                   String groupId = entry.getGroupId();
                   if (this.groupFlag.get(context) && groupId != null) {
                      GroupEntry group = manager.getGroup(groupId);

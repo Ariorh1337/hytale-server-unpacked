@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -41,13 +42,14 @@ public abstract class BlockingDiskFile {
                   byte[] bytes;
                   try (
                      ByteArrayOutputStream out = new ByteArrayOutputStream();
-                     BufferedWriter buf = new BufferedWriter(new OutputStreamWriter(out));
+                     BufferedWriter buf = new BufferedWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8));
                   ) {
                      this.create(buf);
+                     buf.flush();
                      bytes = out.toByteArray();
                   }
 
-                  try (BufferedReader var34 = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(bytes)))) {
+                  try (BufferedReader var34 = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(bytes), StandardCharsets.UTF_8))) {
                      this.read(var34);
                      return;
                   }

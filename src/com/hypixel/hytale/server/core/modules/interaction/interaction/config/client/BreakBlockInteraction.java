@@ -8,17 +8,21 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
+import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.Interaction;
 import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
 import com.hypixel.hytale.server.core.asset.type.gameplay.WorldConfig;
+import com.hypixel.hytale.server.core.asset.type.item.config.BreakShapeDurabilityMode;
+import com.hypixel.hytale.server.core.asset.type.item.config.Item;
+import com.hypixel.hytale.server.core.asset.type.item.config.ItemTool;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.modules.interaction.BlockHarvestUtils;
+import com.hypixel.hytale.server.core.modules.interaction.breakshape.BreakShape;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
@@ -26,6 +30,8 @@ import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
@@ -33,6 +39,7 @@ import javax.annotation.Nullable;
 import org.joml.Vector3i;
 
 public class BreakBlockInteraction extends SimpleBlockInteraction {
+   private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
    @Nonnull
    public static final BuilderCodec<BreakBlockInteraction> CODEC = BuilderCodec.builder(
          BreakBlockInteraction.class, BreakBlockInteraction::new, SimpleBlockInteraction.CODEC
@@ -85,67 +92,96 @@ public class BreakBlockInteraction extends SimpleBlockInteraction {
    ) {
       Ref<EntityStore> ref = context.getEntity();
       Ref<EntityStore> ownerRef = context.getOwningEntity();
-      Player playerComponent = commandBuffer.getComponent(ownerRef, Player.getComponentType());
-      if (playerComponent == null) {
-         HytaleLogger.getLogger().at(Level.INFO).atMostEvery(5, TimeUnit.MINUTES).log("BreakBlockInteraction requires a Player but was used for: %s", ref);
-      } else {
-         Inventory playerInventory = playerComponent.getInventory();
-         ItemStack ownerHeldItem = playerInventory.getItemInHand();
-         ChunkStore chunkStore = world.getChunkStore();
-         Store<ChunkStore> chunkStoreStore = chunkStore.getStore();
-         long chunkIndex = ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z);
-         Ref<ChunkStore> chunkReference = chunkStore.getChunkReference(chunkIndex);
-         if (chunkReference != null && chunkReference.isValid()) {
-            WorldChunk worldChunkComponent = chunkStoreStore.getComponent(chunkReference, WorldChunk.getComponentType());
-            assert worldChunkComponent != null;
-            BlockChunk blockChunkComponent = chunkStoreStore.getComponent(chunkReference, BlockChunk.getComponentType());
-            assert blockChunkComponent != null;
-            BlockSection blockSection = blockChunkComponent.getSectionAtBlockY(targetBlock.y());
-            GameplayConfig gameplayConfig = world.getGameplayConfig();
-            WorldConfig worldConfig = gameplayConfig.getWorldConfig();
-            if (this.harvest) {
-               int x = targetBlock.x();
-               int y = targetBlock.y();
-               int z = targetBlock.z();
-               BlockType blockType = worldChunkComponent.getBlockType(x, y, z);
-               if (blockType == null) {
-                  context.getState().state = InteractionState.Failed;
-                  return;
+      ChunkStore chunkStore = world.getChunkStore();
+      Store<ChunkStore> chunkStoreStore = chunkStore.getStore();
+      long chunkIndex = ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z);
+      Ref<ChunkStore> chunkReference = chunkStore.getChunkReference(chunkIndex);
+      if (chunkReference != null && chunkReference.isValid()) {
+         WorldChunk worldChunkComponent = chunkStoreStore.getComponent(chunkReference, WorldChunk.getComponentType());
+         assert worldChunkComponent != null;
+         BlockChunk blockChunkComponent = chunkStoreStore.getComponent(chunkReference, BlockChunk.getComponentType());
+         assert blockChunkComponent != null;
+         BlockSection blockSection = blockChunkComponent.getSectionAtBlockY(targetBlock.y());
+         GameplayConfig gameplayConfig = world.getGameplayConfig();
+         WorldConfig worldConfig = gameplayConfig.getWorldConfig();
+         if (this.harvest) {
+            int x = targetBlock.x();
+            int y = targetBlock.y();
+            int z = targetBlock.z();
+            BlockType blockType = worldChunkComponent.getBlockType(x, y, z);
+            if (blockType == null) {
+               context.getState().state = InteractionState.Failed;
+               return;
+            }
+
+            if (!worldConfig.isBlockGatheringAllowed()) {
+               context.getState().state = InteractionState.Failed;
+               return;
+            }
+
+            if (!BlockHarvestUtils.shouldPickupByInteraction(blockType)) {
+               context.getState().state = InteractionState.Failed;
+               return;
+            }
+
+            int filler = blockSection.getFiller(x, y, z);
+            BlockHarvestUtils.performPickupByInteraction(ref, targetBlock, blockType, filler, chunkReference, commandBuffer, chunkStoreStore);
+         } else {
+            boolean blockBreakingAllowed = worldConfig.isBlockBreakingAllowed();
+            if (!blockBreakingAllowed) {
+               context.getState().state = InteractionState.Failed;
+               return;
+            }
+
+            Item heldItem = heldItemStack != null ? heldItemStack.getItem() : null;
+            ItemTool tool = heldItem != null ? heldItem.getTool() : null;
+            BreakShape breakShape = tool != null ? tool.getBreakShape() : null;
+            Player playerComponent = commandBuffer.getComponent(ownerRef, Player.getComponentType());
+            boolean creative = playerComponent != null && playerComponent.getGameMode() == GameMode.Creative;
+            if (breakShape == null) {
+               if (creative) {
+                  BlockHarvestUtils.performBlockBreak(ref, heldItemStack, targetBlock, chunkReference, commandBuffer, chunkStoreStore);
+               } else {
+                  BlockHarvestUtils.performBlockDamage(
+                     ref, targetBlock, heldItemStack, null, this.toolId, this.matchTool, 1.0F, 0, false, chunkReference, commandBuffer, chunkStoreStore
+                  );
                }
 
-               if (!worldConfig.isBlockGatheringAllowed()) {
-                  context.getState().state = InteractionState.Failed;
-                  return;
-               }
+               return;
+            }
 
-               if (!BlockHarvestUtils.shouldPickupByInteraction(blockType)) {
-                  context.getState().state = InteractionState.Failed;
-                  return;
-               }
+            LinkedHashSet<Vector3i> affectedBlocks = new LinkedHashSet<>();
 
-               int filler = blockSection.getFiller(x, y, z);
-               BlockHarvestUtils.performPickupByInteraction(ref, targetBlock, blockType, filler, chunkReference, commandBuffer, chunkStoreStore);
+            try {
+               breakShape.selectBlocks(commandBuffer, ref, targetBlock, (x, y, z) -> affectedBlocks.add(new Vector3i(x, y, z)));
+            } catch (Exception e) {
+               LOGGER.at(Level.WARNING)
+                  .atMostEvery(5, TimeUnit.MINUTES)
+                  .log("Break shape failed to select blocks (tool='%s'); breaking only the target block. Cause: %s", this.toolId, e);
+               affectedBlocks.clear();
+               affectedBlocks.add(new Vector3i(targetBlock));
+            }
+
+            ArrayList<Vector3i> blockList = new ArrayList<>(affectedBlocks);
+            if (creative) {
+               BlockHarvestUtils.performBlockBreak(ref, heldItemStack, blockList, 0, commandBuffer, chunkStoreStore);
             } else {
-               boolean blockBreakingAllowed = worldConfig.isBlockBreakingAllowed();
-               if (!blockBreakingAllowed) {
-                  context.getState().state = InteractionState.Failed;
-                  return;
-               }
-
-               switch (playerComponent.getGameMode()) {
-                  case null:
-                     throw new UnsupportedOperationException("GameMode is not supported");
-                  case Adventure:
-                     BlockHarvestUtils.performBlockDamage(
-                        ref, targetBlock, ownerHeldItem, null, this.toolId, this.matchTool, 1.0F, 0, false, chunkReference, commandBuffer, chunkStoreStore
-                     );
-                     break;
-                  case Creative:
-                     BlockHarvestUtils.performBlockBreak(ref, ownerHeldItem, targetBlock, chunkReference, commandBuffer, chunkStoreStore);
-                     break;
-                  default:
-                     throw new MatchException(null, null);
-               }
+               boolean durabilityPerBlock = tool.getBreakShapeDurabilityMode() == BreakShapeDurabilityMode.PerBlock;
+               BlockHarvestUtils.performBlockDamage(
+                  ref,
+                  blockList,
+                  targetBlock,
+                  heldItemStack,
+                  null,
+                  this.toolId,
+                  this.matchTool,
+                  1.0F,
+                  0,
+                  false,
+                  durabilityPerBlock,
+                  commandBuffer,
+                  chunkStoreStore
+               );
             }
          }
       }

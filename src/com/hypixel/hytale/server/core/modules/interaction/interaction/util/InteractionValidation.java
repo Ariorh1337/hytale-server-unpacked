@@ -27,7 +27,10 @@ public class InteractionValidation {
    private static final float MAX_CREATIVE_BLOCK_INTERACTION_DISTANCE = 128.0F;
 
    private static float getPlayerInteractionDistanceSq(
-      @Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nullable ItemStack heldItem
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor,
+      @Nullable ItemStack heldItem,
+      boolean allowExtendedCreativeRange
    ) {
       Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
       GameMode gameMode = playerComponent.getGameMode();
@@ -35,10 +38,14 @@ public class InteractionValidation {
       float maxDistance = interactionConfig.getUseDistance(gameMode);
       if (gameMode == GameMode.Creative) {
          float creativeDistance = 10.0F;
-         PlayerSettings settingsComponent = componentAccessor.getComponent(ref, PlayerSettings.getComponentType());
-         if (settingsComponent != null) {
-            int clientCreativeDistance = settingsComponent.creativeSettings().creativeInteractionDistance();
-            creativeDistance = MathUtil.clamp(clientCreativeDistance, 0.0F, 128.0F);
+         if (allowExtendedCreativeRange) {
+            creativeDistance = 128.0F;
+         } else {
+            PlayerSettings settingsComponent = componentAccessor.getComponent(ref, PlayerSettings.getComponentType());
+            if (settingsComponent != null) {
+               int clientCreativeDistance = settingsComponent.creativeSettings().creativeInteractionDistance();
+               creativeDistance = MathUtil.clamp(clientCreativeDistance, 0.0F, 128.0F);
+            }
          }
 
          maxDistance = Math.max(maxDistance, creativeDistance);
@@ -74,7 +81,7 @@ public class InteractionValidation {
          return false;
       }
 
-      float maxDistanceSq = getPlayerInteractionDistanceSq(ref, componentAccessor, heldItem);
+      float maxDistanceSq = getPlayerInteractionDistanceSq(ref, componentAccessor, heldItem, false);
       float eyeHeight = getEyeHeight(ref, componentAccessor);
       Vector3d position = transformComponent.getPosition();
       Vector3d targetPosition = targetTransformComponent.getPosition();
@@ -88,7 +95,8 @@ public class InteractionValidation {
       @Nullable ItemStack heldItem,
       int blockX,
       int blockY,
-      int blockZ
+      int blockZ,
+      boolean allowExtendedCreativeRange
    ) {
       Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
       if (playerComponent == null) {
@@ -100,7 +108,7 @@ public class InteractionValidation {
          return false;
       }
 
-      float maxDistanceSq = getPlayerInteractionDistanceSq(ref, componentAccessor, heldItem);
+      float maxDistanceSq = getPlayerInteractionDistanceSq(ref, componentAccessor, heldItem, allowExtendedCreativeRange);
       float eyeHeight = getEyeHeight(ref, componentAccessor);
       Vector3d position = transformComponent.getPosition();
       double dx = blockX + 0.5 - position.x();
@@ -111,9 +119,30 @@ public class InteractionValidation {
    }
 
    public static boolean canPlayerInteractWithBlock(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor,
+      @Nullable ItemStack heldItem,
+      int blockX,
+      int blockY,
+      int blockZ
+   ) {
+      return canPlayerInteractWithBlock(ref, componentAccessor, heldItem, blockX, blockY, blockZ, false);
+   }
+
+   public static boolean canPlayerInteractWithBlock(
       @Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nullable ItemStack heldItem, @Nonnull Vector3i blockPosition
    ) {
-      return canPlayerInteractWithBlock(ref, componentAccessor, heldItem, blockPosition.x, blockPosition.y, blockPosition.z);
+      return canPlayerInteractWithBlock(ref, componentAccessor, heldItem, blockPosition.x, blockPosition.y, blockPosition.z, false);
+   }
+
+   public static boolean canPlayerInteractWithBlock(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor,
+      @Nullable ItemStack heldItem,
+      @Nonnull Vector3i blockPosition,
+      boolean allowExtendedCreativeRange
+   ) {
+      return canPlayerInteractWithBlock(ref, componentAccessor, heldItem, blockPosition.x, blockPosition.y, blockPosition.z, allowExtendedCreativeRange);
    }
 
    public static boolean canPlayerInteractWithBlock(
@@ -122,7 +151,7 @@ public class InteractionValidation {
       @Nullable ItemStack heldItem,
       @Nonnull BlockPosition blockPosition
    ) {
-      return canPlayerInteractWithBlock(ref, componentAccessor, heldItem, blockPosition.x, blockPosition.y, blockPosition.z);
+      return canPlayerInteractWithBlock(ref, componentAccessor, heldItem, blockPosition.x, blockPosition.y, blockPosition.z, false);
    }
 
    @Nonnull

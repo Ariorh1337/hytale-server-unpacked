@@ -1,5 +1,6 @@
 package com.hypixel.hytale.server.core.permissions;
 
+import java.util.Locale;
 import javax.annotation.Nonnull;
 
 public class HytalePermissions {
@@ -10,6 +11,10 @@ public class HytalePermissions {
    public static final String ASSET_EDITOR_PACKS_EDIT = register("hytale.editor.packs.edit", "hytale:ServerEditor");
    public static final String ASSET_EDITOR_PACKS_DELETE = register("hytale.editor.packs.delete", "hytale:ServerEditor");
    public static final String BUILDER_TOOLS_EDITOR = register("hytale.editor.builderTools", "hytale:WorldEditor");
+   public static final String EDITOR_TOOL_BASE = "hytale.editor.tool";
+   public static final String EDITOR_TOOL_ENTITY = registerToolPermission("Entity");
+   public static final String EDITOR_TOOL_RULER = registerToolPermission("Ruler");
+   public static final String EDITOR_TOOL_LASER_POINTER = registerToolPermission("LaserPointer");
    public static final String EDITOR_BRUSH_USE = register("hytale.editor.brush.use", "hytale:WorldEditor");
    public static final String EDITOR_BRUSH_CONFIG = register("hytale.editor.brush.config", "hytale:WorldEditor");
    public static final String EDITOR_PREFAB_USE = register("hytale.editor.prefab.use", "hytale:WorldEditor");
@@ -32,6 +37,15 @@ public class HytalePermissions {
    @Nonnull
    public static String fromCommand(@Nonnull String name, @Nonnull String subCommand) {
       return "hytale.command." + name + "." + subCommand;
+   }
+
+   @Nonnull
+   public static String toolPermission(@Nonnull String toolId) {
+      return "hytale.editor.tool." + toolId.toLowerCase(Locale.ROOT);
+   }
+
+   private static String registerToolPermission(@Nonnull String toolId) {
+      return register(toolPermission(toolId), "hytale:WorldEditor");
    }
 
    private static String register(@Nonnull String permission, @Nonnull String... groups) {

@@ -20,7 +20,7 @@ public class InterpolatedCurve implements Double2DoubleFunction {
          this.smoothTransition = smoothTransition;
          this.positionA = Math.min(positionA, positionB);
          this.positionB = Math.max(positionA, positionB);
-         this.distance = positionB - positionA;
+         this.distance = this.positionB - this.positionA;
          this.functionA = functionA;
          this.functionB = functionB;
       } else {

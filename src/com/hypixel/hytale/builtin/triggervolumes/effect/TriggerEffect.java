@@ -6,9 +6,11 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.EnumCodec;
 import com.hypixel.hytale.codec.lookup.CodecMapCodec;
+import com.hypixel.hytale.server.core.Message;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.Map.Entry;
 import javax.annotation.Nonnull;
 
 public abstract class TriggerEffect {
@@ -26,10 +28,13 @@ public abstract class TriggerEffect {
       .add()
       .append(new KeyedCodec<>("Delay", Codec.FLOAT, false), (effect, delay) -> effect.delay = delay, effect -> effect.delay)
       .add()
+      .append(new KeyedCodec<>("Entry", Codec.INTEGER, false), (effect, entry) -> effect.entry = entry, effect -> effect.entry != 0 ? effect.entry : null)
+      .add()
       .build();
    private TriggerEventType eventType;
    private float interval = 0.0F;
    private float delay = 0.0F;
+   private int entry = 0;
 
    @Nonnull
    public static TriggerEffect deepCopy(@Nonnull TriggerEffect effect) {
@@ -77,8 +82,25 @@ public abstract class TriggerEffect {
       this.delay = delay;
    }
 
+   public int getEntry() {
+      return this.entry;
+   }
+
+   public void setEntry(int entry) {
+      this.entry = entry;
+   }
+
    public abstract void execute(@Nonnull TriggerContext var1);
 
    public void onEntityExit(@Nonnull UUID entityUuid) {
+   }
+
+   @Nonnull
+   protected static Message withTagParams(@Nonnull TriggerContext context, @Nonnull Message message) {
+      for (Entry<String, String> entry : context.getVolume().getRawTags().entrySet()) {
+         message.param(entry.getKey(), entry.getValue());
+      }
+
+      return message;
    }
 }

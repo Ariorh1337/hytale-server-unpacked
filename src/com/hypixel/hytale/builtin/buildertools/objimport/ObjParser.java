@@ -84,7 +84,7 @@ public final class ObjParser {
          float z = Float.parseFloat(parts[3]);
          vertices.add(new float[]{x, y, z});
       } catch (NumberFormatException e) {
-         throw new ObjParser.ObjParseException("Invalid vertex coordinates at line " + lineNum);
+         throw new ObjParser.ObjParseException("Invalid vertex coordinates at line " + lineNum, e);
       }
    }
 
@@ -98,7 +98,7 @@ public final class ObjParser {
          float v = Float.parseFloat(parts[2]);
          uvCoordinates.add(new float[]{u, v});
       } catch (NumberFormatException e) {
-         throw new ObjParser.ObjParseException("Invalid UV coordinates at line " + lineNum);
+         throw new ObjParser.ObjParseException("Invalid UV coordinates at line " + lineNum, e);
       }
    }
 
@@ -119,7 +119,7 @@ public final class ObjParser {
             int vIndex = Integer.parseInt(components[0]);
             vertexIndices[i - 1] = vIndex > 0 ? vIndex - 1 : vIndex;
          } catch (NumberFormatException e) {
-            throw new ObjParser.ObjParseException("Invalid face vertex index at line " + lineNum);
+            throw new ObjParser.ObjParseException("Invalid face vertex index at line " + lineNum, e);
          }
 
          if (components.length >= 2 && !components[1].isEmpty()) {
@@ -218,6 +218,10 @@ public final class ObjParser {
    public static class ObjParseException extends Exception {
       public ObjParseException(String message) {
          super(message);
+      }
+
+      public ObjParseException(String message, Throwable cause) {
+         super(message, cause);
       }
    }
 }

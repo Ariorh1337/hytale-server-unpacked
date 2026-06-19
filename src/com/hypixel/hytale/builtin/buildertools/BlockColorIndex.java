@@ -42,7 +42,7 @@ public final class BlockColorIndex {
 
          for (String key : keys) {
             BlockType blockType = assetMap.getAsset(key);
-            if (blockType != null && this.isSolidCube(blockType)) {
+            if (blockType != null && this.isSolidCube(blockType) && !blockType.isState()) {
                Item item = blockType.getItem();
                if (item != null && !this.hiddenQualityIndexes.contains(item.getQualityIndex())) {
                   int blockId = assetMap.getIndex(key);
@@ -86,6 +86,17 @@ public final class BlockColorIndex {
          this.initialized = true;
          LOGGER.at(Level.INFO).log("BlockColorIndex initialized with %d blocks", (int)this.entries.size());
       }
+   }
+
+   public boolean isExcludedQuality(int blockId) {
+      this.ensureInitialized();
+      BlockType blockType = BlockType.getAssetMap().getAsset(blockId);
+      if (blockType == null) {
+         return true;
+      }
+
+      Item item = blockType.getItem();
+      return item != null && this.hiddenQualityIndexes.contains(item.getQualityIndex());
    }
 
    private static boolean hasTintColor(@Nonnull BlockType blockType) {
@@ -138,6 +149,84 @@ public final class BlockColorIndex {
       return bestId;
    }
 
+   private static int computeBlockColorRgb(@Nonnull BlockType blockType) {
+      boolean hasTint = hasTintColor(blockType);
+      boolean hasTexture = blockType.getTextureComputedColor() != null;
+      byte[] tint = getTintColor(blockType);
+      Color textureColor = blockType.getTextureComputedColor();
+      Color particleColor = blockType.getParticleColor();
+      int r;
+      int g;
+      int b;
+      if (hasTint && hasTexture) {
+         r = (textureColor.red & 255) * (tint[0] & 255) / 255;
+         g = (textureColor.green & 255) * (tint[1] & 255) / 255;
+         b = (textureColor.blue & 255) * (tint[2] & 255) / 255;
+      } else if (hasTint) {
+         r = tint[0] & 255;
+         g = tint[1] & 255;
+         b = tint[2] & 255;
+      } else if (hasTexture) {
+         r = textureColor.red & 255;
+         g = textureColor.green & 255;
+         b = textureColor.blue & 255;
+      } else {
+         if (particleColor == null) {
+            return -1;
+         }
+
+         r = particleColor.red & 255;
+         g = particleColor.green & 255;
+         b = particleColor.blue & 255;
+      }
+
+      return r << 16 | g << 8 | b;
+   }
+
+   public int findClosestVariant(int sourceBlockId, @Nonnull String suffix) {
+      this.ensureInitialized();
+      BlockTypeAssetMap<String, BlockType> assetMap = BlockType.getAssetMap();
+      BlockType source = assetMap.getAsset(sourceBlockId);
+      if (source == null) {
+         return -1;
+      }
+
+      int sourceRgb = computeBlockColorRgb(source);
+      if (sourceRgb < 0) {
+         return -1;
+      }
+
+      double[] lab = rgbToLab(sourceRgb >> 16 & 0xFF, sourceRgb >> 8 & 0xFF, sourceRgb & 0xFF);
+      double targetL = lab[0];
+      double targetA = lab[1];
+      double targetB = lab[2];
+      String suffixMatch = "_" + suffix;
+      double minDist = Double.MAX_VALUE;
+      int bestId = -1;
+
+      for (String key : assetMap.getAssetMap().keySet()) {
+         if (key.endsWith(suffixMatch)) {
+            BlockType blockType = assetMap.getAsset(key);
+            if (blockType != null) {
+               Item item = blockType.getItem();
+               if (item == null || !this.hiddenQualityIndexes.contains(item.getQualityIndex())) {
+                  int rgb = computeBlockColorRgb(blockType);
+                  if (rgb >= 0) {
+                     double[] entryLab = rgbToLab(rgb >> 16 & 0xFF, rgb >> 8 & 0xFF, rgb & 0xFF);
+                     double dist = colorDistanceLab(targetL, targetA, targetB, entryLab[0], entryLab[1], entryLab[2]);
+                     if (dist < minDist) {
+                        minDist = dist;
+                        bestId = assetMap.getIndex(key);
+                     }
+                  }
+               }
+            }
+         }
+      }
+
+      return bestId;
+   }
+
    public int findDarkerVariant(int blockId, float darkenAmount) {
       this.ensureInitialized();
       BlockColorIndex.BlockColorEntry source = this.findEntry(blockId);
@@ -153,6 +242,32 @@ public final class BlockColorIndex {
 
       for (BlockColorIndex.BlockColorEntry entry : this.entries) {
          if (!(entry.labL > source.labL)) {
+            double dist = colorDistanceLab(targetL, targetA, targetB, entry.labL, entry.labA, entry.labB);
+            if (dist < minDist) {
+               minDist = dist;
+               bestId = entry.blockId;
+            }
+         }
+      }
+
+      return bestId;
+   }
+
+   public int findLighterVariant(int blockId, float lightenAmount) {
+      this.ensureInitialized();
+      BlockColorIndex.BlockColorEntry source = this.findEntry(blockId);
+      if (source == null) {
+         return blockId;
+      }
+
+      double targetL = source.labL + (100.0 - source.labL) * lightenAmount;
+      double targetA = source.labA;
+      double targetB = source.labB;
+      double minDist = Double.MAX_VALUE;
+      int bestId = blockId;
+
+      for (BlockColorIndex.BlockColorEntry entry : this.entries) {
+         if (!(entry.labL < source.labL)) {
             double dist = colorDistanceLab(targetL, targetA, targetB, entry.labL, entry.labA, entry.labB);
             if (dist < minDist) {
                minDist = dist;

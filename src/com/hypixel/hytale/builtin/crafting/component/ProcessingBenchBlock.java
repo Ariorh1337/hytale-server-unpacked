@@ -367,6 +367,12 @@ public class ProcessingBenchBlock implements Component<ChunkStore> {
       String fuelDropItemId = this.processingBench.getFuelDropItemId();
       if (fuelDropItemId != null) {
          Item item = Item.getAssetMap().getAsset(fuelDropItemId);
+         if (item == null) {
+            LOGGER.at(Level.WARNING).log("Unknown FuelDropItemId %s for %s, fuel value of %s will be lost!", fuelDropItemId, this.bench.getId(), this.fuelTime);
+            this.fuelTime = 0.0F;
+            return;
+         }
+
          int dropAmount = (int)this.fuelTime;
          this.fuelTime = 0.0F;
 

@@ -39,7 +39,9 @@ import com.hypixel.hytale.server.core.universe.world.chunk.ChunkFlag;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -59,6 +61,7 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
    private static final double DEFAULT_ENTITY_HEIGHT = 1.8;
    private static final int MAX_PENDING_EVENTS_PER_TICK = 64;
+   private static final int[] SINGLE_DEFAULT_ENTRY = new int[]{0};
    @Nonnull
    private static final ThreadLocal<Set<UUID>> THREAD_LOCAL_PREVIOUS = ThreadLocal.withInitial(HashSet::new);
    @Nonnull
@@ -207,28 +210,31 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
    private void firePendingVolumeEvent(
       @Nonnull VolumeEntry entry, @Nonnull TriggerVolumeManager.PendingTriggerEvent event, @Nonnull Store<EntityStore> store, long nowNanos
    ) {
-      if (hasMatchingEventEffect(event.eventType(), entry.getEffects())
-         || hasMatchingEventEffect(event.eventType(), entry.getRejectionEffects())
-         || hasMatchingEventCondition(event.eventType(), entry.getConditions())) {
-         if (!entry.isOnCooldown(event.actorUuid(), nowNanos)) {
-            this.fireGatedEffects(
-               event.eventType(),
-               event.actorRef(),
-               entry,
-               store,
-               nowNanos,
-               event.actorUuid(),
-               null,
-               entry.getConditions(),
-               entry.getEffects(),
-               entry.getRejectionEffects(),
-               entry.getConditionTiming() == ConditionTiming.BEFORE_VOLUME_DELAY ? entry.getActivationDelay() : 0.0F,
-               rejectionDelay(entry.getRejectionDelayMode(), entry.getActivationDelay()),
-               VolumeEntry.EffectBucket.VOLUME,
-               VolumeEntry.EffectBucket.VOLUME_REJECTION,
-               "volume '" + entry.getId() + "'",
-               event
-            );
+      if (!entry.isOnCooldown(event.actorUuid(), nowNanos)) {
+         for (int eventEntry : collectEntries(entry.getConditions(), entry.getEffects(), entry.getRejectionEffects())) {
+            if (hasMatchingEventEffect(event.eventType(), entry.getEffects(), eventEntry)
+               || hasMatchingEventEffect(event.eventType(), entry.getRejectionEffects(), eventEntry)
+               || hasMatchingEventCondition(event.eventType(), entry.getConditions(), eventEntry)) {
+               this.fireGatedEffects(
+                  event.eventType(),
+                  event.actorRef(),
+                  entry,
+                  store,
+                  nowNanos,
+                  event.actorUuid(),
+                  eventEntry,
+                  null,
+                  entry.getConditions(),
+                  entry.getEffects(),
+                  entry.getRejectionEffects(),
+                  entry.getConditionTiming() == ConditionTiming.BEFORE_VOLUME_DELAY ? entry.getActivationDelay() : 0.0F,
+                  rejectionDelay(entry.getRejectionDelayMode(), entry.getActivationDelay()),
+                  VolumeEntry.EffectBucket.VOLUME,
+                  VolumeEntry.EffectBucket.VOLUME_REJECTION,
+                  "volume '" + entry.getId() + "'",
+                  event
+               );
+            }
          }
       }
    }
@@ -243,29 +249,33 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
       if (entry.getGroupId() != null) {
          GroupEntry group = manager.getGroup(entry.getGroupId());
          if (group != null && group.isEnabled()) {
-            if (hasMatchingEventEffect(event.eventType(), group.getEffects())
-               || hasMatchingEventEffect(event.eventType(), group.getRejectionEffects())
-               || hasMatchingEventCondition(event.eventType(), group.getConditions())) {
-               if (!entry.isOnCooldown(event.actorUuid(), nowNanos)) {
-                  List<VolumeEntry> spatialVolumes = getGroupSpatialVolumes(entry, manager, group);
-                  this.fireGatedEffects(
-                     event.eventType(),
-                     event.actorRef(),
-                     entry,
-                     store,
-                     nowNanos,
-                     event.actorUuid(),
-                     spatialVolumes,
-                     group.getConditions(),
-                     group.getEffects(),
-                     group.getRejectionEffects(),
-                     group.getConditionTiming() == ConditionTiming.BEFORE_VOLUME_DELAY ? entry.getActivationDelay() : 0.0F,
-                     rejectionDelay(group.getRejectionDelayMode(), entry.getActivationDelay()),
-                     VolumeEntry.EffectBucket.GROUP,
-                     VolumeEntry.EffectBucket.GROUP_REJECTION,
-                     "group '" + group.getId() + "' via volume '" + entry.getId() + "'",
-                     event
-                  );
+            if (!entry.isOnCooldown(event.actorUuid(), nowNanos)) {
+               List<VolumeEntry> spatialVolumes = getGroupSpatialVolumes(entry, manager, group);
+
+               for (int eventEntry : collectEntries(group.getConditions(), group.getEffects(), group.getRejectionEffects())) {
+                  if (hasMatchingEventEffect(event.eventType(), group.getEffects(), eventEntry)
+                     || hasMatchingEventEffect(event.eventType(), group.getRejectionEffects(), eventEntry)
+                     || hasMatchingEventCondition(event.eventType(), group.getConditions(), eventEntry)) {
+                     this.fireGatedEffects(
+                        event.eventType(),
+                        event.actorRef(),
+                        entry,
+                        store,
+                        nowNanos,
+                        event.actorUuid(),
+                        eventEntry,
+                        spatialVolumes,
+                        group.getConditions(),
+                        group.getEffects(),
+                        group.getRejectionEffects(),
+                        group.getConditionTiming() == ConditionTiming.BEFORE_VOLUME_DELAY ? entry.getActivationDelay() : 0.0F,
+                        rejectionDelay(group.getRejectionDelayMode(), entry.getActivationDelay()),
+                        VolumeEntry.EffectBucket.GROUP,
+                        VolumeEntry.EffectBucket.GROUP_REJECTION,
+                        "group '" + group.getId() + "' via volume '" + entry.getId() + "'",
+                        event
+                     );
+                  }
                }
             }
          }
@@ -338,6 +348,14 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
       entitiesToProcess.clear();
       entitiesToProcess.addAll(results);
       long nowNanos = System.nanoTime();
+      int[] volumeEntries = collectEntries(entry.getConditions(), entry.getEffects(), entry.getRejectionEffects());
+      int[] groupEntries = SINGLE_DEFAULT_ENTRY;
+      if (entry.getGroupId() != null) {
+         GroupEntry group = manager.getGroup(entry.getGroupId());
+         if (group != null) {
+            groupEntries = collectEntries(group.getConditions(), group.getEffects(), group.getRejectionEffects());
+         }
+      }
 
       for (int i = 0; i < entitiesToProcess.size(); i++) {
          Ref<EntityStore> entityRef = entitiesToProcess.get(i);
@@ -355,25 +373,36 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
                      }
 
                      this.clearIntervalTimers(entry, uuid);
-                     if (!hasTickActivationGate(entry.getConditions())) {
-                        this.activateVolumeEntry(entityRef, entry, store, nowNanos, uuid);
+
+                     for (int volumeEntry : volumeEntries) {
+                        if (!hasTickActivationGate(entry.getConditions(), volumeEntry)) {
+                           this.activateVolumeEntry(entityRef, entry, store, nowNanos, uuid, volumeEntry);
+                        }
                      }
 
-                     if (!hasGroupTickActivationGate(entry, manager)) {
-                        this.activateGroupEntry(entityRef, entry, manager, store, nowNanos, uuid);
+                     for (int groupEntry : groupEntries) {
+                        if (!hasGroupTickActivationGate(entry, manager, groupEntry)) {
+                           this.activateGroupEntry(entityRef, entry, manager, store, nowNanos, uuid, groupEntry);
+                        }
                      }
                   }
 
-                  if (entry.isVolumeActivated(uuid)) {
-                     this.fireEffects(TriggerEventType.TICK, entityRef, entry, store, nowNanos, uuid);
-                  } else if (hasTickActivationGate(entry.getConditions())) {
-                     this.processVolumeTickActivationGate(entityRef, entry, store, nowNanos, uuid);
+                  for (int volumeEntry : volumeEntries) {
+                     if (entry.isVolumeActivated(volumeEntry, uuid)) {
+                        this.fireEffects(TriggerEventType.TICK, entityRef, entry, store, nowNanos, uuid, volumeEntry);
+                     } else if (hasTickActivationGate(entry.getConditions(), volumeEntry)) {
+                        this.processVolumeTickActivationGate(entityRef, entry, store, nowNanos, uuid, volumeEntry);
+                     }
                   }
 
-                  if (entry.getGroupId() != null && entry.isGroupActivated(entry.getGroupId(), uuid)) {
-                     this.fireGroupEffects(TriggerEventType.TICK, entityRef, entry, manager, store, nowNanos, uuid);
-                  } else {
-                     this.processGroupTickActivationGate(entityRef, entry, manager, store, nowNanos, uuid);
+                  if (entry.getGroupId() != null) {
+                     for (int groupEntry : groupEntries) {
+                        if (entry.isGroupActivated(entry.getGroupId(), groupEntry, uuid)) {
+                           this.fireGroupEffects(TriggerEventType.TICK, entityRef, entry, manager, store, nowNanos, uuid, groupEntry);
+                        } else {
+                           this.processGroupTickActivationGate(entityRef, entry, manager, store, nowNanos, uuid, groupEntry);
+                        }
+                     }
                   }
                }
             }
@@ -381,55 +410,87 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
       }
 
       for (UUID exitedUuid : previousUuids) {
-         Ref<EntityStore> exitedRef = previousRefs.get(exitedUuid);
-         if (exitedRef != null && exitedRef.isValid()) {
-            this.dispatchEvent(TriggerEventType.EXIT, entry, exitedRef, exitedUuid);
-            this.fireEffects(TriggerEventType.EXIT, exitedRef, entry, store, nowNanos, exitedUuid);
-            if (entry.getGroupId() != null) {
-               this.fireGroupEffects(TriggerEventType.EXIT, exitedRef, entry, manager, store, nowNanos, exitedUuid);
-            }
-         }
-
-         notifyVolumeEntityExit(entry, exitedUuid);
-         this.fireGroupOnEntityExit(entry, manager, exitedUuid);
-         if (entry.isCancelDelayedEffectsOnExit()) {
-            manager.getDelayedEffectScheduler().cancelNonExitForEntityInVolume(exitedUuid, entry);
-         }
-
-         entry.clearEntityRuntimeState(exitedUuid);
+         this.fireVolumeExit(entry, previousRefs.get(exitedUuid), exitedUuid, manager, store, nowNanos, false);
       }
    }
 
-   private boolean activateVolumeEntry(
-      @Nonnull Ref<EntityStore> entityRef, @Nonnull VolumeEntry entry, @Nonnull Store<EntityStore> store, long nowNanos, @Nonnull UUID entityUuid
+   void fireVolumeExit(
+      @Nonnull VolumeEntry entry,
+      @Nullable Ref<EntityStore> exitedRef,
+      @Nonnull UUID exitedUuid,
+      @Nonnull TriggerVolumeManager manager,
+      @Nonnull Store<EntityStore> store,
+      long nowNanos,
+      boolean fromRemoval
    ) {
-      TriggerVolumeTickingSystem.ActivationResult result = this.fireEffects(TriggerEventType.ENTER, entityRef, entry, store, nowNanos, entityUuid);
+      if (exitedRef != null && exitedRef.isValid()) {
+         this.dispatchEvent(TriggerEventType.EXIT, entry, exitedRef, exitedUuid);
+
+         for (int volumeEntry : collectEntries(entry.getConditions(), entry.getEffects(), entry.getRejectionEffects())) {
+            this.fireEffects(TriggerEventType.EXIT, exitedRef, entry, store, nowNanos, exitedUuid, volumeEntry);
+         }
+
+         if (entry.getGroupId() != null) {
+            GroupEntry group = manager.getGroup(entry.getGroupId());
+            if (group != null) {
+               for (int groupEntry : collectEntries(group.getConditions(), group.getEffects(), group.getRejectionEffects())) {
+                  this.fireGroupEffects(TriggerEventType.EXIT, exitedRef, entry, manager, store, nowNanos, exitedUuid, groupEntry);
+               }
+            }
+         }
+      }
+
+      notifyVolumeEntityExit(entry, exitedUuid);
+      this.fireGroupOnEntityExit(entry, manager, exitedUuid);
+      if (!fromRemoval && entry.isCancelDelayedEffectsOnExit()) {
+         manager.getDelayedEffectScheduler().cancelNonExitForEntityInVolume(exitedUuid, entry);
+      }
+
+      entry.clearEntityRuntimeState(exitedUuid);
+   }
+
+   private boolean activateVolumeEntry(
+      @Nonnull Ref<EntityStore> entityRef,
+      @Nonnull VolumeEntry entry,
+      @Nonnull Store<EntityStore> store,
+      long nowNanos,
+      @Nonnull UUID entityUuid,
+      int eventEntry
+   ) {
+      TriggerVolumeTickingSystem.ActivationResult result = this.fireEffects(TriggerEventType.ENTER, entityRef, entry, store, nowNanos, entityUuid, eventEntry);
       if (result != TriggerVolumeTickingSystem.ActivationResult.ACCEPTED) {
          return false;
       }
 
-      this.completeVolumeActivation(entityRef, entry, nowNanos, entityUuid);
+      this.completeVolumeActivation(entityRef, entry, nowNanos, entityUuid, eventEntry);
       return true;
    }
 
-   private void completeVolumeActivation(@Nonnull Ref<EntityStore> entityRef, @Nonnull VolumeEntry entry, long nowNanos, @Nonnull UUID entityUuid) {
+   private void completeVolumeActivation(
+      @Nonnull Ref<EntityStore> entityRef, @Nonnull VolumeEntry entry, long nowNanos, @Nonnull UUID entityUuid, int eventEntry
+   ) {
       if (entry.getTrackedEntities().containsKey(entityUuid)) {
-         entry.markVolumeActivated(entityUuid);
+         entry.markVolumeActivated(eventEntry, entityUuid);
          entry.recordActivation(entityUuid, nowNanos);
          this.dispatchEvent(TriggerEventType.ENTER, entry, entityRef, entityUuid);
       }
    }
 
    private void processVolumeTickActivationGate(
-      @Nonnull Ref<EntityStore> entityRef, @Nonnull VolumeEntry entry, @Nonnull Store<EntityStore> store, long nowNanos, @Nonnull UUID entityUuid
+      @Nonnull Ref<EntityStore> entityRef,
+      @Nonnull VolumeEntry entry,
+      @Nonnull Store<EntityStore> store,
+      long nowNanos,
+      @Nonnull UUID entityUuid,
+      int eventEntry
    ) {
       if (entry.isOnCooldown(entityUuid, nowNanos)) {
-         entry.markVolumeActivated(entityUuid);
+         entry.markVolumeActivated(eventEntry, entityUuid);
       } else {
          TriggerContext context = new TriggerContext(entityRef, store, TriggerEventType.TICK, entry);
-         if (this.conditionsPass(entry.getConditions(), TriggerEventType.TICK, context, "volume '" + entry.getId() + "'")) {
-            this.activateVolumeEntry(entityRef, entry, store, nowNanos, entityUuid);
-         } else if (entry.markVolumeTickRejectionFired(entityUuid)) {
+         if (this.conditionsPass(entry.getConditions(), TriggerEventType.TICK, eventEntry, context, "volume '" + entry.getId() + "'")) {
+            this.activateVolumeEntry(entityRef, entry, store, nowNanos, entityUuid, eventEntry);
+         } else if (entry.markVolumeTickRejectionFired(eventEntry, entityUuid)) {
             this.fireEffectList(
                TriggerEventType.TICK,
                entityRef,
@@ -439,6 +500,7 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
                entityUuid,
                null,
                entry.getRejectionEffects(),
+               eventEntry,
                0.0F,
                VolumeEntry.EffectBucket.VOLUME_REJECTION,
                "volume '" + entry.getId() + "'"
@@ -453,25 +515,28 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
       @Nonnull TriggerVolumeManager manager,
       @Nonnull Store<EntityStore> store,
       long nowNanos,
-      @Nonnull UUID entityUuid
+      @Nonnull UUID entityUuid,
+      int eventEntry
    ) {
       String groupId = entry.getGroupId();
       if (groupId == null) {
          return false;
       }
 
-      TriggerVolumeTickingSystem.ActivationResult result = this.fireGroupEffects(TriggerEventType.ENTER, entityRef, entry, manager, store, nowNanos, entityUuid);
+      TriggerVolumeTickingSystem.ActivationResult result = this.fireGroupEffects(
+         TriggerEventType.ENTER, entityRef, entry, manager, store, nowNanos, entityUuid, eventEntry
+      );
       if (result != TriggerVolumeTickingSystem.ActivationResult.ACCEPTED) {
          return false;
       }
 
-      this.completeGroupActivation(entry, groupId, entityUuid);
+      this.completeGroupActivation(entry, groupId, entityUuid, eventEntry);
       return true;
    }
 
-   private void completeGroupActivation(@Nonnull VolumeEntry entry, @Nonnull String groupId, @Nonnull UUID entityUuid) {
+   private void completeGroupActivation(@Nonnull VolumeEntry entry, @Nonnull String groupId, @Nonnull UUID entityUuid, int eventEntry) {
       if (entry.getTrackedEntities().containsKey(entityUuid)) {
-         entry.markGroupActivated(groupId, entityUuid);
+         entry.markGroupActivated(groupId, eventEntry, entityUuid);
       }
    }
 
@@ -481,22 +546,23 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
       @Nonnull TriggerVolumeManager manager,
       @Nonnull Store<EntityStore> store,
       long nowNanos,
-      @Nonnull UUID entityUuid
+      @Nonnull UUID entityUuid,
+      int eventEntry
    ) {
       String groupId = entry.getGroupId();
       if (groupId != null) {
          GroupEntry group = manager.getGroup(groupId);
-         if (group != null && group.isEnabled() && hasTickActivationGate(group.getConditions())) {
+         if (group != null && group.isEnabled() && hasTickActivationGate(group.getConditions(), eventEntry)) {
             if (entry.isOnCooldown(entityUuid, nowNanos)) {
-               entry.markGroupActivated(groupId, entityUuid);
+               entry.markGroupActivated(groupId, eventEntry, entityUuid);
             } else {
                List<VolumeEntry> spatialVolumes = getGroupSpatialVolumes(entry, manager, group);
                if (!spatialVolumes.isEmpty()) {
                   TriggerContext context = new TriggerContext(entityRef, store, TriggerEventType.TICK, entry, spatialVolumes);
                   String sourceLabel = "group '" + group.getId() + "' via volume '" + entry.getId() + "'";
-                  if (this.conditionsPass(group.getConditions(), TriggerEventType.TICK, context, sourceLabel)) {
-                     this.activateGroupEntry(entityRef, entry, manager, store, nowNanos, entityUuid);
-                  } else if (entry.markGroupTickRejectionFired(groupId, entityUuid)) {
+                  if (this.conditionsPass(group.getConditions(), TriggerEventType.TICK, eventEntry, context, sourceLabel)) {
+                     this.activateGroupEntry(entityRef, entry, manager, store, nowNanos, entityUuid, eventEntry);
+                  } else if (entry.markGroupTickRejectionFired(groupId, eventEntry, entityUuid)) {
                      this.fireEffectList(
                         TriggerEventType.TICK,
                         entityRef,
@@ -506,6 +572,7 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
                         entityUuid,
                         spatialVolumes,
                         group.getRejectionEffects(),
+                        eventEntry,
                         0.0F,
                         VolumeEntry.EffectBucket.GROUP_REJECTION,
                         sourceLabel
@@ -541,11 +608,25 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
       @Nonnull VolumeEntry entry,
       @Nonnull Store<EntityStore> store,
       long nowNanos,
-      @Nonnull UUID entityUuid
+      @Nonnull UUID entityUuid,
+      int eventEntry
    ) {
-      if (hasMatchingEventEffect(eventType, entry.getEffects()) || hasMatchingEventEffect(eventType, entry.getRejectionEffects())) {
+      if (!hasMatchingEventEffect(eventType, entry.getEffects(), eventEntry) && !hasMatchingEventEffect(eventType, entry.getRejectionEffects(), eventEntry)) {
+         if (!hasMatchingEventCondition(eventType, entry.getConditions(), eventEntry)) {
+            return TriggerVolumeTickingSystem.ActivationResult.ACCEPTED;
+         }
+
+         if (entry.getConditionTiming() == ConditionTiming.AFTER_VOLUME_DELAY && entry.getActivationDelay() > 0.0F) {
+            return this.scheduleDelayedVolumeGate(eventType, entityRef, entry, store, nowNanos, entityUuid, eventEntry);
+         }
+
+         TriggerContext context = new TriggerContext(entityRef, store, eventType, entry);
+         return this.conditionsPass(entry.getConditions(), eventType, eventEntry, context, "volume '" + entry.getId() + "'")
+            ? TriggerVolumeTickingSystem.ActivationResult.ACCEPTED
+            : TriggerVolumeTickingSystem.ActivationResult.REJECTED;
+      } else {
          return entry.getConditionTiming() == ConditionTiming.AFTER_VOLUME_DELAY && entry.getActivationDelay() > 0.0F
-            ? this.scheduleDelayedVolumeGate(eventType, entityRef, entry, store, nowNanos, entityUuid)
+            ? this.scheduleDelayedVolumeGate(eventType, entityRef, entry, store, nowNanos, entityUuid, eventEntry)
             : this.fireGatedEffects(
                eventType,
                entityRef,
@@ -553,6 +634,7 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
                store,
                nowNanos,
                entityUuid,
+               eventEntry,
                null,
                entry.getConditions(),
                entry.getEffects(),
@@ -564,19 +646,6 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
                "volume '" + entry.getId() + "'"
             );
       }
-
-      if (!hasMatchingEventCondition(eventType, entry.getConditions())) {
-         return TriggerVolumeTickingSystem.ActivationResult.ACCEPTED;
-      }
-
-      if (entry.getConditionTiming() == ConditionTiming.AFTER_VOLUME_DELAY && entry.getActivationDelay() > 0.0F) {
-         return this.scheduleDelayedVolumeGate(eventType, entityRef, entry, store, nowNanos, entityUuid);
-      }
-
-      TriggerContext context = new TriggerContext(entityRef, store, eventType, entry);
-      return this.conditionsPass(entry.getConditions(), eventType, context, "volume '" + entry.getId() + "'")
-         ? TriggerVolumeTickingSystem.ActivationResult.ACCEPTED
-         : TriggerVolumeTickingSystem.ActivationResult.REJECTED;
    }
 
    @Nonnull
@@ -586,14 +655,26 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
       @Nonnull VolumeEntry entry,
       @Nonnull Store<EntityStore> store,
       long nowNanos,
-      @Nonnull UUID entityUuid
+      @Nonnull UUID entityUuid,
+      int eventEntry
    ) {
-      if (eventType == TriggerEventType.ENTER && !entry.markVolumeActivationPending(entityUuid)) {
+      if (eventType == TriggerEventType.ENTER && !entry.markVolumeActivationPending(eventEntry, entityUuid)) {
          return TriggerVolumeTickingSystem.ActivationResult.PENDING;
       }
 
       this.getScheduler(store)
-         .scheduleGate(this::fireDelayedVolumeEffects, entityRef, entityUuid, eventType, entry, nowNanos, entry.getActivationDelay(), null);
+         .scheduleGate(
+            (delayedEntityRef, delayedEntityUuid, delayedEventType, delayedVolume, delayedVolumes, delayedStore, delayedNow) -> this.fireDelayedVolumeEffects(
+               delayedEntityRef, delayedEntityUuid, delayedEventType, delayedVolume, delayedVolumes, delayedStore, delayedNow, eventEntry
+            ),
+            entityRef,
+            entityUuid,
+            eventType,
+            entry,
+            nowNanos,
+            entry.getActivationDelay(),
+            null
+         );
       return TriggerVolumeTickingSystem.ActivationResult.PENDING;
    }
 
@@ -604,7 +685,8 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
       @Nonnull VolumeEntry entry,
       @Nullable List<VolumeEntry> spatialVolumes,
       @Nonnull Store<EntityStore> store,
-      long nowNanos
+      long nowNanos,
+      int eventEntry
    ) {
       try {
          TriggerVolumeTickingSystem.ActivationResult result = this.fireGatedEffects(
@@ -614,6 +696,7 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
             store,
             nowNanos,
             entityUuid,
+            eventEntry,
             null,
             entry.getConditions(),
             entry.getEffects(),
@@ -625,11 +708,11 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
             "volume '" + entry.getId() + "'"
          );
          if (eventType == TriggerEventType.ENTER && result == TriggerVolumeTickingSystem.ActivationResult.ACCEPTED) {
-            this.completeVolumeActivation(entityRef, entry, nowNanos, entityUuid);
+            this.completeVolumeActivation(entityRef, entry, nowNanos, entityUuid, eventEntry);
          }
       } finally {
          if (eventType == TriggerEventType.ENTER) {
-            entry.clearVolumeActivationPending(entityUuid);
+            entry.clearVolumeActivationPending(eventEntry, entityUuid);
          }
       }
    }
@@ -641,6 +724,7 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
       @Nonnull Store<EntityStore> store,
       long nowNanos,
       @Nonnull UUID entityUuid,
+      int eventEntry,
       @Nullable List<VolumeEntry> spatialVolumes,
       @Nonnull List<TriggerCondition> conditions,
       @Nonnull List<TriggerEffect> effects,
@@ -658,6 +742,7 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
          store,
          nowNanos,
          entityUuid,
+         eventEntry,
          spatialVolumes,
          conditions,
          effects,
@@ -678,6 +763,7 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
       @Nonnull Store<EntityStore> store,
       long nowNanos,
       @Nonnull UUID entityUuid,
+      int eventEntry,
       @Nullable List<VolumeEntry> spatialVolumes,
       @Nonnull List<TriggerCondition> conditions,
       @Nonnull List<TriggerEffect> effects,
@@ -692,11 +778,13 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
       TriggerContext context = spatialVolumes != null
          ? createContext(entityRef, store, eventType, entry, spatialVolumes, eventData)
          : createContext(entityRef, store, eventType, entry, List.of(entry), eventData);
-      boolean accepted = this.conditionsPass(conditions, eventType, context, sourceLabel);
+      boolean accepted = this.conditionsPass(conditions, eventType, eventEntry, context, sourceLabel);
       List<TriggerEffect> effectsToFire = accepted ? effects : rejectionEffects;
       VolumeEntry.EffectBucket bucket = accepted ? effectsBucket : rejectionBucket;
       float activationDelay = accepted ? successDelay : rejectionDelay;
-      this.fireEffectList(eventType, entityRef, entry, store, nowNanos, entityUuid, spatialVolumes, effectsToFire, activationDelay, bucket, sourceLabel);
+      this.fireEffectList(
+         eventType, entityRef, entry, store, nowNanos, entityUuid, spatialVolumes, effectsToFire, eventEntry, activationDelay, bucket, sourceLabel
+      );
       return accepted ? TriggerVolumeTickingSystem.ActivationResult.ACCEPTED : TriggerVolumeTickingSystem.ActivationResult.REJECTED;
    }
 
@@ -712,17 +800,31 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
       return eventData == null
          ? new TriggerContext(entityRef, store, eventType, entry, spatialVolumes)
          : new TriggerContext(
-            entityRef, store, eventType, entry, spatialVolumes, eventData.tagKey(), eventData.tagValue(), eventData.blockPosition(), eventData.blockId()
+            entityRef,
+            store,
+            eventType,
+            entry,
+            spatialVolumes,
+            null,
+            eventData.tagKey(),
+            eventData.tagValue(),
+            eventData.blockPosition(),
+            eventData.blockId(),
+            eventData.interactionType()
          );
    }
 
    private boolean conditionsPass(
-      @Nonnull List<TriggerCondition> conditions, @Nonnull TriggerEventType eventType, @Nonnull TriggerContext context, @Nonnull String sourceLabel
+      @Nonnull List<TriggerCondition> conditions,
+      @Nonnull TriggerEventType eventType,
+      int eventEntry,
+      @Nonnull TriggerContext context,
+      @Nonnull String sourceLabel
    ) {
       ArrayList<TriggerCondition> acceptedConditions = new ArrayList<>();
 
       for (TriggerCondition condition : conditions) {
-         if (condition.getEventType() == eventType) {
+         if (condition.getEntry() == eventEntry && condition.getEventType() == eventType) {
             try {
                if (!condition.test(context)) {
                   return false;
@@ -748,9 +850,9 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
       return true;
    }
 
-   static boolean hasTickActivationGate(@Nonnull List<TriggerCondition> conditions) {
+   static boolean hasTickActivationGate(@Nonnull List<TriggerCondition> conditions, int entry) {
       for (TriggerCondition condition : conditions) {
-         if (condition.getEventType() == TriggerEventType.TICK) {
+         if (condition.getEntry() == entry && condition.getEventType() == TriggerEventType.TICK) {
             return true;
          }
       }
@@ -758,9 +860,9 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
       return false;
    }
 
-   static boolean hasMatchingEventEffect(@Nonnull TriggerEventType eventType, @Nonnull List<TriggerEffect> effects) {
+   static boolean hasMatchingEventEffect(@Nonnull TriggerEventType eventType, @Nonnull List<TriggerEffect> effects, int entry) {
       for (TriggerEffect effect : effects) {
-         if (effect.getEventType() == eventType) {
+         if (effect.getEntry() == entry && effect.getEventType() == eventType) {
             return true;
          }
       }
@@ -768,9 +870,9 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
       return false;
    }
 
-   static boolean hasMatchingEventCondition(@Nonnull TriggerEventType eventType, @Nonnull List<TriggerCondition> conditions) {
+   static boolean hasMatchingEventCondition(@Nonnull TriggerEventType eventType, @Nonnull List<TriggerCondition> conditions, int entry) {
       for (TriggerCondition condition : conditions) {
-         if (condition.getEventType() == eventType) {
+         if (condition.getEntry() == entry && condition.getEventType() == eventType) {
             return true;
          }
       }
@@ -778,14 +880,41 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
       return false;
    }
 
-   private static boolean hasGroupTickActivationGate(@Nonnull VolumeEntry entry, @Nonnull TriggerVolumeManager manager) {
+   private static boolean hasGroupTickActivationGate(@Nonnull VolumeEntry entry, @Nonnull TriggerVolumeManager manager, int groupEntry) {
       String groupId = entry.getGroupId();
       if (groupId == null) {
          return false;
       }
 
       GroupEntry group = manager.getGroup(groupId);
-      return group != null && group.isEnabled() && hasTickActivationGate(group.getConditions());
+      return group != null && group.isEnabled() && hasTickActivationGate(group.getConditions(), groupEntry);
+   }
+
+   @Nonnull
+   private static int[] collectEntries(
+      @Nonnull List<TriggerCondition> conditions, @Nonnull List<TriggerEffect> effects, @Nonnull List<TriggerEffect> rejectionEffects
+   ) {
+      IntOpenHashSet entries = new IntOpenHashSet();
+
+      for (TriggerCondition condition : conditions) {
+         entries.add(condition.getEntry());
+      }
+
+      for (TriggerEffect effect : effects) {
+         entries.add(effect.getEntry());
+      }
+
+      for (TriggerEffect effect : rejectionEffects) {
+         entries.add(effect.getEntry());
+      }
+
+      if (entries.isEmpty()) {
+         return SINGLE_DEFAULT_ENTRY;
+      }
+
+      int[] array = entries.toIntArray();
+      Arrays.sort(array);
+      return array;
    }
 
    private void fireEffectList(
@@ -797,13 +926,14 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
       @Nonnull UUID entityUuid,
       @Nullable List<VolumeEntry> spatialVolumes,
       @Nonnull List<TriggerEffect> effects,
+      int eventEntry,
       float activationDelay,
       @Nonnull VolumeEntry.EffectBucket bucket,
       @Nonnull String sourceLabel
    ) {
       for (int i = 0; i < effects.size(); i++) {
          TriggerEffect effect = effects.get(i);
-         if (effect.getEventType() == eventType) {
+         if (effect.getEntry() == eventEntry && effect.getEventType() == eventType) {
             VolumeEntry.EffectEntityKey intervalKey = null;
             boolean hasFiredBefore = false;
             if (eventType == TriggerEventType.TICK && effect.getInterval() > 0.0F) {
@@ -829,10 +959,10 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
                         if (executed) {
                            entry.getLastFireTimes().put(pendingIntervalKey, executedAtNanos);
                         }
-                     });
+                     }, store);
                   }
                } else {
-                  scheduler.schedule(effect, entityRef, entityUuid, eventType, entry, nowNanos, totalDelay, spatialVolumes);
+                  scheduler.schedule(effect, entityRef, entityUuid, eventType, entry, nowNanos, totalDelay, spatialVolumes, null, store);
                }
             } else {
                try {
@@ -863,7 +993,8 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
       @Nonnull TriggerVolumeManager manager,
       @Nonnull Store<EntityStore> store,
       long nowNanos,
-      @Nonnull UUID entityUuid
+      @Nonnull UUID entityUuid,
+      int eventEntry
    ) {
       if (entry.getGroupId() == null) {
          return TriggerVolumeTickingSystem.ActivationResult.REJECTED;
@@ -878,7 +1009,7 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
          return TriggerVolumeTickingSystem.ActivationResult.ACCEPTED;
       }
 
-      if (hasMatchingEventEffect(eventType, group.getEffects()) || hasMatchingEventEffect(eventType, group.getRejectionEffects())) {
+      if (hasMatchingEventEffect(eventType, group.getEffects(), eventEntry) || hasMatchingEventEffect(eventType, group.getRejectionEffects(), eventEntry)) {
          List<VolumeEntry> spatialVolumes = getGroupSpatialVolumes(entry, manager, group);
          if (spatialVolumes.isEmpty()) {
             return TriggerVolumeTickingSystem.ActivationResult.REJECTED;
@@ -896,7 +1027,7 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
          }
 
          return group.getConditionTiming() == ConditionTiming.AFTER_VOLUME_DELAY && entry.getActivationDelay() > 0.0F
-            ? this.scheduleDelayedGroupGate(eventType, entityRef, entry, group, store, nowNanos, entityUuid, spatialVolumes)
+            ? this.scheduleDelayedGroupGate(eventType, entityRef, entry, group, store, nowNanos, entityUuid, eventEntry, spatialVolumes)
             : this.fireGroupEffectLists(
                eventType,
                entityRef,
@@ -905,21 +1036,24 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
                store,
                nowNanos,
                entityUuid,
+               eventEntry,
                spatialVolumes,
                group.getConditionTiming() == ConditionTiming.BEFORE_VOLUME_DELAY ? entry.getActivationDelay() : 0.0F,
                rejectionDelay(group.getRejectionDelayMode(), entry.getActivationDelay())
             );
       } else {
-         if (!hasMatchingEventCondition(eventType, group.getConditions())) {
+         if (!hasMatchingEventCondition(eventType, group.getConditions(), eventEntry)) {
             return TriggerVolumeTickingSystem.ActivationResult.ACCEPTED;
          }
 
          if (group.getConditionTiming() == ConditionTiming.AFTER_VOLUME_DELAY && entry.getActivationDelay() > 0.0F) {
-            return this.scheduleDelayedGroupGate(eventType, entityRef, entry, group, store, nowNanos, entityUuid, getGroupSpatialVolumes(entry, manager, group));
+            return this.scheduleDelayedGroupGate(
+               eventType, entityRef, entry, group, store, nowNanos, entityUuid, eventEntry, getGroupSpatialVolumes(entry, manager, group)
+            );
          }
 
          TriggerContext context = new TriggerContext(entityRef, store, eventType, entry, getGroupSpatialVolumes(entry, manager, group));
-         return this.conditionsPass(group.getConditions(), eventType, context, "group '" + group.getId() + "' via volume '" + entry.getId() + "'")
+         return this.conditionsPass(group.getConditions(), eventType, eventEntry, context, "group '" + group.getId() + "' via volume '" + entry.getId() + "'")
             ? TriggerVolumeTickingSystem.ActivationResult.ACCEPTED
             : TriggerVolumeTickingSystem.ActivationResult.REJECTED;
       }
@@ -934,16 +1068,17 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
       @Nonnull Store<EntityStore> store,
       long nowNanos,
       @Nonnull UUID entityUuid,
+      int eventEntry,
       @Nonnull List<VolumeEntry> spatialVolumes
    ) {
-      if (eventType == TriggerEventType.ENTER && !entry.markGroupActivationPending(group.getId(), entityUuid)) {
+      if (eventType == TriggerEventType.ENTER && !entry.markGroupActivationPending(group.getId(), eventEntry, entityUuid)) {
          return TriggerVolumeTickingSystem.ActivationResult.PENDING;
       }
 
       this.getScheduler(store)
          .scheduleGate(
             (delayedEntityRef, delayedEntityUuid, delayedEventType, delayedVolume, delayedVolumes, delayedStore, delayedNow) -> this.fireDelayedGroupEffects(
-               delayedEventType, delayedEntityRef, delayedVolume, group, delayedStore, delayedNow, delayedEntityUuid, delayedVolumes
+               delayedEventType, delayedEntityRef, delayedVolume, group, delayedStore, delayedNow, delayedEntityUuid, eventEntry, delayedVolumes
             ),
             entityRef,
             entityUuid,
@@ -964,6 +1099,7 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
       @Nonnull Store<EntityStore> store,
       long nowNanos,
       @Nonnull UUID entityUuid,
+      int eventEntry,
       @Nullable List<VolumeEntry> spatialVolumes
    ) {
       try {
@@ -979,16 +1115,17 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
             store,
             nowNanos,
             entityUuid,
+            eventEntry,
             spatialVolumes,
             0.0F,
             rejectionDelay(group.getRejectionDelayMode(), entry.getActivationDelay())
          );
          if (eventType == TriggerEventType.ENTER && result == TriggerVolumeTickingSystem.ActivationResult.ACCEPTED) {
-            this.completeGroupActivation(entry, group.getId(), entityUuid);
+            this.completeGroupActivation(entry, group.getId(), entityUuid, eventEntry);
          }
       } finally {
          if (eventType == TriggerEventType.ENTER) {
-            entry.clearGroupActivationPending(group.getId(), entityUuid);
+            entry.clearGroupActivationPending(group.getId(), eventEntry, entityUuid);
          }
       }
    }
@@ -1001,6 +1138,7 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
       @Nonnull Store<EntityStore> store,
       long nowNanos,
       @Nonnull UUID entityUuid,
+      int eventEntry,
       @Nullable List<VolumeEntry> spatialVolumes,
       float successDelay,
       float rejectionDelay
@@ -1013,6 +1151,7 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
          store,
          nowNanos,
          entityUuid,
+         eventEntry,
          volumes,
          group.getConditions(),
          group.getEffects(),
@@ -1125,9 +1264,18 @@ public class TriggerVolumeTickingSystem extends TickingSystem<EntityStore> {
          Ref<EntityStore> entityRef = tracked.getValue();
          if (entityRef != null && entityRef.isValid()) {
             this.dispatchEvent(TriggerEventType.EXIT, entry, entityRef, uuid);
-            this.fireEffects(TriggerEventType.EXIT, entityRef, entry, store, nowNanos, uuid);
+
+            for (int volumeEntry : collectEntries(entry.getConditions(), entry.getEffects(), entry.getRejectionEffects())) {
+               this.fireEffects(TriggerEventType.EXIT, entityRef, entry, store, nowNanos, uuid, volumeEntry);
+            }
+
             if (entry.getGroupId() != null) {
-               this.fireGroupEffects(TriggerEventType.EXIT, entityRef, entry, manager, store, nowNanos, uuid);
+               GroupEntry group = manager.getGroup(entry.getGroupId());
+               if (group != null) {
+                  for (int groupEntry : collectEntries(group.getConditions(), group.getEffects(), group.getRejectionEffects())) {
+                     this.fireGroupEffects(TriggerEventType.EXIT, entityRef, entry, manager, store, nowNanos, uuid, groupEntry);
+                  }
+               }
             }
          }
 

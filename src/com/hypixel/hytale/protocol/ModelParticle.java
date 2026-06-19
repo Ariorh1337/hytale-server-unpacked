@@ -13,10 +13,10 @@ import org.joml.Vector3fc;
 
 public class ModelParticle {
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
-   public static final int FIXED_BLOCK_SIZE = 34;
+   public static final int FIXED_BLOCK_SIZE = 35;
    public static final int VARIABLE_FIELD_COUNT = 2;
-   public static final int VARIABLE_BLOCK_START = 42;
-   public static final int MAX_SIZE = 32768052;
+   public static final int VARIABLE_BLOCK_START = 43;
+   public static final int MAX_SIZE = 32768053;
    @Nullable
    public String systemId;
    public float scale;
@@ -31,6 +31,7 @@ public class ModelParticle {
    @Nullable
    public Direction rotationOffset;
    public boolean detachedFromModel;
+   public boolean clearParticlesOnRemove;
 
    public ModelParticle() {
    }
@@ -43,7 +44,8 @@ public class ModelParticle {
       @Nullable String targetNodeName,
       @Nullable Vector3fc positionOffset,
       @Nullable Direction rotationOffset,
-      boolean detachedFromModel
+      boolean detachedFromModel,
+      boolean clearParticlesOnRemove
    ) {
       this.systemId = systemId;
       this.scale = scale;
@@ -53,6 +55,7 @@ public class ModelParticle {
       this.positionOffset = positionOffset;
       this.rotationOffset = rotationOffset;
       this.detachedFromModel = detachedFromModel;
+      this.clearParticlesOnRemove = clearParticlesOnRemove;
    }
 
    public ModelParticle(@Nonnull ModelParticle other) {
@@ -64,12 +67,13 @@ public class ModelParticle {
       this.positionOffset = other.positionOffset;
       this.rotationOffset = other.rotationOffset;
       this.detachedFromModel = other.detachedFromModel;
+      this.clearParticlesOnRemove = other.clearParticlesOnRemove;
    }
 
    @Nonnull
    public static ModelParticle deserialize(@Nonnull ByteBuf buf, int offset) {
-      if (buf.readableBytes() - offset < 42) {
-         throw ProtocolException.bufferTooSmall("ModelParticle", 42, buf.readableBytes() - offset);
+      if (buf.readableBytes() - offset < 43) {
+         throw ProtocolException.bufferTooSmall("ModelParticle", 43, buf.readableBytes() - offset);
       }
 
       ModelParticle obj = new ModelParticle();
@@ -89,13 +93,14 @@ public class ModelParticle {
       }
 
       obj.detachedFromModel = buf.getByte(offset + 33) != 0;
+      obj.clearParticlesOnRemove = buf.getByte(offset + 34) != 0;
       if ((nullBits & 8) != 0) {
-         int varPosBase0 = buf.getIntLE(offset + 34);
-         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 42) {
+         int varPosBase0 = buf.getIntLE(offset + 35);
+         if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 43) {
             throw ProtocolException.invalidOffset("SystemId", varPosBase0, buf.readableBytes());
          }
 
-         int varPos0 = offset + 42 + varPosBase0;
+         int varPos0 = offset + 43 + varPosBase0;
          int systemIdLen = VarInt.peek(buf, varPos0);
          if (systemIdLen < 0) {
             throw ProtocolException.invalidVarInt("SystemId");
@@ -114,12 +119,12 @@ public class ModelParticle {
       }
 
       if ((nullBits & 16) != 0) {
-         int varPosBase1 = buf.getIntLE(offset + 38);
-         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 42) {
+         int varPosBase1 = buf.getIntLE(offset + 39);
+         if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 43) {
             throw ProtocolException.invalidOffset("TargetNodeName", varPosBase1, buf.readableBytes());
          }
 
-         int varPos1 = offset + 42 + varPosBase1;
+         int varPos1 = offset + 43 + varPosBase1;
          int targetNodeNameLen = VarInt.peek(buf, varPos1);
          if (targetNodeNameLen < 0) {
             throw ProtocolException.invalidVarInt("TargetNodeName");
@@ -142,14 +147,14 @@ public class ModelParticle {
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte nullBits = buf.getByte(offset);
-      int maxEnd = 42;
+      int maxEnd = 43;
       if ((nullBits & 8) != 0) {
-         int fieldOffset0 = buf.getIntLE(offset + 34);
-         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 42) {
+         int fieldOffset0 = buf.getIntLE(offset + 35);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 43) {
             throw ProtocolException.invalidOffset("SystemId", fieldOffset0, maxEnd);
          }
 
-         int pos0 = offset + 42 + fieldOffset0;
+         int pos0 = offset + 43 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
          pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
@@ -158,12 +163,12 @@ public class ModelParticle {
       }
 
       if ((nullBits & 16) != 0) {
-         int fieldOffset1 = buf.getIntLE(offset + 38);
-         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 42) {
+         int fieldOffset1 = buf.getIntLE(offset + 39);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 43) {
             throw ProtocolException.invalidOffset("TargetNodeName", fieldOffset1, maxEnd);
          }
 
-         int pos1 = offset + 42 + fieldOffset1;
+         int pos1 = offset + 43 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
          pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
@@ -175,7 +180,7 @@ public class ModelParticle {
    }
 
    public static boolean isBufferTooSmall(MemorySegment mem) {
-      return mem.byteSize() < 42L;
+      return mem.byteSize() < 43L;
    }
 
    @Nullable
@@ -186,7 +191,7 @@ public class ModelParticle {
    @Nullable
    public static String getSystemId(MemorySegment mem, int offset) {
       return hasSystemId(mem, offset)
-         ? PacketIO.readVarString("SystemId", mem, offset + getValidatedOffset(mem, offset, 34, 42, "SystemId"), 4096000, PacketIO.UTF8)
+         ? PacketIO.readVarString("SystemId", mem, offset + getValidatedOffset(mem, offset, 35, 43, "SystemId"), 4096000, PacketIO.UTF8)
          : null;
    }
 
@@ -224,7 +229,7 @@ public class ModelParticle {
    @Nullable
    public static String getTargetNodeName(MemorySegment mem, int offset) {
       return hasTargetNodeName(mem, offset)
-         ? PacketIO.readVarString("TargetNodeName", mem, offset + getValidatedOffset(mem, offset, 38, 42, "TargetNodeName"), 4096000, PacketIO.UTF8)
+         ? PacketIO.readVarString("TargetNodeName", mem, offset + getValidatedOffset(mem, offset, 39, 43, "TargetNodeName"), 4096000, PacketIO.UTF8)
          : null;
    }
 
@@ -254,6 +259,14 @@ public class ModelParticle {
 
    public static boolean getDetachedFromModel(MemorySegment mem, int offset) {
       return mem.get(PacketIO.PROTO_BOOL, offset + 33);
+   }
+
+   public static boolean getClearParticlesOnRemove(MemorySegment mem) {
+      return getClearParticlesOnRemove(mem, 0);
+   }
+
+   public static boolean getClearParticlesOnRemove(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 34);
    }
 
    public static boolean hasColor(MemorySegment mem, int offset) {
@@ -295,22 +308,23 @@ public class ModelParticle {
    }
 
    public static ModelParticle toObject(MemorySegment mem, int offset) {
-      if (offset + 42 > mem.byteSize()) {
-         throw ProtocolException.bufferTooSmall("ModelParticle", offset + 42, (int)mem.byteSize());
+      if (offset + 43 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ModelParticle", offset + 43, (int)mem.byteSize());
       } else {
          return new ModelParticle(
             hasSystemId(mem, offset)
-               ? PacketIO.readVarString("SystemId", mem, offset + getValidatedOffset(mem, offset, 34, 42, "SystemId"), 4096000, PacketIO.UTF8)
+               ? PacketIO.readVarString("SystemId", mem, offset + getValidatedOffset(mem, offset, 35, 43, "SystemId"), 4096000, PacketIO.UTF8)
                : null,
             mem.get(PacketIO.PROTO_FLOAT, offset + 1),
             hasColor(mem, offset) ? Color.toObject(mem, offset + 5) : null,
             EntityPart.fromValue(mem.get(PacketIO.PROTO_BYTE, offset + 8)),
             hasTargetNodeName(mem, offset)
-               ? PacketIO.readVarString("TargetNodeName", mem, offset + getValidatedOffset(mem, offset, 38, 42, "TargetNodeName"), 4096000, PacketIO.UTF8)
+               ? PacketIO.readVarString("TargetNodeName", mem, offset + getValidatedOffset(mem, offset, 39, 43, "TargetNodeName"), 4096000, PacketIO.UTF8)
                : null,
             hasPositionOffset(mem, offset) ? PacketIO.readVector3f(mem, offset + 9) : null,
             hasRotationOffset(mem, offset) ? Direction.toObject(mem, offset + 21) : null,
-            mem.get(PacketIO.PROTO_BOOL, offset + 33)
+            mem.get(PacketIO.PROTO_BOOL, offset + 33),
+            mem.get(PacketIO.PROTO_BOOL, offset + 34)
          );
       }
    }
@@ -360,6 +374,7 @@ public class ModelParticle {
       }
 
       buf.writeByte(this.detachedFromModel ? 1 : 0);
+      buf.writeByte(this.clearParticlesOnRemove ? 1 : 0);
       int systemIdOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
       int targetNodeNameOffsetSlot = buf.writerIndex();
@@ -424,26 +439,27 @@ public class ModelParticle {
       }
 
       mem.set(PacketIO.PROTO_BOOL, offset + 33, this.detachedFromModel);
-      int varOffset = offset + 42;
+      mem.set(PacketIO.PROTO_BOOL, offset + 34, this.clearParticlesOnRemove);
+      int varOffset = offset + 43;
       if (this.systemId != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 34, varOffset - offset - 42);
+         mem.set(PacketIO.PROTO_INT, offset + 35, varOffset - offset - 43);
          varOffset += PacketIO.writeVarString(mem, varOffset, this.systemId, 4096000);
       } else {
-         mem.set(PacketIO.PROTO_INT, offset + 34, -1);
+         mem.set(PacketIO.PROTO_INT, offset + 35, -1);
       }
 
       if (this.targetNodeName != null) {
-         mem.set(PacketIO.PROTO_INT, offset + 38, varOffset - offset - 42);
+         mem.set(PacketIO.PROTO_INT, offset + 39, varOffset - offset - 43);
          varOffset += PacketIO.writeVarString(mem, varOffset, this.targetNodeName, 4096000);
       } else {
-         mem.set(PacketIO.PROTO_INT, offset + 38, -1);
+         mem.set(PacketIO.PROTO_INT, offset + 39, -1);
       }
 
       return varOffset - offset;
    }
 
    public int computeSize() {
-      int size = 42;
+      int size = 43;
       if (this.systemId != null) {
          size += PacketIO.stringSize(this.systemId);
       }
@@ -456,8 +472,8 @@ public class ModelParticle {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      if (buffer.readableBytes() - offset < 42) {
-         return ValidationResult.error("Buffer too small: expected at least 42 bytes");
+      if (buffer.readableBytes() - offset < 43) {
+         return ValidationResult.error("Buffer too small: expected at least 43 bytes");
       }
 
       byte nullBits = buffer.getByte(offset);
@@ -467,12 +483,12 @@ public class ModelParticle {
       }
 
       if ((nullBits & 8) != 0) {
-         v = buffer.getIntLE(offset + 34);
-         if (v < 0 || v > buffer.writerIndex() - offset - 42) {
+         v = buffer.getIntLE(offset + 35);
+         if (v < 0 || v > buffer.writerIndex() - offset - 43) {
             return ValidationResult.error("Invalid offset for SystemId");
          }
 
-         int pos = offset + 42 + v;
+         int pos = offset + 43 + v;
          int systemIdLen = VarInt.peek(buffer, pos);
          if (systemIdLen < 0) {
             return ValidationResult.error("Invalid string length for SystemId");
@@ -490,12 +506,12 @@ public class ModelParticle {
       }
 
       if ((nullBits & 16) != 0) {
-         v = buffer.getIntLE(offset + 38);
-         if (v < 0 || v > buffer.writerIndex() - offset - 42) {
+         v = buffer.getIntLE(offset + 39);
+         if (v < 0 || v > buffer.writerIndex() - offset - 43) {
             return ValidationResult.error("Invalid offset for TargetNodeName");
          }
 
-         int pos = offset + 42 + v;
+         int pos = offset + 43 + v;
          int targetNodeNameLen = VarInt.peek(buffer, pos);
          if (targetNodeNameLen < 0) {
             return ValidationResult.error("Invalid string length for TargetNodeName");
@@ -525,6 +541,7 @@ public class ModelParticle {
       copy.positionOffset = this.positionOffset;
       copy.rotationOffset = this.rotationOffset != null ? this.rotationOffset.clone() : null;
       copy.detachedFromModel = this.detachedFromModel;
+      copy.clearParticlesOnRemove = this.clearParticlesOnRemove;
       return copy;
    }
 
@@ -542,14 +559,23 @@ public class ModelParticle {
                && Objects.equals(this.targetNodeName, other.targetNodeName)
                && Objects.equals(this.positionOffset, other.positionOffset)
                && Objects.equals(this.rotationOffset, other.rotationOffset)
-               && this.detachedFromModel == other.detachedFromModel;
+               && this.detachedFromModel == other.detachedFromModel
+               && this.clearParticlesOnRemove == other.clearParticlesOnRemove;
       }
    }
 
    @Override
    public int hashCode() {
       return Objects.hash(
-         this.systemId, this.scale, this.color, this.targetEntityPart, this.targetNodeName, this.positionOffset, this.rotationOffset, this.detachedFromModel
+         this.systemId,
+         this.scale,
+         this.color,
+         this.targetEntityPart,
+         this.targetNodeName,
+         this.positionOffset,
+         this.rotationOffset,
+         this.detachedFromModel,
+         this.clearParticlesOnRemove
       );
    }
 }

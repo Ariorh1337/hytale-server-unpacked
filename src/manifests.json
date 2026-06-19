@@ -637,4 +637,16 @@
   },
   "ServerVersion": "*"
 }
+,{
+  "Group": "Hytale",
+  "Name": "EncounterManager",
+  "Description": "Adds Encounter Managers: data-driven instruction-list controllers.",
+  "Version": "1.0.0",
+  "Website": "https://hypixel.com/",
+  "Main": "com.hypixel.hytale.builtin.encountermanager.EncounterManagerPlugin",
+  "ServerVersion": "*",
+  "Dependencies": {
+    "Hytale:NPC": "*"
+  }
+}
 ]

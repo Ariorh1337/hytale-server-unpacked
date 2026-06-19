@@ -156,6 +156,7 @@ import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.ResourceType;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.system.WorldEventSystem;
+import com.hypixel.hytale.event.EventBus;
 import com.hypixel.hytale.event.EventRegistry;
 import com.hypixel.hytale.function.predicate.TriIntObjPredicate;
 import com.hypixel.hytale.math.Axis;
@@ -177,6 +178,7 @@ import com.hypixel.hytale.protocol.packets.buildertools.BrushOrigin;
 import com.hypixel.hytale.protocol.packets.buildertools.BrushShape;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolArgUpdate;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolOnUseInteraction;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolsEnabledTools;
 import com.hypixel.hytale.protocol.packets.interface_.BlockChange;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.EditorBlocksChange;
@@ -209,6 +211,9 @@ import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.BlockEntity;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.event.events.permissions.GroupPermissionChangeEvent;
+import com.hypixel.hytale.server.core.event.events.permissions.PlayerGroupEvent;
+import com.hypixel.hytale.server.core.event.events.permissions.PlayerPermissionChangeEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerConnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
@@ -228,6 +233,8 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Roo
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.OpenCustomUIInteraction;
 import com.hypixel.hytale.server.core.modules.prefabspawner.PrefabSpawnerBlock;
 import com.hypixel.hytale.server.core.modules.singleplayer.SingleplayerModule;
+import com.hypixel.hytale.server.core.permissions.HytalePermissions;
+import com.hypixel.hytale.server.core.permissions.PermissionsModule;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.prefab.PrefabCopyableComponent;
@@ -243,6 +250,7 @@ import com.hypixel.hytale.server.core.prefab.selection.standard.BlockSelection;
 import com.hypixel.hytale.server.core.prefab.selection.standard.FeedbackConsumer;
 import com.hypixel.hytale.server.core.prefab.selection.standard.RotateBlockMode;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.accessor.ChunkAccessor;
@@ -279,6 +287,7 @@ import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -368,6 +377,33 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
    private static final Message MESSAGE_PACK_NOT_FOUND = Message.translation("server.commands.editprefab.save.pack.notFound");
    private static final Message MESSAGE_PACK_IMMUTABLE = Message.translation("server.commands.editprefab.save.pack.immutable");
    private ResourceType<EntityStore, PrefabEditSession> prefabEditSessionResourceType;
+
+   @Nonnull
+   public static List<BuilderToolsPlugin.ColorGradientMaterial> parseGradientMaterials(@Nullable String materialsStr) {
+      ArrayList<BuilderToolsPlugin.ColorGradientMaterial> result = new ArrayList<>();
+      if (materialsStr != null && !materialsStr.isEmpty()) {
+         String[] entries = materialsStr.split(",");
+
+         for (String entry : entries) {
+            int percentIdx = entry.indexOf("%");
+            if (percentIdx >= 0) {
+               try {
+                  float weight = Float.parseFloat(entry.substring(0, percentIdx));
+                  String materialName = entry.substring(percentIdx + 1);
+                  BlockPattern pattern = BlockPattern.parse(materialName);
+                  if (pattern != null) {
+                     result.add(new BuilderToolsPlugin.ColorGradientMaterial(pattern, weight));
+                  }
+               } catch (NumberFormatException var11) {
+               }
+            }
+         }
+
+         return result;
+      } else {
+         return result;
+      }
+   }
 
    public BuilderToolsPlugin(@Nonnull JavaPluginInit init) {
       super(init);
@@ -573,11 +609,24 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       eventRegistry.registerGlobal(
          AddWorldEvent.class, event -> event.getWorld().getWorldMapManager().addMarkerProvider("prefabs", PrefabMarkerProvider.INSTANCE)
       );
+      EventBus eventBus = HytaleServer.get().getEventBus();
+      eventBus.register(PlayerGroupEvent.Added.class, event -> this.resendEnabledTools(event.getPlayerUuid()));
+      eventBus.register(PlayerGroupEvent.Removed.class, event -> this.resendEnabledTools(event.getPlayerUuid()));
+      eventBus.register(PlayerPermissionChangeEvent.PermissionsAdded.class, event -> this.resendEnabledTools(event.getPlayerUuid()));
+      eventBus.register(PlayerPermissionChangeEvent.PermissionsRemoved.class, event -> this.resendEnabledTools(event.getPlayerUuid()));
+      eventBus.register(GroupPermissionChangeEvent.Added.class, this::onGroupPermissionsChanged);
+      eventBus.register(GroupPermissionChangeEvent.Removed.class, this::onGroupPermissionsChanged);
       entityStoreRegistry.registerSystem(new BuilderToolsPlugin.PrefabPasteEventSystem(this));
       entityStoreRegistry.registerSystem(new PrefabDirtySystems.BlockBreakDirtySystem());
       entityStoreRegistry.registerSystem(new PrefabDirtySystems.BlockPlaceDirtySystem());
-      this.getEventRegistry().register(LoadedAssetsEvent.class, Item.class, event -> ScriptedBrushAsset.invalidateBrushToItemCache());
-      this.getEventRegistry().register(RemovedAssetsEvent.class, Item.class, event -> ScriptedBrushAsset.invalidateBrushToItemCache());
+      this.getEventRegistry().register(LoadedAssetsEvent.class, Item.class, event -> {
+         ScriptedBrushAsset.invalidateBrushToItemCache();
+         this.resendEnabledToolsToAll();
+      });
+      this.getEventRegistry().register(RemovedAssetsEvent.class, Item.class, event -> {
+         ScriptedBrushAsset.invalidateBrushToItemCache();
+         this.resendEnabledToolsToAll();
+      });
       this.prefabAnchorComponentType = entityStoreRegistry.registerComponent(PrefabAnchor.class, "PrefabAnchor", PrefabAnchor.CODEC);
       Interaction.CODEC.register("PrefabSelectionInteraction", PrefabSelectionInteraction.class, PrefabSelectionInteraction.CODEC);
       Interaction.CODEC.register("PickupItem", PickupItemInteraction.class, PickupItemInteraction.CODEC);
@@ -792,8 +841,62 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
             if (state != null && state.getSelection() != null) {
                state.sendSelectionToClient();
             }
+
+            PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+            if (playerRef != null) {
+               this.sendEnabledTools(playerRef);
+            }
          }
       }
+   }
+
+   private void onGroupPermissionsChanged(@Nonnull GroupPermissionChangeEvent event) {
+      String groupName = event.getGroupName();
+      PermissionsModule permissionsModule = PermissionsModule.get();
+
+      for (PlayerRef playerRef : Universe.get().getPlayers()) {
+         if (permissionsModule.getGroupsForUser(playerRef.getUuid()).contains(groupName)) {
+            this.sendEnabledTools(playerRef);
+         }
+      }
+   }
+
+   private void resendEnabledTools(@Nonnull UUID uuid) {
+      PlayerRef playerRef = Universe.get().getPlayer(uuid);
+      if (playerRef != null) {
+         this.sendEnabledTools(playerRef);
+      }
+   }
+
+   private void resendEnabledToolsToAll() {
+      Universe universe = Universe.get();
+      if (universe != null) {
+         for (PlayerRef playerRef : universe.getPlayers()) {
+            this.sendEnabledTools(playerRef);
+         }
+      }
+   }
+
+   private void sendEnabledTools(@Nonnull PlayerRef playerRef) {
+      PermissionsModule permissionsModule = PermissionsModule.get();
+      UUID uuid = playerRef.getUuid();
+      boolean hasEditor = permissionsModule.hasPermission(uuid, HytalePermissions.BUILDER_TOOLS_EDITOR);
+      ArrayList<String> enabledItemIds = new ArrayList<>();
+
+      for (Entry<String, Item> entry : Item.getAssetMap().getAssetMap().entrySet()) {
+         String itemId = entry.getKey();
+         BuilderTool builderTool = entry.getValue().getBuilderTool();
+         if (builderTool != null && builderTool.isSurvivalAllowed() && itemId != null && !enabledItemIds.contains(itemId)) {
+            String toolId = builderTool.getId();
+            if (hasEditor || toolId != null && permissionsModule.hasPermission(uuid, HytalePermissions.toolPermission(toolId))) {
+               enabledItemIds.add(itemId);
+            }
+         }
+      }
+
+      BuilderToolsEnabledTools packet = new BuilderToolsEnabledTools();
+      packet.toolIds = enabledItemIds.toArray(new String[0]);
+      playerRef.getPacketHandler().write(packet);
    }
 
    public void onToolArgUpdate(
@@ -1294,6 +1397,10 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       private List<EntityAddSnapshot> pendingEntitySnapshots = new ArrayList<>();
       private List<EntityTransformSnapshot> pendingEntityTransformSnapshots = new ArrayList<>();
       private int executionCountInGroup;
+      private static final double SHADING_MAX_LOS_RANGE = 48.0;
+      private static final double SHADING_AMBIENT = 0.2;
+      private static final int[] SOBEL_SMOOTH = new int[]{1, 4, 6, 4, 1};
+      private static final int[] SOBEL_DERIV = new int[]{-1, -2, 0, 2, 1};
       @Nullable
       private EntityTransformSnapshot pendingEntityTransformSession;
       @Nullable
@@ -2543,6 +2650,724 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
                this.sendArea();
             }
          }
+      }
+
+      private static boolean isFullCubeBlock(int blockId, int filler) {
+         if (filler != 0) {
+            return false;
+         }
+
+         BlockType blockType = BlockType.getAssetMap().getAsset(blockId);
+         return blockType != null && blockType.getHitboxTypeIndex() == 0 && blockType.getCustomModel() == null;
+      }
+
+      public void applyRecoloring(
+         int targetX,
+         int targetY,
+         int targetZ,
+         int width,
+         int height,
+         @Nonnull BlockPattern replacementPattern,
+         boolean smartMatch,
+         @Nonnull BrushShape brushShape,
+         int undoGroupSize,
+         boolean isHoldDown,
+         @Nonnull BlockColorIndex blockColorIndex,
+         @Nonnull ComponentAccessor<EntityStore> componentAccessor
+      ) {
+         World world = componentAccessor.getExternalData().getWorld();
+         int halfWidth = width / 2;
+         int halfHeight = height / 2;
+         int maxHalf = Math.max(halfWidth, halfHeight);
+         LocalCachedChunkAccessor accessor = LocalCachedChunkAccessor.atWorldCoords(world, targetX, targetZ, maxHalf);
+         int targetBlockId = accessor.getBlock(targetX, targetY, targetZ);
+         if (targetBlockId > 0) {
+            BlockTypeAssetMap<String, BlockType> assetMap = BlockType.getAssetMap();
+            String targetBaseMaterial = null;
+            HashMap<String, Integer> variantCache = null;
+            if (smartMatch) {
+               BlockType targetType = assetMap.getAsset(targetBlockId);
+               if (targetType == null) {
+                  return;
+               }
+
+               variantCache = new HashMap<>();
+               String targetKey = Objects.requireNonNullElse(targetType.getDefaultStateKey(), targetType.getId());
+               targetBaseMaterial = BuilderToolsPlugin.getBlockBaseMaterial(targetKey);
+            }
+
+            int xHalf = halfWidth;
+            int yHalf = halfHeight;
+            int zHalf = halfWidth;
+            Predicate<Vector3i> inShape = this.createShapePredicate(brushShape, halfWidth, halfHeight, 0.0F, 0.0F, false);
+            Vector3i rel = new Vector3i();
+            int totalBlocks = (xHalf * 2 + 1) * (yHalf * 2 + 1) * (zHalf * 2 + 1);
+            BlockSelection before = new BlockSelection(totalBlocks, 0);
+            before.setPosition(targetX, targetY, targetZ);
+            BlockSelection after = new BlockSelection(totalBlocks, 0);
+            after.copyPropertiesFrom(before);
+
+            for (int x = -xHalf; x <= xHalf; x++) {
+               for (int y = -yHalf; y <= yHalf; y++) {
+                  for (int z = -zHalf; z <= zHalf; z++) {
+                     int wx = targetX + x;
+                     int wy = targetY + y;
+                     int wz = targetZ + z;
+                     if (wy >= 0 && wy < 320) {
+                        rel.set(x, y, z);
+                        if (inShape.test(rel)) {
+                           WorldChunk chunk = accessor.getChunk(ChunkUtil.indexChunkFromBlock(wx, wz));
+                           int blockId = chunk.getBlock(wx, wy, wz);
+                           BlockType currentType = assetMap.getAsset(blockId);
+                           if (currentType != null) {
+                              String currentKey = Objects.requireNonNullElse(currentType.getDefaultStateKey(), currentType.getId());
+                              if (smartMatch
+                                 ? BuilderToolsPlugin.getBlockBaseMaterial(currentKey).equals(targetBaseMaterial) && chunk.getFiller(wx, wy, wz) == 0
+                                 : blockId == targetBlockId) {
+                                 Material material = Material.fromPattern(replacementPattern, this.random);
+                                 int newBlockId = material.getBlockId();
+                                 int newRotation = material.getRotation();
+                                 if (smartMatch) {
+                                    BlockType inputType = assetMap.getAsset(newBlockId);
+                                    String inputName = Objects.requireNonNullElse(inputType.getDefaultStateKey(), inputType.getId());
+                                    String shape = BuilderToolsPlugin.getBlockShape(currentKey);
+                                    if (!shape.isEmpty()) {
+                                       int variantId = variantCache.computeIfAbsent(
+                                          inputName + "|" + shape,
+                                          k -> {
+                                             int exact = assetMap.getIndex(inputName + "_" + shape);
+                                             return exact != Integer.MIN_VALUE && !blockColorIndex.isExcludedQuality(exact)
+                                                ? exact
+                                                : blockColorIndex.findClosestVariant(material.getBlockId(), shape);
+                                          }
+                                       );
+                                       if (variantId != Integer.MIN_VALUE && variantId >= 0) {
+                                          newBlockId = variantId;
+                                       }
+                                    }
+
+                                    newRotation = chunk.getRotationIndex(wx, wy, wz);
+                                 }
+
+                                 Holder<ChunkStore> holder = chunk.getBlockComponentHolder(wx, wy, wz);
+                                 Holder<ChunkStore> newHolder = BuilderToolsPlugin.createBlockComponent(chunk, wx, wy, wz, newBlockId, blockId, holder, false);
+                                 int supportValue = chunk.getSupportValue(wx, wy, wz);
+                                 int filler = chunk.getFiller(wx, wy, wz);
+                                 int rotation = chunk.getRotationIndex(wx, wy, wz);
+                                 BlockType currentBase = assetMap.getAsset(currentKey);
+                                 String stateName = currentBase != null ? currentBase.getStateForBlock(currentType.getId()) : null;
+                                 if (stateName != null && !stateName.equals("default")) {
+                                    BlockType newBase = assetMap.getAsset(newBlockId);
+                                    String statedKey = newBase != null ? newBase.getBlockKeyForState(stateName) : null;
+                                    if (statedKey != null) {
+                                       int statedId = assetMap.getIndex(statedKey);
+                                       if (statedId != Integer.MIN_VALUE) {
+                                          newBlockId = statedId;
+                                       }
+                                    }
+                                 }
+
+                                 before.addBlockAtWorldPos(wx, wy, wz, blockId, rotation, filler, supportValue, holder);
+                                 after.addBlockAtWorldPos(wx, wy, wz, newBlockId, newRotation, 0, 0, newHolder);
+                                 if (smartMatch) {
+                                    this.replaceMultiBlockStructure(wx, wy, wz, blockId, newBlockId, newRotation, accessor, before, after);
+                                 }
+                              }
+                           }
+                        }
+                     }
+                  }
+               }
+            }
+
+            this.handleBrushUndoGrouping(before, Collections.emptyList(), Collections.emptyList(), undoGroupSize, isHoldDown);
+            after.placeNoReturn("Color", this.playerRef, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
+            BuilderToolsPlugin.invalidateWorldMapForSelection(after, world);
+            this.sendUpdate();
+            this.sendArea();
+         }
+      }
+
+      private static float edgeBlendFactor(@Nonnull BrushShape brushShape, int x, int y, int z, int halfWidth, int halfHeight, float edgeBlend) {
+         if (edgeBlend <= 0.0F) {
+            return 1.0F;
+         }
+
+         double rx = halfWidth + 0.5;
+         double ry = halfHeight + 0.5;
+
+         double d = switch (brushShape) {
+            case Cube, Pyramid, InvertedPyramid, Diamond -> Math.max(Math.abs(x) / rx, Math.max(Math.abs(y) / ry, Math.abs(z) / rx));
+            default -> Math.sqrt(x * x / (rx * rx) + y * y / (ry * ry) + z * z / (rx * rx));
+         };
+         double start = 1.0 - edgeBlend;
+         return d <= start ? 1.0F : (float)Math.max(0.0, (1.0 - d) / edgeBlend);
+      }
+
+      public void applyGradient(
+         int targetX,
+         int targetY,
+         int targetZ,
+         int width,
+         int height,
+         int startX,
+         int startY,
+         int startZ,
+         int endX,
+         int endY,
+         int endZ,
+         @Nonnull List<BuilderToolsPlugin.ColorGradientMaterial> materials,
+         @Nonnull String shape,
+         float blendBand,
+         @Nonnull BrushShape brushShape,
+         boolean invert,
+         int undoGroupSize,
+         boolean isHoldDown,
+         @Nonnull ComponentAccessor<EntityStore> componentAccessor
+      ) {
+         if (materials.size() >= 2) {
+            World world = componentAccessor.getExternalData().getWorld();
+            if ("Linear".equals(shape)) {
+               this.applyLinearGradient(
+                  targetX,
+                  targetY,
+                  targetZ,
+                  width,
+                  height,
+                  startX,
+                  startY,
+                  startZ,
+                  endX,
+                  endY,
+                  endZ,
+                  materials,
+                  blendBand,
+                  brushShape,
+                  invert,
+                  undoGroupSize,
+                  isHoldDown,
+                  world,
+                  componentAccessor
+               );
+            } else {
+               this.applyShapedGradient(
+                  targetX,
+                  targetY,
+                  targetZ,
+                  width,
+                  height,
+                  startX,
+                  startY,
+                  startZ,
+                  endX,
+                  endY,
+                  endZ,
+                  materials,
+                  shape,
+                  blendBand,
+                  brushShape,
+                  invert,
+                  undoGroupSize,
+                  isHoldDown,
+                  world,
+                  componentAccessor
+               );
+            }
+         }
+      }
+
+      private void applyLinearGradient(
+         int targetX,
+         int targetY,
+         int targetZ,
+         int width,
+         int height,
+         int startX,
+         int startY,
+         int startZ,
+         int endX,
+         int endY,
+         int endZ,
+         @Nonnull List<BuilderToolsPlugin.ColorGradientMaterial> materials,
+         float blendBand,
+         @Nonnull BrushShape brushShape,
+         boolean invert,
+         int undoGroupSize,
+         boolean isHoldDown,
+         @Nonnull World world,
+         @Nonnull ComponentAccessor<EntityStore> componentAccessor
+      ) {
+         double lineLength = Math.sqrt((endX - startX) * (endX - startX) + (endY - startY) * (endY - startY) + (endZ - startZ) * (endZ - startZ));
+         if (!(lineLength < 1.0)) {
+            double normX = (endX - startX) / lineLength;
+            double normY = (endY - startY) / lineLength;
+            double normZ = (endZ - startZ) / lineLength;
+            int halfWidth = width / 2;
+            int halfHeight = height / 2;
+            int xHalf = halfWidth;
+            int yHalf = halfHeight;
+            int zHalf = halfWidth;
+            Predicate<Vector3i> inShape = this.createShapePredicate(brushShape, halfWidth, halfHeight, 0.0F, 0.0F, false);
+            Vector3i rel = new Vector3i();
+            int totalBlocks = (xHalf * 2 + 1) * (yHalf * 2 + 1) * (zHalf * 2 + 1);
+            LocalCachedChunkAccessor accessor = LocalCachedChunkAccessor.atWorldCoords(world, targetX, targetZ, Math.max(xHalf, zHalf) + 2);
+            BlockSelection before = new BlockSelection(totalBlocks, 0);
+            before.setPosition(targetX, targetY, targetZ);
+            BlockSelection after = new BlockSelection(totalBlocks, 0);
+            after.copyPropertiesFrom(before);
+
+            for (int x = -xHalf; x <= xHalf; x++) {
+               for (int y = -yHalf; y <= yHalf; y++) {
+                  for (int z = -zHalf; z <= zHalf; z++) {
+                     int wx = targetX + x;
+                     int wy = targetY + y;
+                     int wz = targetZ + z;
+                     if (wy >= 0 && wy < 320) {
+                        rel.set(x, y, z);
+                        if (inShape.test(rel)) {
+                           WorldChunk chunk = accessor.getChunk(ChunkUtil.indexChunkFromBlock(wx, wz));
+                           int blockId = chunk.getBlock(wx, wy, wz);
+                           if (blockId > 0 && isFullCubeBlock(blockId, chunk.getFiller(wx, wy, wz))) {
+                              double dx = wx - startX;
+                              double dy = wy - startY;
+                              double dz = wz - startZ;
+                              double projection = (dx * normX + dy * normY + dz * normZ) / lineLength;
+                              float t = (float)Math.max(0.0, Math.min(1.0, projection));
+                              if (invert) {
+                                 t = 1.0F - t;
+                              }
+
+                              BlockPattern pattern = this.getGradientMaterialAtPosition(materials, t, blendBand);
+                              if (pattern != null) {
+                                 this.applyGradientBlock(accessor, before, after, wx, wy, wz, blockId, pattern);
+                              }
+                           }
+                        }
+                     }
+                  }
+               }
+            }
+
+            this.handleBrushUndoGrouping(before, Collections.emptyList(), Collections.emptyList(), undoGroupSize, isHoldDown);
+            after.placeNoReturn("Gradient", this.playerRef, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
+            BuilderToolsPlugin.invalidateWorldMapForSelection(after, world);
+            this.sendUpdate();
+            this.sendArea();
+         }
+      }
+
+      private void applyShapedGradient(
+         int targetX,
+         int targetY,
+         int targetZ,
+         int width,
+         int height,
+         int startX,
+         int startY,
+         int startZ,
+         int endX,
+         int endY,
+         int endZ,
+         @Nonnull List<BuilderToolsPlugin.ColorGradientMaterial> materials,
+         @Nonnull String shape,
+         float blendBand,
+         @Nonnull BrushShape brushShape,
+         boolean invert,
+         int undoGroupSize,
+         boolean isHoldDown,
+         @Nonnull World world,
+         @Nonnull ComponentAccessor<EntityStore> componentAccessor
+      ) {
+         double lineLength = Math.sqrt((endX - startX) * (endX - startX) + (endY - startY) * (endY - startY) + (endZ - startZ) * (endZ - startZ));
+         if (!(lineLength < 1.0)) {
+            int halfWidth = width / 2;
+            int halfHeight = height / 2;
+            int xHalf = halfWidth;
+            int yHalf = halfHeight;
+            int zHalf = halfWidth;
+            Predicate<Vector3i> inShape = this.createShapePredicate(brushShape, halfWidth, halfHeight, 0.0F, 0.0F, false);
+            Vector3i rel = new Vector3i();
+            int totalBlocks = (xHalf * 2 + 1) * (yHalf * 2 + 1) * (zHalf * 2 + 1);
+            LocalCachedChunkAccessor accessor = LocalCachedChunkAccessor.atWorldCoords(world, targetX, targetZ, Math.max(xHalf, zHalf) + 2);
+            BlockSelection before = new BlockSelection(totalBlocks, 0);
+            before.setPosition(targetX, targetY, targetZ);
+            BlockSelection after = new BlockSelection(totalBlocks, 0);
+            after.copyPropertiesFrom(before);
+
+            for (int x = -xHalf; x <= xHalf; x++) {
+               for (int y = -yHalf; y <= yHalf; y++) {
+                  for (int z = -zHalf; z <= zHalf; z++) {
+                     int wx = targetX + x;
+                     int wy = targetY + y;
+                     int wz = targetZ + z;
+                     if (wy >= 0 && wy < 320) {
+                        rel.set(x, y, z);
+                        if (inShape.test(rel)) {
+                           WorldChunk chunk = accessor.getChunk(ChunkUtil.indexChunkFromBlock(wx, wz));
+                           int blockId = chunk.getBlock(wx, wy, wz);
+                           if (blockId > 0 && isFullCubeBlock(blockId, chunk.getFiller(wx, wy, wz))) {
+                              double dx = wx - startX;
+                              double dy = wy - startY;
+                              double dz = wz - startZ;
+                              double adx = Math.abs(dx);
+                              double ady = Math.abs(dy);
+                              double adz = Math.abs(dz);
+
+                              double dist = switch (shape) {
+                                 case "Cube" -> Math.max(adx, Math.max(ady, adz));
+                                 case "Diamond" -> adx + ady + adz;
+                                 case "Cylinder" -> Math.max(Math.sqrt(dx * dx + dz * dz), ady);
+                                 default -> Math.sqrt(dx * dx + dy * dy + dz * dz);
+                              };
+                              float t = (float)Math.min(1.0, dist / lineLength);
+                              if (invert) {
+                                 t = 1.0F - t;
+                              }
+
+                              BlockPattern pattern = this.getGradientMaterialAtPosition(materials, t, blendBand);
+                              if (pattern != null) {
+                                 this.applyGradientBlock(accessor, before, after, wx, wy, wz, blockId, pattern);
+                              }
+                           }
+                        }
+                     }
+                  }
+               }
+            }
+
+            this.handleBrushUndoGrouping(before, Collections.emptyList(), Collections.emptyList(), undoGroupSize, isHoldDown);
+            after.placeNoReturn("Gradient", this.playerRef, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
+            BuilderToolsPlugin.invalidateWorldMapForSelection(after, world);
+            this.sendUpdate();
+            this.sendArea();
+         }
+      }
+
+      private void applyGradientBlock(
+         @Nonnull LocalCachedChunkAccessor accessor,
+         @Nonnull BlockSelection before,
+         @Nonnull BlockSelection after,
+         int x,
+         int y,
+         int z,
+         int currentBlockId,
+         @Nonnull BlockPattern pattern
+      ) {
+         WorldChunk chunk = accessor.getChunk(ChunkUtil.indexChunkFromBlock(x, z));
+         Material material = Material.fromPattern(pattern, this.random);
+         int newBlockId = material.getBlockId();
+         int newRotation = material.getRotation();
+         Holder<ChunkStore> holder = chunk.getBlockComponentHolder(x, y, z);
+         Holder<ChunkStore> newHolder = BuilderToolsPlugin.createBlockComponent(chunk, x, y, z, newBlockId, currentBlockId, holder, false);
+         int supportValue = chunk.getSupportValue(x, y, z);
+         int filler = chunk.getFiller(x, y, z);
+         int rotation = chunk.getRotationIndex(x, y, z);
+         before.addBlockAtWorldPos(x, y, z, currentBlockId, rotation, filler, supportValue, holder);
+         after.addBlockAtWorldPos(x, y, z, newBlockId, newRotation, 0, 0, newHolder);
+      }
+
+      @Nullable
+      private BlockPattern getGradientMaterialAtPosition(@Nonnull List<BuilderToolsPlugin.ColorGradientMaterial> materials, float t, float blendBand) {
+         float upper = 0.0F;
+         int seg = materials.size() - 1;
+
+         for (int i = 0; i < materials.size(); i++) {
+            upper += materials.get(i).weight / 100.0F;
+            if (t <= upper) {
+               seg = i;
+               break;
+            }
+         }
+
+         if (blendBand <= 0.0F) {
+            return materials.get(seg).pattern;
+         }
+
+         float lower = upper - materials.get(seg).weight / 100.0F;
+         if (seg < materials.size() - 1 && upper - t < blendBand) {
+            float nextWidth = materials.get(seg + 1).weight / 100.0F;
+            float band = Math.min(blendBand, Math.min(upper - lower, nextWidth));
+            if (upper - t < band) {
+               float p = 0.5F * (1.0F - (upper - t) / band);
+               if (this.random.nextFloat() < p) {
+                  return materials.get(seg + 1).pattern;
+               }
+            }
+         } else if (seg > 0 && t - lower < blendBand) {
+            float prevWidth = materials.get(seg - 1).weight / 100.0F;
+            float band = Math.min(blendBand, Math.min(upper - lower, prevWidth));
+            if (t - lower < band) {
+               float p = 0.5F * (1.0F - (t - lower) / band);
+               if (this.random.nextFloat() < p) {
+                  return materials.get(seg - 1).pattern;
+               }
+            }
+         }
+
+         return materials.get(seg).pattern;
+      }
+
+      public void applyShading(
+         int targetX,
+         int targetY,
+         int targetZ,
+         float playerX,
+         float playerY,
+         float playerZ,
+         int width,
+         int height,
+         boolean lighten,
+         boolean autoMode,
+         boolean falloffFromTarget,
+         @Nonnull BuilderToolsPlugin.ShadingLight lightSource,
+         @Nullable int[] customRamp,
+         float intensity,
+         @Nonnull BrushShape brushShape,
+         boolean invert,
+         float edgeBlend,
+         int undoGroupSize,
+         boolean isHoldDown,
+         @Nonnull BlockColorIndex blockColorIndex,
+         @Nonnull ComponentAccessor<EntityStore> componentAccessor
+      ) {
+         World world = componentAccessor.getExternalData().getWorld();
+         int halfWidth = width / 2;
+         int halfHeight = height / 2;
+         int maxHalf = Math.max(halfWidth, halfHeight);
+         boolean falloffFromBrush = lightSource != BuilderToolsPlugin.ShadingLight.PLAYER || falloffFromTarget;
+         double falloffRefX = falloffFromBrush ? targetX + 0.5 : playerX;
+         double falloffRefY = falloffFromBrush ? targetY + 0.5 : playerY;
+         double falloffRefZ = falloffFromBrush ? targetZ + 0.5 : playerZ;
+         double playerDx = playerX - targetX;
+         double playerDz = playerZ - targetZ;
+         int losReach = (int)Math.ceil(Math.min(48.0, Math.sqrt(playerDx * playerDx + playerDz * playerDz)));
+         LocalCachedChunkAccessor accessor = LocalCachedChunkAccessor.atWorldCoords(world, targetX, targetZ, maxHalf + losReach);
+         int totalBlocks = (width + 1) * (height + 1) * (width + 1);
+         BlockSelection before = new BlockSelection(totalBlocks, 0);
+         before.setPosition(targetX, targetY, targetZ);
+         BlockSelection after = new BlockSelection(totalBlocks, 0);
+         after.copyPropertiesFrom(before);
+         Predicate<Vector3i> inShape = this.createShapePredicate(brushShape, halfWidth, halfHeight, 0.0F, 0.0F, false);
+         Vector3i rel = new Vector3i();
+
+         for (int x = -halfWidth; x <= halfWidth; x++) {
+            for (int y = -halfHeight; y <= halfHeight; y++) {
+               for (int z = -halfWidth; z <= halfWidth; z++) {
+                  int wx = targetX + x;
+                  int wy = targetY + y;
+                  int wz = targetZ + z;
+                  if (wy >= 0 && wy < 320) {
+                     rel.set(x, y, z);
+                     if (inShape.test(rel)) {
+                        WorldChunk chunk = accessor.getChunk(ChunkUtil.indexChunkFromBlock(wx, wz));
+                        int blockId = chunk.getBlock(wx, wy, wz);
+                        if (blockId > 0 && isFullCubeBlock(blockId, chunk.getFiller(wx, wy, wz))) {
+                           float edgeFactor = edgeBlendFactor(brushShape, x, y, z, halfWidth, halfHeight, edgeBlend);
+                           if (!(edgeFactor < 1.0F) || !(this.random.nextFloat() > edgeFactor)) {
+                              float exposure = computeBlockExposure(
+                                 accessor, wx, wy, wz, playerX, playerY, playerZ, falloffRefX, falloffRefY, falloffRefZ, lightSource
+                              );
+                              int newBlockId;
+                              if (customRamp != null) {
+                                 float scaled = 0.5F + (exposure - 0.5F) * intensity;
+                                 int idx = Math.round((1.0F - scaled) * (customRamp.length - 1));
+                                 idx = Math.max(0, Math.min(customRamp.length - 1, idx));
+                                 if (invert) {
+                                    idx = customRamp.length - 1 - idx;
+                                 }
+
+                                 newBlockId = customRamp[idx];
+                              } else if (autoMode) {
+                                 float signed = (exposure - 0.5F) * 2.0F * intensity;
+                                 signed = Math.max(-1.0F, Math.min(1.0F, signed));
+                                 newBlockId = signed >= 0.0F
+                                    ? blockColorIndex.findLighterVariant(blockId, signed)
+                                    : blockColorIndex.findDarkerVariant(blockId, -signed);
+                              } else if (lighten) {
+                                 newBlockId = blockColorIndex.findLighterVariant(blockId, Math.min(1.0F, exposure * intensity));
+                              } else {
+                                 newBlockId = blockColorIndex.findDarkerVariant(blockId, Math.min(1.0F, exposure * intensity));
+                              }
+
+                              if (newBlockId != blockId) {
+                                 int newRotation = chunk.getRotationIndex(wx, wy, wz);
+                                 Holder<ChunkStore> holder = chunk.getBlockComponentHolder(wx, wy, wz);
+                                 Holder<ChunkStore> newHolder = BuilderToolsPlugin.createBlockComponent(chunk, wx, wy, wz, newBlockId, blockId, holder, false);
+                                 int supportValue = chunk.getSupportValue(wx, wy, wz);
+                                 int filler = chunk.getFiller(wx, wy, wz);
+                                 before.addBlockAtWorldPos(wx, wy, wz, blockId, newRotation, filler, supportValue, holder);
+                                 after.addBlockAtWorldPos(wx, wy, wz, newBlockId, newRotation, 0, 0, newHolder);
+                              }
+                           }
+                        }
+                     }
+                  }
+               }
+            }
+         }
+
+         this.handleBrushUndoGrouping(before, Collections.emptyList(), Collections.emptyList(), undoGroupSize, isHoldDown);
+         after.placeNoReturn("Shading", this.playerRef, BuilderToolsPlugin.FEEDBACK_CONSUMER, world, componentAccessor);
+         BuilderToolsPlugin.invalidateWorldMapForSelection(after, world);
+         this.sendUpdate();
+         this.sendArea();
+      }
+
+      private static float computeBlockExposure(
+         @Nonnull LocalCachedChunkAccessor accessor,
+         int bx,
+         int by,
+         int bz,
+         float playerX,
+         float playerY,
+         float playerZ,
+         double falloffRefX,
+         double falloffRefY,
+         double falloffRefZ,
+         @Nonnull BuilderToolsPlugin.ShadingLight lightSource
+      ) {
+         double[] normal = estimateSurfaceNormalSobel(accessor, bx, by, bz);
+         if (normal == null) {
+            return 0.0F;
+         }
+
+         if (lightSource == BuilderToolsPlugin.ShadingLight.ANGLE) {
+            return (float)((normal[1] + 1.0) / 2.0);
+         }
+
+         double ox = bx + 0.5;
+         double oy = by + 0.5;
+         double oz = bz + 0.5;
+         double lightX;
+         double lightY;
+         double lightZ;
+         double lightDist;
+         if (lightSource == BuilderToolsPlugin.ShadingLight.SUN) {
+            lightX = ox;
+            lightY = oy + 48.0;
+            lightZ = oz;
+            lightDist = 48.0;
+         } else {
+            lightX = playerX;
+            lightY = playerY;
+            lightZ = playerZ;
+            lightDist = Math.sqrt((playerX - ox) * (playerX - ox) + (playerY - oy) * (playerY - oy) + (playerZ - oz) * (playerZ - oz));
+            if (lightDist < 1.0E-6) {
+               return 1.0F;
+            }
+         }
+
+         double lx = (lightX - ox) / lightDist;
+         double ly = (lightY - oy) / lightDist;
+         double lz = (lightZ - oz) / lightDist;
+         double diffuse = Math.max(0.0, normal[0] * lx + normal[1] * ly + normal[2] * lz);
+         double frx = falloffRefX - ox;
+         double fry = falloffRefY - oy;
+         double frz = falloffRefZ - oz;
+         double falloffDist = Math.sqrt(frx * frx + fry * fry + frz * frz);
+         double visibility = !(falloffDist > 48.0) && countLineOfSightOccluders(accessor, bx, by, bz, lightX, lightY, lightZ, lightDist) <= 0 ? 1.0 : 0.0;
+         double falloff = Math.max(0.0, 1.0 - falloffDist / 48.0);
+         double direct = diffuse * visibility * falloff;
+         double ambient = 0.2 * (0.5 + 0.5 * normal[1]);
+         return (float)Math.min(1.0, ambient + 0.8 * direct);
+      }
+
+      @Nullable
+      private static double[] estimateSurfaceNormalSobel(@Nonnull LocalCachedChunkAccessor accessor, int x, int y, int z) {
+         double gx = 0.0;
+         double gy = 0.0;
+         double gz = 0.0;
+         int emptyCount = 0;
+
+         for (int i = -2; i <= 2; i++) {
+            for (int j = -2; j <= 2; j++) {
+               for (int k = -2; k <= 2; k++) {
+                  if (!isBlockSolidCover(accessor, x + i, y + j, z + k)) {
+                     if (Math.abs(i) <= 1 && Math.abs(j) <= 1 && Math.abs(k) <= 1) {
+                        emptyCount++;
+                     }
+                  } else {
+                     int si = i + 2;
+                     int sj = j + 2;
+                     int sk = k + 2;
+                     gx += SOBEL_DERIV[si] * SOBEL_SMOOTH[sj] * SOBEL_SMOOTH[sk];
+                     gy += SOBEL_SMOOTH[si] * SOBEL_DERIV[sj] * SOBEL_SMOOTH[sk];
+                     gz += SOBEL_SMOOTH[si] * SOBEL_SMOOTH[sj] * SOBEL_DERIV[sk];
+                  }
+               }
+            }
+         }
+
+         if (emptyCount == 0) {
+            return null;
+         }
+
+         double nx = -gx;
+         double ny = -gy;
+         double nz = -gz;
+         double len = Math.sqrt(nx * nx + ny * ny + nz * nz);
+         return len < 1.0E-6 ? new double[]{0.0, 1.0, 0.0} : new double[]{nx / len, ny / len, nz / len};
+      }
+
+      private static int countLineOfSightOccluders(
+         @Nonnull LocalCachedChunkAccessor accessor, int bx, int by, int bz, double px, double py, double pz, double dist
+      ) {
+         if (dist < 1.0E-6) {
+            return 0;
+         }
+
+         double ox = bx + 0.5;
+         double oy = by + 0.5;
+         double oz = bz + 0.5;
+         double dirX = (px - ox) / dist;
+         double dirY = (py - oy) / dist;
+         double dirZ = (pz - oz) / dist;
+         int cx = bx;
+         int cy = by;
+         int cz = bz;
+         int stepX = dirX > 0.0 ? 1 : (dirX < 0.0 ? -1 : 0);
+         int stepY = dirY > 0.0 ? 1 : (dirY < 0.0 ? -1 : 0);
+         int stepZ = dirZ > 0.0 ? 1 : (dirZ < 0.0 ? -1 : 0);
+         double tMaxX = stepX != 0 ? voxelBoundaryT(ox, dirX, stepX) : Double.MAX_VALUE;
+         double tMaxY = stepY != 0 ? voxelBoundaryT(oy, dirY, stepY) : Double.MAX_VALUE;
+         double tMaxZ = stepZ != 0 ? voxelBoundaryT(oz, dirZ, stepZ) : Double.MAX_VALUE;
+         double tDeltaX = stepX != 0 ? 1.0 / Math.abs(dirX) : Double.MAX_VALUE;
+         double tDeltaY = stepY != 0 ? 1.0 / Math.abs(dirY) : Double.MAX_VALUE;
+         double tDeltaZ = stepZ != 0 ? 1.0 / Math.abs(dirZ) : Double.MAX_VALUE;
+         double reach = Math.min(dist, 48.0);
+         int occluders = 0;
+         double t = 0.0;
+
+         while (t < reach) {
+            if (tMaxX <= tMaxY && tMaxX <= tMaxZ) {
+               cx += stepX;
+               t = tMaxX;
+               tMaxX += tDeltaX;
+            } else if (tMaxY <= tMaxZ) {
+               cy += stepY;
+               t = tMaxY;
+               tMaxY += tDeltaY;
+            } else {
+               cz += stepZ;
+               t = tMaxZ;
+               tMaxZ += tDeltaZ;
+            }
+
+            if (t >= reach) {
+               break;
+            }
+
+            if (cy >= 0 && cy < 320 && isBlockSolidCover(accessor, cx, cy, cz)) {
+               occluders++;
+            }
+         }
+
+         return occluders;
+      }
+
+      private static double voxelBoundaryT(double origin, double dir, int step) {
+         double next = step > 0 ? Math.floor(origin) + 1.0 : Math.floor(origin);
+         return (next - origin) / dir;
       }
 
       public void update(int xMin, int yMin, int zMin, int xMax, int yMax, int zMax) {
@@ -5933,6 +6758,9 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       }
    }
 
+   public record ColorGradientMaterial(@Nonnull BlockPattern pattern, float weight) {
+   }
+
    public static class PrefabPasteEventSystem extends WorldEventSystem<EntityStore, PrefabPasteEvent> {
       @Nonnull
       private final BuilderToolsPlugin plugin;
@@ -5968,5 +6796,11 @@ public class BuilderToolsPlugin extends JavaPlugin implements SelectionProvider,
       ) throws Throwable {
          this.task.acceptNow(ref, state, defaultComponentAccessor);
       }
+   }
+
+   public enum ShadingLight {
+      PLAYER,
+      SUN,
+      ANGLE;
    }
 }

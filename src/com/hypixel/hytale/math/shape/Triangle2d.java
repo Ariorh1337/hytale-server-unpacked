@@ -117,7 +117,7 @@ public class Triangle2d {
          q = 1.0 - q;
       }
 
-      vec.set(-this.a.x * (1.0 - p - q) + this.b.x * p + this.c.x * q, -this.a.y * (1.0 - p - q) + this.b.y * p + this.c.y * q);
+      vec.set(this.a.x * (1.0 - p - q) + this.b.x * p + this.c.x * q, this.a.y * (1.0 - p - q) + this.b.y * p + this.c.y * q);
       return vec;
    }
 }

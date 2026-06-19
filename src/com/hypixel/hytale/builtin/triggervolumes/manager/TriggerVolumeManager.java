@@ -16,6 +16,7 @@ import com.hypixel.hytale.codec.codecs.map.MapCodec;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Resource;
 import com.hypixel.hytale.math.util.ChunkUtil;
+import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.packets.player.AddOrUpdateTriggerVolumeDisplay;
 import com.hypixel.hytale.protocol.packets.player.RemoveTriggerVolumeDisplay;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeConditionTiming;
@@ -493,7 +494,9 @@ public class TriggerVolumeManager implements Resource<EntityStore> {
       tags.put(normalizedKey, normalizedValue);
       volume.setTags(tags);
       this.enqueuePendingEvent(
-         new TriggerVolumeManager.PendingTriggerEvent(TriggerEventType.TAG_ADDED, actorRef, actorUuid, volumeId, null, null, normalizedKey, normalizedValue)
+         new TriggerVolumeManager.PendingTriggerEvent(
+            TriggerEventType.TAG_ADDED, actorRef, actorUuid, volumeId, null, null, normalizedKey, normalizedValue, null
+         )
       );
       return true;
    }
@@ -520,7 +523,7 @@ public class TriggerVolumeManager implements Resource<EntityStore> {
          tags.remove(normalizedKey);
          volume.setTags(tags);
          this.enqueuePendingEvent(
-            new TriggerVolumeManager.PendingTriggerEvent(TriggerEventType.TAG_REMOVED, actorRef, actorUuid, volumeId, null, null, normalizedKey, existing)
+            new TriggerVolumeManager.PendingTriggerEvent(TriggerEventType.TAG_REMOVED, actorRef, actorUuid, volumeId, null, null, normalizedKey, existing, null)
          );
          return true;
       } else {
@@ -535,8 +538,27 @@ public class TriggerVolumeManager implements Resource<EntityStore> {
       @Nonnull Vector3d blockPosition,
       @Nonnull String blockId
    ) {
+      this.enqueueBlockEvent(eventType, actorRef, actorUuid, blockPosition, blockId, null);
+   }
+
+   public void enqueueBlockEvent(
+      @Nonnull TriggerEventType eventType,
+      @Nonnull Ref<EntityStore> actorRef,
+      @Nonnull UUID actorUuid,
+      @Nonnull Vector3d blockPosition,
+      @Nonnull String blockId,
+      @Nullable InteractionType interactionType
+   ) {
       this.enqueuePendingEvent(
-         new TriggerVolumeManager.PendingTriggerEvent(eventType, actorRef, actorUuid, null, new Vector3d(blockPosition), blockId, null, null)
+         new TriggerVolumeManager.PendingTriggerEvent(eventType, actorRef, actorUuid, null, new Vector3d(blockPosition), blockId, null, null, interactionType)
+      );
+   }
+
+   public void enqueuePositionalEvent(
+      @Nonnull TriggerEventType eventType, @Nonnull Ref<EntityStore> actorRef, @Nonnull UUID actorUuid, @Nonnull Vector3d position
+   ) {
+      this.enqueuePendingEvent(
+         new TriggerVolumeManager.PendingTriggerEvent(eventType, actorRef, actorUuid, null, new Vector3d(position), null, null, null, null)
       );
    }
 
@@ -793,7 +815,8 @@ public class TriggerVolumeManager implements Resource<EntityStore> {
       @Nullable Vector3d blockPosition,
       @Nullable String blockId,
       @Nullable String tagKey,
-      @Nullable String tagValue
+      @Nullable String tagValue,
+      @Nullable InteractionType interactionType
    ) {
    }
 

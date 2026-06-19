@@ -13,8 +13,9 @@ import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.Rotation;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
 import com.hypixel.hytale.server.core.asset.type.fluid.Fluid;
-import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.prefab.selection.mask.BlockFilter;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
@@ -47,6 +48,8 @@ public class PlaceBlockEffect extends TriggerEffect {
          effect -> effect.replaceMode
       )
       .add()
+      .append(new KeyedCodec<>("Rotation", new EnumCodec<>(Rotation.class), false), (effect, rotation) -> effect.rotation = rotation, effect -> effect.rotation)
+      .add()
       .build();
    @Nullable
    private String blockType;
@@ -56,6 +59,8 @@ public class PlaceBlockEffect extends TriggerEffect {
    private PlaceBlockEffect.Origin origin = PlaceBlockEffect.Origin.VOLUME_ORIGIN;
    @Nonnull
    private PlaceBlockEffect.ReplaceMode replaceMode = PlaceBlockEffect.ReplaceMode.ALWAYS;
+   @Nonnull
+   private Rotation rotation = Rotation.None;
 
    @Override
    public void execute(@Nonnull TriggerContext context) {
@@ -84,7 +89,8 @@ public class PlaceBlockEffect extends TriggerEffect {
                            clearFluid(chunkStore, chunkRef, blockX, blockY, blockZ);
                            BlockType blockTypeAsset = BlockType.getAssetMap().getAsset(targetType.blockId());
                            if (blockTypeAsset != null) {
-                              worldChunkComponent.setBlock(blockX, blockY, blockZ, targetType.blockId(), blockTypeAsset, 0, 0, 256);
+                              int rotationIndex = RotationTuple.index(this.rotation, Rotation.None, Rotation.None);
+                              worldChunkComponent.setBlock(blockX, blockY, blockZ, targetType.blockId(), blockTypeAsset, rotationIndex, 0, 256);
                            }
                         }
                      }
@@ -154,8 +160,8 @@ public class PlaceBlockEffect extends TriggerEffect {
       return switch (this.origin != null ? this.origin : PlaceBlockEffect.Origin.VOLUME_ORIGIN) {
          case VOLUME_ORIGIN -> new Vector3d(context.getVolume().getPosition()).add(offset);
          case ENTITY -> {
-            TransformComponent transform = context.getStore().getComponent(context.getEntityRef(), TransformComponent.getComponentType());
-            Vector3d base = transform != null ? new Vector3d(transform.getPosition()) : new Vector3d(context.getVolume().getPosition());
+            Vector3d actorPosition = context.getActorPosition();
+            Vector3d base = actorPosition != null ? actorPosition : new Vector3d(context.getVolume().getPosition());
             yield base.add(offset);
          }
          case WORLD_ABSOLUTE -> offset;

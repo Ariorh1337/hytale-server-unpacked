@@ -48,7 +48,7 @@ abstract class AbstractLocateSubcommand extends AbstractAsyncPlayerCommand {
    protected static int horizontalDistance(int x1, int z1, int x2, int z2) {
       long dx = (long)x2 - x1;
       long dz = (long)z2 - z1;
-      return (int)Math.sqrt(dx * dx + dz * dz);
+      return (int)Math.hypot(dx, dz);
    }
 
    protected static void sendDidYouMean(@Nonnull CommandContext context, @Nonnull String input, @Nonnull Collection<String> validNames) {

@@ -12,8 +12,11 @@ import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.PlayVfxEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.SendMessageEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.SetVelocityEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.ShowEventTitleEffect;
+import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.SpawnNpcEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.conditions.BlockTypeCondition;
+import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.conditions.BlockUsedCondition;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.conditions.CooldownCondition;
+import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.conditions.EntityCountCondition;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.conditions.GameModeCondition;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.conditions.PermissionCondition;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.conditions.RandomChanceCondition;
@@ -408,6 +411,71 @@ public class TriggerVolumeTestCommand extends AbstractWorldCommand {
                      ),
                      targets
                   );
+                  VolumeEntry multiEntry = this.registerVolumeEntry(
+                     manager, worldName, "tvtest_multi_entry", slotPosition(position, forwardX, forwardZ, ++slot), box, List.of(), targets
+                  );
+                  if (multiEntry != null) {
+                     RandomChanceCondition firstPass = RandomChanceCondition.create(TriggerEventType.ENTER, 1.0F);
+                     SendMessageEffect firstMessage = SendMessageEffect.create(TriggerEventType.ENTER, "server.commands.triggervolume.test.msg.multiEntryFirst");
+                     RandomChanceCondition secondReject = RandomChanceCondition.create(TriggerEventType.ENTER, 0.0F);
+                     secondReject.setEntry(1);
+                     SendMessageEffect secondSuccess = SendMessageEffect.create(
+                        TriggerEventType.ENTER, "server.commands.triggervolume.test.msg.multiEntrySecondSuccess"
+                     );
+                     secondSuccess.setEntry(1);
+                     SendMessageEffect secondRejected = SendMessageEffect.create(
+                        TriggerEventType.ENTER, "server.commands.triggervolume.test.msg.multiEntrySecondRejected"
+                     );
+                     secondRejected.setEntry(1);
+                     multiEntry.getConditions().add(firstPass);
+                     multiEntry.getConditions().add(secondReject);
+                     multiEntry.getEffects().add(firstMessage);
+                     multiEntry.getEffects().add(secondSuccess);
+                     multiEntry.getRejectionEffects().add(secondRejected);
+                     created++;
+                  }
+
+                  VolumeEntry spawnOnDeath = this.registerVolumeEntry(
+                     manager,
+                     worldName,
+                     "tvtest_spawn_npc_on_death",
+                     slotPosition(position, forwardX, forwardZ, ++slot),
+                     box,
+                     List.of(),
+                     EnumSet.of(EntityTargetType.NPC)
+                  );
+                  if (spawnOnDeath != null) {
+                     SpawnNpcEffect spawn = SpawnNpcEffect.create(TriggerEventType.ENTITY_DIED, "Chicken", SpawnNpcEffect.Origin.ENTITY);
+                     spawn.setDelay(2.0F);
+                     spawnOnDeath.getEffects().add(spawn);
+                     created++;
+                  }
+
+                  VolumeEntry entityCount = this.registerVolumeEntry(
+                     manager, worldName, "tvtest_entity_count_tick", slotPosition(position, forwardX, forwardZ, ++slot), box, List.of(), targets
+                  );
+                  if (entityCount != null) {
+                     SendMessageEffect tickCount = SendMessageEffect.create(TriggerEventType.TICK, "server.commands.triggervolume.test.msg.entityCount");
+                     tickCount.setInterval(1.0F);
+                     entityCount.getEffects().add(tickCount);
+                     entityCount.getConditions().add(EntityCountCondition.create(TriggerEventType.TICK, EntityCountCondition.Comparison.AT_LEAST, 1));
+                     created++;
+                  }
+
+                  VolumeEntry blockUsed = this.registerVolumeEntry(
+                     manager,
+                     worldName,
+                     "tvtest_block_used_any_usable",
+                     slotPosition(position, forwardX, forwardZ, ++slot),
+                     box,
+                     List.of(SendMessageEffect.create(TriggerEventType.BLOCK_USED, "server.commands.triggervolume.test.msg.blockUsed")),
+                     targets
+                  );
+                  if (blockUsed != null) {
+                     blockUsed.getConditions().add(BlockUsedCondition.create(TriggerEventType.BLOCK_USED));
+                     created++;
+                  }
+
                   context.sendMessage(Message.translation("server.commands.triggervolume.test.success").param("count", created));
                }
             }

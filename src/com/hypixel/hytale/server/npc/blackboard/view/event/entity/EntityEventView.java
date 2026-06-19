@@ -16,6 +16,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.flock.FlockMembership;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderManager;
 import com.hypixel.hytale.server.npc.blackboard.Blackboard;
+import com.hypixel.hytale.server.npc.blackboard.BlackboardSubscription;
 import com.hypixel.hytale.server.npc.blackboard.view.event.EntityEventNotification;
 import com.hypixel.hytale.server.npc.blackboard.view.event.EventTypeRegistration;
 import com.hypixel.hytale.server.npc.blackboard.view.event.EventView;
@@ -34,7 +35,9 @@ public class EntityEventView extends EventView<EntityEventView, EntityEventType,
             .put(
                eventType,
                new EventTypeRegistration<>(
-                  eventType, (set, roleIndex) -> TagSetPlugin.get(NPCGroup.class).tagInSet(set, roleIndex), NPCEntity::notifyEntityEvent
+                  eventType,
+                  (set, roleIndex) -> TagSetPlugin.get(NPCGroup.class).tagInSet(set, roleIndex),
+                  (blackboardSubscription, ref, accessor, type, notification) -> BlackboardSubscription.notifyEntityEvent(ref, accessor, type, notification)
                )
             );
       }
@@ -51,9 +54,9 @@ public class EntityEventView extends EventView<EntityEventView, EntityEventType,
    }
 
    @Override
-   public void initialiseEntity(@Nonnull Ref<EntityStore> ref, @Nonnull NPCEntity npcComponent) {
+   public void initialiseEntity(@Nonnull Ref<EntityStore> ref, @Nonnull BlackboardSubscription subscription) {
       for (EntityEventType type : EntityEventType.VALUES) {
-         IntSet eventSets = npcComponent.getBlackboardEntityEventSet(type);
+         IntSet eventSets = subscription.getEntityEventSet(type);
          if (eventSets != null) {
             this.entityMapsByEventType.get(type).initialiseEntity(ref, eventSets);
          }

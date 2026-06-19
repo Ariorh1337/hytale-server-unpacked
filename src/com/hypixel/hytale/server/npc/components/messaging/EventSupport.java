@@ -1,7 +1,7 @@
 package com.hypixel.hytale.server.npc.components.messaging;
 
+import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.blackboard.view.event.EventNotification;
@@ -17,10 +17,12 @@ public abstract class EventSupport<EventType extends Enum<EventType>, Notificati
    protected EventMessage[] messageSlots;
    protected Map<EventType, Int2IntMap> messageIndices;
 
-   public void postMessage(EventType type, @Nonnull NotificationType notification, @Nonnull Ref<EntityStore> parent, @Nonnull Store<EntityStore> store) {
+   public void postMessage(
+      EventType type, @Nonnull NotificationType notification, @Nonnull Ref<EntityStore> parent, @Nonnull ComponentAccessor<EntityStore> accessor
+   ) {
       EventMessage slot = this.getMessageSlot(type, notification);
       if (slot != null && slot.isEnabled()) {
-         Vector3d parentEntityPosition = store.getComponent(parent, TransformComponent.getComponentType()).getPosition();
+         Vector3d parentEntityPosition = accessor.getComponent(parent, TransformComponent.getComponentType()).getPosition();
          Vector3d pos = notification.getPosition();
          double x = pos.x();
          double y = pos.y();

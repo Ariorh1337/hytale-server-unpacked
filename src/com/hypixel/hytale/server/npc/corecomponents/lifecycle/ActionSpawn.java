@@ -26,6 +26,7 @@ import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.systems.NewSpawnStartTickingSystem;
 import com.hypixel.hytale.server.npc.util.AimingHelper;
 import com.hypixel.hytale.server.spawning.ISpawnableWithModel;
+import com.hypixel.hytale.server.spawning.SpawnLineage;
 import com.hypixel.hytale.server.spawning.SpawnTestResult;
 import com.hypixel.hytale.server.spawning.SpawningContext;
 import it.unimi.dsi.fastutil.Pair;
@@ -230,6 +231,7 @@ public class ActionSpawn extends ActionBase {
       }
 
       NewSpawnStartTickingSystem.queueNewSpawn(ref, store);
+      SpawnLineage.inherit(this.parent, ref, store);
    }
 
    protected void joinFlock(@Nonnull Ref<EntityStore> targetRef, @Nonnull Store<EntityStore> store) {

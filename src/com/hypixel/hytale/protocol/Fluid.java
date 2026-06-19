@@ -217,8 +217,8 @@ public class Fluid {
             throw ProtocolException.arrayTooLong("Particles", particlesCount, 4096000);
          }
 
-         if (varPos3 + varIntLen + particlesCount * 34L > buf.readableBytes()) {
-            throw ProtocolException.bufferTooSmall("Particles", varPos3 + varIntLen + particlesCount * 34, buf.readableBytes());
+         if (varPos3 + varIntLen + particlesCount * 35L > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Particles", varPos3 + varIntLen + particlesCount * 35, buf.readableBytes());
          }
 
          obj.particles = new ModelParticle[particlesCount];

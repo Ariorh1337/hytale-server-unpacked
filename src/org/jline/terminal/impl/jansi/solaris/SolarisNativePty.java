@@ -4,7 +4,7 @@ import java.io.FileDescriptor;
 import java.io.IOException;
 import java.util.EnumMap;
 import java.util.EnumSet;
-import org.fusesource.jansi.internal.CLibrary;
+import org.fusesource.jansi.internal.CLibrary.Termios;
 import org.jline.terminal.Attributes;
 import org.jline.terminal.impl.jansi.JansiNativePty;
 import org.jline.terminal.spi.SystemStream;
@@ -151,8 +151,8 @@ public class SolarisNativePty extends JansiNativePty {
    }
 
    @Override
-   protected CLibrary.Termios toTermios(Attributes t) {
-      CLibrary.Termios tio = new CLibrary.Termios();
+   protected Termios toTermios(Attributes t) {
+      Termios tio = new Termios();
       tio.c_iflag = setFlag(t.getInputFlag(Attributes.InputFlag.IGNBRK), 1L, tio.c_iflag);
       tio.c_iflag = setFlag(t.getInputFlag(Attributes.InputFlag.BRKINT), 2L, tio.c_iflag);
       tio.c_iflag = setFlag(t.getInputFlag(Attributes.InputFlag.IGNPAR), 4L, tio.c_iflag);
@@ -225,7 +225,7 @@ public class SolarisNativePty extends JansiNativePty {
    }
 
    @Override
-   protected Attributes toAttributes(CLibrary.Termios tio) {
+   protected Attributes toAttributes(Termios tio) {
       Attributes attr = new Attributes();
       EnumSet<Attributes.InputFlag> iflag = attr.getInputFlags();
       addFlag(tio.c_iflag, iflag, Attributes.InputFlag.IGNBRK, 1);

@@ -1,8 +1,10 @@
 package com.hypixel.hytale.server.core.auth.oauth;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.EmptyExtraInfo;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.util.RawJsonReader;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.auth.AuthConfig;
@@ -364,38 +366,17 @@ public class OAuthClient {
       return Base64.getUrlEncoder().withoutPadding().encodeToString(json.getBytes(StandardCharsets.UTF_8));
    }
 
-   private OAuthClient.TokenResponse parseTokenResponse(String json) {
-      JsonObject obj = JsonParser.parseString(json).getAsJsonObject();
-      return new OAuthClient.TokenResponse(
-         getJsonString(obj, "access_token"),
-         getJsonString(obj, "refresh_token"),
-         getJsonString(obj, "id_token"),
-         getJsonString(obj, "error"),
-         getJsonInt(obj, "expires_in", 0)
-      );
+   private OAuthClient.TokenResponse parseTokenResponse(String json) throws IOException {
+      OAuthClient.TokenResponseData data = OAuthClient.TokenResponseData.CODEC.decodeJson(new RawJsonReader(json.toCharArray()), EmptyExtraInfo.EMPTY);
+      return new OAuthClient.TokenResponse(data.accessToken, data.refreshToken, data.idToken, data.error, data.expiresIn);
    }
 
-   private OAuthClient.DeviceAuthResponse parseDeviceAuthResponse(String json) {
-      JsonObject obj = JsonParser.parseString(json).getAsJsonObject();
+   private OAuthClient.DeviceAuthResponse parseDeviceAuthResponse(String json) throws IOException {
+      OAuthClient.DeviceAuthResponseData data = OAuthClient.DeviceAuthResponseData.CODEC
+         .decodeJson(new RawJsonReader(json.toCharArray()), EmptyExtraInfo.EMPTY);
       return new OAuthClient.DeviceAuthResponse(
-         getJsonString(obj, "device_code"),
-         getJsonString(obj, "user_code"),
-         getJsonString(obj, "verification_uri"),
-         getJsonString(obj, "verification_uri_complete"),
-         getJsonInt(obj, "expires_in", 600),
-         getJsonInt(obj, "interval", 5)
+         data.deviceCode, data.userCode, data.verificationUri, data.verificationUriComplete, data.expiresIn, data.interval
       );
-   }
-
-   @Nullable
-   private static String getJsonString(JsonObject obj, String key) {
-      JsonElement elem = obj.get(key);
-      return elem != null && elem.isJsonPrimitive() ? elem.getAsString() : null;
-   }
-
-   private static int getJsonInt(JsonObject obj, String key, int defaultValue) {
-      JsonElement elem = obj.get(key);
-      return elem != null && elem.isJsonPrimitive() ? elem.getAsInt() : defaultValue;
    }
 
    private static String buildHtmlPage(boolean success, String title, String heading, String message, @Nullable String errorDetail) {
@@ -408,12 +389,63 @@ public class OAuthClient {
          .formatted(title, iconClass, iconSvg, heading, message, detail);
    }
 
+   private static <T> KeyedCodec<T> externalKey(String key, Codec<T> codec) {
+      return new KeyedCodec<>(key, codec, false, true);
+   }
+
    public record DeviceAuthResponse(String deviceCode, String userCode, String verificationUri, String verificationUriComplete, int expiresIn, int interval) {
+   }
+
+   private static final class DeviceAuthResponseData {
+      String deviceCode;
+      String userCode;
+      String verificationUri;
+      String verificationUriComplete;
+      int expiresIn = 600;
+      int interval = 5;
+      static final BuilderCodec<OAuthClient.DeviceAuthResponseData> CODEC = BuilderCodec.builder(
+            OAuthClient.DeviceAuthResponseData.class, OAuthClient.DeviceAuthResponseData::new
+         )
+         .append(OAuthClient.externalKey("device_code", Codec.STRING), (r, v) -> r.deviceCode = v, r -> r.deviceCode)
+         .add()
+         .append(OAuthClient.externalKey("user_code", Codec.STRING), (r, v) -> r.userCode = v, r -> r.userCode)
+         .add()
+         .append(OAuthClient.externalKey("verification_uri", Codec.STRING), (r, v) -> r.verificationUri = v, r -> r.verificationUri)
+         .add()
+         .append(OAuthClient.externalKey("verification_uri_complete", Codec.STRING), (r, v) -> r.verificationUriComplete = v, r -> r.verificationUriComplete)
+         .add()
+         .append(OAuthClient.externalKey("expires_in", Codec.INTEGER), (r, v) -> r.expiresIn = v, r -> r.expiresIn)
+         .add()
+         .append(OAuthClient.externalKey("interval", Codec.INTEGER), (r, v) -> r.interval = v, r -> r.interval)
+         .add()
+         .build();
    }
 
    public record TokenResponse(@Nullable String accessToken, @Nullable String refreshToken, @Nullable String idToken, @Nullable String error, int expiresIn) {
       public boolean isSuccess() {
          return this.error == null && this.accessToken != null;
       }
+   }
+
+   private static final class TokenResponseData {
+      String accessToken;
+      String refreshToken;
+      String idToken;
+      String error;
+      int expiresIn;
+      static final BuilderCodec<OAuthClient.TokenResponseData> CODEC = BuilderCodec.builder(
+            OAuthClient.TokenResponseData.class, OAuthClient.TokenResponseData::new
+         )
+         .append(OAuthClient.externalKey("access_token", Codec.STRING), (r, v) -> r.accessToken = v, r -> r.accessToken)
+         .add()
+         .append(OAuthClient.externalKey("refresh_token", Codec.STRING), (r, v) -> r.refreshToken = v, r -> r.refreshToken)
+         .add()
+         .append(OAuthClient.externalKey("id_token", Codec.STRING), (r, v) -> r.idToken = v, r -> r.idToken)
+         .add()
+         .append(OAuthClient.externalKey("error", Codec.STRING), (r, v) -> r.error = v, r -> r.error)
+         .add()
+         .append(OAuthClient.externalKey("expires_in", Codec.INTEGER), (r, v) -> r.expiresIn = v, r -> r.expiresIn)
+         .add()
+         .build();
    }
 }

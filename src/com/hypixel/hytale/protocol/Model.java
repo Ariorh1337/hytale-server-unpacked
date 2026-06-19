@@ -370,8 +370,8 @@ public class Model {
             throw ProtocolException.arrayTooLong("Particles", particlesCount, 4096000);
          }
 
-         if (varPos8 + varIntLen + particlesCount * 34L > buf.readableBytes()) {
-            throw ProtocolException.bufferTooSmall("Particles", varPos8 + varIntLen + particlesCount * 34, buf.readableBytes());
+         if (varPos8 + varIntLen + particlesCount * 35L > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Particles", varPos8 + varIntLen + particlesCount * 35, buf.readableBytes());
          }
 
          obj.particles = new ModelParticle[particlesCount];

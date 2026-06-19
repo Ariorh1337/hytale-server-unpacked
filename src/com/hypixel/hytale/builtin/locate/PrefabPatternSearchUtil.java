@@ -62,8 +62,8 @@ public final class PrefabPatternSearchUtil {
       LongOpenHashSet seen = new LongOpenHashSet();
       FastRandom random = new FastRandom(0L);
       Comparator<Entry<String, Vector3i>> byDistanceSq = Comparator.comparingLong(e -> {
-         long ex = e.getValue().x - startX;
-         long ez = e.getValue().z - startZ;
+         long ex = (long)e.getValue().x - startX;
+         long ez = (long)e.getValue().z - startZ;
          return ex * ex + ez * ez;
       });
       SpiralIterator iterator = new SpiralIterator(chunkX, chunkZ, radiusInChunks);
@@ -104,8 +104,8 @@ public final class PrefabPatternSearchUtil {
                                     WorldGenPrefabSupplier supplier = entry.getPrefabs().get(random);
                                     if (supplier != null) {
                                        if (matchesPrefabKey(supplier, searchKeyLower)) {
-                                          long dx = x - startX;
-                                          long dz = z - startZ;
+                                          long dx = (long)x - startX;
+                                          long dz = (long)z - startZ;
                                           long distSq = dx * dx + dz * dz;
                                           if (distSq <= effectiveRadiusSq[0]) {
                                              int y = estimateHeight(generator, seed, x, z, patternGenerator, biome);
@@ -114,8 +114,8 @@ public final class PrefabPatternSearchUtil {
                                                 results.sort(byDistanceSq);
                                                 results.subList(maxResults, results.size()).clear();
                                                 Vector3i worst = results.get(results.size() - 1).getValue();
-                                                long wdx = worst.x - startX;
-                                                long wdz = worst.z - startZ;
+                                                long wdx = (long)worst.x - startX;
+                                                long wdz = (long)worst.z - startZ;
                                                 effectiveRadiusSq[0] = wdx * wdx + wdz * wdz;
                                              }
                                           }
@@ -167,8 +167,8 @@ public final class PrefabPatternSearchUtil {
 
       for (UniquePrefabContainer.UniquePrefabEntry unique : uniquePrefabs) {
          if (priority < unique.getCategory().priority()) {
-            long dx = x - unique.getPosition().x();
-            long dz = z - unique.getPosition().z();
+            long dx = (long)x - unique.getPosition().x();
+            long dz = (long)z - unique.getPosition().z();
             if (dx * dx + dz * dz <= radius2) {
                return true;
             }

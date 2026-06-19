@@ -7,6 +7,10 @@ import java.io.Writer;
 import java.nio.charset.Charset;
 import java.util.function.IntConsumer;
 import org.fusesource.jansi.internal.Kernel32;
+import org.fusesource.jansi.internal.Kernel32.CONSOLE_SCREEN_BUFFER_INFO;
+import org.fusesource.jansi.internal.Kernel32.INPUT_RECORD;
+import org.fusesource.jansi.internal.Kernel32.KEY_EVENT_RECORD;
+import org.fusesource.jansi.internal.Kernel32.MOUSE_EVENT_RECORD;
 import org.jline.terminal.Cursor;
 import org.jline.terminal.Size;
 import org.jline.terminal.Terminal;
@@ -207,14 +211,14 @@ public class JansiWinSysTerminal extends AbstractWindowsTerminal<Long> {
 
    @Override
    public Size getSize() {
-      Kernel32.CONSOLE_SCREEN_BUFFER_INFO info = new Kernel32.CONSOLE_SCREEN_BUFFER_INFO();
+      CONSOLE_SCREEN_BUFFER_INFO info = new CONSOLE_SCREEN_BUFFER_INFO();
       Kernel32.GetConsoleScreenBufferInfo(this.outConsole, info);
       return new Size(info.windowWidth(), info.windowHeight());
    }
 
    @Override
    public Size getBufferSize() {
-      Kernel32.CONSOLE_SCREEN_BUFFER_INFO info = new Kernel32.CONSOLE_SCREEN_BUFFER_INFO();
+      CONSOLE_SCREEN_BUFFER_INFO info = new CONSOLE_SCREEN_BUFFER_INFO();
       Kernel32.GetConsoleScreenBufferInfo(this.outConsole, info);
       return new Size(info.size.x, info.size.y);
    }
@@ -222,20 +226,20 @@ public class JansiWinSysTerminal extends AbstractWindowsTerminal<Long> {
    @Override
    protected boolean processConsoleInput() throws IOException {
       if (this.inConsole != Kernel32.INVALID_HANDLE_VALUE && Kernel32.WaitForSingleObject(this.inConsole, 100) == 0) {
-         Kernel32.INPUT_RECORD[] events = Kernel32.readConsoleInputHelper(this.inConsole, 1, false);
+         INPUT_RECORD[] events = Kernel32.readConsoleInputHelper(this.inConsole, 1, false);
          boolean flush = false;
 
-         for (Kernel32.INPUT_RECORD event : events) {
-            if (event.eventType == Kernel32.INPUT_RECORD.KEY_EVENT) {
-               Kernel32.KEY_EVENT_RECORD keyEvent = event.keyEvent;
+         for (INPUT_RECORD event : events) {
+            if (event.eventType == INPUT_RECORD.KEY_EVENT) {
+               KEY_EVENT_RECORD keyEvent = event.keyEvent;
                this.processKeyEvent(keyEvent.keyDown, keyEvent.keyCode, keyEvent.uchar, keyEvent.controlKeyState);
                flush = true;
-            } else if (event.eventType == Kernel32.INPUT_RECORD.WINDOW_BUFFER_SIZE_EVENT) {
+            } else if (event.eventType == INPUT_RECORD.WINDOW_BUFFER_SIZE_EVENT) {
                this.raise(Terminal.Signal.WINCH);
-            } else if (event.eventType == Kernel32.INPUT_RECORD.MOUSE_EVENT) {
+            } else if (event.eventType == INPUT_RECORD.MOUSE_EVENT) {
                this.processMouseEvent(event.mouseEvent);
                flush = true;
-            } else if (event.eventType == Kernel32.INPUT_RECORD.FOCUS_EVENT) {
+            } else if (event.eventType == INPUT_RECORD.FOCUS_EVENT) {
                this.processFocusEvent(event.focusEvent.setFocus);
             }
          }
@@ -253,29 +257,29 @@ public class JansiWinSysTerminal extends AbstractWindowsTerminal<Long> {
       }
    }
 
-   private void processMouseEvent(Kernel32.MOUSE_EVENT_RECORD mouseEvent) throws IOException {
+   private void processMouseEvent(MOUSE_EVENT_RECORD mouseEvent) throws IOException {
       int dwEventFlags = mouseEvent.eventFlags;
       int dwButtonState = mouseEvent.buttonState;
       if (this.tracking != Terminal.MouseTracking.Off
-         && (this.tracking != Terminal.MouseTracking.Normal || dwEventFlags != Kernel32.MOUSE_EVENT_RECORD.MOUSE_MOVED)
-         && (this.tracking != Terminal.MouseTracking.Button || dwEventFlags != Kernel32.MOUSE_EVENT_RECORD.MOUSE_MOVED || dwButtonState != 0)) {
+         && (this.tracking != Terminal.MouseTracking.Normal || dwEventFlags != MOUSE_EVENT_RECORD.MOUSE_MOVED)
+         && (this.tracking != Terminal.MouseTracking.Button || dwEventFlags != MOUSE_EVENT_RECORD.MOUSE_MOVED || dwButtonState != 0)) {
          int cb = 0;
-         dwEventFlags &= ~Kernel32.MOUSE_EVENT_RECORD.DOUBLE_CLICK;
-         if (dwEventFlags == Kernel32.MOUSE_EVENT_RECORD.MOUSE_WHEELED) {
+         dwEventFlags &= ~MOUSE_EVENT_RECORD.DOUBLE_CLICK;
+         if (dwEventFlags == MOUSE_EVENT_RECORD.MOUSE_WHEELED) {
             cb |= 64;
             if (dwButtonState >> 16 < 0) {
                cb |= 1;
             }
          } else {
-            if (dwEventFlags == Kernel32.MOUSE_EVENT_RECORD.MOUSE_HWHEELED) {
+            if (dwEventFlags == MOUSE_EVENT_RECORD.MOUSE_HWHEELED) {
                return;
             }
 
-            if ((dwButtonState & Kernel32.MOUSE_EVENT_RECORD.FROM_LEFT_1ST_BUTTON_PRESSED) != 0) {
+            if ((dwButtonState & MOUSE_EVENT_RECORD.FROM_LEFT_1ST_BUTTON_PRESSED) != 0) {
                cb |= 0;
-            } else if ((dwButtonState & Kernel32.MOUSE_EVENT_RECORD.RIGHTMOST_BUTTON_PRESSED) != 0) {
+            } else if ((dwButtonState & MOUSE_EVENT_RECORD.RIGHTMOST_BUTTON_PRESSED) != 0) {
                cb |= 1;
-            } else if ((dwButtonState & Kernel32.MOUSE_EVENT_RECORD.FROM_LEFT_2ND_BUTTON_PRESSED) != 0) {
+            } else if ((dwButtonState & MOUSE_EVENT_RECORD.FROM_LEFT_2ND_BUTTON_PRESSED) != 0) {
                cb |= 2;
             } else {
                cb |= 3;
@@ -293,7 +297,7 @@ public class JansiWinSysTerminal extends AbstractWindowsTerminal<Long> {
 
    @Override
    public Cursor getCursorPosition(IntConsumer discarded) {
-      Kernel32.CONSOLE_SCREEN_BUFFER_INFO info = new Kernel32.CONSOLE_SCREEN_BUFFER_INFO();
+      CONSOLE_SCREEN_BUFFER_INFO info = new CONSOLE_SCREEN_BUFFER_INFO();
       if (Kernel32.GetConsoleScreenBufferInfo(this.outConsole, info) == 0) {
          throw new IOError(new IOException("Could not get the cursor position: " + WindowsSupport.getLastErrorMessage()));
       } else {
@@ -310,13 +314,13 @@ public class JansiWinSysTerminal extends AbstractWindowsTerminal<Long> {
 
    @Override
    public int getDefaultForegroundColor() {
-      Kernel32.CONSOLE_SCREEN_BUFFER_INFO info = new Kernel32.CONSOLE_SCREEN_BUFFER_INFO();
+      CONSOLE_SCREEN_BUFFER_INFO info = new CONSOLE_SCREEN_BUFFER_INFO();
       return Kernel32.GetConsoleScreenBufferInfo(this.outConsole, info) == 0 ? -1 : this.convertAttributeToRgb(info.attributes & 15, true);
    }
 
    @Override
    public int getDefaultBackgroundColor() {
-      Kernel32.CONSOLE_SCREEN_BUFFER_INFO info = new Kernel32.CONSOLE_SCREEN_BUFFER_INFO();
+      CONSOLE_SCREEN_BUFFER_INFO info = new CONSOLE_SCREEN_BUFFER_INFO();
       return Kernel32.GetConsoleScreenBufferInfo(this.outConsole, info) == 0 ? -1 : this.convertAttributeToRgb((info.attributes & 240) >> 4, false);
    }
 }

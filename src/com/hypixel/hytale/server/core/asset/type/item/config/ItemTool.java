@@ -4,12 +4,14 @@ import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
+import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.common.util.ArrayUtil;
 import com.hypixel.hytale.server.core.asset.type.blockset.config.BlockSet;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.asset.type.soundevent.validator.SoundEventValidators;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
+import com.hypixel.hytale.server.core.modules.interaction.breakshape.BreakShape;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -25,6 +27,19 @@ public class ItemTool implements NetworkSerializable<com.hypixel.hytale.protocol
          (item, s) -> item.durabilityLossBlockTypes = s,
          item -> item.durabilityLossBlockTypes
       )
+      .<BreakShape>append(new KeyedCodec<>("BreakShape", BreakShape.CODEC), (item, s) -> item.breakShape = s, item -> item.breakShape)
+      .documentation(
+         "Optional break shape. When set, breaking with this tool affects the set of blocks the shape covers (oriented to the user's view) instead of only the targeted block."
+      )
+      .add()
+      .<BreakShapeDurabilityMode>append(
+         new KeyedCodec<>("BreakShapeDurabilityMode", BreakShapeDurabilityMode.CODEC),
+         (item, s) -> item.breakShapeDurabilityMode = s,
+         item -> item.breakShapeDurabilityMode
+      )
+      .addValidator(Validators.nonNull())
+      .documentation("How durability is consumed when a break shape affects multiple blocks: once per swing, or once per block broken.")
+      .add()
       .<String>appendInherited(
          new KeyedCodec<>("HitSoundLayer", Codec.STRING),
          (item, s) -> item.hitSoundLayerId = s,
@@ -51,10 +66,14 @@ public class ItemTool implements NetworkSerializable<com.hypixel.hytale.protocol
    protected float speed;
    protected ItemTool.DurabilityLossBlockTypes[] durabilityLossBlockTypes;
    @Nullable
-   protected String hitSoundLayerId = null;
+   protected BreakShape breakShape;
+   @Nonnull
+   protected BreakShapeDurabilityMode breakShapeDurabilityMode = BreakShapeDurabilityMode.PerSwing;
+   @Nullable
+   protected String hitSoundLayerId;
    protected transient int hitSoundLayerIndex = 0;
    @Nullable
-   protected String incorrectMaterialSoundLayerId = null;
+   protected String incorrectMaterialSoundLayerId;
    protected transient int incorrectMaterialSoundLayerIndex = 0;
 
    public ItemTool(ItemToolSpec[] specs, float speed, ItemTool.DurabilityLossBlockTypes[] durabilityLossBlockTypes) {
@@ -84,11 +103,25 @@ public class ItemTool implements NetworkSerializable<com.hypixel.hytale.protocol
       }
 
       packet.speed = this.speed;
+      if (this.breakShape != null) {
+         packet.breakShape = this.breakShape.toPacket();
+      }
+
       return packet;
    }
 
    public ItemToolSpec[] getSpecs() {
       return this.specs;
+   }
+
+   @Nullable
+   public BreakShape getBreakShape() {
+      return this.breakShape;
+   }
+
+   @Nonnull
+   public BreakShapeDurabilityMode getBreakShapeDurabilityMode() {
+      return this.breakShapeDurabilityMode;
    }
 
    public float getSpeed() {

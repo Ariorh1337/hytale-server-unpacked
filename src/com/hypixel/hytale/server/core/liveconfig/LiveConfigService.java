@@ -1,8 +1,5 @@
 package com.hypixel.hytale.server.core.liveconfig;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.auth.AuthConfig;
 import com.hypixel.hytale.server.core.auth.ServerAuthManager;
@@ -22,6 +19,8 @@ import java.util.Map.Entry;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.bson.BsonDocument;
+import org.bson.BsonValue;
 
 public class LiveConfigService {
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
@@ -93,14 +92,13 @@ public class LiveConfigService {
    @Nullable
    private LiveConfigSnapshot parseResponse(@Nonnull HttpResponse<String> response) {
       try {
-         JsonObject root = JsonParser.parseString(response.body()).getAsJsonObject();
-         String version = root.get("version").getAsString();
-         JsonObject flagsObj = root.getAsJsonObject("flags");
+         BsonDocument root = BsonDocument.parse(response.body());
+         String version = root.getString("version").getValue();
          Map<String, LiveConfigSnapshot.ResolvedFlag> flags = new HashMap<>();
-         if (flagsObj != null) {
-            for (Entry<String, JsonElement> entry : flagsObj.entrySet()) {
-               JsonObject flagObj = entry.getValue().getAsJsonObject();
-               String type = flagObj.get("type").getAsString();
+         if (root.containsKey("flags")) {
+            for (Entry<String, BsonValue> entry : root.getDocument("flags").entrySet()) {
+               BsonDocument flagObj = entry.getValue().asDocument();
+               String type = flagObj.getString("type").getValue();
                Object value = parseValue(type, flagObj);
                flags.put(entry.getKey(), new LiveConfigSnapshot.ResolvedFlag(type, value));
             }
@@ -115,13 +113,13 @@ public class LiveConfigService {
    }
 
    @Nullable
-   private static Object parseValue(@Nonnull String type, @Nonnull JsonObject flagObj) {
-      JsonElement valueElement = flagObj.get("value");
-      if (valueElement != null && !valueElement.isJsonNull()) {
+   private static Object parseValue(@Nonnull String type, @Nonnull BsonDocument flagObj) {
+      BsonValue value = flagObj.get("value");
+      if (value != null && !value.isNull()) {
          return switch (type) {
-            case "boolean" -> valueElement.getAsBoolean();
-            case "integer" -> valueElement.getAsInt();
-            case "string" -> valueElement.getAsString();
+            case "boolean" -> value.asBoolean().getValue();
+            case "integer" -> value.asNumber().intValue();
+            case "string" -> value.asString().getValue();
             default -> {
                LOGGER.at(Level.WARNING).log("Unknown flag type: %s", type);
                yield null;

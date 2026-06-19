@@ -76,7 +76,7 @@ public class ObjectiveInventoryChangeSystem extends EntityEventSystem<EntityStor
             UUID objectiveUUID = itemStack.getFromMetadataOrNull(StartObjectiveInteraction.OBJECTIVE_UUID);
             if (objectiveUUID != null) {
                if (inventoryItemObjectiveUUIDs == null) {
-                  inventoryItemObjectiveUUIDs = new HashSet<>(activeObjectiveUUIDs);
+                  inventoryItemObjectiveUUIDs = new HashSet<>();
                }
 
                inventoryItemObjectiveUUIDs.add(objectiveUUID);

@@ -76,7 +76,7 @@ public class BlockPlaceUtils {
 
    public static void placeBlock(
       @Nonnull Ref<EntityStore> ref,
-      @Nonnull ItemStack itemStack,
+      @Nullable ItemStack itemStack,
       @Nullable String blockTypeKey,
       @Nonnull ItemContainer itemContainer,
       @Nonnull Vector3i placementNormal,

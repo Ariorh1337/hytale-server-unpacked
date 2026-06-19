@@ -190,7 +190,6 @@ public class Role implements IAnnotatedComponentCollection {
    public static Role createAndAttach(@Nonnull Holder<EntityStore> holder, @Nonnull BuilderRole builder, @Nonnull BuilderSupport builderSupport) {
       CombatSupport combatSupport = new CombatSupport(builder, builderSupport);
       StateSupport stateSupport = new StateSupport(builder, builderSupport);
-      MarkedEntitySupport markedEntitySupport = new MarkedEntitySupport();
       WorldSupport worldSupport = new WorldSupport(builder, builderSupport);
       EntitySupport entitySupport = new EntitySupport();
       PositionCache positionCache = new PositionCache(builderSupport.getRoleStats());
@@ -203,7 +202,10 @@ public class Role implements IAnnotatedComponentCollection {
       PlayerTaskSupport playerTaskSupport = new PlayerTaskSupport();
       holder.putComponent(CombatSupport.getComponentType(), combatSupport);
       holder.putComponent(StateSupport.getComponentType(), stateSupport);
-      holder.putComponent(MarkedEntitySupport.getComponentType(), markedEntitySupport);
+      if (holder.getComponent(MarkedEntitySupport.getComponentType()) == null) {
+         holder.putComponent(MarkedEntitySupport.getComponentType(), new MarkedEntitySupport());
+      }
+
       holder.putComponent(WorldSupport.getComponentType(), worldSupport);
       holder.putComponent(EntitySupport.getComponentType(), entitySupport);
       holder.putComponent(PositionCache.getComponentType(), positionCache);
@@ -407,11 +409,6 @@ public class Role implements IAnnotatedComponentCollection {
       holder.getComponent(WorldSupport.getComponentType()).postRoleBuilt(builderSupport);
       holder.getComponent(EntitySupport.getComponentType()).postRoleBuilt(builderSupport);
       holder.getComponent(MarkedEntitySupport.getComponentType()).postRoleBuilder(builderSupport);
-      if (builderSupport.requiresBlockTypeBlackboard()) {
-         NPCEntity npcEntity = holder.getComponent(NPCEntity.getComponentType());
-         npcEntity.addBlackboardBlockTypeSets(builderSupport.getBlockTypeBlackboardBlockSets());
-      }
-
       this.rootInstruction.setContext(this, 0);
    }
 

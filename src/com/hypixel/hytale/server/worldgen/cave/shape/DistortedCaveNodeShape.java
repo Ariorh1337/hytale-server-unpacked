@@ -303,7 +303,6 @@ public class DistortedCaveNodeShape implements CaveNodeShape {
          }
 
          Vector3d offset = CaveNodeShapeUtils.getOffset(parentNode, childEntry);
-         origin.add(offset);
          return origin.add(offset);
       }
 
@@ -331,7 +330,7 @@ public class DistortedCaveNodeShape implements CaveNodeShape {
       }
 
       private static double getMiddleRadius(double start, double end, @Nullable IDoubleRange range, Random random) {
-         return range == null ? (start - end) * 0.5 + start : range.getValue(random);
+         return range == null ? (end - start) * 0.5 + start : range.getValue(random);
       }
    }
 }

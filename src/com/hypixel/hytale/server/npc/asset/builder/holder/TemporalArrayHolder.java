@@ -33,7 +33,7 @@ public class TemporalArrayHolder extends StringArrayHolder {
             try {
                result[i] = Duration.parse(period);
             } catch (DateTimeParseException e2) {
-               throw new IllegalStateException(String.format("Cannot parse text %s to Duration or Period", source[i]));
+               throw new IllegalStateException(String.format("Cannot parse text %s to Duration or Period", source[i]), e2);
             }
          }
       }

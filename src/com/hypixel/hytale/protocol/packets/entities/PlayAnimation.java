@@ -324,7 +324,7 @@ public class PlayAnimation implements Packet, ToClientPacket {
 
       byte nullBits = buffer.getByte(offset);
       int v = buffer.getByte(offset + 5) & 255;
-      if (v >= 5) {
+      if (v >= 6) {
          return ValidationResult.error("Invalid AnimationSlot value for Slot");
       }
 

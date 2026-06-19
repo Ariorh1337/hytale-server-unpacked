@@ -76,14 +76,28 @@ public class GenerateI18nCommand extends AbstractAsyncCommand {
       TranslationMap mergedMap = new TranslationMap();
       if (Files.exists(path)) {
          Properties diskAsProperties = new Properties();
-         diskAsProperties.load(new FileInputStream(path.toFile()));
-         TranslationMap diskTranslationMap = new TranslationMap(diskAsProperties);
-         if (cleanOldKeys) {
-            Set<String> extraneousDiskKeys = difference(diskTranslationMap.asMap().keySet(), generated.asMap().keySet());
-            diskTranslationMap.removeKeys(extraneousDiskKeys);
+         FileInputStream in = new FileInputStream(path.toFile());
+
+         try {
+            diskAsProperties.load(in);
+         } catch (Throwable var10) {
+            try {
+               in.close();
+            } catch (Throwable var9) {
+               var10.addSuppressed(var9);
+            }
+
+            throw var10;
          }
 
-         mergedMap.putAbsentKeys(diskTranslationMap);
+         in.close();
+         TranslationMap var11 = new TranslationMap(diskAsProperties);
+         if (cleanOldKeys) {
+            Set<String> extraneousDiskKeys = difference(var11.asMap().keySet(), generated.asMap().keySet());
+            var11.removeKeys(extraneousDiskKeys);
+         }
+
+         mergedMap.putAbsentKeys(var11);
       }
 
       mergedMap.putAbsentKeys(generated);

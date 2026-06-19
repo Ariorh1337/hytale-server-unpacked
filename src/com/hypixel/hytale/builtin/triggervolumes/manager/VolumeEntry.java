@@ -186,9 +186,9 @@ public class VolumeEntry {
    private IntSet expandedTagIndexes = IntSets.EMPTY_SET;
    private final Map<UUID, Ref<EntityStore>> trackedEntities = new HashMap<>();
    private final Object2LongOpenHashMap<VolumeEntry.EffectEntityKey> lastFireTimes = new Object2LongOpenHashMap<>();
-   private final Set<UUID> activatedEntities = new HashSet<>();
-   private final Set<UUID> volumeTickRejectionsFired = new HashSet<>();
-   private final Set<UUID> pendingVolumeActivations = new HashSet<>();
+   private final Set<VolumeEntry.EntryEntityKey> activatedEntities = new HashSet<>();
+   private final Set<VolumeEntry.EntryEntityKey> volumeTickRejectionsFired = new HashSet<>();
+   private final Set<VolumeEntry.EntryEntityKey> pendingVolumeActivations = new HashSet<>();
    private final Set<VolumeEntry.GroupEntityKey> activatedGroups = new HashSet<>();
    private final Set<VolumeEntry.GroupEntityKey> groupTickRejectionsFired = new HashSet<>();
    private final Set<VolumeEntry.GroupEntityKey> pendingGroupActivations = new HashSet<>();
@@ -496,40 +496,40 @@ public class VolumeEntry {
       return this.lastFireTimes;
    }
 
-   public boolean isVolumeActivated(@Nonnull UUID entityUuid) {
-      return this.activatedEntities.contains(entityUuid);
+   public boolean isVolumeActivated(int entry, @Nonnull UUID entityUuid) {
+      return this.activatedEntities.contains(new VolumeEntry.EntryEntityKey(entry, entityUuid));
    }
 
-   public void markVolumeActivated(@Nonnull UUID entityUuid) {
-      this.activatedEntities.add(entityUuid);
+   public void markVolumeActivated(int entry, @Nonnull UUID entityUuid) {
+      this.activatedEntities.add(new VolumeEntry.EntryEntityKey(entry, entityUuid));
    }
 
-   public boolean markVolumeActivationPending(@Nonnull UUID entityUuid) {
-      return this.pendingVolumeActivations.add(entityUuid);
+   public boolean markVolumeActivationPending(int entry, @Nonnull UUID entityUuid) {
+      return this.pendingVolumeActivations.add(new VolumeEntry.EntryEntityKey(entry, entityUuid));
    }
 
-   public void clearVolumeActivationPending(@Nonnull UUID entityUuid) {
-      this.pendingVolumeActivations.remove(entityUuid);
+   public void clearVolumeActivationPending(int entry, @Nonnull UUID entityUuid) {
+      this.pendingVolumeActivations.remove(new VolumeEntry.EntryEntityKey(entry, entityUuid));
    }
 
-   public boolean markVolumeTickRejectionFired(@Nonnull UUID entityUuid) {
-      return this.volumeTickRejectionsFired.add(entityUuid);
+   public boolean markVolumeTickRejectionFired(int entry, @Nonnull UUID entityUuid) {
+      return this.volumeTickRejectionsFired.add(new VolumeEntry.EntryEntityKey(entry, entityUuid));
    }
 
-   public boolean isGroupActivated(@Nonnull String groupId, @Nonnull UUID entityUuid) {
-      return this.activatedGroups.contains(new VolumeEntry.GroupEntityKey(groupId, entityUuid));
+   public boolean isGroupActivated(@Nonnull String groupId, int entry, @Nonnull UUID entityUuid) {
+      return this.activatedGroups.contains(new VolumeEntry.GroupEntityKey(groupId, entry, entityUuid));
    }
 
-   public void markGroupActivated(@Nonnull String groupId, @Nonnull UUID entityUuid) {
-      this.activatedGroups.add(new VolumeEntry.GroupEntityKey(groupId, entityUuid));
+   public void markGroupActivated(@Nonnull String groupId, int entry, @Nonnull UUID entityUuid) {
+      this.activatedGroups.add(new VolumeEntry.GroupEntityKey(groupId, entry, entityUuid));
    }
 
-   public boolean markGroupActivationPending(@Nonnull String groupId, @Nonnull UUID entityUuid) {
-      return this.pendingGroupActivations.add(new VolumeEntry.GroupEntityKey(groupId, entityUuid));
+   public boolean markGroupActivationPending(@Nonnull String groupId, int entry, @Nonnull UUID entityUuid) {
+      return this.pendingGroupActivations.add(new VolumeEntry.GroupEntityKey(groupId, entry, entityUuid));
    }
 
-   public void clearGroupActivationPending(@Nonnull String groupId, @Nonnull UUID entityUuid) {
-      this.pendingGroupActivations.remove(new VolumeEntry.GroupEntityKey(groupId, entityUuid));
+   public void clearGroupActivationPending(@Nonnull String groupId, int entry, @Nonnull UUID entityUuid) {
+      this.pendingGroupActivations.remove(new VolumeEntry.GroupEntityKey(groupId, entry, entityUuid));
    }
 
    public void clearGroupActivationState(@Nonnull String groupId) {
@@ -538,8 +538,8 @@ public class VolumeEntry {
       this.pendingGroupActivations.removeIf(key -> key.groupId().equals(groupId));
    }
 
-   public boolean markGroupTickRejectionFired(@Nonnull String groupId, @Nonnull UUID entityUuid) {
-      return this.groupTickRejectionsFired.add(new VolumeEntry.GroupEntityKey(groupId, entityUuid));
+   public boolean markGroupTickRejectionFired(@Nonnull String groupId, int entry, @Nonnull UUID entityUuid) {
+      return this.groupTickRejectionsFired.add(new VolumeEntry.GroupEntityKey(groupId, entry, entityUuid));
    }
 
    public boolean markDelayedEffectPending(@Nonnull VolumeEntry.EffectEntityKey key) {
@@ -551,9 +551,9 @@ public class VolumeEntry {
    }
 
    public void clearEntityRuntimeState(@Nonnull UUID entityUuid) {
-      this.activatedEntities.remove(entityUuid);
-      this.volumeTickRejectionsFired.remove(entityUuid);
-      this.pendingVolumeActivations.remove(entityUuid);
+      this.activatedEntities.removeIf(key -> key.entityId().equals(entityUuid));
+      this.volumeTickRejectionsFired.removeIf(key -> key.entityId().equals(entityUuid));
+      this.pendingVolumeActivations.removeIf(key -> key.entityId().equals(entityUuid));
       this.activatedGroups.removeIf(key -> key.entityId().equals(entityUuid));
       this.groupTickRejectionsFired.removeIf(key -> key.entityId().equals(entityUuid));
       this.pendingGroupActivations.removeIf(key -> key.entityId().equals(entityUuid));
@@ -571,6 +571,9 @@ public class VolumeEntry {
    public record EffectEntityKey(@Nonnull VolumeEntry.EffectBucket bucket, int effectIndex, @Nonnull UUID entityId) {
    }
 
-   public record GroupEntityKey(@Nonnull String groupId, @Nonnull UUID entityId) {
+   public record EntryEntityKey(int entry, @Nonnull UUID entityId) {
+   }
+
+   public record GroupEntityKey(@Nonnull String groupId, int entry, @Nonnull UUID entityId) {
    }
 }

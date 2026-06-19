@@ -73,6 +73,10 @@ public class BuilderTool implements JsonAssetWithMap<String, DefaultAssetMap<Str
       .append(new KeyedCodec<>("IsBrush", Codec.BOOLEAN), (builderTool, o) -> builderTool.isBrush = o, builderTool -> builderTool.isBrush)
       .add()
       .append(
+         new KeyedCodec<>("SurvivalAllowed", Codec.BOOLEAN), (builderTool, o) -> builderTool.survivalAllowed = o, builderTool -> builderTool.survivalAllowed
+      )
+      .add()
+      .append(
          new KeyedCodec<>("BrushConfigurationCommand", Codec.STRING),
          (builderTool, o) -> builderTool.brushConfigurationCommand = o,
          builderTool -> builderTool.brushConfigurationCommand
@@ -111,6 +115,7 @@ public class BuilderTool implements JsonAssetWithMap<String, DefaultAssetMap<Str
    protected AssetExtraInfo.Data data;
    protected String id;
    protected boolean isBrush;
+   protected boolean survivalAllowed;
    protected String brushConfigurationCommand;
    protected Map<String, ToolArg> args = Collections.emptyMap();
    protected Map<String, Object> defaultToolArgs;
@@ -152,6 +157,10 @@ public class BuilderTool implements JsonAssetWithMap<String, DefaultAssetMap<Str
 
    public boolean isBrush() {
       return this.isBrush;
+   }
+
+   public boolean isSurvivalAllowed() {
+      return this.survivalAllowed;
    }
 
    public Map<String, ToolArg> getArgs() {

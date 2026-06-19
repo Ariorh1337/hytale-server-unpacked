@@ -27,11 +27,14 @@ public class RunRootInteractionEffect extends TriggerEffect {
       .add()
       .append(new KeyedCodec<>("InteractionType", new EnumCodec<>(InteractionType.class), false), (e, v) -> e.interactionType = v, e -> e.interactionType)
       .add()
+      .append(new KeyedCodec<>("EquipSlot", Codec.INTEGER, false), (e, v) -> e.equipSlot = v, e -> e.equipSlot)
+      .add()
       .build();
    @Nullable
    private String rootInteractionId;
    @Nonnull
    private InteractionType interactionType = InteractionType.Use;
+   private int equipSlot;
 
    @Override
    public void execute(@Nonnull TriggerContext context) {
@@ -43,7 +46,9 @@ public class RunRootInteractionEffect extends TriggerEffect {
             if (interactionManager != null) {
                RootInteraction rootInteraction = RootInteraction.getAssetMap().getAsset(this.rootInteractionId);
                if (rootInteraction != null) {
-                  InteractionContext interactionContext = InteractionContext.forInteraction(interactionManager, entityRef, this.interactionType, store);
+                  InteractionContext interactionContext = InteractionContext.forInteraction(
+                     interactionManager, entityRef, this.interactionType, this.equipSlot, store
+                  );
                   InteractionChain chain = interactionManager.initChain(this.interactionType, interactionContext, rootInteraction, false);
                   interactionManager.queueExecuteChain(chain);
                }

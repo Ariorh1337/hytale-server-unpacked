@@ -1,5 +1,6 @@
 package com.hypixel.hytale.builtin.triggervolumes.ui;
 
+import com.hypixel.hytale.assetstore.AssetPack;
 import com.hypixel.hytale.assetstore.AssetRegistry;
 import com.hypixel.hytale.assetstore.AssetStore;
 import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
@@ -10,6 +11,7 @@ import com.hypixel.hytale.builtin.triggervolumes.effect.TriggerCondition;
 import com.hypixel.hytale.builtin.triggervolumes.effect.TriggerEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.TriggerEventType;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.PastePrefabEffect;
+import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.PlayAnimationEffect;
 import com.hypixel.hytale.builtin.triggervolumes.effect.builtin.TaggedVolumeEffectUtil;
 import com.hypixel.hytale.builtin.triggervolumes.manager.ConditionTiming;
 import com.hypixel.hytale.builtin.triggervolumes.manager.CooldownMode;
@@ -41,21 +43,26 @@ import com.hypixel.hytale.protocol.packets.player.HideTriggerVolumePastePrefabPr
 import com.hypixel.hytale.protocol.packets.player.ShowTriggerVolumePastePrefabPreview;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeShapeType;
 import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolSelection;
+import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Message;
-import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.asset.type.buildertool.config.PrefabListAsset;
 import com.hypixel.hytale.server.core.asset.type.environment.config.Environment;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.asset.util.ColorParseUtil;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.modules.i18n.I18nModule;
 import com.hypixel.hytale.server.core.prefab.PrefabStore;
 import com.hypixel.hytale.server.core.prefab.selection.standard.BlockSelection;
+import com.hypixel.hytale.server.core.ui.Anchor;
 import com.hypixel.hytale.server.core.ui.DropdownEntryInfo;
 import com.hypixel.hytale.server.core.ui.LocalizableString;
 import com.hypixel.hytale.server.core.ui.PatchStyle;
 import com.hypixel.hytale.server.core.ui.Value;
+import com.hypixel.hytale.server.core.ui.browser.AssetPackSaveBrowser;
+import com.hypixel.hytale.server.core.ui.browser.AssetPackSaveBrowserConfig;
+import com.hypixel.hytale.server.core.ui.browser.AssetPackSaveBrowserEventData;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
@@ -69,6 +76,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.BsonUtil;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -120,6 +128,35 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
    private static final String GROUP_ROW = "Pages/TriggerVolume/TriggerVolumeBrowseGroupRow.ui";
    private static final String VOLUME_ROW = "Pages/TriggerVolume/TriggerVolumeBrowseVolumeRow.ui";
    private static final String TAG_ROW = "Pages/TriggerVolume/TriggerVolumeBrowseTagRow.ui";
+   private static final String TAG_CHIP = "Pages/TriggerVolume/TriggerVolumeTagChip.ui";
+   private static final int[] TAG_CHIP_COLORS = new int[]{
+      5223543,
+      4176047,
+      5214176,
+      7237344,
+      10181046,
+      13393320,
+      14707612,
+      14715452,
+      14070332,
+      14247259,
+      6013118,
+      8365648,
+      11566278,
+      15241563,
+      13194606,
+      4878288,
+      4894348,
+      12546880,
+      7317724,
+      13332382
+   };
+   private static final int OVERFLOW_CHIP_COLOR = 5596014;
+   private static final int INSPECTOR_PANE_WIDTH = 895;
+   private static final int TAB_BUTTONS_WIDTH = 300;
+   private static final int TITLE_CHIP_ROW_BUDGET = 579;
+   private static final int[] EMPTY_ENTRIES = new int[0];
+   private static final String ADD_ENTRY_NEW = "NEW";
    private static final String PROPERTY_ROW = "Pages/TriggerVolume/TriggerVolumeBrowsePropertyRow.ui";
    private static final String TAB_BUTTON = "Pages/TriggerVolume/TriggerVolumeInspectorTabButton.ui";
    private static final String EFFECT_ROW = "Pages/TriggerVolume/TriggerVolumeInspectorEffectRow.ui";
@@ -130,6 +167,7 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
    private static final String VOLUME_SECTION_LABEL = "Pages/TriggerVolume/TriggerVolumeInspectorVolumeSectionLabel.ui";
    private static final String EFFECT_OWNER_SECTION_LABEL = "Pages/TriggerVolume/TriggerVolumeInspectorEffectOwnerSectionLabel.ui";
    private static final String COMMON_TEXT_BUTTON_DOCUMENT = "Common/TextButton.ui";
+   private static final String BASE_HEADER_GRID = "Pages/TriggerVolume/TriggerVolumeInspectorBaseHeaderGrid.ui";
    private static final String FIELD_TEXT = "Pages/TriggerVolume/TriggerVolumeInspectorTextRow.ui";
    private static final String FIELD_COLOR = "Pages/TriggerVolume/TriggerVolumeInspectorColorRow.ui";
    private static final String FIELD_NUMBER = "Pages/TriggerVolume/TriggerVolumeInspectorNumberRow.ui";
@@ -208,13 +246,20 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
    private TriggerVolumeInspectorPage.EffectListKind addTargetKind = TriggerVolumeInspectorPage.EffectListKind.EFFECT;
    @Nonnull
    private TriggerEventType addEventType = TriggerEventType.ENTER;
+   @Nonnull
+   private String addEffectType = "";
+   private int addEntry = 0;
+   private boolean renamingSelected = false;
+   @Nullable
+   private String renameOriginalId = null;
    private int selectedEffectIndex = -1;
    @Nonnull
-   private final EnumSet<TriggerEventType> collapsedVolumeEventCategories = EnumSet.noneOf(TriggerEventType.class);
+   private final Set<TriggerVolumeInspectorPage.EventCategoryKey> collapsedVolumeEventCategories = new HashSet<>();
    @Nonnull
-   private final EnumSet<TriggerEventType> collapsedGroupEventCategories = EnumSet.allOf(TriggerEventType.class);
+   private final Set<TriggerVolumeInspectorPage.EventCategoryKey> expandedGroupEventCategories = new HashSet<>();
    private boolean suppressSelectionObserver;
    private boolean skipSaveOnDismiss;
+   private boolean pendingScrollToSelection = true;
    @Nullable
    private String pendingPickerFieldKey;
    @Nullable
@@ -226,6 +271,8 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
    private String assetPickerSearchQuery = "";
    @Nonnull
    private final Set<String> missingOptionLangKeys = new HashSet<>();
+   @Nonnull
+   private final AssetPackSaveBrowser presetPackBrowser = new AssetPackSaveBrowser(AssetPackSaveBrowserConfig.defaults());
 
    public TriggerVolumeInspectorPage(
       @Nonnull PlayerRef playerRef,
@@ -265,6 +312,7 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
 
       this.buildSelectedPane(cmd, evt);
       this.bindStaticEvents(evt);
+      this.presetPackBrowser.buildUI(cmd, evt);
    }
 
    @Override
@@ -283,7 +331,15 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
    }
 
    public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull TriggerVolumeInspectorPage.PageData data) {
-      if (data.action != null) {
+      AssetPackSaveBrowser.ActionResult packResult = this.presetPackBrowser
+         .handleAction(data.action != null ? data.action.name() : null, data.packBrowserData, "#PresetSavePage #SelectedPackLabel");
+      if (packResult != null) {
+         if (packResult.errorKey() != null) {
+            this.playerRef.sendMessage(Message.translation(packResult.errorKey()));
+         }
+
+         this.sendUpdate(packResult.commandBuilder(), packResult.eventBuilder(), false);
+      } else if (data.action != null) {
          switch (data.action) {
             case Select:
                this.onSelect(data);
@@ -315,6 +371,18 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
             case Discard:
                this.onDiscard();
                break;
+            case Teleport:
+               this.onTeleport(ref, store);
+               break;
+            case ToggleRenameSelected:
+               this.onToggleRenameSelected();
+               break;
+            case ConfirmRenameSelected:
+               this.onConfirmRenameSelected();
+               break;
+            case CancelRenameSelected:
+               this.onCancelRenameSelected();
+               break;
             case SelectEffect:
                this.onSelectEffect(data);
                break;
@@ -336,14 +404,23 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
             case UpdateAddTarget:
                this.onUpdateAddTarget(data);
                break;
+            case UpdateAddEffectType:
+               this.onUpdateAddEffectType(data);
+               break;
             case UpdateAddEventType:
                this.onUpdateAddEventType(data);
+               break;
+            case UpdateAddEntry:
+               this.onUpdateAddEntry(data);
                break;
             case ToggleEventCategory:
                this.onToggleEventCategory(data);
                break;
             case UpdateParameter:
                this.onUpdateParameter(data);
+               break;
+            case CommitEntry:
+               this.onCommitEntry();
                break;
             case TogglePrefabPreview:
                this.onTogglePrefabPreview();
@@ -454,20 +531,21 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
          for (GroupEntry group : manager.getGroupsMap().values()) {
             if (!this.deletedGroups.contains(group.getId())) {
                TriggerVolumeInspectorDrafts.GroupDraft draft = this.draftForGroup(group);
-               if (this.matchesFilter(draft.id)) {
+               List<VolumeEntry> children = groupedVolumes.getOrDefault(group.getId(), List.of());
+               if (this.matchesGroupFilter(draft.id, group, children)) {
                   idx = this.appendGroupRow(cmd, evt, idx, group.getId(), draft.id, draft.color);
 
-                  for (VolumeEntry volume : groupedVolumes.getOrDefault(group.getId(), List.of())) {
-                     TriggerVolumeInspectorDrafts.VolumeDraft volumeDraft = this.draftForVolume(volume);
-                     if (this.matchesFilter(volumeDraft.id)) {
-                        idx = this.appendVolumeRow(cmd, evt, idx, volume.getId(), volumeDraft.id, true, draft.color);
+                  for (VolumeEntry volume : children) {
+                     if (this.matchesVolumeFilter(volume)) {
+                        TriggerVolumeInspectorDrafts.VolumeDraft volumeDraft = this.draftForVolume(volume);
+                        idx = this.appendVolumeRow(cmd, evt, idx, volume.getId(), volumeDraft.id, true, draft.color, volumeDraft.tags);
                      }
                   }
                }
             }
          }
 
-         List<VolumeEntry> visibleUngrouped = ungrouped.stream().filter(volumex -> this.matchesFilter(this.draftForVolume(volumex).id)).toList();
+         List<VolumeEntry> visibleUngrouped = ungrouped.stream().filter(this::matchesVolumeFilter).toList();
          if (!visibleUngrouped.isEmpty()) {
             cmd.append("#ListContainer", "Pages/TriggerVolume/TriggerVolumeInspectorSectionLabel.ui");
             cmd.set("#ListContainer[" + idx + "].Text", Message.translation("server.customUI.triggerVolumeBrowse.ungrouped"));
@@ -475,7 +553,7 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
 
             for (VolumeEntry volume : visibleUngrouped) {
                TriggerVolumeInspectorDrafts.VolumeDraft draft = this.draftForVolume(volume);
-               idx = this.appendVolumeRow(cmd, evt, idx, volume.getId(), draft.id, false, 0);
+               idx = this.appendVolumeRow(cmd, evt, idx, volume.getId(), draft.id, false, 0, draft.tags);
             }
          }
 
@@ -506,11 +584,26 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
    }
 
    private int appendVolumeRow(
-      @Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder evt, int idx, @Nonnull String originalId, @Nonnull String label, boolean indented, int groupColor
+      @Nonnull UICommandBuilder cmd,
+      @Nonnull UIEventBuilder evt,
+      int idx,
+      @Nonnull String originalId,
+      @Nonnull String label,
+      boolean indented,
+      int groupColor,
+      @Nonnull Map<String, String> tags
    ) {
       String sel = "#ListContainer[" + idx + "]";
       cmd.append("#ListContainer", "Pages/TriggerVolume/TriggerVolumeBrowseVolumeRow.ui");
       cmd.set(sel + " #Label.Text", label);
+      int chipRows = this.appendRowTagChips(cmd, sel + " #TagChips", tags, indented);
+      cmd.set(sel + " #TagChips.Visible", chipRows > 0);
+      if (chipRows > 0) {
+         Anchor anchor = new Anchor();
+         anchor.setHeight(Value.of(chipRows == 1 ? 44 : 64));
+         cmd.setObject(sel + ".Anchor", anchor);
+      }
+
       cmd.set(sel + " #Indent.Visible", indented);
       cmd.set(sel + " #ColorBar.Visible", indented);
       if (indented) {
@@ -546,10 +639,11 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
    }
 
    private void scrollSelectedRowToView(@Nonnull UICommandBuilder cmd) {
-      if (this.selectedId != null) {
+      if (this.pendingScrollToSelection && this.selectedId != null) {
          for (TriggerVolumeInspectorPage.RowEntry row : this.currentRows) {
             if (row.isGroup == this.selectedIsGroup && row.id.equals(this.selectedId)) {
                cmd.set("#ListContainer.ScrollChildIndexIntoView", row.listIndex);
+               this.pendingScrollToSelection = false;
                return;
             }
          }
@@ -562,6 +656,8 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
       cmd.clear("#EffectListContainer");
       cmd.clear("#EffectDetailPanel");
       cmd.set("#NoSelectionLabel.Visible", this.selectedId == null);
+      this.buildSelectedNameHeader(cmd);
+      this.buildTitleTagChips(cmd);
       cmd.set("#VolumeTab.Visible", this.selectedId != null && this.selectedTab == TriggerVolumeInspectorPage.InspectorTab.VOLUME);
       cmd.set("#TagsTab.Visible", this.selectedId != null && this.selectedTab == TriggerVolumeInspectorPage.InspectorTab.TAGS);
       cmd.set("#EffectsTab.Visible", this.selectedId != null && this.selectedTab == TriggerVolumeInspectorPage.InspectorTab.EFFECTS);
@@ -579,6 +675,106 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
             case TAGS:
                this.buildTagsTab(cmd, evt);
          }
+      }
+   }
+
+   private void buildSelectedNameHeader(@Nonnull UICommandBuilder cmd) {
+      String name = this.selectedDraftId();
+      cmd.set("#SelectedNameHeader.Visible", name != null);
+      if (name == null) {
+         this.renamingSelected = false;
+         cmd.set("#SelectedNameValidation.Visible", false);
+      } else {
+         cmd.set("#SelectedNameTitle.Text", name);
+         cmd.set("#SelectedNameTitle.Visible", !this.renamingSelected);
+         cmd.set("#SelectedNameSpacer.Visible", !this.renamingSelected);
+         cmd.set("#SelectedNameEditButton.Visible", !this.renamingSelected);
+         cmd.set("#SelectedNameFieldContainer.Visible", this.renamingSelected);
+         cmd.set("#SelectedNameField.Value", name);
+         cmd.set("#SelectedNameEditButton.TooltipText", Message.translation("server.customUI.triggerVolumeInspector.renameToggle.tooltip"));
+         cmd.set("#SelectedNameConfirmButton.TooltipText", Message.translation("server.customUI.triggerVolumeInspector.renameConfirm.tooltip"));
+         cmd.set("#SelectedNameCancelButton.TooltipText", Message.translation("server.customUI.triggerVolumeInspector.renameCancel.tooltip"));
+         Message validationMessage = this.idValidationMessage(name);
+         cmd.set("#SelectedNameValidation.Visible", this.renamingSelected && validationMessage != null);
+         if (validationMessage != null) {
+            cmd.set("#SelectedNameValidation.Text", validationMessage);
+         }
+      }
+   }
+
+   private void buildTitleTagChips(@Nonnull UICommandBuilder cmd) {
+      cmd.clear("#TitleTagChips");
+      cmd.clear("#TitleTagChipsOverflow");
+      Map<String, String> tags = null;
+      if (this.selectedIsGroup) {
+         TriggerVolumeInspectorDrafts.GroupDraft draft = this.selectedGroupDraft();
+         if (draft != null) {
+            tags = draft.tags;
+         }
+      } else {
+         TriggerVolumeInspectorDrafts.VolumeDraft draft = this.selectedVolumeDraft();
+         if (draft != null) {
+            tags = draft.tags;
+         }
+      }
+
+      if (this.selectedId != null && tags != null) {
+         ArrayList<Entry<String, String>> entries = new ArrayList<>(tags.entrySet());
+         int inlineEnd = this.fillTitleChipRows(cmd, "#TitleTagChips", entries, 0, 579, 1, false);
+         if (inlineEnd < entries.size()) {
+            this.fillTitleChipRows(cmd, "#TitleTagChipsOverflow", entries, inlineEnd, 579, 2, true);
+         }
+      }
+   }
+
+   private int fillTitleChipRows(
+      @Nonnull UICommandBuilder cmd,
+      @Nonnull String container,
+      @Nonnull List<Entry<String, String>> entries,
+      int startIndex,
+      int budget,
+      int maxRows,
+      boolean lastRow
+   ) {
+      int chipIdx = 0;
+      int rowsUsed = 1;
+      int x = 0;
+
+      int index;
+      for (index = startIndex; index < entries.size(); index++) {
+         Entry<String, String> entry = entries.get(index);
+         String value = entry.getValue();
+         String text = value != null && !value.isEmpty() ? entry.getKey() + ": " + value : entry.getKey();
+         int width = chipWidth(text);
+         if (x > 0 && x + width > budget) {
+            if (rowsUsed == maxRows) {
+               if (lastRow) {
+                  this.appendChip(cmd, container, chipIdx, "+" + (entries.size() - index), 5596014);
+               }
+               break;
+            }
+
+            rowsUsed++;
+            x = 0;
+         }
+
+         this.appendChip(cmd, container, chipIdx++, text, tagChipColor(entry.getKey()));
+         x += width;
+      }
+
+      return index;
+   }
+
+   @Nullable
+   private String selectedDraftId() {
+      if (this.selectedId == null) {
+         return null;
+      } else if (this.selectedIsGroup) {
+         TriggerVolumeInspectorDrafts.GroupDraft draft = this.selectedGroupDraft();
+         return draft != null ? draft.id : null;
+      } else {
+         TriggerVolumeInspectorDrafts.VolumeDraft draft = this.selectedVolumeDraft();
+         return draft != null ? draft.id : null;
       }
    }
 
@@ -613,7 +809,7 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
          row = this.addVolumeColorRow(cmd, evt, row, "color", draft.color != null ? colorToHex(draft.color) : "#00CCCC");
          row = this.addVolumeSectionLabel(cmd, row, "transform");
          row = this.addVolumeDropdownRow(cmd, evt, row, "shape", shapeEntries(), draft.shapeType.name());
-         row = this.addVolumeVec3Row(cmd, evt, row, "position", draft.position);
+         row = this.addVolumeVec3Row(cmd, evt, row, "position", draft.position, true);
          row = this.addVolumeDimensionsRow(cmd, evt, row, draft.shapeType, draft.dimensions);
          row = this.addVolumeSectionLabel(cmd, row, "behavior");
          row = this.addVolumeDropdownRow(cmd, evt, row, "targetTypes", targetTypeEntries(), targetTypesValue(draft.targetTypes));
@@ -719,6 +915,12 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
    }
 
    private int addVolumeVec3Row(@Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder evt, int row, @Nonnull String key, @Nonnull Vector3d value) {
+      return this.addVolumeVec3Row(cmd, evt, row, key, value, false);
+   }
+
+   private int addVolumeVec3Row(
+      @Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder evt, int row, @Nonnull String key, @Nonnull Vector3d value, boolean withTeleport
+   ) {
       String sel = "#VolumeTab[" + row + "]";
       cmd.append("#VolumeTab", "Pages/TriggerVolume/TriggerVolumeInspectorVec3Row.ui");
       cmd.set(sel + " #Label.Text", fieldLabel(key));
@@ -733,6 +935,13 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
             sel + " #" + comp,
             volumeFieldEvent(key).append("@VecX", sel + " #X.Value").append("@VecY", sel + " #Y.Value").append("@VecZ", sel + " #Z.Value"),
             false
+         );
+      }
+
+      if (withTeleport) {
+         cmd.set(sel + " #TeleportButton.Visible", true);
+         evt.addEventBinding(
+            CustomUIEventBindingType.Activating, sel + " #TeleportButton", new EventData().append("Action", TriggerVolumeInspectorPage.Action.Teleport.name())
          );
       }
 
@@ -825,7 +1034,9 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
       for (Entry<String, String> entry : tags.entrySet()) {
          String sel = "#TagsList[" + idx + "]";
          cmd.append("#TagsList", "Pages/TriggerVolume/TriggerVolumeBrowseTagRow.ui");
+         int color = tagChipColor(entry.getKey());
          cmd.set(sel + " #TagLabel.Text", entry.getKey() + ": " + entry.getValue());
+         cmd.setObject(sel + " #TagLabel.Background", tagColorPatch(color));
          evt.addEventBinding(
             CustomUIEventBindingType.Activating,
             sel + " #RemoveButton",
@@ -837,6 +1048,7 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
 
    private void buildEffectsTab(@Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder evt) {
       this.buildAddEventTypeDropdown(cmd);
+      this.buildAddEntryDropdown(cmd);
       this.buildAddTargetDropdown(cmd);
       this.buildAddEffectDropdown(cmd);
       this.buildEffectList(cmd, evt);
@@ -844,6 +1056,7 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
    }
 
    private void bindStaticEvents(@Nonnull UIEventBuilder evt) {
+      this.presetPackBrowser.buildEventBindings(evt, "#BrowsePackButton");
       evt.addEventBinding(
          CustomUIEventBindingType.ValueChanged,
          "#WorldDropdown",
@@ -879,6 +1092,31 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
             .append("@EffectType", "#AddEffectDropdown.Value")
             .append("@AddTargetKind", "#AddTargetDropdown.Value")
             .append("@AddEventType", "#AddEventTypeDropdown.Value")
+            .append("@AddEntry", "#AddEntryDropdown.Value")
+      );
+      evt.addEventBinding(
+         CustomUIEventBindingType.ValueChanged, "#SelectedNameField", volumeFieldEvent("id").append("@ParamValue", "#SelectedNameField.Value"), false
+      );
+      evt.addEventBinding(
+         CustomUIEventBindingType.Activating,
+         "#SelectedNameEditButton",
+         new EventData().append("Action", TriggerVolumeInspectorPage.Action.ToggleRenameSelected.name())
+      );
+      evt.addEventBinding(
+         CustomUIEventBindingType.Activating,
+         "#SelectedNameConfirmButton",
+         new EventData().append("Action", TriggerVolumeInspectorPage.Action.ConfirmRenameSelected.name())
+      );
+      evt.addEventBinding(
+         CustomUIEventBindingType.Activating,
+         "#SelectedNameCancelButton",
+         new EventData().append("Action", TriggerVolumeInspectorPage.Action.CancelRenameSelected.name())
+      );
+      evt.addEventBinding(
+         CustomUIEventBindingType.ValueChanged,
+         "#AddEffectDropdown",
+         new EventData().append("Action", TriggerVolumeInspectorPage.Action.UpdateAddEffectType.name()).append("@EffectType", "#AddEffectDropdown.Value"),
+         false
       );
       evt.addEventBinding(
          CustomUIEventBindingType.ValueChanged,
@@ -890,6 +1128,12 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
          CustomUIEventBindingType.ValueChanged,
          "#AddEventTypeDropdown",
          new EventData().append("Action", TriggerVolumeInspectorPage.Action.UpdateAddEventType.name()).append("@AddEventType", "#AddEventTypeDropdown.Value"),
+         false
+      );
+      evt.addEventBinding(
+         CustomUIEventBindingType.ValueChanged,
+         "#AddEntryDropdown",
+         new EventData().append("Action", TriggerVolumeInspectorPage.Action.UpdateAddEntry.name()).append("@AddEntry", "#AddEntryDropdown.Value"),
          false
       );
       evt.addEventBinding(
@@ -960,7 +1204,47 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
          this.selectedId = data.id;
          this.selectedIsGroup = "true".equals(data.isGroup);
          this.selectedEffectIndex = -1;
+         this.renamingSelected = false;
+         this.pendingScrollToSelection = false;
          this.syncSelectionToTool();
+         this.rebuildAll();
+      }
+   }
+
+   private void onToggleRenameSelected() {
+      if (this.selectedId != null) {
+         this.renamingSelected = !this.renamingSelected;
+         this.renameOriginalId = this.renamingSelected ? this.selectedDraftId() : null;
+         this.rebuildAll();
+      }
+   }
+
+   private void onConfirmRenameSelected() {
+      if (this.renamingSelected) {
+         this.renamingSelected = false;
+         this.renameOriginalId = null;
+         this.rebuildAll();
+      }
+   }
+
+   private void onCancelRenameSelected() {
+      if (this.renamingSelected) {
+         if (this.renameOriginalId != null) {
+            if (this.selectedIsGroup) {
+               TriggerVolumeInspectorDrafts.GroupDraft draft = this.selectedGroupDraft();
+               if (draft != null) {
+                  draft.id = this.renameOriginalId;
+               }
+            } else {
+               TriggerVolumeInspectorDrafts.VolumeDraft draft = this.selectedVolumeDraft();
+               if (draft != null) {
+                  draft.id = this.renameOriginalId;
+               }
+            }
+         }
+
+         this.renamingSelected = false;
+         this.renameOriginalId = null;
          this.rebuildAll();
       }
    }
@@ -1120,7 +1404,16 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
 
    private void updateIdValidation(@Nonnull String value) {
       UICommandBuilder cmd = new UICommandBuilder();
-      this.setIdValidation(cmd, "#VolumeTab[1]", "id", value);
+      if (this.selectedTab == TriggerVolumeInspectorPage.InspectorTab.VOLUME) {
+         this.setIdValidation(cmd, "#VolumeTab[1]", "id", value);
+      }
+
+      Message validationMessage = this.idValidationMessage(value);
+      cmd.set("#SelectedNameValidation.Visible", validationMessage != null);
+      if (validationMessage != null) {
+         cmd.set("#SelectedNameValidation.Text", validationMessage);
+      }
+
       this.sendUpdate(cmd, false);
    }
 
@@ -1198,6 +1491,24 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
 
          this.selectedId = null;
          this.rebuildAll();
+      }
+   }
+
+   private void onTeleport(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
+      if (this.selectedId != null && !this.selectedIsGroup) {
+         TriggerVolumeManager manager = getManagerForWorld(this.selectedWorld);
+         if (manager != null) {
+            VolumeEntry entry = manager.getVolume(this.selectedId);
+            if (entry != null && ref.isValid()) {
+               TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
+               if (transform != null) {
+                  Vector3d destination = new Vector3d(entry.getPosition());
+                  store.addComponent(ref, Teleport.getComponentType(), Teleport.createForPlayer(destination, transform.getRotation()));
+                  this.playerRef.sendMessage(Message.translation("server.customUI.triggerVolumeInspector.teleported").param("name", this.selectedId));
+                  this.close();
+               }
+            }
+         }
       }
    }
 
@@ -1443,8 +1754,9 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
       }
 
       cmd.set("#AddEffectDropdown.Entries", entries);
-      if (!typeIds.isEmpty()) {
-         cmd.set("#AddEffectDropdown.Value", typeIds.get(0));
+      String selected = !this.addEffectType.isEmpty() && typeIds.contains(this.addEffectType) ? this.addEffectType : (typeIds.isEmpty() ? "" : typeIds.get(0));
+      if (!selected.isEmpty()) {
+         cmd.set("#AddEffectDropdown.Value", selected);
       }
    }
 
@@ -1461,6 +1773,33 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
 
       cmd.set("#AddEventTypeDropdown.Entries", entries);
       cmd.set("#AddEventTypeDropdown.Value", this.addEventType.name());
+   }
+
+   private void buildAddEntryDropdown(@Nonnull UICommandBuilder cmd) {
+      IntOpenHashSet entryIds = new IntOpenHashSet();
+      entryIds.add(0);
+      entryIds.add(this.addEntry);
+
+      for (int existing : this.getEventEntries(TriggerVolumeInspectorPage.EventCategoryScope.VOLUME, null, this.addEventType)) {
+         entryIds.add(existing);
+      }
+
+      int[] sorted = entryIds.toIntArray();
+      Arrays.sort(sorted);
+      ObjectArrayList<DropdownEntryInfo> entries = new ObjectArrayList<>();
+
+      for (int entryId : sorted) {
+         entries.add(
+            new DropdownEntryInfo(
+               LocalizableString.fromMessageId("server.customUI.triggerVolumeEffectEditor.addEntry.option", Map.of("entry", String.valueOf(entryId + 1))),
+               String.valueOf(entryId)
+            )
+         );
+      }
+
+      entries.add(new DropdownEntryInfo(LocalizableString.fromMessageId("server.customUI.triggerVolumeEffectEditor.addEntry.new"), "NEW"));
+      cmd.set("#AddEntryDropdown.Entries", entries);
+      cmd.set("#AddEntryDropdown.Value", String.valueOf(this.addEntry));
    }
 
    private void buildAddTargetDropdown(@Nonnull UICommandBuilder cmd) {
@@ -1488,16 +1827,20 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
    }
 
    private void buildEffectList(@Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder evt) {
-      cmd.clear("#EffectListContainer");
-      int childIndex = 0;
-      childIndex = this.appendInheritedGroupSections(cmd, evt, childIndex);
-      childIndex = this.appendVolumeEffectsSection(cmd, childIndex, childIndex > 0 || this.selectedIsGroup);
-      this.appendEventCategoryGroups(cmd, evt, childIndex, TriggerVolumeInspectorPage.EventCategoryScope.VOLUME, null);
+      this.appendEffectList(cmd, evt, "#EffectListContainer");
       Object selectedItem = this.getSelectedItem();
       cmd.set("#DuplicateEffectButton.Disabled", selectedItem == null);
       cmd.set("#RemoveEffectButton.Disabled", selectedItem == null);
       cmd.set("#MoveEffectUpButton.Disabled", selectedItem == null || this.selectedEffectIndex <= 0);
       cmd.set("#MoveEffectDownButton.Disabled", selectedItem == null || this.selectedEffectIndex >= this.getItemCount(this.selectedKind) - 1);
+   }
+
+   private void appendEffectList(@Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder evt, @Nonnull String container) {
+      cmd.clear(container);
+      int childIndex = 0;
+      childIndex = this.appendInheritedGroupSections(cmd, evt, container, childIndex);
+      childIndex = this.appendVolumeEffectsSection(cmd, container, childIndex, childIndex > 0 || this.selectedIsGroup);
+      this.appendEventCategoryGroups(cmd, evt, container, childIndex, TriggerVolumeInspectorPage.EventCategoryScope.VOLUME, null);
    }
 
    @Nonnull
@@ -1533,21 +1876,21 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
       return "server.customUI.triggerVolumeEffectEditor." + (isCondition ? "conditionType." : "effectType.") + typeId;
    }
 
-   private int appendInheritedGroupSections(@Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder evt, int childIndex) {
+   private int appendInheritedGroupSections(@Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder evt, @Nonnull String container, int childIndex) {
       TriggerVolumeInspectorDrafts.GroupDraft groupDraft = this.selectedInheritedGroupDraft();
       if (groupDraft != null && (!groupDraft.conditions.isEmpty() || !groupDraft.rejectionEffects.isEmpty() || !groupDraft.effects.isEmpty())) {
-         cmd.append("#EffectListContainer", "Pages/TriggerVolume/TriggerVolumeInspectorEffectOwnerSectionLabel.ui");
+         cmd.append(container, "Pages/TriggerVolume/TriggerVolumeInspectorEffectOwnerSectionLabel.ui");
          cmd.set(
-            "#EffectListContainer[" + childIndex + "].Text",
+            container + "[" + childIndex + "].Text",
             Message.translation("server.customUI.triggerVolumeEffectEditor.inheritedFromGroup").param("group", groupDraft.id)
          );
-         return this.appendEventCategoryGroups(cmd, evt, ++childIndex, TriggerVolumeInspectorPage.EventCategoryScope.GROUP, groupDraft);
+         return this.appendEventCategoryGroups(cmd, evt, container, ++childIndex, TriggerVolumeInspectorPage.EventCategoryScope.GROUP, groupDraft);
       } else {
          return childIndex;
       }
    }
 
-   private int appendVolumeEffectsSection(@Nonnull UICommandBuilder cmd, int childIndex, boolean showLabel) {
+   private int appendVolumeEffectsSection(@Nonnull UICommandBuilder cmd, @Nonnull String container, int childIndex, boolean showLabel) {
       if (this.currentConditions().isEmpty()
          && this.currentEffects(TriggerVolumeInspectorPage.EffectListKind.REJECTION_EFFECT).isEmpty()
          && this.currentEffects(TriggerVolumeInspectorPage.EffectListKind.EFFECT).isEmpty()) {
@@ -1559,35 +1902,42 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
       }
 
       if (childIndex > 0 && !this.selectedIsGroup) {
-         childIndex = this.appendEventCategorySpacer(cmd, childIndex);
+         childIndex = this.appendEventCategorySpacer(cmd, container, childIndex);
       }
 
-      cmd.append("#EffectListContainer", "Pages/TriggerVolume/TriggerVolumeInspectorEffectOwnerSectionLabel.ui");
+      cmd.append(container, "Pages/TriggerVolume/TriggerVolumeInspectorEffectOwnerSectionLabel.ui");
       Message label = this.selectedIsGroup
          ? Message.translation("server.customUI.triggerVolumeEffectEditor.groupEffects")
          : Message.translation("server.customUI.triggerVolumeEffectEditor.volumeEffects");
-      cmd.set("#EffectListContainer[" + childIndex + "].Text", label);
+      cmd.set(container + "[" + childIndex + "].Text", label);
       return childIndex + 1;
    }
 
    private int appendEventCategoryGroups(
       @Nonnull UICommandBuilder cmd,
       @Nonnull UIEventBuilder evt,
+      @Nonnull String container,
       int childIndex,
       @Nonnull TriggerVolumeInspectorPage.EventCategoryScope scope,
       @Nullable TriggerVolumeInspectorDrafts.GroupDraft groupDraft
    ) {
       for (TriggerEventType eventType : TriggerEventType.values()) {
-         int totalCount = this.getEventCategoryItemCount(scope, groupDraft, eventType);
-         if (totalCount != 0) {
-            childIndex = this.appendEventCategoryHeader(cmd, evt, childIndex, scope, eventType, totalCount);
-            if (!this.isEventCategoryCollapsed(scope, eventType)) {
-               childIndex = this.appendEventSection(cmd, evt, childIndex, scope, groupDraft, eventType, TriggerVolumeInspectorPage.EffectListKind.CONDITION);
-               childIndex = this.appendEventSection(
-                  cmd, evt, childIndex, scope, groupDraft, eventType, TriggerVolumeInspectorPage.EffectListKind.REJECTION_EFFECT
-               );
-               childIndex = this.appendEventSection(cmd, evt, childIndex, scope, groupDraft, eventType, TriggerVolumeInspectorPage.EffectListKind.EFFECT);
-               childIndex = this.appendEventCategorySpacer(cmd, childIndex);
+         for (int entry : this.getEventEntries(scope, groupDraft, eventType)) {
+            int totalCount = this.getEventCategoryItemCount(scope, groupDraft, eventType, entry);
+            if (totalCount != 0) {
+               childIndex = this.appendEventCategoryHeader(cmd, evt, container, childIndex, scope, eventType, entry, totalCount);
+               if (!this.isEventCategoryCollapsed(scope, eventType, entry)) {
+                  childIndex = this.appendEventSection(
+                     cmd, evt, container, childIndex, scope, groupDraft, eventType, entry, TriggerVolumeInspectorPage.EffectListKind.CONDITION
+                  );
+                  childIndex = this.appendEventSection(
+                     cmd, evt, container, childIndex, scope, groupDraft, eventType, entry, TriggerVolumeInspectorPage.EffectListKind.REJECTION_EFFECT
+                  );
+                  childIndex = this.appendEventSection(
+                     cmd, evt, container, childIndex, scope, groupDraft, eventType, entry, TriggerVolumeInspectorPage.EffectListKind.EFFECT
+                  );
+                  childIndex = this.appendEventCategorySpacer(cmd, container, childIndex);
+               }
             }
          }
       }
@@ -1598,21 +1948,24 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
    private int appendEventCategoryHeader(
       @Nonnull UICommandBuilder cmd,
       @Nonnull UIEventBuilder evt,
+      @Nonnull String container,
       int childIndex,
       @Nonnull TriggerVolumeInspectorPage.EventCategoryScope scope,
       @Nonnull TriggerEventType eventType,
+      int entry,
       int totalCount
    ) {
-      String selector = "#EffectListContainer[" + childIndex + "]";
-      String togglePrefix = this.isEventCategoryCollapsed(scope, eventType) ? ">" : "v";
-      cmd.append("#EffectListContainer", "Pages/TriggerVolume/TriggerVolumeInspectorEventCategoryHeader.ui");
-      cmd.set(selector + ".Text", eventCategoryLabel(scope, eventType).param("state", togglePrefix).param("count", totalCount));
+      String selector = container + "[" + childIndex + "]";
+      String togglePrefix = this.isEventCategoryCollapsed(scope, eventType, entry) ? ">" : "v";
+      cmd.append(container, "Pages/TriggerVolume/TriggerVolumeInspectorEventCategoryHeader.ui");
+      cmd.set(selector + ".TextSpans", eventCategoryLabel(scope, eventType, entry).param("state", togglePrefix).param("count", totalCount));
       evt.addEventBinding(
          CustomUIEventBindingType.Activating,
          selector,
          new EventData()
             .append("Action", TriggerVolumeInspectorPage.Action.ToggleEventCategory.name())
             .append("EventType", eventType.name())
+            .append("EventEntry", String.valueOf(entry))
             .append("EventCategoryScope", scope.name())
       );
       return childIndex + 1;
@@ -1621,31 +1974,31 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
    private int appendEventSection(
       @Nonnull UICommandBuilder cmd,
       @Nonnull UIEventBuilder evt,
+      @Nonnull String container,
       int childIndex,
       @Nonnull TriggerVolumeInspectorPage.EventCategoryScope scope,
       @Nullable TriggerVolumeInspectorDrafts.GroupDraft groupDraft,
       @Nonnull TriggerEventType eventType,
+      int entry,
       @Nonnull TriggerVolumeInspectorPage.EffectListKind kind
    ) {
-      IntList indices = this.getEventItemIndices(scope, groupDraft, eventType, kind);
+      IntList indices = this.getEventItemIndices(scope, groupDraft, eventType, entry, kind);
       if (indices.isEmpty()) {
          return childIndex;
       }
 
-      cmd.append("#EffectListContainer", "Pages/TriggerVolume/TriggerVolumeInspectorEventSectionLabel.ui");
-      cmd.set(
-         "#EffectListContainer[" + childIndex + "] #Label.Text", this.effectSectionLabel(kind, scope == TriggerVolumeInspectorPage.EventCategoryScope.GROUP)
-      );
+      cmd.append(container, "Pages/TriggerVolume/TriggerVolumeInspectorEventSectionLabel.ui");
+      cmd.set(container + "[" + childIndex + "] #Label.Text", this.effectSectionLabel(kind, scope == TriggerVolumeInspectorPage.EventCategoryScope.GROUP));
       childIndex++;
 
       for (int i = 0; i < indices.size(); i++) {
          int itemIndex = indices.getInt(i);
-         String selector = "#EffectListContainer[" + childIndex + "]";
+         String selector = container + "[" + childIndex + "]";
          String typeId = scope == TriggerVolumeInspectorPage.EventCategoryScope.GROUP
             ? getGroupItemTypeId(kind, itemIndex, groupDraft)
             : this.getItemTypeId(kind, itemIndex);
          Message label = this.effectRowLabel(i + 1, typeId, kind == TriggerVolumeInspectorPage.EffectListKind.CONDITION);
-         cmd.append("#EffectListContainer", "Pages/TriggerVolume/TriggerVolumeInspectorEffectRow.ui");
+         cmd.append(container, "Pages/TriggerVolume/TriggerVolumeInspectorEffectRow.ui");
          cmd.set(selector + " #Label.TextSpans", label);
          if (scope == TriggerVolumeInspectorPage.EventCategoryScope.GROUP) {
             cmd.set(selector + ".Style", INHERITED_EFFECT_ROW_STYLE);
@@ -1670,28 +2023,65 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
       return childIndex;
    }
 
-   private int appendEventCategorySpacer(@Nonnull UICommandBuilder cmd, int childIndex) {
-      cmd.append("#EffectListContainer", "Pages/TriggerVolume/TriggerVolumeInspectorEventCategorySpacer.ui");
+   private int appendEventCategorySpacer(@Nonnull UICommandBuilder cmd, @Nonnull String container, int childIndex) {
+      cmd.append(container, "Pages/TriggerVolume/TriggerVolumeInspectorEventCategorySpacer.ui");
       return childIndex + 1;
    }
 
    @Nonnull
-   private static Message eventCategoryLabel(@Nonnull TriggerVolumeInspectorPage.EventCategoryScope scope, @Nonnull TriggerEventType eventType) {
+   private static Message eventCategoryLabel(@Nonnull TriggerVolumeInspectorPage.EventCategoryScope scope, @Nonnull TriggerEventType eventType, int entry) {
       Message label = Message.translation("server.customUI.triggerVolumeEffectEditor.eventCategory." + eventType.name());
+      if (entry > 0) {
+         label = label.insert(
+            Message.translation("server.customUI.triggerVolumeEffectEditor.eventCategoryEntrySuffix").param("entry", String.valueOf(entry + 1))
+         );
+      }
+
       return scope == TriggerVolumeInspectorPage.EventCategoryScope.GROUP
          ? label.insert(Message.translation("server.customUI.triggerVolumeEffectEditor.eventCategoryInheritedSuffix"))
          : label;
    }
 
-   private int getEventCategoryItemCount(
+   @Nonnull
+   private int[] getEventEntries(
       @Nonnull TriggerVolumeInspectorPage.EventCategoryScope scope,
       @Nullable TriggerVolumeInspectorDrafts.GroupDraft groupDraft,
       @Nonnull TriggerEventType eventType
    ) {
+      if (scope == TriggerVolumeInspectorPage.EventCategoryScope.GROUP && groupDraft == null) {
+         return EMPTY_ENTRIES;
+      }
+
+      IntOpenHashSet entries = new IntOpenHashSet();
+
+      for (TriggerVolumeInspectorPage.EffectListKind kind : TriggerVolumeInspectorPage.EffectListKind.values()) {
+         int count = scope == TriggerVolumeInspectorPage.EventCategoryScope.GROUP ? getGroupItemCount(kind, groupDraft) : this.getItemCount(kind);
+
+         for (int i = 0; i < count; i++) {
+            TriggerEventType itemEventType = scope == TriggerVolumeInspectorPage.EventCategoryScope.GROUP
+               ? getGroupItemEventType(kind, i, groupDraft)
+               : this.getItemEventType(kind, i);
+            if (normalizeEventType(itemEventType) == eventType) {
+               entries.add(scope == TriggerVolumeInspectorPage.EventCategoryScope.GROUP ? getGroupItemEntry(kind, i, groupDraft) : this.getItemEntry(kind, i));
+            }
+         }
+      }
+
+      int[] array = entries.toIntArray();
+      Arrays.sort(array);
+      return array;
+   }
+
+   private int getEventCategoryItemCount(
+      @Nonnull TriggerVolumeInspectorPage.EventCategoryScope scope,
+      @Nullable TriggerVolumeInspectorDrafts.GroupDraft groupDraft,
+      @Nonnull TriggerEventType eventType,
+      int entry
+   ) {
       int totalCount = 0;
 
       for (TriggerVolumeInspectorPage.EffectListKind kind : TriggerVolumeInspectorPage.EffectListKind.values()) {
-         totalCount += this.getEventItemIndices(scope, groupDraft, eventType, kind).size();
+         totalCount += this.getEventItemIndices(scope, groupDraft, eventType, entry, kind).size();
       }
 
       return totalCount;
@@ -1702,6 +2092,7 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
       @Nonnull TriggerVolumeInspectorPage.EventCategoryScope scope,
       @Nullable TriggerVolumeInspectorDrafts.GroupDraft groupDraft,
       @Nonnull TriggerEventType eventType,
+      int entry,
       @Nonnull TriggerVolumeInspectorPage.EffectListKind kind
    ) {
       IntArrayList indices = new IntArrayList();
@@ -1716,24 +2107,41 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
             ? getGroupItemEventType(kind, i, groupDraft)
             : this.getItemEventType(kind, i);
          if (normalizeEventType(itemEventType) == eventType) {
-            indices.add(i);
+            int itemEntry = scope == TriggerVolumeInspectorPage.EventCategoryScope.GROUP ? getGroupItemEntry(kind, i, groupDraft) : this.getItemEntry(kind, i);
+            if (itemEntry == entry) {
+               indices.add(i);
+            }
          }
       }
 
       return indices;
    }
 
-   private boolean isEventCategoryCollapsed(@Nonnull TriggerVolumeInspectorPage.EventCategoryScope scope, @Nonnull TriggerEventType eventType) {
-      return this.collapsedEventCategories(scope).contains(eventType);
+   private boolean isEventCategoryCollapsed(@Nonnull TriggerVolumeInspectorPage.EventCategoryScope scope, @Nonnull TriggerEventType eventType, int entry) {
+      TriggerVolumeInspectorPage.EventCategoryKey key = new TriggerVolumeInspectorPage.EventCategoryKey(eventType, entry);
+      return scope == TriggerVolumeInspectorPage.EventCategoryScope.GROUP
+         ? !this.expandedGroupEventCategories.contains(key)
+         : this.collapsedVolumeEventCategories.contains(key);
    }
 
-   private void setEventCategoryExpanded(@Nonnull TriggerVolumeInspectorPage.EventCategoryScope scope, @Nonnull TriggerEventType eventType) {
-      this.collapsedEventCategories(scope).remove(eventType);
+   private void setEventCategoryExpanded(@Nonnull TriggerVolumeInspectorPage.EventCategoryScope scope, @Nonnull TriggerEventType eventType, int entry) {
+      TriggerVolumeInspectorPage.EventCategoryKey key = new TriggerVolumeInspectorPage.EventCategoryKey(eventType, entry);
+      if (scope == TriggerVolumeInspectorPage.EventCategoryScope.GROUP) {
+         this.expandedGroupEventCategories.add(key);
+      } else {
+         this.collapsedVolumeEventCategories.remove(key);
+      }
    }
 
-   @Nonnull
-   private EnumSet<TriggerEventType> collapsedEventCategories(@Nonnull TriggerVolumeInspectorPage.EventCategoryScope scope) {
-      return scope == TriggerVolumeInspectorPage.EventCategoryScope.GROUP ? this.collapsedGroupEventCategories : this.collapsedVolumeEventCategories;
+   private void toggleEventCategory(@Nonnull TriggerVolumeInspectorPage.EventCategoryScope scope, @Nonnull TriggerEventType eventType, int entry) {
+      TriggerVolumeInspectorPage.EventCategoryKey key = new TriggerVolumeInspectorPage.EventCategoryKey(eventType, entry);
+      if (scope == TriggerVolumeInspectorPage.EventCategoryScope.GROUP) {
+         if (!this.expandedGroupEventCategories.remove(key)) {
+            this.expandedGroupEventCategories.add(key);
+         }
+      } else if (!this.collapsedVolumeEventCategories.remove(key)) {
+         this.collapsedVolumeEventCategories.add(key);
+      }
    }
 
    @Nonnull
@@ -1753,23 +2161,15 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
          int row = 0;
          if (selected instanceof TriggerCondition condition) {
             String typeId = getConditionTypeId(condition);
-            row = this.addEffectDropdownRow(
-               cmd,
-               evt,
-               row,
-               Message.translation("server.customUI.triggerVolumeEffectEditor.baseField.event"),
-               "Event",
-               Message.translation("server.customUI.triggerVolumeEffectEditor.baseField.event.tooltip"),
-               Arrays.stream(TriggerEventType.values()).map(Enum::name).toList(),
-               condition.getEventType() != null ? condition.getEventType().name() : TriggerEventType.ENTER.name()
-            );
+            String eventValue = condition.getEventType() != null ? condition.getEventType().name() : TriggerEventType.ENTER.name();
+            row = this.appendBaseFieldHeader(cmd, evt, row, true, eventValue, String.valueOf(condition.getEntry()), "0", "0");
             BuilderCodec<TriggerCondition> codec = getConditionBuilderCodecFor(typeId);
             if (codec != null) {
                BsonDocument encoded = encodeCondition(codec, condition);
 
                for (Entry<String, List<BuilderField<TriggerCondition, ?>>> entry : codec.getEntries().entrySet()) {
                   String key = entry.getKey();
-                  if (!"Event".equals(key) && !entry.getValue().isEmpty()) {
+                  if (!"Event".equals(key) && !"Entry".equals(key) && !entry.getValue().isEmpty()) {
                      BuilderField<TriggerCondition, ?> field = entry.getValue().getLast();
                      row = this.addEffectFieldRow(cmd, evt, row, typeId, key, field.getCodec().getChildCodec(), encoded.get(key));
                   }
@@ -1778,35 +2178,9 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
          } else {
             TriggerEffect effect = (TriggerEffect)selected;
             String typeId = getTypeId(effect);
-            row = this.addEffectDropdownRow(
-               cmd,
-               evt,
-               row,
-               Message.translation("server.customUI.triggerVolumeEffectEditor.baseField.event"),
-               "Event",
-               Message.translation("server.customUI.triggerVolumeEffectEditor.baseField.event.tooltip"),
-               Arrays.stream(TriggerEventType.values()).map(Enum::name).toList(),
-               effect.getEventType() != null ? effect.getEventType().name() : TriggerEventType.ENTER.name()
-            );
-            row = this.addEffectNumberRow(
-               cmd,
-               evt,
-               row,
-               Message.translation("server.customUI.triggerVolumeEffectEditor.baseField.interval"),
-               "Interval",
-               Message.translation("server.customUI.triggerVolumeEffectEditor.baseField.interval.tooltip"),
-               String.valueOf(effect.getInterval()),
-               2
-            );
-            row = this.addEffectNumberRow(
-               cmd,
-               evt,
-               row,
-               Message.translation("server.customUI.triggerVolumeEffectEditor.effectDelay"),
-               "Delay",
-               Message.translation("server.customUI.triggerVolumeEffectEditor.effectDelay.tooltip"),
-               String.valueOf(effect.getDelay()),
-               1
+            String eventValue = effect.getEventType() != null ? effect.getEventType().name() : TriggerEventType.ENTER.name();
+            row = this.appendBaseFieldHeader(
+               cmd, evt, row, false, eventValue, String.valueOf(effect.getEntry()), String.valueOf(effect.getDelay()), String.valueOf(effect.getInterval())
             );
             BuilderCodec<TriggerEffect> codec = getBuilderCodecFor(typeId);
             if (codec != null) {
@@ -1814,7 +2188,7 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
 
                for (Entry<String, List<BuilderField<TriggerEffect, ?>>> entry : codec.getEntries().entrySet()) {
                   String key = entry.getKey();
-                  if (!"Event".equals(key) && !"Interval".equals(key) && !"Delay".equals(key) && !entry.getValue().isEmpty()) {
+                  if (!"Event".equals(key) && !"Interval".equals(key) && !"Delay".equals(key) && !"Entry".equals(key) && !entry.getValue().isEmpty()) {
                      BuilderField<TriggerEffect, ?> field = entry.getValue().getLast();
                      row = this.addEffectFieldRow(cmd, evt, row, typeId, key, field.getCodec().getChildCodec(), encoded.get(key));
                   }
@@ -1826,6 +2200,70 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
             }
          }
       }
+   }
+
+   private int appendBaseFieldHeader(
+      @Nonnull UICommandBuilder cmd,
+      @Nonnull UIEventBuilder evt,
+      int row,
+      boolean isCondition,
+      @Nonnull String eventValue,
+      @Nonnull String entryValue,
+      @Nonnull String delayValue,
+      @Nonnull String intervalValue
+   ) {
+      String sel = "#EffectDetailPanel[" + row + "]";
+      cmd.append("#EffectDetailPanel", "Pages/TriggerVolume/TriggerVolumeInspectorBaseHeaderGrid.ui");
+      String eventCell = sel + " #EventCell";
+      cmd.set(eventCell + " #Label.Text", Message.translation("server.customUI.triggerVolumeEffectEditor.baseField.event"));
+      cmd.set(eventCell + " #Label.TooltipText", Message.translation("server.customUI.triggerVolumeEffectEditor.baseField.event.tooltip"));
+      ObjectArrayList<DropdownEntryInfo> entries = new ObjectArrayList<>();
+
+      for (TriggerEventType eventType : TriggerEventType.values()) {
+         String name = eventType.name();
+         entries.add(new DropdownEntryInfo(this.optionLabel("baseField", "Event", name), name, this.optionTooltip("baseField", "Event", name)));
+      }
+
+      cmd.set(eventCell + " #Input.Entries", entries);
+      cmd.set(eventCell + " #Input.Value", eventValue);
+      evt.addEventBinding(CustomUIEventBindingType.ValueChanged, eventCell + " #Input", paramEvent("Event", eventCell + " #Input.Value"), false);
+      this.setBaseNumberCell(cmd, evt, sel + " #EntryCell", "Entry", "baseField.entry", entryValue);
+      evt.addEventBinding(
+         CustomUIEventBindingType.FocusLost,
+         sel + " #EntryCell #Input",
+         new EventData().append("Action", TriggerVolumeInspectorPage.Action.CommitEntry.name()),
+         false
+      );
+      if (isCondition) {
+         cmd.set(sel + " #SecondRow.Visible", false);
+      } else {
+         this.setBaseNumberCell(cmd, evt, sel + " #DelayCell", "Delay", "effectDelay", delayValue);
+         this.setBaseNumberCell(cmd, evt, sel + " #IntervalCell", "Interval", "baseField.interval", intervalValue);
+      }
+
+      return row + 1;
+   }
+
+   private void setBaseNumberCell(
+      @Nonnull UICommandBuilder cmd,
+      @Nonnull UIEventBuilder evt,
+      @Nonnull String cell,
+      @Nonnull String paramKey,
+      @Nonnull String labelKey,
+      @Nonnull String value
+   ) {
+      cmd.set(cell + " #Label.Text", Message.translation("server.customUI.triggerVolumeEffectEditor." + labelKey));
+      cmd.set(cell + " #Label.TooltipText", Message.translation("server.customUI.triggerVolumeEffectEditor." + labelKey + ".tooltip"));
+
+      double numeric;
+      try {
+         numeric = Double.parseDouble(value);
+      } catch (NumberFormatException exception) {
+         numeric = 0.0;
+      }
+
+      cmd.set(cell + " #Input.Value", numeric);
+      evt.addEventBinding(CustomUIEventBindingType.ValueChanged, cell + " #Input", numericParamEvent(paramKey, cell + " #Input.Value"), false);
    }
 
    private int addEffectFieldRow(
@@ -1928,19 +2366,6 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
       @Nonnull UICommandBuilder cmd,
       @Nonnull UIEventBuilder evt,
       int row,
-      @Nonnull Message label,
-      @Nonnull String key,
-      @Nullable Message tooltip,
-      @Nonnull String value,
-      int decimals
-   ) {
-      return this.addEffectNumberRow(cmd, evt, row, "", key, label, tooltip, value, decimals);
-   }
-
-   private int addEffectNumberRow(
-      @Nonnull UICommandBuilder cmd,
-      @Nonnull UIEventBuilder evt,
-      int row,
       @Nonnull String typeId,
       @Nonnull String key,
       @Nonnull Object label,
@@ -2007,35 +2432,6 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
 
       for (String opt : options) {
          entries.add(new DropdownEntryInfo(this.optionLabel(typeId, key, opt), opt, this.optionTooltip(typeId, key, opt)));
-      }
-
-      cmd.set(sel + " #Input.Entries", entries);
-      cmd.set(sel + " #Input.Value", value);
-      evt.addEventBinding(CustomUIEventBindingType.ValueChanged, sel + " #Input", paramEvent(key, sel + " #Input.Value"), false);
-      return row + 1;
-   }
-
-   private int addEffectDropdownRow(
-      @Nonnull UICommandBuilder cmd,
-      @Nonnull UIEventBuilder evt,
-      int row,
-      @Nonnull Message label,
-      @Nonnull String key,
-      @Nullable Message tooltip,
-      @Nonnull List<String> options,
-      @Nonnull String value
-   ) {
-      String sel = "#EffectDetailPanel[" + row + "]";
-      cmd.append("#EffectDetailPanel", "Pages/TriggerVolume/TriggerVolumeInspectorDropdownRow.ui");
-      cmd.set(sel + " #Label.Text", label);
-      if (tooltip != null) {
-         cmd.set(sel + " #Label.TooltipText", tooltip);
-      }
-
-      ObjectArrayList<DropdownEntryInfo> entries = new ObjectArrayList<>();
-
-      for (String opt : options) {
-         entries.add(new DropdownEntryInfo(this.optionLabel("baseField", key, opt), opt, this.optionTooltip("baseField", key, opt)));
       }
 
       cmd.set(sel + " #Input.Entries", entries);
@@ -2193,6 +2589,17 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
       setEffectFieldTooltip(cmd, sel, typeId, key);
       if (value.isEmpty()) {
          cmd.set(sel + " #PickerLabel.Text", Message.translation("server.customUI.triggerVolumeEffectEditor.assetPicker.none"));
+      } else if (this.isUnsupportedAnimation(typeId, key, value)) {
+         cmd.set(
+            sel + " #PickerLabel.Text",
+            Message.translation("server.customUI.triggerVolumeEffectEditor.assetPicker.animationUnsupported").param("animation", value)
+         );
+      } else if (this.isLoopingAnimation(typeId, key, value)) {
+         cmd.set(
+            sel + " #PickerLabel.Text", Message.translation("server.customUI.triggerVolumeEffectEditor.assetPicker.animationLooping").param("animation", value)
+         );
+      } else if (isApplyOnField(typeId, key)) {
+         this.setApplyOnLabel(cmd, sel + " #PickerLabel.Text", value);
       } else {
          cmd.set(sel + " #PickerLabel.Text", value);
       }
@@ -2203,6 +2610,68 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
          new EventData().append("Action", TriggerVolumeInspectorPage.Action.OpenAssetPicker.name()).append("ParamKey", key)
       );
       return row + 1;
+   }
+
+   private boolean isUnsupportedAnimation(@Nonnull String typeId, @Nonnull String key, @Nonnull String value) {
+      if ("PlayAnimation".equals(typeId) && "Animation".equals(key)) {
+         if (this.getSelectedItem() instanceof PlayAnimationEffect animation) {
+            String applyOn = animation.getNpcType();
+            return applyOn.isBlank() ? false : !TriggerVolumesPlugin.get().collectAnimationIdsForApplyOn(applyOn).contains(value);
+         } else {
+            return false;
+         }
+      } else {
+         return false;
+      }
+   }
+
+   private boolean isUnsupportedApplyOn(@Nonnull String typeId, @Nonnull String key, @Nonnull String value) {
+      if ("PlayAnimation".equals(typeId) && "NpcType".equals(key) && !value.isBlank()) {
+         if (this.getSelectedItem() instanceof PlayAnimationEffect animation) {
+            String animationKey = animation.getAnimation();
+            return animationKey != null && !animationKey.isBlank()
+               ? !TriggerVolumesPlugin.get().collectApplyOnIdsForAnimation(animationKey).contains(value)
+               : false;
+         } else {
+            return false;
+         }
+      } else {
+         return false;
+      }
+   }
+
+   private boolean isLoopingAnimation(@Nonnull String typeId, @Nonnull String key, @Nonnull String value) {
+      if ("PlayAnimation".equals(typeId) && "Animation".equals(key)) {
+         return this.getSelectedItem() instanceof PlayAnimationEffect animation
+            ? TriggerVolumesPlugin.get().isLoopingAnimation(animation.getNpcType(), value)
+            : false;
+      } else {
+         return false;
+      }
+   }
+
+   private static boolean isApplyOnField(@Nonnull String typeId, @Nonnull String key) {
+      return "PlayAnimation".equals(typeId) && "NpcType".equals(key);
+   }
+
+   private static boolean isApplyOnPseudo(@Nonnull String value) {
+      return "Player".equals(value) || "Everyone".equals(value);
+   }
+
+   private void setApplyOnLabel(@Nonnull UICommandBuilder cmd, @Nonnull String selector, @Nonnull String value) {
+      boolean pseudo = isApplyOnPseudo(value);
+      String langKey = "server.customUI.triggerVolumeEffectEditor.applyOn." + value;
+      if (this.isUnsupportedApplyOn("PlayAnimation", "NpcType", value)) {
+         if (pseudo) {
+            cmd.set(selector, Message.translation(langKey + "Unsupported"));
+         } else {
+            cmd.set(selector, Message.translation("server.customUI.triggerVolumeEffectEditor.assetPicker.targetUnsupported").param("target", value));
+         }
+      } else if (pseudo) {
+         cmd.set(selector, Message.translation(langKey));
+      } else {
+         cmd.set(selector, value);
+      }
    }
 
    private int addPastePrefabPreviewButtonRow(@Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder evt, int row) {
@@ -2227,8 +2696,29 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
          int newIndex = Integer.parseInt(data.effectIndex);
          this.selectedKind = newKind;
          this.selectedEffectIndex = newIndex;
+         this.syncAddControlsToSelectedEffect();
          this.rebuildAll();
       } catch (IllegalArgumentException exception) {
+      }
+   }
+
+   private void syncAddControlsToSelectedEffect() {
+      if (this.selectedEffectIndex >= 0 && this.selectedEffectIndex < this.getItemCount(this.selectedKind)) {
+         TriggerEventType eventType;
+         int entry;
+         if (this.selectedKind == TriggerVolumeInspectorPage.EffectListKind.CONDITION) {
+            TriggerCondition condition = this.currentConditions().get(this.selectedEffectIndex);
+            eventType = condition.getEventType();
+            entry = condition.getEntry();
+         } else {
+            TriggerEffect effect = this.currentEffects(this.selectedKind).get(this.selectedEffectIndex);
+            eventType = effect.getEventType();
+            entry = effect.getEntry();
+         }
+
+         this.addTargetKind = this.selectedKind;
+         this.addEventType = eventType;
+         this.addEntry = entry;
       }
    }
 
@@ -2240,6 +2730,8 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
          this.addTargetKind = target;
          TriggerEventType eventType = data.addEventType != null ? parseTriggerEventType(data.addEventType, this.addEventType) : this.addEventType;
          this.addEventType = eventType;
+         int entry = this.resolveAddEntry(data.addEntry, eventType);
+         this.addEntry = entry;
          if (target == TriggerVolumeInspectorPage.EffectListKind.CONDITION) {
             BuilderCodec<TriggerCondition> codec = getConditionBuilderCodecFor(data.effectType);
             if (codec == null) {
@@ -2247,12 +2739,13 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
             } else {
                TriggerCondition condition = codec.getSupplier().get();
                condition.setEventType(eventType);
+               condition.setEntry(entry);
                materializeConditionDefaults(codec, condition);
                this.currentConditions().add(condition);
                this.markSelectedDraftDirty();
                this.selectedKind = TriggerVolumeInspectorPage.EffectListKind.CONDITION;
                this.selectedEffectIndex = this.currentConditions().size() - 1;
-               this.setEventCategoryExpanded(TriggerVolumeInspectorPage.EventCategoryScope.VOLUME, eventType);
+               this.setEventCategoryExpanded(TriggerVolumeInspectorPage.EventCategoryScope.VOLUME, eventType, entry);
                this.rebuildAll();
             }
          } else {
@@ -2262,16 +2755,35 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
             } else {
                TriggerEffect effect = codec.getSupplier().get();
                effect.setEventType(eventType);
+               effect.setEntry(entry);
                materializeDefaults(codec, effect);
                this.currentEffects(target).add(effect);
                this.markSelectedDraftDirty();
                this.selectedKind = target;
                this.selectedEffectIndex = this.currentEffects(target).size() - 1;
-               this.setEventCategoryExpanded(TriggerVolumeInspectorPage.EventCategoryScope.VOLUME, eventType);
+               this.setEventCategoryExpanded(TriggerVolumeInspectorPage.EventCategoryScope.VOLUME, eventType, entry);
                this.rebuildAll();
             }
          }
       }
+   }
+
+   private int resolveAddEntry(@Nullable String raw, @Nonnull TriggerEventType eventType) {
+      if ("NEW".equals(raw)) {
+         return this.maxEntryForEvent(eventType) + 1;
+      } else {
+         return raw != null && !raw.isBlank() ? parseEntry(raw) : this.addEntry;
+      }
+   }
+
+   private int maxEntryForEvent(@Nonnull TriggerEventType eventType) {
+      int max = 0;
+
+      for (int existing : this.getEventEntries(TriggerVolumeInspectorPage.EventCategoryScope.VOLUME, null, eventType)) {
+         max = Math.max(max, existing);
+      }
+
+      return max;
    }
 
    private void onRemoveEffect() {
@@ -2337,11 +2849,23 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
       }
    }
 
+   private void onUpdateAddEffectType(@Nonnull TriggerVolumeInspectorPage.PageData data) {
+      if (data.effectType != null && !data.effectType.isBlank()) {
+         this.addEffectType = data.effectType;
+      }
+   }
+
    private void onUpdateAddEventType(@Nonnull TriggerVolumeInspectorPage.PageData data) {
       if (data.addEventType != null) {
          this.addEventType = parseTriggerEventType(data.addEventType, this.addEventType);
+         this.addEntry = 0;
          this.rebuildAll();
       }
+   }
+
+   private void onUpdateAddEntry(@Nonnull TriggerVolumeInspectorPage.PageData data) {
+      this.addEntry = this.resolveAddEntry(data.addEntry, this.addEventType);
+      this.rebuildAll();
    }
 
    private void onToggleEventCategory(@Nonnull TriggerVolumeInspectorPage.PageData data) {
@@ -2349,14 +2873,23 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
          try {
             TriggerEventType eventType = TriggerEventType.valueOf(data.eventType);
             TriggerVolumeInspectorPage.EventCategoryScope scope = TriggerVolumeInspectorPage.EventCategoryScope.valueOf(data.eventCategoryScope);
-            EnumSet<TriggerEventType> collapsedCategories = this.collapsedEventCategories(scope);
-            if (!collapsedCategories.remove(eventType)) {
-               collapsedCategories.add(eventType);
-            }
-
+            int entry = parseEntry(data.eventEntry);
+            this.toggleEventCategory(scope, eventType, entry);
             this.rebuildAll();
          } catch (IllegalArgumentException var5) {
          }
+      }
+   }
+
+   private static int parseEntry(@Nullable String value) {
+      if (value != null && !value.isBlank()) {
+         try {
+            return Math.max(0, Integer.parseInt(value.trim()));
+         } catch (NumberFormatException exception) {
+            return 0;
+         }
+      } else {
+         return 0;
       }
    }
 
@@ -2367,6 +2900,7 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
          if ("Event".equals(key)) {
             try {
                TriggerEventType eventType = TriggerEventType.valueOf(data.paramValue);
+               int itemEntry = selected instanceof TriggerCondition condition ? condition.getEntry() : ((TriggerEffect)selected).getEntry();
                if (selected instanceof TriggerCondition condition) {
                   condition.setEventType(eventType);
                } else {
@@ -2374,11 +2908,26 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
                }
 
                this.markSelectedDraftDirty();
-               this.setEventCategoryExpanded(TriggerVolumeInspectorPage.EventCategoryScope.VOLUME, eventType);
-            } catch (IllegalArgumentException var6) {
+               this.setEventCategoryExpanded(TriggerVolumeInspectorPage.EventCategoryScope.VOLUME, eventType, itemEntry);
+            } catch (IllegalArgumentException var7) {
             }
 
             this.rebuildAll();
+         } else if ("Entry".equals(key)) {
+            if (data.paramNumericValue != null) {
+               int entryValue = Math.max(0, data.paramNumericValue.intValue());
+               TriggerEventType itemEventType = selected instanceof TriggerCondition condition
+                  ? condition.getEventType()
+                  : ((TriggerEffect)selected).getEventType();
+               if (selected instanceof TriggerCondition condition) {
+                  condition.setEntry(entryValue);
+               } else {
+                  ((TriggerEffect)selected).setEntry(entryValue);
+               }
+
+               this.markSelectedDraftDirty();
+               this.setEventCategoryExpanded(TriggerVolumeInspectorPage.EventCategoryScope.VOLUME, normalizeEventType(itemEventType), entryValue);
+            }
          } else if (selected instanceof TriggerCondition condition) {
             BuilderCodec<TriggerCondition> codec = getConditionBuilderCodecFor(getConditionTypeId(condition));
             if (codec != null) {
@@ -2414,6 +2963,10 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
             }
          }
       }
+   }
+
+   private void onCommitEntry() {
+      this.rebuildAll();
    }
 
    private void onTogglePrefabPreview() {
@@ -2771,6 +3324,10 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
       cmd.set("#PresetSavePage.Visible", true);
       cmd.set("#PresetName #Input.Value", "");
       cmd.set("#ConfirmSavePresetButton.Disabled", true);
+      if (this.presetPackBrowser.hasSelectedPack()) {
+         cmd.set("#PresetSavePage #SelectedPackLabel.Text", this.presetPackBrowser.getSelectedPackDisplayName());
+      }
+
       this.sendUpdate(cmd);
    }
 
@@ -2782,28 +3339,50 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
 
    private void onConfirmSavePreset(@Nonnull TriggerVolumeInspectorPage.PageData data) {
       if (data.presetName != null && !data.presetName.isBlank()) {
-         try {
-            Path assetRoot = AssetModule.get().getAssetPacks().get(0).getRoot();
-            Path path = assetRoot.resolve("Server").resolve("TriggerVolumes").resolve("Effects").resolve(data.presetName + ".json");
-            Files.createDirectories(path.getParent());
-            TriggerEffectAsset asset = TriggerEffectAsset.create(
-               data.presetName,
-               this.currentConditions().toArray(TriggerCondition[]::new),
-               this.currentEffects(TriggerVolumeInspectorPage.EffectListKind.EFFECT).toArray(TriggerEffect[]::new),
-               this.currentEffects(TriggerVolumeInspectorPage.EffectListKind.REJECTION_EFFECT).toArray(TriggerEffect[]::new),
-               this.currentConditionTiming()
-            );
-            BsonUtil.writeSync(path, TriggerEffectAsset.CODEC, asset, LOGGER);
-            this.playerRef.sendMessage(Message.translation("server.customUI.triggerVolumeEffectEditor.presetSaved").param("name", data.presetName));
-         } catch (Exception exception) {
-            LOGGER.at(Level.SEVERE).log("Failed to save effect preset '%s'", data.presetName, exception);
-            this.playerRef.sendMessage(Message.translation("server.customUI.triggerVolumeEffectEditor.presetSaveError").param("error", exception.getMessage()));
+         String presetName = data.presetName.trim();
+         if (!presetName.contains("..") && !presetName.contains("/") && !presetName.contains("\\")) {
+            AssetPack targetPack = this.presetPackBrowser.getSelectedPack();
+            if (targetPack == null) {
+               this.playerRef.sendMessage(Message.translation("server.customUI.assetPackBrowser.packRequired"));
+            } else {
+               AssetStore<String, TriggerEffectAsset, DefaultAssetMap<String, TriggerEffectAsset>> store = AssetRegistry.getAssetStore(TriggerEffectAsset.class);
+               if (store != null) {
+                  TriggerEffectAsset asset = TriggerEffectAsset.create(
+                     presetName,
+                     this.currentConditions().toArray(TriggerCondition[]::new),
+                     this.currentEffects(TriggerVolumeInspectorPage.EffectListKind.EFFECT).toArray(TriggerEffect[]::new),
+                     this.currentEffects(TriggerVolumeInspectorPage.EffectListKind.REJECTION_EFFECT).toArray(TriggerEffect[]::new),
+                     this.currentConditionTiming()
+                  );
+                  Path path = targetPack.getRoot().resolve("Server").resolve("TriggerVolumes").resolve("Effects").resolve(presetName + ".json");
+                  String packName = targetPack.getName();
+                  UICommandBuilder cmd = new UICommandBuilder();
+                  cmd.set("#PresetSavePage.Visible", false);
+                  cmd.set("#MainPage.Visible", true);
+                  this.sendUpdate(cmd);
+                  HytaleServer.SCHEDULED_EXECUTOR
+                     .execute(
+                        () -> {
+                           try {
+                              Files.createDirectories(path.getParent());
+                              BsonUtil.writeSync(path, TriggerEffectAsset.CODEC, asset, LOGGER);
+                              store.loadAssetsFromPaths(packName, List.of(path));
+                              this.playerRef
+                                 .sendMessage(Message.translation("server.customUI.triggerVolumeEffectEditor.presetSaved").param("name", presetName));
+                           } catch (Exception exception) {
+                              LOGGER.at(Level.SEVERE).log("Failed to save effect preset '%s'", presetName, exception);
+                              this.playerRef
+                                 .sendMessage(
+                                    Message.translation("server.customUI.triggerVolumeEffectEditor.presetSaveError").param("error", exception.getMessage())
+                                 );
+                           }
+                        }
+                     );
+               }
+            }
+         } else {
+            this.playerRef.sendMessage(Message.translation("server.customUI.triggerVolumeEffectEditor.presetInvalidName"));
          }
-
-         UICommandBuilder cmd = new UICommandBuilder();
-         cmd.set("#PresetSavePage.Visible", false);
-         cmd.set("#MainPage.Visible", true);
-         this.sendUpdate(cmd);
       }
    }
 
@@ -2900,11 +3479,11 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
                   this.pendingPickerSelections.addAll(this.currentPickerArrayValues(selected, data.paramKey));
                }
 
-               this.assetPickerSearchQuery = "";
                UICommandBuilder cmd = new UICommandBuilder();
                UIEventBuilder evt = new UIEventBuilder();
                cmd.set("#MainPage.Visible", false);
                cmd.set("#AssetPickerPage.Visible", true);
+               cmd.set("#AssetPickerPage #SearchInput.Value", this.assetPickerSearchQuery);
                cmd.set("#ConfirmAssetPickerButton.Visible", this.pendingPickerMultiSelect);
                cmd.set("#AssetPickerFieldLabel.Text", data.paramKey);
                this.buildAssetPickerList(cmd, evt);
@@ -2917,7 +3496,7 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
 
    private void onAssetPickerSearch(@Nonnull TriggerVolumeInspectorPage.PageData data) {
       if (data.assetPickerQuery != null) {
-         this.assetPickerSearchQuery = data.assetPickerQuery.trim().toLowerCase(Locale.ROOT);
+         this.assetPickerSearchQuery = data.assetPickerQuery.trim();
       }
 
       UICommandBuilder cmd = new UICommandBuilder();
@@ -2963,7 +3542,6 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
 
             this.pendingPickerFieldKey = null;
             this.pendingPickerSource = null;
-            this.assetPickerSearchQuery = "";
             UICommandBuilder cmd = new UICommandBuilder();
             cmd.set("#AssetPickerPage.Visible", false);
             cmd.set("#MainPage.Visible", true);
@@ -3023,7 +3601,6 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
       this.pendingPickerSource = null;
       this.pendingPickerMultiSelect = false;
       this.pendingPickerSelections.clear();
-      this.assetPickerSearchQuery = "";
       UICommandBuilder cmd = new UICommandBuilder();
       cmd.set("#ConfirmAssetPickerButton.Visible", false);
       cmd.set("#AssetPickerPage.Visible", false);
@@ -3054,6 +3631,7 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
                this.selectedId = volumeId;
                this.selectedIsGroup = false;
                this.selectedEffectIndex = -1;
+               this.pendingScrollToSelection = true;
                this.rebuildAll();
             }
          }
@@ -3242,20 +3820,46 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
 
    private void buildAssetPickerList(@Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder evt) {
       cmd.clear("#AssetPickerList");
-      Collection<String> allIds = getAssetIdsForSource(this.pendingPickerSource);
-      List<String> filtered;
-      if (!this.assetPickerSearchQuery.isEmpty()) {
+      Collection<String> allIds = this.resolvePickerIds();
+      String query = this.assetPickerSearchQuery.toLowerCase(Locale.ROOT);
+      List<String> ordered;
+      if (!query.isEmpty()) {
          Object2IntMap<String> scored = new Object2IntOpenHashMap<>(allIds.size());
 
          for (String assetId : allIds) {
-            if (assetId.toLowerCase(Locale.ROOT).contains(this.assetPickerSearchQuery)) {
-               scored.put(assetId, StringCompareUtil.getFuzzyDistance(assetId, this.assetPickerSearchQuery, Locale.ROOT));
+            if (assetId.toLowerCase(Locale.ROOT).contains(query)) {
+               scored.put(assetId, StringCompareUtil.getFuzzyDistance(assetId, query, Locale.ROOT));
             }
          }
 
-         filtered = scored.keySet().stream().sorted().sorted(Comparator.comparingInt(scored::getInt).reversed()).limit(50L).toList();
+         ordered = scored.keySet().stream().sorted().sorted(Comparator.comparingInt(scored::getInt).reversed()).toList();
+      } else if ("AnimationApplyOn".equals(this.pendingPickerSource)) {
+         ordered = allIds.stream()
+            .sorted(Comparator.<String, Boolean>comparing(assetIdx -> !isApplyOnPseudo(assetIdx)).thenComparing(Comparator.naturalOrder()))
+            .toList();
       } else {
-         filtered = allIds.stream().sorted().limit(50L).toList();
+         ordered = allIds.stream().sorted().toList();
+      }
+
+      List<String> filtered;
+      if (this.pendingPickerMultiSelect && !this.pendingPickerSelections.isEmpty()) {
+         ArrayList<String> selectedFirst = new ArrayList<>(ordered.size());
+
+         for (String assetId : ordered) {
+            if (this.pendingPickerSelections.contains(assetId)) {
+               selectedFirst.add(assetId);
+            }
+         }
+
+         for (String assetId : ordered) {
+            if (!this.pendingPickerSelections.contains(assetId)) {
+               selectedFirst.add(assetId);
+            }
+         }
+
+         filtered = selectedFirst.size() > 50 ? selectedFirst.subList(0, 50) : selectedFirst;
+      } else {
+         filtered = ordered.size() > 50 ? ordered.subList(0, 50) : ordered;
       }
 
       cmd.set("#AssetPickerNoResults.Visible", filtered.isEmpty());
@@ -3288,7 +3892,17 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
             );
          } else {
             cmd.append("#AssetPickerList", "Common/TextButton.ui");
-            cmd.set(sel + " #Button.Text", label);
+            if ("AnimationApplyOn".equals(this.pendingPickerSource) && isApplyOnPseudo(assetId)) {
+               cmd.set(sel + " #Button.Text", Message.translation("server.customUI.triggerVolumeEffectEditor.applyOn." + assetId));
+            } else if ("Animation".equals(this.pendingPickerSource) && this.isLoopingAnimation("PlayAnimation", "Animation", assetId)) {
+               cmd.set(
+                  sel + " #Button.Text",
+                  Message.translation("server.customUI.triggerVolumeEffectEditor.assetPicker.animationLooping").param("animation", assetId)
+               );
+            } else {
+               cmd.set(sel + " #Button.Text", label);
+            }
+
             evt.addEventBinding(
                CustomUIEventBindingType.Activating,
                sel + " #Button",
@@ -3457,6 +4071,22 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
       };
    }
 
+   private int getItemEntry(@Nonnull TriggerVolumeInspectorPage.EffectListKind kind, int index) {
+      return kind == TriggerVolumeInspectorPage.EffectListKind.CONDITION
+         ? this.currentConditions().get(index).getEntry()
+         : this.currentEffects(kind).get(index).getEntry();
+   }
+
+   private static int getGroupItemEntry(
+      @Nonnull TriggerVolumeInspectorPage.EffectListKind kind, int index, @Nonnull TriggerVolumeInspectorDrafts.GroupDraft groupDraft
+   ) {
+      return switch (kind) {
+         case CONDITION -> groupDraft.conditions.get(index).getEntry();
+         case EFFECT -> groupDraft.effects.get(index).getEntry();
+         case REJECTION_EFFECT -> groupDraft.rejectionEffects.get(index).getEntry();
+      };
+   }
+
    @Nonnull
    private String getItemTypeId(@Nonnull TriggerVolumeInspectorPage.EffectListKind kind, int index) {
       return kind == TriggerVolumeInspectorPage.EffectListKind.CONDITION
@@ -3479,6 +4109,113 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
       return this.filterText.isEmpty() || value.toLowerCase(Locale.ROOT).contains(this.filterText);
    }
 
+   private boolean matchesVolumeFilter(@Nonnull VolumeEntry volume) {
+      if (this.filterText.isEmpty()) {
+         return true;
+      } else {
+         return this.draftForVolume(volume).id.toLowerCase(Locale.ROOT).contains(this.filterText)
+            ? true
+            : this.tagsMatchFilter(this.draftForVolume(volume).tags);
+      }
+   }
+
+   private boolean matchesGroupFilter(@Nonnull String groupLabel, @Nonnull GroupEntry group, @Nonnull List<VolumeEntry> children) {
+      if (this.filterText.isEmpty()) {
+         return true;
+      }
+
+      if (groupLabel.toLowerCase(Locale.ROOT).contains(this.filterText)) {
+         return true;
+      }
+
+      if (this.tagsMatchFilter(this.draftForGroup(group).tags)) {
+         return true;
+      }
+
+      for (VolumeEntry child : children) {
+         if (this.matchesVolumeFilter(child)) {
+            return true;
+         }
+      }
+
+      return false;
+   }
+
+   private boolean tagsMatchFilter(@Nonnull Map<String, String> tags) {
+      for (Entry<String, String> tag : tags.entrySet()) {
+         if (this.tagMatchesFilter(tag.getKey(), tag.getValue())) {
+            return true;
+         }
+      }
+
+      return false;
+   }
+
+   private boolean tagMatchesFilter(@Nonnull String key, @Nullable String value) {
+      if (this.filterText.isEmpty()) {
+         return false;
+      }
+
+      String keyLower = key.toLowerCase(Locale.ROOT);
+      String valueLower = value != null ? value.toLowerCase(Locale.ROOT) : "";
+      return keyLower.contains(this.filterText) || valueLower.contains(this.filterText) || (keyLower + "=" + valueLower).contains(this.filterText);
+   }
+
+   private int appendRowTagChips(@Nonnull UICommandBuilder cmd, @Nonnull String container, @Nonnull Map<String, String> tags, boolean indented) {
+      if (tags.isEmpty()) {
+         return 0;
+      }
+
+      List<Entry<String, String>> entries = this.orderedRowTags(tags);
+      int available = indented ? 236 : 252;
+      int chipIdx = 0;
+      int rowsUsed = 1;
+      int x = 0;
+
+      for (int i = 0; i < entries.size(); i++) {
+         Entry<String, String> entry = entries.get(i);
+         String text = this.chipDisplay(entry.getKey(), entry.getValue());
+         int width = chipWidth(text);
+         if (x > 0 && x + width > available) {
+            if (rowsUsed == 2) {
+               this.appendChip(cmd, container, chipIdx, "+" + (entries.size() - i), 5596014);
+               return 2;
+            }
+
+            rowsUsed++;
+            x = 0;
+         }
+
+         this.appendChip(cmd, container, chipIdx++, text, tagChipColor(entry.getKey()));
+         x += width;
+      }
+
+      return rowsUsed;
+   }
+
+   @Nonnull
+   private List<Entry<String, String>> orderedRowTags(@Nonnull Map<String, String> tags) {
+      ArrayList<Entry<String, String>> entries = new ArrayList<>(tags.entrySet());
+      if (!this.filterText.isEmpty()) {
+         entries.sort(
+            (left, right) -> Boolean.compare(this.tagMatchesFilter(right.getKey(), right.getValue()), this.tagMatchesFilter(left.getKey(), left.getValue()))
+         );
+      }
+
+      return entries;
+   }
+
+   @Nonnull
+   private String chipDisplay(@Nonnull String key, @Nullable String value) {
+      boolean hasValue = value != null && !value.isEmpty();
+      boolean valueMatched = hasValue && !this.filterText.isEmpty() && value.toLowerCase(Locale.ROOT).contains(this.filterText);
+      return valueMatched ? key + ": " + value : key;
+   }
+
+   private static int chipWidth(@Nonnull String text) {
+      return (int)Math.ceil(text.length() * 6.2) + 14;
+   }
+
    @Nullable
    private static TriggerVolumeManager getManagerForWorld(@Nonnull String worldName) {
       for (World world : Universe.get().getWorlds().values()) {
@@ -3493,6 +4230,28 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
    @Nonnull
    private static PatchStyle colorPatch(int rgb) {
       return new PatchStyle().setColor(Value.of(colorToHex(rgb)));
+   }
+
+   @Nonnull
+   private static PatchStyle tagColorPatch(int rgb) {
+      return new PatchStyle().setColor(Value.of(colorToHex(rgb) + "99"));
+   }
+
+   private static int tagChipColor(@Nonnull String key) {
+      int hash = key.toLowerCase(Locale.ROOT).hashCode();
+      hash ^= hash >>> 16;
+      hash *= 2146121005;
+      hash ^= hash >>> 15;
+      hash *= -2073254261;
+      hash ^= hash >>> 16;
+      return TAG_CHIP_COLORS[Math.floorMod(hash, TAG_CHIP_COLORS.length)];
+   }
+
+   private void appendChip(@Nonnull UICommandBuilder cmd, @Nonnull String container, int idx, @Nonnull String text, int rgb) {
+      String sel = container + "[" + idx + "]";
+      cmd.append(container, "Pages/TriggerVolume/TriggerVolumeTagChip.ui");
+      cmd.setObject(sel + ".Background", tagColorPatch(rgb));
+      cmd.set(sel + " #ChipLabel.Text", text);
    }
 
    @Nonnull
@@ -3920,7 +4679,7 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
 
       for (Entry<String, List<BuilderField<TriggerEffect, ?>>> entry : codec.getEntries().entrySet()) {
          String key = entry.getKey();
-         if (!"Event".equals(key) && !"Interval".equals(key) && !encoded.containsKey(key) && !entry.getValue().isEmpty()) {
+         if (!"Event".equals(key) && !"Interval".equals(key) && !"Entry".equals(key) && !encoded.containsKey(key) && !entry.getValue().isEmpty()) {
             BuilderField field = entry.getValue().getLast();
             BsonValue defaultValue = getDefaultBsonValue(getTypeId(effect), key, field.getCodec().getChildCodec());
             if (defaultValue != null) {
@@ -3942,7 +4701,7 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
 
       for (Entry<String, List<BuilderField<TriggerCondition, ?>>> entry : codec.getEntries().entrySet()) {
          String key = entry.getKey();
-         if (!"Event".equals(key) && !encoded.containsKey(key) && !entry.getValue().isEmpty()) {
+         if (!"Event".equals(key) && !"Entry".equals(key) && !encoded.containsKey(key) && !entry.getValue().isEmpty()) {
             BuilderField field = entry.getValue().getLast();
             BsonValue defaultValue = getDefaultBsonValue(getConditionTypeId(condition), key, field.getCodec().getChildCodec());
             if (defaultValue != null) {
@@ -3994,6 +4753,24 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
       return sourceId == null ? List.of() : TriggerVolumesPlugin.get().getAssetIds(sourceId);
    }
 
+   private Collection<String> resolvePickerIds() {
+      if (this.getSelectedItem() instanceof PlayAnimationEffect animation) {
+         if ("Animation".equals(this.pendingPickerSource)) {
+            String applyOn = animation.getNpcType();
+            if (!applyOn.isBlank()) {
+               return TriggerVolumesPlugin.get().collectAnimationIdsForApplyOn(applyOn);
+            }
+         } else if ("AnimationApplyOn".equals(this.pendingPickerSource)) {
+            String animationKey = animation.getAnimation();
+            if (animationKey != null && !animationKey.isBlank()) {
+               return TriggerVolumesPlugin.get().collectApplyOnIdsForAnimation(animationKey);
+            }
+         }
+      }
+
+      return getAssetIdsForSource(this.pendingPickerSource);
+   }
+
    @Nullable
    private static String getAssetSourceForField(@Nonnull String typeId, @Nonnull String fieldKey) {
       return TriggerVolumesPlugin.get().getAssetSourceForField(typeId, fieldKey);
@@ -4010,6 +4787,10 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
       DeleteSelection,
       Save,
       Discard,
+      Teleport,
+      ToggleRenameSelected,
+      ConfirmRenameSelected,
+      CancelRenameSelected,
       SelectEffect,
       AddEffect,
       RemoveEffect,
@@ -4017,9 +4798,12 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
       MoveEffectUp,
       MoveEffectDown,
       UpdateAddTarget,
+      UpdateAddEffectType,
       UpdateAddEventType,
+      UpdateAddEntry,
       ToggleEventCategory,
       UpdateParameter,
+      CommitEntry,
       TogglePrefabPreview,
       OpenPresetSave,
       PresetNameChanged,
@@ -4033,13 +4817,24 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
       AssetPickerSelect,
       ConfirmAssetPicker,
       PreviewSound,
-      CancelAssetPicker;
+      CancelAssetPicker,
+      OpenPackBrowser,
+      ConfirmPackBrowser,
+      CancelPackBrowser,
+      OpenCreatePack,
+      CreatePack,
+      CancelCreatePack,
+      PackSearch,
+      PackSelect;
    }
 
    private enum EffectListKind {
       CONDITION,
       EFFECT,
       REJECTION_EFFECT;
+   }
+
+   private record EventCategoryKey(@Nonnull TriggerEventType eventType, int entry) {
    }
 
    private enum EventCategoryScope {
@@ -4107,7 +4902,11 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
          .add()
          .append(new KeyedCodec<>("@AddEventType", Codec.STRING, false), (pageData, value) -> pageData.addEventType = value, pageData -> pageData.addEventType)
          .add()
+         .append(new KeyedCodec<>("@AddEntry", Codec.STRING, false), (o, v) -> o.addEntry = v, o -> o.addEntry)
+         .add()
          .append(new KeyedCodec<>("EventType", Codec.STRING, false), (o, v) -> o.eventType = v, o -> o.eventType)
+         .add()
+         .append(new KeyedCodec<>("EventEntry", Codec.STRING, false), (o, v) -> o.eventEntry = v, o -> o.eventEntry)
          .add()
          .append(new KeyedCodec<>("EventCategoryScope", Codec.STRING, false), (o, v) -> o.eventCategoryScope = v, o -> o.eventCategoryScope)
          .add()
@@ -4133,6 +4932,40 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
          .add()
          .append(new KeyedCodec<>("AssetPickerSelection", Codec.STRING, false), (o, v) -> o.assetPickerSelection = v, o -> o.assetPickerSelection)
          .add()
+         .append(new KeyedCodec<>("Pack", Codec.STRING, false), (o, v) -> o.packBrowserData.pack = v, o -> o.packBrowserData.pack)
+         .add()
+         .append(new KeyedCodec<>("@PackSearch", Codec.STRING, false), (o, v) -> o.packBrowserData.search = v, o -> o.packBrowserData.search)
+         .add()
+         .append(new KeyedCodec<>("@CreateName", Codec.STRING, false), (o, v) -> o.packBrowserData.createName = v, o -> o.packBrowserData.createName)
+         .add()
+         .append(new KeyedCodec<>("@CreateGroup", Codec.STRING, false), (o, v) -> o.packBrowserData.createGroup = v, o -> o.packBrowserData.createGroup)
+         .add()
+         .append(
+            new KeyedCodec<>("@CreateDescription", Codec.STRING, false),
+            (o, v) -> o.packBrowserData.createDescription = v,
+            o -> o.packBrowserData.createDescription
+         )
+         .add()
+         .append(new KeyedCodec<>("@CreateVersion", Codec.STRING, false), (o, v) -> o.packBrowserData.createVersion = v, o -> o.packBrowserData.createVersion)
+         .add()
+         .append(new KeyedCodec<>("@CreateWebsite", Codec.STRING, false), (o, v) -> o.packBrowserData.createWebsite = v, o -> o.packBrowserData.createWebsite)
+         .add()
+         .append(
+            new KeyedCodec<>("@CreateAuthorName", Codec.STRING, false),
+            (o, v) -> o.packBrowserData.createAuthorName = v,
+            o -> o.packBrowserData.createAuthorName
+         )
+         .add()
+         .append(new KeyedCodec<>("ValidateCreate", Codec.STRING, false), (o, v) -> o.packBrowserData.validateCreate = v, o -> o.packBrowserData.validateCreate)
+         .add()
+         .append(
+            new KeyedCodec<>("@CreateTargetDir", Codec.STRING, false), (o, v) -> o.packBrowserData.createTargetDir = v, o -> o.packBrowserData.createTargetDir
+         )
+         .add()
+         .append(
+            new KeyedCodec<>("@DirectoryFilter", Codec.STRING, false), (o, v) -> o.packBrowserData.directoryFilter = v, o -> o.packBrowserData.directoryFilter
+         )
+         .add()
          .build();
       public TriggerVolumeInspectorPage.Action action;
       public String id;
@@ -4148,7 +4981,9 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
       public String effectType;
       public String addTargetKind;
       public String addEventType;
+      public String addEntry;
       public String eventType;
+      public String eventEntry;
       public String eventCategoryScope;
       public String paramKey;
       public String paramValue;
@@ -4161,6 +4996,7 @@ public class TriggerVolumeInspectorPage extends InteractiveCustomUIPage<TriggerV
       public String presetId;
       public String assetPickerQuery;
       public String assetPickerSelection;
+      public final AssetPackSaveBrowserEventData packBrowserData = new AssetPackSaveBrowserEventData();
    }
 
    private record RowEntry(@Nonnull String id, boolean isGroup, int listIndex) {

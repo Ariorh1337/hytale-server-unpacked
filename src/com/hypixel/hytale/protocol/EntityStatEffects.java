@@ -58,8 +58,8 @@ public class EntityStatEffects {
             throw ProtocolException.arrayTooLong("Particles", particlesCount, 4096000);
          }
 
-         if (pos + particlesVarLen + particlesCount * 34L > buf.readableBytes()) {
-            throw ProtocolException.bufferTooSmall("Particles", pos + particlesVarLen + particlesCount * 34, buf.readableBytes());
+         if (pos + particlesVarLen + particlesCount * 35L > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Particles", pos + particlesVarLen + particlesCount * 35, buf.readableBytes());
          }
 
          pos += particlesVarLen;

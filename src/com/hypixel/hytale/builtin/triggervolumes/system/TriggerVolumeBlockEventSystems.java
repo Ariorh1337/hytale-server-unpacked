@@ -13,6 +13,7 @@ import com.hypixel.hytale.component.system.EntityEventSystem;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.event.events.ecs.BreakBlockEvent;
 import com.hypixel.hytale.server.core.event.events.ecs.PlaceBlockEvent;
+import com.hypixel.hytale.server.core.event.events.ecs.UseBlockEvent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
@@ -119,6 +120,47 @@ public final class TriggerVolumeBlockEventSystems {
                manager.enqueueBlockEvent(eventType, actorRef, uuidComponent.getUuid(), new Vector3d(blockX + 0.5, blockY + 0.5, blockZ + 0.5), blockId);
             }
          }
+      }
+   }
+
+   public static final class BlockUsed extends EntityEventSystem<EntityStore, UseBlockEvent.Post> {
+      @Nonnull
+      private final ResourceType<EntityStore, TriggerVolumeManager> managerResourceType;
+
+      public BlockUsed(@Nonnull ResourceType<EntityStore, TriggerVolumeManager> managerResourceType) {
+         super(UseBlockEvent.Post.class);
+         this.managerResourceType = managerResourceType;
+      }
+
+      public void handle(
+         int index,
+         @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
+         @Nonnull Store<EntityStore> store,
+         @Nonnull CommandBuffer<EntityStore> commandBuffer,
+         @Nonnull UseBlockEvent.Post event
+      ) {
+         TriggerVolumeManager manager = store.getResource(this.managerResourceType);
+         if (manager != null) {
+            Ref<EntityStore> actorRef = archetypeChunk.getReferenceTo(index);
+            UUIDComponent uuidComponent = store.getComponent(actorRef, UUIDComponent.getComponentType());
+            if (uuidComponent != null) {
+               Vector3i targetBlock = event.getTargetBlock();
+               manager.enqueueBlockEvent(
+                  TriggerEventType.BLOCK_USED,
+                  actorRef,
+                  uuidComponent.getUuid(),
+                  new Vector3d(targetBlock.x() + 0.5, targetBlock.y() + 0.5, targetBlock.z() + 0.5),
+                  event.getBlockType().getId(),
+                  event.getInteractionType()
+               );
+            }
+         }
+      }
+
+      @Nullable
+      @Override
+      public Query<EntityStore> getQuery() {
+         return Archetype.empty();
       }
    }
 }

@@ -81,7 +81,7 @@ public class SleepSoundsConfig {
    }
 
    public long getNotificationLoopCooldownMs() {
-      return this.notificationCooldownSeconds * 1000;
+      return this.notificationCooldownSeconds * 1000L;
    }
 
    public boolean isNotificationLoopEnabled() {

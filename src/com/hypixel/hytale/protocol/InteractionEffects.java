@@ -127,8 +127,8 @@ public class InteractionEffects {
             throw ProtocolException.arrayTooLong("Particles", particlesCount, 4096000);
          }
 
-         if (varPos0 + varIntLen + particlesCount * 34L > buf.readableBytes()) {
-            throw ProtocolException.bufferTooSmall("Particles", varPos0 + varIntLen + particlesCount * 34, buf.readableBytes());
+         if (varPos0 + varIntLen + particlesCount * 35L > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Particles", varPos0 + varIntLen + particlesCount * 35, buf.readableBytes());
          }
 
          obj.particles = new ModelParticle[particlesCount];
@@ -157,8 +157,8 @@ public class InteractionEffects {
             throw ProtocolException.arrayTooLong("FirstPersonParticles", firstPersonParticlesCount, 4096000);
          }
 
-         if (varPos1 + varIntLen + firstPersonParticlesCount * 34L > buf.readableBytes()) {
-            throw ProtocolException.bufferTooSmall("FirstPersonParticles", varPos1 + varIntLen + firstPersonParticlesCount * 34, buf.readableBytes());
+         if (varPos1 + varIntLen + firstPersonParticlesCount * 35L > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("FirstPersonParticles", varPos1 + varIntLen + firstPersonParticlesCount * 35, buf.readableBytes());
          }
 
          obj.firstPersonParticles = new ModelParticle[firstPersonParticlesCount];

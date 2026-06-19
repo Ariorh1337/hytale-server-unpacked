@@ -254,8 +254,9 @@ public class MergedEnumMapCodec<K extends Enum<K>, V, M extends Enum<M>> impleme
       return this.enumStyle.match(this.enumConstants, this.enumKeys, value, true);
    }
 
+   @Nullable
    protected K[] getMergedEnum(String value) {
       M m = this.enumStyle.match(this.mergeEnumConstants, this.mergeEnumKeys, value, true);
-      return (K[])((Enum[])this.unmergeFunction.apply(m));
+      return (K[])(m == null ? null : (Enum[])this.unmergeFunction.apply(m));
    }
 }

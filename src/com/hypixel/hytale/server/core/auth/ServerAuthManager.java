@@ -1,7 +1,5 @@
 package com.hypixel.hytale.server.core.auth;
 
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.hypixel.hytale.codec.lookup.Priority;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.HytaleServer;
@@ -12,11 +10,11 @@ import com.hypixel.hytale.server.core.auth.oauth.OAuthBrowserFlow;
 import com.hypixel.hytale.server.core.auth.oauth.OAuthClient;
 import com.hypixel.hytale.server.core.auth.oauth.OAuthDeviceFlow;
 import com.hypixel.hytale.server.core.telemetry.TelemetryService;
+import com.nimbusds.jwt.SignedJWT;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
-import java.util.Base64;
+import java.util.Date;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -821,15 +819,9 @@ public class ServerAuthManager {
       }
 
       try {
-         String[] parts = idToken.split("\\.");
-         if (parts.length != 3) {
-            return null;
-         }
-
-         String payload = new String(Base64.getUrlDecoder().decode(parts[1]), StandardCharsets.UTF_8);
-         JsonObject json = JsonParser.parseString(payload).getAsJsonObject();
-         if (json.has("exp")) {
-            return Instant.ofEpochSecond(json.get("exp").getAsLong());
+         Date expiration = SignedJWT.parse(idToken).getJWTClaimsSet().getExpirationTime();
+         if (expiration != null) {
+            return expiration.toInstant();
          }
       } catch (Exception e) {
          LOGGER.at(Level.WARNING).withCause(e).log("Failed to parse identity token expiry");

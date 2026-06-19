@@ -648,8 +648,8 @@ public class ItemBase {
             throw ProtocolException.arrayTooLong("Particles", particlesCount, 4096000);
          }
 
-         if (varPos17 + varIntLen + particlesCount * 34L > buf.readableBytes()) {
-            throw ProtocolException.bufferTooSmall("Particles", varPos17 + varIntLen + particlesCount * 34, buf.readableBytes());
+         if (varPos17 + varIntLen + particlesCount * 35L > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Particles", varPos17 + varIntLen + particlesCount * 35, buf.readableBytes());
          }
 
          obj.particles = new ModelParticle[particlesCount];
@@ -678,8 +678,8 @@ public class ItemBase {
             throw ProtocolException.arrayTooLong("FirstPersonParticles", firstPersonParticlesCount, 4096000);
          }
 
-         if (varPos18 + varIntLen + firstPersonParticlesCount * 34L > buf.readableBytes()) {
-            throw ProtocolException.bufferTooSmall("FirstPersonParticles", varPos18 + varIntLen + firstPersonParticlesCount * 34, buf.readableBytes());
+         if (varPos18 + varIntLen + firstPersonParticlesCount * 35L > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("FirstPersonParticles", varPos18 + varIntLen + firstPersonParticlesCount * 35, buf.readableBytes());
          }
 
          obj.firstPersonParticles = new ModelParticle[firstPersonParticlesCount];

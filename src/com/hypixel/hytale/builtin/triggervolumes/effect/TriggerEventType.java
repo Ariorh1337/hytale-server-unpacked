@@ -7,5 +7,7 @@ public enum TriggerEventType {
    TAG_ADDED,
    TAG_REMOVED,
    BLOCK_PLACED,
-   BLOCK_BROKEN;
+   BLOCK_BROKEN,
+   BLOCK_USED,
+   ENTITY_DIED;
 }

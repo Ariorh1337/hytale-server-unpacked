@@ -70,8 +70,8 @@ public class SpawnModelParticles implements Packet, ToClientPacket {
             throw ProtocolException.arrayTooLong("ModelParticles", modelParticlesCount, 4096000);
          }
 
-         if (pos + modelParticlesVarLen + modelParticlesCount * 34L > buf.readableBytes()) {
-            throw ProtocolException.bufferTooSmall("ModelParticles", pos + modelParticlesVarLen + modelParticlesCount * 34, buf.readableBytes());
+         if (pos + modelParticlesVarLen + modelParticlesCount * 35L > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("ModelParticles", pos + modelParticlesVarLen + modelParticlesCount * 35, buf.readableBytes());
          }
 
          pos += modelParticlesVarLen;

@@ -132,10 +132,12 @@ public class SpawnSuppressionSystems {
             for (int i = 0; i < results.size(); i++) {
                Ref<EntityStore> markerRef = results.get(i);
                SpawnMarkerEntity marker = store.getComponent(markerRef, spawnMarkerEntityComponentType);
-               marker.suppress(uuid);
-               HytaleLogger.Api context = SpawningPlugin.get().getLogger().at(Level.FINEST);
-               if (context.isEnabled()) {
-                  context.log("Suppressing spawn marker %s", store.getComponent(markerRef, UUIDComponent.getComponentType()).getUuid());
+               if (marker.isSuppressedBy(suppression)) {
+                  marker.suppress(uuid);
+                  HytaleLogger.Api context = SpawningPlugin.get().getLogger().at(Level.FINEST);
+                  if (context.isEnabled()) {
+                     context.log("Suppressing spawn marker %s", store.getComponent(markerRef, UUIDComponent.getComponentType()).getUuid());
+                  }
                }
             }
          }

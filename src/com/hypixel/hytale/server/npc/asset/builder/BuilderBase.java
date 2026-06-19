@@ -346,7 +346,7 @@ public abstract class BuilderBase<T> implements Builder<T> {
             return data.getAsJsonPrimitive().getAsDouble();
          } catch (NumberFormatException e) {
             throw new IllegalStateException(
-               "Invalid number when looking for parameter \"" + name + "\", found '" + data + "' in context " + this.getBreadCrumbs()
+               "Invalid number when looking for parameter \"" + name + "\", found '" + data + "' in context " + this.getBreadCrumbs(), e
             );
          }
       } else {
@@ -363,7 +363,7 @@ public abstract class BuilderBase<T> implements Builder<T> {
             return data.getAsJsonPrimitive().getAsInt();
          } catch (NumberFormatException e) {
             throw new IllegalStateException(
-               "Invalid integer number when looking for parameter \"" + name + "\", found '" + data + "' in context " + this.getBreadCrumbs()
+               "Invalid integer number when looking for parameter \"" + name + "\", found '" + data + "' in context " + this.getBreadCrumbs(), e
             );
          }
       } else {

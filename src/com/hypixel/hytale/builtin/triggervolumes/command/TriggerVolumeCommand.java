@@ -17,6 +17,9 @@ public class TriggerVolumeCommand extends AbstractCommandCollection {
       this.addSubCommand(new TriggerVolumeAssignEffectCommand());
       this.addSubCommand(new TriggerVolumeUnassignEffectCommand());
       this.addSubCommand(new TriggerVolumeAssignGroupEffectCommand());
+      this.addSubCommand(new TriggerVolumeTagCommand());
+      this.addSubCommand(new TriggerVolumeTpCommand());
+      this.addSubCommand(new TriggerVolumeRenameCommand());
       this.addSubCommand(new TriggerVolumeEnableTagCommand());
       this.addSubCommand(new TriggerVolumeDisableTagCommand());
       this.addSubCommand(new TriggerVolumeListTagCommand());

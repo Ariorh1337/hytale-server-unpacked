@@ -70,41 +70,44 @@ public class BlockPositionEntryGenerator {
 
       @Override
       public void accept(int blockIndex) {
-         BlockSetModule blockSetModule = BlockSetModule.getInstance();
-         int type = this.sectionPointer.getSection().get(blockIndex);
-         BlockPositionData data = null;
+         BlockSection section = this.sectionPointer.getSection();
+         if (section.getFiller(blockIndex) == 0) {
+            BlockSetModule blockSetModule = BlockSetModule.getInstance();
+            int type = section.get(blockIndex);
+            BlockPositionData data = null;
 
-         for (int i = this.searchedBlockSets.nextSetBit(0); i >= 0; i = this.searchedBlockSets.nextSetBit(i + 1)) {
-            if (blockSetModule.blockInSet(i, type)) {
-               List<IBlockPositionData> entry = this.blockData.getOrDefault(i, null);
-               if (entry == null) {
-                  entry = new ObjectArrayList<>();
-                  this.blockData.put(i, entry);
-               }
-
-               int count = this.blockSetCounts.getOrDefault(i, 0);
-               if (count < this.maxBlockType) {
-                  if (data == null) {
-                     data = new BlockPositionData(blockIndex, this.sectionPointer, type);
+            for (int i = this.searchedBlockSets.nextSetBit(0); i >= 0; i = this.searchedBlockSets.nextSetBit(i + 1)) {
+               if (blockSetModule.blockInSet(i, type)) {
+                  List<IBlockPositionData> entry = this.blockData.getOrDefault(i, null);
+                  if (entry == null) {
+                     entry = new ObjectArrayList<>();
+                     this.blockData.put(i, entry);
                   }
 
-                  entry.add(data);
-               } else {
-                  int j = RandomExtra.randomRange(count + 1);
-                  if (j < this.maxBlockType) {
+                  int count = this.blockSetCounts.getOrDefault(i, 0);
+                  if (count < this.maxBlockType) {
                      if (data == null) {
                         data = new BlockPositionData(blockIndex, this.sectionPointer, type);
                      }
 
-                     entry.set(j, data);
+                     entry.add(data);
+                  } else {
+                     int j = RandomExtra.randomRange(count + 1);
+                     if (j < this.maxBlockType) {
+                        if (data == null) {
+                           data = new BlockPositionData(blockIndex, this.sectionPointer, type);
+                        }
+
+                        entry.set(j, data);
+                     }
                   }
+
+                  this.blockSetCounts.put(i, count + 1);
                }
 
-               this.blockSetCounts.put(i, count + 1);
-            }
-
-            if (i == Integer.MAX_VALUE) {
-               break;
+               if (i == Integer.MAX_VALUE) {
+                  break;
+               }
             }
          }
       }

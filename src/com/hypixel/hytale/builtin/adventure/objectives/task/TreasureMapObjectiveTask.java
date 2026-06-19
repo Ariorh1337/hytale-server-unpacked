@@ -211,8 +211,11 @@ public class TreasureMapObjectiveTask extends ObjectiveTask {
          Vector3d objectivePosition = objective.getPosition(componentAccessor);
          Vector3d position = new Vector3d(objectivePosition).floor();
          position.add(radius * TrigMathUtil.cos(angle), 0.0, radius * TrigMathUtil.sin(angle));
-         position.y = world.getChunk(ChunkUtil.indexChunkFromBlock(position.x, position.z)).getHeight(MathUtil.floor(position.x), MathUtil.floor(position.z));
-         conditionPosition = chestConfig.getWorldLocationProvider().runCondition(world, Vector3dUtil.toVector3i(position));
+         WorldChunk chunk = world.getChunk(ChunkUtil.indexChunkFromBlock(position.x, position.z));
+         if (chunk != null) {
+            position.y = chunk.getHeight(MathUtil.floor(position.x), MathUtil.floor(position.z));
+            conditionPosition = chestConfig.getWorldLocationProvider().runCondition(world, Vector3dUtil.toVector3i(position));
+         }
       }
 
       return conditionPosition;

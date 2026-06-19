@@ -140,14 +140,12 @@ public class HitboxCollisionSystems {
 
    public static class Setup extends HolderSystem<EntityStore> {
       private final ComponentType<EntityStore, HitboxCollision> componentType;
-      private final ComponentType<EntityStore, Player> playerComponentType;
       @Nonnull
       private final Query<EntityStore> query;
 
       public Setup(ComponentType<EntityStore, HitboxCollision> componentType, ComponentType<EntityStore, Player> playerComponentType) {
          this.componentType = componentType;
-         this.playerComponentType = playerComponentType;
-         this.query = Query.and(playerComponentType, Query.not(componentType));
+         this.query = Query.and(playerComponentType);
       }
 
       @Nonnull
@@ -159,9 +157,23 @@ public class HitboxCollisionSystems {
       @Override
       public void onEntityAdd(@Nonnull Holder<EntityStore> holder, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store) {
          World world = store.getExternalData().getWorld();
-         int hitboxCollisionConfigIndex = world.getGameplayConfig().getPlayerConfig().getHitboxCollisionConfigIndex();
-         if (hitboxCollisionConfigIndex != -1) {
-            holder.addComponent(this.componentType, new HitboxCollision(HitboxCollisionConfig.getAssetMap().getAsset(hitboxCollisionConfigIndex)));
+         HitboxCollision existing = holder.getComponent(this.componentType);
+         int index = world.getGameplayConfig().getPlayerConfig().getHitboxCollisionConfigIndex();
+         if (index == -1) {
+            if (existing != null && existing.isMigrated()) {
+               holder.removeComponent(this.componentType);
+            }
+         } else {
+            HitboxCollisionConfig config = HitboxCollisionConfig.getAssetMap().getAsset(index);
+            if (config != null) {
+               if (existing != null) {
+                  if (existing.isMigrated()) {
+                     existing.setHitboxCollisionConfig(config);
+                  }
+               } else {
+                  holder.addComponent(this.componentType, new HitboxCollision(config));
+               }
+            }
          }
       }
 

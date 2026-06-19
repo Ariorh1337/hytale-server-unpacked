@@ -308,12 +308,15 @@ public class WorldSupport implements Component<EntityStore> {
          int targetId;
          if (npcComponent != null) {
             targetId = npcComponent.getRoleIndex();
+         } else if (componentAccessor.getArchetype(ref).contains(Player.getComponentType())) {
+            targetId = BuilderManager.getPlayerGroupID();
          } else {
-            if (!componentAccessor.getArchetype(ref).contains(Player.getComponentType())) {
+            PositionCache positionCache = componentAccessor.getComponent(ref, PositionCache.getComponentType());
+            if (positionCache == null || positionCache.getRoleIndex() < 0) {
                return false;
             }
 
-            targetId = BuilderManager.getPlayerGroupID();
+            targetId = positionCache.getRoleIndex();
          }
 
          return targetId == parentRoleIndex && hasTagInGroup(group, BuilderManager.getSelfGroupID()) ? true : hasTagInGroup(group, targetId);

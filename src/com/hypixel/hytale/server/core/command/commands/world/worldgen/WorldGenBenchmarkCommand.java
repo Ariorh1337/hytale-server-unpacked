@@ -16,6 +16,7 @@ import com.hypixel.hytale.server.core.universe.world.worldgen.IWorldGen;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import java.io.File;
 import java.io.FileWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -140,7 +141,7 @@ public class WorldGenBenchmarkCommand extends CommandBase {
                            File file = new File("quantification" + File.separator + fileName);
                            folder.mkdirs();
 
-                           try (FileWriter fw = new FileWriter(file)) {
+                           try (FileWriter fw = new FileWriter(file, StandardCharsets.UTF_8)) {
                               fw.write(benchmarkableWorldGen.getBenchmark().buildReport().join());
                               world.execute(
                                  () -> world.sendMessage(Message.translation("server.commands.worldgenbenchmark.saveDone").param("fileName", fileName))

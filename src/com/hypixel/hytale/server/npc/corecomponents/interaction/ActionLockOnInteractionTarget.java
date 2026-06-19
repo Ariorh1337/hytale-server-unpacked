@@ -13,10 +13,12 @@ import javax.annotation.Nullable;
 
 public class ActionLockOnInteractionTarget extends ActionBase {
    protected final int targetSlot;
+   protected final boolean rebind;
 
    public ActionLockOnInteractionTarget(@Nonnull BuilderActionLockOnInteractionTarget builderActionBase, @Nonnull BuilderSupport support) {
       super(builderActionBase);
       this.targetSlot = builderActionBase.getTargetSlot(support);
+      this.rebind = builderActionBase.isRebind(support);
    }
 
    @Override
@@ -40,7 +42,7 @@ public class ActionLockOnInteractionTarget extends ActionBase {
    ) {
       super.execute(ref, executionSupport, sensorInfo, dt, store);
       Ref<EntityStore> target = executionSupport.getStateSupport().getInteractionIterationTarget();
-      executionSupport.getMarkedEntitySupport().setMarkedEntity(this.targetSlot, target);
+      executionSupport.getMarkedEntitySupport().setMarkedEntity(this.targetSlot, target, this.rebind, store);
       return true;
    }
 }

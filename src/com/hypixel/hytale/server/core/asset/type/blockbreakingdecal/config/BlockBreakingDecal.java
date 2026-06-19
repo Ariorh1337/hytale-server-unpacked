@@ -11,6 +11,7 @@ import com.hypixel.hytale.assetstore.map.JsonAssetWithMap;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.validation.ValidatorCache;
+import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.codec.validation.validator.ArrayValidator;
 import com.hypixel.hytale.server.core.asset.common.CommonAssetValidator;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
@@ -33,6 +34,7 @@ public class BlockBreakingDecal
       .append(
          new KeyedCodec<>("StageTextures", Codec.STRING_ARRAY), (blockSet, strings) -> blockSet.stageTextures = strings, blockSet -> blockSet.stageTextures
       )
+      .addValidator(Validators.nonNull())
       .addValidator(new ArrayValidator<>(CommonAssetValidator.TEXTURE_ITEM))
       .add()
       .build();
@@ -40,6 +42,7 @@ public class BlockBreakingDecal
    public static final ValidatorCache<String> VALIDATOR_CACHE = new ValidatorCache<>(new AssetKeyValidator<>(BlockBreakingDecal::getAssetStore));
    private String id;
    private AssetExtraInfo.Data data;
+   @Nonnull
    private String[] stageTextures = DEFAULT_STAGE_TEXTURE_LIST;
 
    public static AssetStore<String, BlockBreakingDecal, DefaultAssetMap<String, BlockBreakingDecal>> getAssetStore() {

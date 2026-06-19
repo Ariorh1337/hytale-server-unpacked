@@ -1,7 +1,5 @@
 package com.hypixel.hytale.server.core.modules.anchoraction;
 
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.hypixel.hytale.common.plugin.PluginManifest;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
@@ -14,6 +12,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nonnull;
+import org.bson.BsonDocument;
 
 public class AnchorActionModule extends JavaPlugin {
    public static final PluginManifest MANIFEST = PluginManifest.corePlugin(AnchorActionModule.class).build();
@@ -35,14 +34,14 @@ public class AnchorActionModule extends JavaPlugin {
    }
 
    public void register(@Nonnull String action, @Nonnull AnchorActionModule.WorldThreadAnchorActionHandler handler) {
-      this.register(action, (playerRef, data) -> {
+      this.register(action, playerRef -> {
          Ref<EntityStore> ref = playerRef.getReference();
          if (ref != null) {
             Store<EntityStore> store = ref.getStore();
             World world = store.getExternalData().getWorld();
             world.execute(() -> {
                if (ref.isValid()) {
-                  handler.handle(playerRef, ref, store, data);
+                  handler.handle(playerRef, ref, store);
                }
             });
          }
@@ -57,18 +56,18 @@ public class AnchorActionModule extends JavaPlugin {
       String action = null;
 
       try {
-         JsonObject data = JsonParser.parseString(rawData).getAsJsonObject();
-         if (!data.has("action")) {
+         BsonDocument data = BsonDocument.parse(rawData);
+         if (!data.containsKey("action")) {
             return false;
          }
 
-         action = data.get("action").getAsString();
+         action = data.getString("action").getValue();
          AnchorActionHandler handler = this.handlers.get(action);
          if (handler == null) {
             return false;
          }
 
-         handler.handle(playerRef, data);
+         handler.handle(playerRef);
          return true;
       } catch (Exception e) {
          LOGGER.atWarning().withCause(e).log("Failed to handle anchor action '%s' for player %s", action, playerRef.getUuid());
@@ -78,6 +77,6 @@ public class AnchorActionModule extends JavaPlugin {
 
    @FunctionalInterface
    public interface WorldThreadAnchorActionHandler {
-      void handle(@Nonnull PlayerRef var1, @Nonnull Ref<EntityStore> var2, @Nonnull Store<EntityStore> var3, @Nonnull JsonObject var4);
+      void handle(@Nonnull PlayerRef var1, @Nonnull Ref<EntityStore> var2, @Nonnull Store<EntityStore> var3);
    }
 }

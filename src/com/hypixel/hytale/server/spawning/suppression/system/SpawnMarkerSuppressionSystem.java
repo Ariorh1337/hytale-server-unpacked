@@ -57,7 +57,7 @@ public class SpawnMarkerSuppressionSystem extends RefSystem<EntityStore> {
          if (suppression.isSuppressSpawnMarkers()) {
             double radius = suppression.getRadius();
             double radiusSquared = radius * radius;
-            if (transform.getPosition().distanceSquared(entry.getPosition()) <= radiusSquared) {
+            if (transform.getPosition().distanceSquared(entry.getPosition()) <= radiusSquared && marker.isSuppressedBy(suppression)) {
                marker.suppress(id);
                SpawningPlugin.get().getLogger().at(Level.FINEST).log("Suppressing spawn marker %s on add/load", uuid.getUuid());
             }

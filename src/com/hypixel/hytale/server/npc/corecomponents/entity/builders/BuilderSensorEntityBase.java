@@ -31,6 +31,7 @@ public abstract class BuilderSensorEntityBase extends BuilderSensorWithEntityFil
    protected final DoubleHolder range = new DoubleHolder();
    protected final DoubleHolder minRange = new DoubleHolder();
    protected final BooleanHolder lockOnTarget = new BooleanHolder();
+   protected final BooleanHolder lockRebind = new BooleanHolder();
    protected final BooleanHolder autoUnlockTarget = new BooleanHolder();
    protected final BooleanHolder onlyLockedTarget = new BooleanHolder();
    protected final StringHolder lockedTargetSlot = new StringHolder();
@@ -47,6 +48,15 @@ public abstract class BuilderSensorEntityBase extends BuilderSensorWithEntityFil
       );
       this.requireDouble(data, "Range", this.range, DoubleSingleValidator.greater0(), BuilderDescriptorState.Stable, "Maximum range to test entities in", null);
       this.getBoolean(data, "LockOnTarget", this.lockOnTarget, false, BuilderDescriptorState.Stable, "Matched target becomes locked target", null);
+      this.getBoolean(
+         data,
+         "Rebind",
+         this.lockRebind,
+         false,
+         BuilderDescriptorState.Stable,
+         "Whether the locked target slot rebinds to the entity, so it survives short reloads or role changes.",
+         null
+      );
       this.getString(
          data,
          "LockedTargetSlot",
@@ -108,7 +118,7 @@ public abstract class BuilderSensorEntityBase extends BuilderSensorWithEntityFil
       this.getArray(data, "Filters", this.filters, null, BuilderDescriptorState.Stable, "A series of entity filter sensors to test", null, builderHelper);
       this.validateDoubleRelation(this.range, RelationalOperator.GreaterEqual, this.minRange);
       this.provideFeature(Feature.LiveEntity);
-      if (!this.isCreatingDescriptor() && this.useProjectedDistance.isStatic() && this.useProjectedDistance.get(null)) {
+      if (!this.isCreatingDescriptor() && (!this.useProjectedDistance.isStatic() || this.useProjectedDistance.get(null))) {
          this.requireInstructionType(InstructionType.NPCOnlyInstructions);
       }
 
@@ -140,6 +150,10 @@ public abstract class BuilderSensorEntityBase extends BuilderSensorWithEntityFil
 
    public boolean isLockOnTarget(@Nonnull BuilderSupport builderSupport) {
       return this.lockOnTarget.get(builderSupport.getExecutionContext());
+   }
+
+   public boolean isLockRebind(@Nonnull BuilderSupport builderSupport) {
+      return this.lockRebind.get(builderSupport.getExecutionContext());
    }
 
    public boolean isOnlyLockedTarget(@Nonnull BuilderSupport builderSupport) {

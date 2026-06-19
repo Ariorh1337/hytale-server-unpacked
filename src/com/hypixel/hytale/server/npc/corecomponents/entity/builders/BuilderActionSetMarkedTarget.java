@@ -4,6 +4,7 @@ import com.google.gson.JsonElement;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.asset.builder.Feature;
+import com.hypixel.hytale.server.npc.asset.builder.holder.BooleanHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.StringHolder;
 import com.hypixel.hytale.server.npc.asset.builder.validators.StringNotEmptyValidator;
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderActionBase;
@@ -13,6 +14,7 @@ import javax.annotation.Nonnull;
 
 public class BuilderActionSetMarkedTarget extends BuilderActionBase {
    protected final StringHolder targetSlot = new StringHolder();
+   protected final BooleanHolder rebind = new BooleanHolder();
 
    @Nonnull
    @Override
@@ -49,11 +51,24 @@ public class BuilderActionSetMarkedTarget extends BuilderActionBase {
          "The target slot to set a target to.",
          null
       );
+      this.getBoolean(
+         data,
+         "Rebind",
+         this.rebind,
+         false,
+         BuilderDescriptorState.Stable,
+         "Whether the target slot rebinds to the entity, so it survives short reloads or role changes.",
+         null
+      );
       this.requireFeature(Feature.LiveEntity);
       return this;
    }
 
    public int getTargetSlot(@Nonnull BuilderSupport support) {
       return support.getTargetSlot(this.targetSlot.get(support.getExecutionContext()));
+   }
+
+   public boolean isRebind(@Nonnull BuilderSupport support) {
+      return this.rebind.get(support.getExecutionContext());
    }
 }

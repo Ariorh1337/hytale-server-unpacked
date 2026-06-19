@@ -1,6 +1,8 @@
 package com.hypixel.hytale.builtin.portals.ui;
 
 import com.hypixel.hytale.builtin.portals.utils.posqueries.predicates.FitsAPortal;
+import com.hypixel.hytale.common.fastutil.HLongOpenHashSet;
+import com.hypixel.hytale.common.fastutil.HLongSet;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
@@ -17,7 +19,9 @@ import com.hypixel.hytale.server.core.universe.world.chunk.ChunkColumn;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -29,24 +33,50 @@ public final class PortalSpawnFinder {
    private static final int QUALITY_ATTEMPTS = 2;
    private static final int CHECKS_PER_CHUNK = 8;
    private static final Vector3dc FALLBACK_POSITION = Vector3dUtil.ZERO;
+   private static final int FALLBACK_MARGIN = 2;
 
-   @Nullable
-   public static Transform computeSpawnTransform(@Nonnull World world, @Nonnull List<Vector3d> hintedSpawns) {
-      Vector3d spawn = guesstimateFromHints(world, hintedSpawns);
-      if (spawn == null) {
-         spawn = findFallbackPositionOnGround(world);
-         HytaleLogger.getLogger().atWarning().log("Had to use fallback spawn for portal spawn (10 attempts)");
+   @Nonnull
+   public static CompletableFuture<Transform> computeSpawnTransform(@Nonnull World world, @Nonnull List<Vector3d> hintedSpawns) {
+      return loadCandidateChunks(world, hintedSpawns).thenApplyAsync(ignored -> {
+         Vector3d spawn = guesstimateFromHints(world, hintedSpawns);
+         if (spawn == null) {
+            spawn = findFallbackPositionOnGround(world);
+            if (spawn != null) {
+               HytaleLogger.getLogger().atWarning().log("Had to use fallback spawn for portal spawn (10 attempts) in " + world.getName());
+            }
+         }
+
+         if (spawn == null) {
+            HytaleLogger.getLogger().atWarning().log("Both dart and fallback spawn finder failed for portal spawn in " + world.getName());
+            return null;
+         } else {
+            Rotation3f direction = Rotation3f.lookAt(spawn).mul(-1.0F);
+            direction.setPitch(0.0F);
+            direction.setRoll(0.0F);
+            return new Transform(new Vector3d(spawn).add(0.0, 0.5, 0.0), direction);
+         }
+      }, world);
+   }
+
+   @Nonnull
+   private static CompletableFuture<Void> loadCandidateChunks(@Nonnull World world, @Nonnull List<Vector3d> hintedSpawns) {
+      HLongSet seen = new HLongOpenHashSet();
+      List<CompletableFuture<WorldChunk>> loads = new ArrayList<>();
+
+      for (int i = 0; i < Math.min(hintedSpawns.size(), 10); i++) {
+         Vector3d hintedSpawn = hintedSpawns.get(i);
+         long index = ChunkUtil.indexChunkFromBlock(hintedSpawn.x, hintedSpawn.z);
+         if (seen.add(index)) {
+            loads.add(world.getChunkAsync(index));
+         }
       }
 
-      if (spawn == null) {
-         HytaleLogger.getLogger().atWarning().log("Both dart and fallback spawn finder failed for portal spawn");
-         return null;
-      } else {
-         Rotation3f direction = Rotation3f.lookAt(spawn).mul(-1.0F);
-         direction.setPitch(0.0F);
-         direction.setRoll(0.0F);
-         return new Transform(new Vector3d(spawn).add(0.0, 0.5, 0.0), direction);
+      long fallbackIndex = ChunkUtil.indexChunkFromBlock(FALLBACK_POSITION.x(), FALLBACK_POSITION.z());
+      if (seen.add(fallbackIndex)) {
+         loads.add(world.getChunkAsync(fallbackIndex));
       }
+
+      return CompletableFuture.allOf(loads.toArray(new CompletableFuture[0]));
    }
 
    @Nullable
@@ -157,7 +187,13 @@ public final class PortalSpawnFinder {
       Vector3d center = new Vector3d(FALLBACK_POSITION);
       long chunkIndex = ChunkUtil.indexChunkFromBlock(center.x, center.z);
       WorldChunk centerChunk = world.getChunk(chunkIndex);
-      return centerChunk == null ? null : findWithGroundBelow(centerChunk, 0, 319, 0, 319, true);
+      if (centerChunk == null) {
+         return null;
+      }
+
+      int x = ChunkUtil.minBlock(centerChunk.getX()) + 2;
+      int z = ChunkUtil.minBlock(centerChunk.getZ()) + 2;
+      return findWithGroundBelow(centerChunk, x, 319, z, 319, true);
    }
 
    private enum Material {

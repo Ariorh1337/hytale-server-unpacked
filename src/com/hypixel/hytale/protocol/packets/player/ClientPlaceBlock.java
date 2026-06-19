@@ -18,10 +18,10 @@ public class ClientPlaceBlock implements Packet, ToServerPacket {
    public static final int PACKET_ID = 117;
    public static final boolean IS_COMPRESSED = false;
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
-   public static final int FIXED_BLOCK_SIZE = 23;
+   public static final int FIXED_BLOCK_SIZE = 24;
    public static final int VARIABLE_FIELD_COUNT = 0;
-   public static final int VARIABLE_BLOCK_START = 23;
-   public static final int MAX_SIZE = 23;
+   public static final int VARIABLE_BLOCK_START = 24;
+   public static final int MAX_SIZE = 24;
    @Nullable
    public BlockPosition position;
    @Nullable
@@ -30,6 +30,7 @@ public class ClientPlaceBlock implements Packet, ToServerPacket {
    public boolean quickReplace;
    public boolean quickRetype;
    public boolean noPhysics;
+   public boolean extendedRange;
 
    @Override
    public int getId() {
@@ -45,7 +46,13 @@ public class ClientPlaceBlock implements Packet, ToServerPacket {
    }
 
    public ClientPlaceBlock(
-      @Nullable BlockPosition position, @Nullable BlockRotation rotation, int placedBlockId, boolean quickReplace, boolean quickRetype, boolean noPhysics
+      @Nullable BlockPosition position,
+      @Nullable BlockRotation rotation,
+      int placedBlockId,
+      boolean quickReplace,
+      boolean quickRetype,
+      boolean noPhysics,
+      boolean extendedRange
    ) {
       this.position = position;
       this.rotation = rotation;
@@ -53,6 +60,7 @@ public class ClientPlaceBlock implements Packet, ToServerPacket {
       this.quickReplace = quickReplace;
       this.quickRetype = quickRetype;
       this.noPhysics = noPhysics;
+      this.extendedRange = extendedRange;
    }
 
    public ClientPlaceBlock(@Nonnull ClientPlaceBlock other) {
@@ -62,12 +70,13 @@ public class ClientPlaceBlock implements Packet, ToServerPacket {
       this.quickReplace = other.quickReplace;
       this.quickRetype = other.quickRetype;
       this.noPhysics = other.noPhysics;
+      this.extendedRange = other.extendedRange;
    }
 
    @Nonnull
    public static ClientPlaceBlock deserialize(@Nonnull ByteBuf buf, int offset) {
-      if (buf.readableBytes() - offset < 23) {
-         throw ProtocolException.bufferTooSmall("ClientPlaceBlock", 23, buf.readableBytes() - offset);
+      if (buf.readableBytes() - offset < 24) {
+         throw ProtocolException.bufferTooSmall("ClientPlaceBlock", 24, buf.readableBytes() - offset);
       }
 
       ClientPlaceBlock obj = new ClientPlaceBlock();
@@ -84,15 +93,16 @@ public class ClientPlaceBlock implements Packet, ToServerPacket {
       obj.quickReplace = buf.getByte(offset + 20) != 0;
       obj.quickRetype = buf.getByte(offset + 21) != 0;
       obj.noPhysics = buf.getByte(offset + 22) != 0;
+      obj.extendedRange = buf.getByte(offset + 23) != 0;
       return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
-      return 23;
+      return 24;
    }
 
    public static boolean isBufferTooSmall(MemorySegment mem) {
-      return mem.byteSize() < 23L;
+      return mem.byteSize() < 24L;
    }
 
    @Nullable
@@ -147,6 +157,14 @@ public class ClientPlaceBlock implements Packet, ToServerPacket {
       return mem.get(PacketIO.PROTO_BOOL, offset + 22);
    }
 
+   public static boolean getExtendedRange(MemorySegment mem) {
+      return getExtendedRange(mem, 0);
+   }
+
+   public static boolean getExtendedRange(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, offset + 23);
+   }
+
    public static boolean hasPosition(MemorySegment mem, int offset) {
       byte b = mem.get(PacketIO.PROTO_BYTE, offset + 0);
       return (b & 1) != 0;
@@ -162,8 +180,8 @@ public class ClientPlaceBlock implements Packet, ToServerPacket {
    }
 
    public static ClientPlaceBlock toObject(MemorySegment mem, int offset) {
-      if (offset + 23 > mem.byteSize()) {
-         throw ProtocolException.bufferTooSmall("ClientPlaceBlock", offset + 23, (int)mem.byteSize());
+      if (offset + 24 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ClientPlaceBlock", offset + 24, (int)mem.byteSize());
       } else {
          return new ClientPlaceBlock(
             hasPosition(mem, offset) ? BlockPosition.toObject(mem, offset + 1) : null,
@@ -171,7 +189,8 @@ public class ClientPlaceBlock implements Packet, ToServerPacket {
             mem.get(PacketIO.PROTO_INT, offset + 16),
             mem.get(PacketIO.PROTO_BOOL, offset + 20),
             mem.get(PacketIO.PROTO_BOOL, offset + 21),
-            mem.get(PacketIO.PROTO_BOOL, offset + 22)
+            mem.get(PacketIO.PROTO_BOOL, offset + 22),
+            mem.get(PacketIO.PROTO_BOOL, offset + 23)
          );
       }
    }
@@ -204,6 +223,7 @@ public class ClientPlaceBlock implements Packet, ToServerPacket {
       buf.writeByte(this.quickReplace ? 1 : 0);
       buf.writeByte(this.quickRetype ? 1 : 0);
       buf.writeByte(this.noPhysics ? 1 : 0);
+      buf.writeByte(this.extendedRange ? 1 : 0);
    }
 
    @Override
@@ -234,17 +254,18 @@ public class ClientPlaceBlock implements Packet, ToServerPacket {
       mem.set(PacketIO.PROTO_BOOL, offset + 20, this.quickReplace);
       mem.set(PacketIO.PROTO_BOOL, offset + 21, this.quickRetype);
       mem.set(PacketIO.PROTO_BOOL, offset + 22, this.noPhysics);
-      return 23;
+      mem.set(PacketIO.PROTO_BOOL, offset + 23, this.extendedRange);
+      return 24;
    }
 
    @Override
    public int computeSize() {
-      return 23;
+      return 24;
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      if (buffer.readableBytes() - offset < 23) {
-         return ValidationResult.error("Buffer too small: expected at least 23 bytes");
+      if (buffer.readableBytes() - offset < 24) {
+         return ValidationResult.error("Buffer too small: expected at least 24 bytes");
       }
 
       byte nullBits = buffer.getByte(offset);
@@ -259,6 +280,7 @@ public class ClientPlaceBlock implements Packet, ToServerPacket {
       copy.quickReplace = this.quickReplace;
       copy.quickRetype = this.quickRetype;
       copy.noPhysics = this.noPhysics;
+      copy.extendedRange = this.extendedRange;
       return copy;
    }
 
@@ -274,12 +296,13 @@ public class ClientPlaceBlock implements Packet, ToServerPacket {
                && this.placedBlockId == other.placedBlockId
                && this.quickReplace == other.quickReplace
                && this.quickRetype == other.quickRetype
-               && this.noPhysics == other.noPhysics;
+               && this.noPhysics == other.noPhysics
+               && this.extendedRange == other.extendedRange;
       }
    }
 
    @Override
    public int hashCode() {
-      return Objects.hash(this.position, this.rotation, this.placedBlockId, this.quickReplace, this.quickRetype, this.noPhysics);
+      return Objects.hash(this.position, this.rotation, this.placedBlockId, this.quickReplace, this.quickRetype, this.noPhysics, this.extendedRange);
    }
 }

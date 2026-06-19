@@ -1,18 +1,20 @@
 package com.hypixel.hytale.builtin.adventure.wilderness.resource;
 
+import com.hypixel.hytale.builtin.adventure.wilderness.WildernessConfig;
 import com.hypixel.hytale.builtin.adventure.wilderness.WildernessPlugin;
 import com.hypixel.hytale.component.Resource;
 import com.hypixel.hytale.component.ResourceType;
 import com.hypixel.hytale.function.function.TriFunction;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.server.core.asset.type.gameplay.WildernessConfig;
+import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiFunction;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -22,37 +24,46 @@ import org.joml.Vector3i;
 public class WildernessTracker implements Resource<ChunkStore> {
    protected static final int VECTOR_POOL_CAPACITY = 1000;
    protected final boolean enabled;
-   protected final int chunkRadiusX;
-   protected final int chunkRadiusY;
-   protected final int chunkRadiusZ;
+   protected final int ownedChunkRadius;
+   protected final int ownedChunkRadiusY;
+   protected final int unownedChunkRadius;
+   protected final int unownedChunkRadiusY;
+   protected final AtomicLong generation = new AtomicLong();
    protected final Map<Vector3i, WildernessTracker.Counter> homeChunks = new ConcurrentHashMap<>();
    protected final Queue<Vector3i> vecPool = new ArrayBlockingQueue<>(1000);
 
    public WildernessTracker() {
       this.enabled = false;
-      this.chunkRadiusX = ChunkUtil.chunkCoordinate(128);
-      this.chunkRadiusY = ChunkUtil.chunkCoordinate(48);
-      this.chunkRadiusZ = ChunkUtil.chunkCoordinate(128);
+      this.ownedChunkRadius = 8;
+      this.ownedChunkRadiusY = 8;
+      this.unownedChunkRadius = 2;
+      this.unownedChunkRadiusY = 2;
    }
 
    public WildernessTracker(@Nonnull WildernessConfig config) {
       this.enabled = config.isEnabled();
-      this.chunkRadiusX = ChunkUtil.chunkCoordinate(config.getHorizontalDistanceBlocks());
-      this.chunkRadiusY = ChunkUtil.chunkCoordinate(config.getVerticalDistanceBlocks());
-      this.chunkRadiusZ = ChunkUtil.chunkCoordinate(config.getHorizontalDistanceBlocks());
+      this.ownedChunkRadius = config.getOwnedHomeChunkRadius();
+      this.ownedChunkRadiusY = config.getOwnedHomeChunkRadiusY();
+      this.unownedChunkRadius = config.getUnownedHomeChunkRadius();
+      this.unownedChunkRadiusY = config.getUnownedHomeChunkRadiusY();
    }
 
    public WildernessTracker(@Nonnull WildernessTracker tracker) {
       this.enabled = tracker.enabled;
-      this.chunkRadiusX = tracker.chunkRadiusX;
-      this.chunkRadiusY = tracker.chunkRadiusY;
-      this.chunkRadiusZ = tracker.chunkRadiusZ;
+      this.ownedChunkRadius = tracker.ownedChunkRadius;
+      this.ownedChunkRadiusY = tracker.ownedChunkRadiusY;
+      this.unownedChunkRadius = tracker.unownedChunkRadius;
+      this.unownedChunkRadiusY = tracker.unownedChunkRadiusY;
       this.homeChunks.putAll(tracker.homeChunks);
    }
 
    @Nonnull
    public WildernessTracker clone() {
       return new WildernessTracker(this);
+   }
+
+   public long generation() {
+      return this.generation.get();
    }
 
    public boolean isEnabled() {
@@ -100,6 +111,23 @@ public class WildernessTracker implements Resource<ChunkStore> {
       } finally {
          this.recycle(coords);
       }
+   }
+
+   public boolean isWildernessChunk(int chunkX, int chunkY, int chunkZ) {
+      Vector3i coords = this.newVector();
+
+      try {
+         coords.x = chunkX;
+         coords.y = chunkY;
+         coords.z = chunkZ;
+         return !this.homeChunks.containsKey(coords);
+      } finally {
+         this.recycle(coords);
+      }
+   }
+
+   public boolean isWildernessChunk(@Nonnull Vector3i coords) {
+      return !this.homeChunks.containsKey(coords);
    }
 
    public void collectHomeChunks(@Nonnull Vector3i position, int radiusX, int radiusY, int radiusZ, @Nonnull Collection<Vector3i> collector) {
@@ -162,33 +190,43 @@ public class WildernessTracker implements Resource<ChunkStore> {
       });
    }
 
-   public void addHomeChunk(int chunkX, int chunkY, int chunkZ) {
-      iterate(
-         this,
-         chunkX,
-         chunkY,
-         chunkZ,
-         this.chunkRadiusX,
-         this.chunkRadiusY,
-         this.chunkRadiusZ,
-         null,
-         (tracker, coords, ignored) -> tracker.homeChunks.compute(coords, WildernessTracker.Counter::increment).coords == coords
-            ? WildernessTracker.Iterator.CONSUME
-            : WildernessTracker.Iterator.CONTINUE
-      );
+   public void addHomeChunk(int chunkX, int chunkY, int chunkZ, boolean owned) {
+      int radius = owned ? this.ownedChunkRadius : this.unownedChunkRadius;
+      int radiusY = owned ? this.ownedChunkRadiusY : this.unownedChunkRadiusY;
+      if (radius != -1 && radiusY != -1) {
+         iterate(
+            this,
+            chunkX,
+            chunkY,
+            chunkZ,
+            radius,
+            radiusY,
+            radius,
+            null,
+            (tracker, coords, ignored) -> tracker.homeChunks.compute(coords, WildernessTracker.Counter::increment).coords == coords
+               ? WildernessTracker.Iterator.CONSUME
+               : WildernessTracker.Iterator.CONTINUE
+         );
+         this.generation.incrementAndGet();
+      }
    }
 
-   public void removeHomeChunk(int chunkX, int chunkY, int chunkZ) {
-      WildernessTracker.Recycler recycler = WildernessTracker.Recycler.RESOURCE.get();
-      iterate(this, chunkX, chunkY, chunkZ, this.chunkRadiusX, this.chunkRadiusY, this.chunkRadiusZ, recycler, (tracker, coords, decrementer) -> {
-         tracker.homeChunks.compute(coords, decrementer);
-         if (decrementer.removed != null) {
-            this.recycle(decrementer.removed);
-            decrementer.removed = null;
-         }
+   public void removeHomeChunk(int chunkX, int chunkY, int chunkZ, boolean owned) {
+      int radius = owned ? this.ownedChunkRadius : this.unownedChunkRadius;
+      int radiusY = owned ? this.ownedChunkRadiusY : this.unownedChunkRadiusY;
+      if (radius != -1 && radiusY != -1) {
+         WildernessTracker.Recycler recycler = WildernessTracker.Recycler.RESOURCE.get();
+         iterate(this, chunkX, chunkY, chunkZ, radius, radiusY, radius, recycler, (tracker, coords, decrementer) -> {
+            tracker.homeChunks.compute(coords, decrementer);
+            if (decrementer.removed != null) {
+               this.recycle(decrementer.removed);
+               decrementer.removed = null;
+            }
 
-         return WildernessTracker.Iterator.CONTINUE;
-      });
+            return WildernessTracker.Iterator.CONTINUE;
+         });
+         this.generation.incrementAndGet();
+      }
    }
 
    protected static <T> void iterate(
@@ -250,6 +288,11 @@ public class WildernessTracker implements Resource<ChunkStore> {
 
    public static ResourceType<ChunkStore, WildernessTracker> getResourceType() {
       return WildernessPlugin.get().getWildernessTrackerResourceType();
+   }
+
+   @Nonnull
+   public static WildernessTracker getTracker(@Nonnull World world) {
+      return world.getChunkStore().getStore().getResource(getResourceType());
    }
 
    protected static class Counter {

@@ -8,7 +8,6 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Vector3dUtil;
-import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.ParticleUtil;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
@@ -56,12 +55,12 @@ public class PlayVfxEffect extends TriggerEffect {
          Store<EntityStore> store = context.getStore();
          Vector3d position;
          if (this.atEntity) {
-            TransformComponent transform = store.getComponent(context.getEntityRef(), TransformComponent.getComponentType());
-            if (transform == null) {
+            Vector3d actorPosition = context.getActorPosition();
+            if (actorPosition == null) {
                return;
             }
 
-            position = new Vector3d(transform.getPosition()).add(this.offset);
+            position = actorPosition.add(this.offset);
          } else {
             position = new Vector3d(context.getVolume().getPosition()).add(this.offset);
          }

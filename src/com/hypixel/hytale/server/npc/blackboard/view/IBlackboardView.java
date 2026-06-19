@@ -4,7 +4,7 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.blackboard.BlackboardSubscription;
 import javax.annotation.Nonnull;
 
 public interface IBlackboardView<View extends IBlackboardView<View>> {
@@ -12,7 +12,7 @@ public interface IBlackboardView<View extends IBlackboardView<View>> {
 
    View getUpdatedView(@Nonnull Ref<EntityStore> var1, @Nonnull ComponentAccessor<EntityStore> var2);
 
-   void initialiseEntity(@Nonnull Ref<EntityStore> var1, @Nonnull NPCEntity var2);
+   void initialiseEntity(@Nonnull Ref<EntityStore> var1, @Nonnull BlackboardSubscription var2);
 
    void cleanup();
 

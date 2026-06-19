@@ -13,7 +13,7 @@ public class ItemUpdate extends ComponentUpdate {
    public static final int FIXED_BLOCK_SIZE = 4;
    public static final int VARIABLE_FIELD_COUNT = 1;
    public static final int VARIABLE_BLOCK_START = 4;
-   public static final int MAX_SIZE = 32768044;
+   public static final int MAX_SIZE = 32768048;
    @Nonnull
    public ItemWithAllMetadata item = new ItemWithAllMetadata();
    public float entityScale;

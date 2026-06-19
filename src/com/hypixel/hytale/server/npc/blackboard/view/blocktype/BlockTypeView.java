@@ -17,9 +17,9 @@ import com.hypixel.hytale.server.core.universe.world.chunk.section.blockposition
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.blackboard.Blackboard;
+import com.hypixel.hytale.server.npc.blackboard.BlackboardSubscription;
 import com.hypixel.hytale.server.npc.blackboard.view.BlockRegionView;
 import com.hypixel.hytale.server.npc.blackboard.view.resource.ResourceView;
-import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
@@ -72,17 +72,21 @@ public class BlockTypeView extends BlockRegionView<BlockTypeView> {
    public BlockTypeView getUpdatedView(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       Blackboard blackBoardResource = componentAccessor.getResource(Blackboard.getResourceType());
       BlockTypeView blockTypeView = blackBoardResource.getView(BlockTypeView.class, ref, componentAccessor);
-      NPCEntity npcComponent = componentAccessor.getComponent(ref, NPCEntity.getComponentType());
-      assert npcComponent != null;
-      IntList blockSets = npcComponent.getBlackboardBlockTypeSets();
-      this.removeSearchedBlockSets(ref, npcComponent, blockSets);
-      blockTypeView.addSearchedBlockSets(ref, npcComponent, blockSets);
+      BlackboardSubscription subscription = componentAccessor.getComponent(ref, BlackboardSubscription.getComponentType());
+      assert subscription != null;
+      IntList blockSets = subscription.getBlockTypeSets();
+      assert blockSets != null;
+      this.removeSearchedBlockSets(ref, blockSets);
+      blockTypeView.addSearchedBlockSets(ref, blockSets);
       return blockTypeView;
    }
 
    @Override
-   public void initialiseEntity(@Nonnull Ref<EntityStore> ref, @Nonnull NPCEntity npcComponent) {
-      this.addSearchedBlockSets(ref, npcComponent, npcComponent.getBlackboardBlockTypeSets());
+   public void initialiseEntity(@Nonnull Ref<EntityStore> ref, @Nonnull BlackboardSubscription subscription) {
+      IntList blockSets = subscription.getBlockTypeSets();
+      if (blockSets != null) {
+         this.addSearchedBlockSets(ref, blockSets);
+      }
    }
 
    @Override
@@ -93,16 +97,10 @@ public class BlockTypeView extends BlockRegionView<BlockTypeView> {
    public void onWorldRemoved() {
    }
 
-   public void addSearchedBlockSets(@Nonnull Ref<EntityStore> ref, @Nonnull NPCEntity entity, @Nonnull IntList blockSets) {
+   public void addSearchedBlockSets(@Nonnull Ref<EntityStore> ref, @Nonnull IntList blockSets) {
       HytaleLogger.Api context = Blackboard.LOGGER.at(Level.FINEST);
       if (context.isEnabled()) {
-         context.log(
-            "Registering new entity %s (reference:%s) with partial blackboard view %s, %s",
-            entity.getRoleName(),
-            ref,
-            xOfViewIndex(this.index),
-            zOfViewIndex(this.index)
-         );
+         context.log("Registering new entity (reference:%s) with partial blackboard view %s, %s", ref, xOfViewIndex(this.index), zOfViewIndex(this.index));
       }
 
       this.entities.add(ref);
@@ -122,12 +120,11 @@ public class BlockTypeView extends BlockRegionView<BlockTypeView> {
       this.blockSetCounts.put(blockSet, existingCount + 1);
    }
 
-   public void removeSearchedBlockSets(@Nonnull Ref<EntityStore> ref, @Nonnull NPCEntity npcComponent, @Nonnull IntList blockSets) {
+   public void removeSearchedBlockSets(@Nonnull Ref<EntityStore> ref, @Nonnull IntList blockSets) {
       if (!this.entities.remove(ref)) {
          throw new IllegalStateException(
             String.format(
-               "Attempting to unregister entity %s (reference:%s) from partial blackboard view %s at %s, %s when not registered",
-               npcComponent.getRoleName(),
+               "Attempting to unregister entity (reference:%s) from partial blackboard view %s at %s, %s when not registered",
                ref,
                this.index,
                xOfViewIndex(this.index),
@@ -138,13 +135,7 @@ public class BlockTypeView extends BlockRegionView<BlockTypeView> {
 
       HytaleLogger.Api context = Blackboard.LOGGER.at(Level.FINEST);
       if (context.isEnabled()) {
-         context.log(
-            "Unregistering entity %s (reference:%s) from partial blackboard view %s, %s",
-            npcComponent.getRoleName(),
-            ref,
-            xOfViewIndex(this.index),
-            zOfViewIndex(this.index)
-         );
+         context.log("Unregistering entity (reference:%s) from partial blackboard view %s, %s", ref, xOfViewIndex(this.index), zOfViewIndex(this.index));
       }
 
       for (int i = 0; i < blockSets.size(); i++) {
@@ -181,9 +172,6 @@ public class BlockTypeView extends BlockRegionView<BlockTypeView> {
       TransformComponent transformComponent = componentAccessor.getComponent(ref, TransformComponent.getComponentType());
       assert transformComponent != null;
       Vector3d entityPos = transformComponent.getPosition();
-      NPCEntity npcComponent = componentAccessor.getComponent(ref, NPCEntity.getComponentType());
-      assert npcComponent != null;
-      String roleName = npcComponent.getRoleName();
       int entityX = MathUtil.floor(entityPos.x);
       int entityZ = MathUtil.floor(entityPos.z);
       int entityY = MathUtil.floor(entityPos.y);
@@ -230,8 +218,7 @@ public class BlockTypeView extends BlockRegionView<BlockTypeView> {
                               HytaleLogger.Api context = Blackboard.LOGGER.at(Level.FINEST);
                               if (context.isEnabled()) {
                                  context.log(
-                                    "Entity %s (reference:%s) generating new entry for chunk %s section %s in view %s, %s",
-                                    roleName,
+                                    "Entity (reference:%s) generating new entry for chunk %s section %s in view %s, %s",
                                     ref,
                                     chunkIndex,
                                     sectionIndex,
@@ -251,8 +238,7 @@ public class BlockTypeView extends BlockRegionView<BlockTypeView> {
                               if (entry != null) {
                                  if (context.isEnabled()) {
                                     context.log(
-                                       "Entity %s (reference:%s) generating new entry for chunk %s section %s across border using existing entry",
-                                       roleName,
+                                       "Entity (reference:%s) generating new entry for chunk %s section %s across border using existing entry",
                                        ref,
                                        chunkIndex,
                                        sectionIndex
@@ -263,11 +249,7 @@ public class BlockTypeView extends BlockRegionView<BlockTypeView> {
                               } else {
                                  if (context.isEnabled()) {
                                     context.log(
-                                       "Entity %s (reference:%s) generating new entry for chunk %s section %s across border",
-                                       roleName,
-                                       ref,
-                                       chunkIndex,
-                                       sectionIndex
+                                       "Entity (reference:%s) generating new entry for chunk %s section %s across border", ref, chunkIndex, sectionIndex
                                     );
                                  }
 

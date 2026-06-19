@@ -45,6 +45,9 @@ import com.hypixel.hytale.server.core.modules.entity.tracker.EntityTrackerSystem
 import com.hypixel.hytale.server.core.modules.entitystats.asset.EntityStatType;
 import com.hypixel.hytale.server.core.modules.interaction.blocktrack.BlockCounter;
 import com.hypixel.hytale.server.core.modules.interaction.blocktrack.TrackedPlacement;
+import com.hypixel.hytale.server.core.modules.interaction.breakshape.BoxBreakShape;
+import com.hypixel.hytale.server.core.modules.interaction.breakshape.BreakShape;
+import com.hypixel.hytale.server.core.modules.interaction.breakshape.CylinderBreakShape;
 import com.hypixel.hytale.server.core.modules.interaction.commands.InteractionCommand;
 import com.hypixel.hytale.server.core.modules.interaction.components.PlacedByInteractionComponent;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.InteractionPacketGenerator;
@@ -308,6 +311,8 @@ public class InteractionModule extends JavaPlugin {
       SelectorType.CODEC.register("AOECircle", AOECircleSelector.class, AOECircleSelector.CODEC);
       SelectorType.CODEC.register("AOECylinder", AOECylinderSelector.class, AOECylinderSelector.CODEC);
       SelectorType.CODEC.register("Raycast", RaycastSelector.class, RaycastSelector.CODEC);
+      BreakShape.CODEC.register("Box", BoxBreakShape.class, BoxBreakShape.CODEC);
+      BreakShape.CODEC.register("Cylinder", CylinderBreakShape.class, CylinderBreakShape.CODEC);
       Knockback.CODEC.register("Directional", DirectionalKnockback.class, DirectionalKnockback.CODEC);
       Knockback.CODEC.register("Point", PointKnockback.class, PointKnockback.CODEC);
       Knockback.CODEC.register("Force", ForceKnockback.class, ForceKnockback.CODEC);

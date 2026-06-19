@@ -22,8 +22,8 @@ public final class ObjectiveHistoryData extends CommonObjectiveHistoryData {
       .add()
       .build();
    @Nonnull
-   protected Map<UUID, List<ObjectiveRewardHistoryData>> rewardsPerPlayer = new ConcurrentHashMap<>();
-   protected ObjectiveRewardHistoryData[] rewards;
+   Map<UUID, List<ObjectiveRewardHistoryData>> rewardsPerPlayer = new ConcurrentHashMap<>();
+   ObjectiveRewardHistoryData[] rewards;
 
    public ObjectiveHistoryData(String id, String category) {
       super(id, category);
@@ -34,7 +34,7 @@ public final class ObjectiveHistoryData extends CommonObjectiveHistoryData {
       this.rewards = rewards;
    }
 
-   protected ObjectiveHistoryData() {
+   ObjectiveHistoryData() {
    }
 
    public ObjectiveRewardHistoryData[] getRewards() {

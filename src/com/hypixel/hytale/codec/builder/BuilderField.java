@@ -10,6 +10,7 @@ import com.hypixel.hytale.codec.schema.config.Schema;
 import com.hypixel.hytale.codec.schema.metadata.Metadata;
 import com.hypixel.hytale.codec.util.RawJsonReader;
 import com.hypixel.hytale.codec.validation.LateValidator;
+import com.hypixel.hytale.codec.validation.LazyLateValidator;
 import com.hypixel.hytale.codec.validation.LegacyValidator;
 import com.hypixel.hytale.codec.validation.ValidatableCodec;
 import com.hypixel.hytale.codec.validation.ValidationResults;
@@ -341,41 +342,12 @@ public class BuilderField<Type, FieldType> {
       }
 
       @Nonnull
-      public BuilderField.FieldBuilder<T, FieldType, Builder> addValidatorLate(@Nonnull final Supplier<LateValidator<? super FieldType>> validatorSupplier) {
+      public BuilderField.FieldBuilder<T, FieldType, Builder> addValidatorLate(@Nonnull Supplier<LateValidator<? super FieldType>> validatorSupplier) {
          if (this.validators == null) {
             this.validators = new ObjectArrayList<>();
          }
 
-         this.validators.add(new LateValidator<FieldType>() {
-            private LateValidator<? super FieldType> validator;
-
-            @Override
-            public void accept(FieldType fieldType, ValidationResults results) {
-               if (this.validator == null) {
-                  this.validator = validatorSupplier.get();
-               }
-
-               this.validator.accept(fieldType, results);
-            }
-
-            @Override
-            public void acceptLate(FieldType fieldType, ValidationResults results, ExtraInfo extraInfo) {
-               if (this.validator == null) {
-                  this.validator = validatorSupplier.get();
-               }
-
-               this.validator.acceptLate(fieldType, results, extraInfo);
-            }
-
-            @Override
-            public void updateSchema(SchemaContext context, Schema target) {
-               if (this.validator == null) {
-                  this.validator = validatorSupplier.get();
-               }
-
-               this.validator.updateSchema(context, target);
-            }
-         });
+         this.validators.add(new LazyLateValidator<>(validatorSupplier));
          return this;
       }
 

@@ -3,6 +3,7 @@ package com.hypixel.hytale.builtin.buildertools.snapshot;
 import com.hypixel.hytale.component.Archetype;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.protocol.ColorLight;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.modules.entity.component.DynamicLight;
@@ -15,17 +16,20 @@ import com.hypixel.hytale.server.core.modules.interaction.Interactions;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class EntitySettingsSnapshot implements EntitySnapshot<EntitySettingsSnapshot> {
-   private static final int NO_COLLISION = -1;
+   @Nonnull
+   private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
    @Nonnull
    private Ref<EntityStore> ref;
    @Nullable
    private final ColorLight previousLight;
    private final boolean wasPickupEnabled;
-   private final int previousCollisionConfigIndex;
+   @Nullable
+   private final String previousCollisionConfigId;
 
    public EntitySettingsSnapshot(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       this.ref = ref;
@@ -33,7 +37,7 @@ public class EntitySettingsSnapshot implements EntitySnapshot<EntitySettingsSnap
       this.previousLight = dynamicLight != null ? new ColorLight(dynamicLight.getColorLight()) : null;
       this.wasPickupEnabled = !componentAccessor.getArchetype(ref).contains(PreventPickup.getComponentType());
       HitboxCollision hitboxCollision = componentAccessor.getComponent(ref, HitboxCollision.getComponentType());
-      this.previousCollisionConfigIndex = hitboxCollision != null ? hitboxCollision.getHitboxCollisionConfigIndex() : -1;
+      this.previousCollisionConfigId = hitboxCollision != null ? hitboxCollision.getHitboxCollisionConfigId() : null;
    }
 
    @Override
@@ -127,15 +131,17 @@ public class EntitySettingsSnapshot implements EntitySnapshot<EntitySettingsSnap
    }
 
    private void restoreCollision(@Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      if (this.previousCollisionConfigIndex == -1) {
+      if (this.previousCollisionConfigId == null) {
          componentAccessor.tryRemoveComponent(this.ref, HitboxCollision.getComponentType());
       } else {
-         HitboxCollision currentHitbox = componentAccessor.getComponent(this.ref, HitboxCollision.getComponentType());
-         if (currentHitbox != null) {
-            currentHitbox.setHitboxCollisionConfigIndex(this.previousCollisionConfigIndex);
+         HitboxCollisionConfig config = HitboxCollisionConfig.getAssetMap().getAsset(this.previousCollisionConfigId);
+         if (config == null) {
+            LOGGER.at(Level.FINE).log("Dropping HitboxCollision restore; config '%s' no longer exists", this.previousCollisionConfigId);
          } else {
-            HitboxCollisionConfig config = HitboxCollisionConfig.getAssetMap().getAsset(this.previousCollisionConfigIndex);
-            if (config != null) {
+            HitboxCollision currentHitbox = componentAccessor.getComponent(this.ref, HitboxCollision.getComponentType());
+            if (currentHitbox != null) {
+               currentHitbox.setHitboxCollisionConfig(config);
+            } else {
                componentAccessor.addComponent(this.ref, HitboxCollision.getComponentType(), new HitboxCollision(config));
             }
          }

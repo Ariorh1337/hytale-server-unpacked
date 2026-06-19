@@ -43,7 +43,9 @@ public abstract class ASTOperator extends AST {
             ASTOperatorBinary.fromBinaryOperator(operand, compileContext);
          }
       } catch (NoSuchElementException e) {
-         throw new ParseException("Not enough operands for operator '" + operand.tokenString, operand.tokenPosition);
+         ParseException error = new ParseException("Not enough operands for operator '" + operand.tokenString, operand.tokenPosition);
+         error.initCause(e);
+         throw error;
       }
    }
 }

@@ -25,15 +25,15 @@ public final class ItemObjectiveRewardHistoryData extends ObjectiveRewardHistory
       )
       .add()
       .build();
-   protected String itemId;
-   protected int quantity;
+   String itemId;
+   int quantity;
 
    public ItemObjectiveRewardHistoryData(String itemId, int quantity) {
       this.itemId = itemId;
       this.quantity = quantity;
    }
 
-   protected ItemObjectiveRewardHistoryData() {
+   ItemObjectiveRewardHistoryData() {
    }
 
    public String getItemId() {

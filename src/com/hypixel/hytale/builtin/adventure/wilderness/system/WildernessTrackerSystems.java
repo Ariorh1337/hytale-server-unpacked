@@ -1,5 +1,6 @@
 package com.hypixel.hytale.builtin.adventure.wilderness.system;
 
+import com.hypixel.hytale.builtin.adventure.wilderness.WildernessConfig;
 import com.hypixel.hytale.builtin.adventure.wilderness.resource.WildernessTracker;
 import com.hypixel.hytale.builtin.adventure.wilderness.resource.WildernessVisitor;
 import com.hypixel.hytale.component.AddReason;
@@ -12,7 +13,6 @@ import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.RefChangeSystem;
 import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.server.core.asset.type.gameplay.WildernessConfig;
 import com.hypixel.hytale.server.core.modules.block.BlockModule;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
@@ -30,19 +30,22 @@ public class WildernessTrackerSystems {
    public static WildernessTracker reload(@Nonnull World world) {
       Store<ChunkStore> store = world.getChunkStore().getStore();
       store.assertThread();
-      WildernessConfig config = world.getGameplayConfig().getWorldConfig().getWildernessConfig();
+      WildernessConfig config = WildernessConfig.getOrDefault(world);
       WildernessTracker tracker = new WildernessTracker(config);
-      if (!tracker.isDisabled()) {
+      if (tracker.isEnabled()) {
          try (WildernessVisitor.ChunkVisitor visitor = store.getResource(WildernessVisitor.getChunkResourceType())) {
             store.forEachEntityParallel(SPAWN_BLOCKSTATE_QUERY, visitor.setup(tracker, (i, table, buffer, t) -> {
                BlockModule.BlockStateInfo state = table.getComponent(i, BLOCK_STATE_COMPONENT_TYPE);
                assert state != null;
+               RespawnBlock spawn = table.getComponent(i, SPAWN_BLOCK_COMPONENT_TYPE);
+               assert spawn != null;
                WorldChunk chunk = buffer.getComponent(state.getChunkRef(), CHUNK_COMPONENT_TYPE);
                assert chunk != null;
                int chunkX = chunk.getX();
                int chunkZ = chunk.getZ();
                int chunkY = ChunkUtil.chunkCoordinate(ChunkUtil.yFromBlockInColumn(state.getIndex()));
-               t.addHomeChunk(chunkX, chunkY, chunkZ);
+               boolean owned = spawn.getOwnerUUID() != null;
+               t.addHomeChunk(chunkX, chunkY, chunkZ, owned);
             }));
          }
       }
@@ -83,45 +86,57 @@ public class WildernessTrackerSystems {
          @Nonnull Store<ChunkStore> store,
          @Nonnull CommandBuffer<ChunkStore> buffer
       ) {
-         if (oldSpawn != null && oldSpawn.getOwnerUUID() != null) {
-            if (newSpawn.getOwnerUUID() == null) {
-               onRemove(ref, oldSpawn, buffer);
+         WildernessTracker tracker = buffer.getResource(WildernessTracker.getResourceType());
+         if (!tracker.isDisabled()) {
+            if (oldSpawn == null) {
+               onAdd(ref, newSpawn, buffer);
+            } else {
+               boolean isOwned = newSpawn.getOwnerUUID() != null;
+               boolean wasOwned = oldSpawn.getOwnerUUID() != null;
+               if (isOwned != wasOwned) {
+                  BlockModule.BlockStateInfo state = buffer.getComponent(ref, WildernessTrackerSystems.BLOCK_STATE_COMPONENT_TYPE);
+                  assert state != null : "System query matched an entity that does not have component: BlockModule.BlockStateInfo";
+                  WorldChunk chunk = buffer.getComponent(state.getChunkRef(), WildernessTrackerSystems.CHUNK_COMPONENT_TYPE);
+                  if (chunk != null) {
+                     int chunkX = chunk.getX();
+                     int chunkZ = chunk.getZ();
+                     int chunkY = ChunkUtil.chunkCoordinate(ChunkUtil.yFromBlockInColumn(state.getIndex()));
+                     tracker.removeHomeChunk(chunkX, chunkY, chunkZ, wasOwned);
+                     tracker.addHomeChunk(chunkX, chunkY, chunkZ, isOwned);
+                  }
+               }
             }
-         } else {
-            onAdd(ref, newSpawn, buffer);
          }
       }
 
       protected static void onAdd(@Nonnull Ref<ChunkStore> ref, @Nonnull RespawnBlock spawn, @Nonnull CommandBuffer<ChunkStore> buffer) {
-         if (spawn.getOwnerUUID() != null) {
-            WildernessTracker tracker = buffer.getResource(WildernessTracker.getResourceType());
-            if (!tracker.isDisabled()) {
-               BlockModule.BlockStateInfo state = buffer.getComponent(ref, WildernessTrackerSystems.BLOCK_STATE_COMPONENT_TYPE);
-               assert state != null : "System query matched an entity that does not have component: BlockModule.BlockStateInfo";
-               WorldChunk chunk = buffer.getComponent(state.getChunkRef(), WildernessTrackerSystems.CHUNK_COMPONENT_TYPE);
-               if (chunk != null) {
-                  int chunkX = chunk.getX();
-                  int chunkZ = chunk.getZ();
-                  int chunkY = ChunkUtil.chunkCoordinate(ChunkUtil.yFromBlockInColumn(state.getIndex()));
-                  tracker.addHomeChunk(chunkX, chunkY, chunkZ);
-               }
+         WildernessTracker tracker = buffer.getResource(WildernessTracker.getResourceType());
+         if (!tracker.isDisabled()) {
+            BlockModule.BlockStateInfo state = buffer.getComponent(ref, WildernessTrackerSystems.BLOCK_STATE_COMPONENT_TYPE);
+            assert state != null : "System query matched an entity that does not have component: BlockModule.BlockStateInfo";
+            WorldChunk chunk = buffer.getComponent(state.getChunkRef(), WildernessTrackerSystems.CHUNK_COMPONENT_TYPE);
+            if (chunk != null) {
+               int chunkX = chunk.getX();
+               int chunkZ = chunk.getZ();
+               int chunkY = ChunkUtil.chunkCoordinate(ChunkUtil.yFromBlockInColumn(state.getIndex()));
+               boolean owned = spawn.getOwnerUUID() != null;
+               tracker.addHomeChunk(chunkX, chunkY, chunkZ, owned);
             }
          }
       }
 
       protected static void onRemove(@Nonnull Ref<ChunkStore> ref, @Nonnull RespawnBlock spawn, @Nonnull CommandBuffer<ChunkStore> buffer) {
-         if (spawn.getOwnerUUID() != null) {
-            WildernessTracker tracker = buffer.getResource(WildernessTracker.getResourceType());
-            if (!tracker.isDisabled()) {
-               BlockModule.BlockStateInfo state = buffer.getComponent(ref, WildernessTrackerSystems.BLOCK_STATE_COMPONENT_TYPE);
-               assert state != null : "System query matched an entity that does not have component: BlockModule.BlockStateInfo";
-               WorldChunk chunk = buffer.getComponent(state.getChunkRef(), WildernessTrackerSystems.CHUNK_COMPONENT_TYPE);
-               if (chunk != null) {
-                  int chunkX = chunk.getX();
-                  int chunkZ = chunk.getZ();
-                  int chunkY = ChunkUtil.chunkCoordinate(ChunkUtil.yFromBlockInColumn(state.getIndex()));
-                  tracker.removeHomeChunk(chunkX, chunkY, chunkZ);
-               }
+         WildernessTracker tracker = buffer.getResource(WildernessTracker.getResourceType());
+         if (!tracker.isDisabled()) {
+            BlockModule.BlockStateInfo state = buffer.getComponent(ref, WildernessTrackerSystems.BLOCK_STATE_COMPONENT_TYPE);
+            assert state != null : "System query matched an entity that does not have component: BlockModule.BlockStateInfo";
+            WorldChunk chunk = buffer.getComponent(state.getChunkRef(), WildernessTrackerSystems.CHUNK_COMPONENT_TYPE);
+            if (chunk != null) {
+               int chunkX = chunk.getX();
+               int chunkZ = chunk.getZ();
+               int chunkY = ChunkUtil.chunkCoordinate(ChunkUtil.yFromBlockInColumn(state.getIndex()));
+               boolean owned = spawn.getOwnerUUID() != null;
+               tracker.removeHomeChunk(chunkX, chunkY, chunkZ, owned);
             }
          }
       }

@@ -1,7 +1,7 @@
 package com.hypixel.hytale.server.npc.components.messaging;
 
+import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.flock.FlockMembership;
@@ -12,18 +12,18 @@ import org.joml.Vector3d;
 
 public abstract class EntityEventSupport extends EventSupport<EntityEventType, EntityEventNotification> {
    public void postMessage(
-      EntityEventType type, @Nonnull EntityEventNotification notification, @Nonnull Ref<EntityStore> parent, @Nonnull Store<EntityStore> store
+      EntityEventType type, @Nonnull EntityEventNotification notification, @Nonnull Ref<EntityStore> parent, @Nonnull ComponentAccessor<EntityStore> accessor
    ) {
       EventMessage slot = this.getMessageSlot(type, notification);
       if (slot != null && slot.isEnabled()) {
-         Vector3d parentEntityPosition = store.getComponent(parent, TransformComponent.getComponentType()).getPosition();
+         Vector3d parentEntityPosition = accessor.getComponent(parent, TransformComponent.getComponentType()).getPosition();
          Vector3d pos = notification.getPosition();
          double x = pos.x();
          double y = pos.y();
          double z = pos.z();
          double distanceSquared = parentEntityPosition.distanceSquared(x, y, z);
          if (!(distanceSquared > slot.getMaxRangeSquared())) {
-            FlockMembership flockMembership = store.getComponent(parent, FlockMembership.getComponentType());
+            FlockMembership flockMembership = accessor.getComponent(parent, FlockMembership.getComponentType());
             Ref<EntityStore> flockReference = flockMembership != null ? flockMembership.getFlockRef() : null;
             boolean isSameFlock = flockReference != null && flockReference.equals(notification.getFlockReference());
             if (!slot.isActivated() || distanceSquared < slot.getPosition().distanceSquared(parentEntityPosition) || !slot.isSameFlock() && isSameFlock) {

@@ -8,7 +8,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.ActionBase;
 import com.hypixel.hytale.server.npc.corecomponents.audiovisual.builders.BuilderActionPlaySound;
-import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import javax.annotation.Nonnull;
@@ -34,8 +33,6 @@ public class ActionPlaySound extends ActionBase {
       super.execute(ref, executionSupport, sensorInfo, dt, store);
       TransformComponent transformComponent = store.getComponent(ref, TransformComponent.getComponentType());
       assert transformComponent != null;
-      NPCEntity npcComponent = store.getComponent(ref, NPCEntity.getComponentType());
-      assert npcComponent != null;
       Vector3d position = transformComponent.getPosition();
       SoundUtil.playSoundEvent3d(ref, this.soundEventIndex, position.x(), position.y(), position.z(), false, store);
       return true;

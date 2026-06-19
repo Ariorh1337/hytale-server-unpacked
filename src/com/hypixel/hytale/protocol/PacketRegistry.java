@@ -115,6 +115,7 @@ import com.hypixel.hytale.protocol.packets.auth.PasswordRejected;
 import com.hypixel.hytale.protocol.packets.auth.PasswordResponse;
 import com.hypixel.hytale.protocol.packets.auth.ServerAuthToken;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolArgUpdate;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolColorAction;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolEntityAction;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolExtrudeAction;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolGMaskPreset;
@@ -142,6 +143,7 @@ import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSetNPCDebug;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSetTransformationModeState;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolShowAnchor;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolStackArea;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolsEnabledTools;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolsSetSoundSet;
 import com.hypixel.hytale.protocol.packets.buildertools.PrefabSetAnchor;
 import com.hypixel.hytale.protocol.packets.buildertools.PrefabUnselectPrefab;
@@ -839,7 +841,7 @@ public final class PacketRegistry {
          45,
          "UpdateBlockBreakingDecals",
          UpdateBlockBreakingDecals.class,
-         2,
+         1,
          1677721600,
          true,
          UpdateBlockBreakingDecals::validateStructure,
@@ -1645,8 +1647,8 @@ public final class PacketRegistry {
          117,
          "ClientPlaceBlock",
          ClientPlaceBlock.class,
-         23,
-         23,
+         24,
+         24,
          false,
          ClientPlaceBlock::validateStructure,
          ClientPlaceBlock::deserialize,
@@ -4199,6 +4201,32 @@ public final class PacketRegistry {
          BuilderToolGMaskPresetLoadResponse::validateStructure,
          BuilderToolGMaskPresetLoadResponse::deserialize,
          BuilderToolGMaskPresetLoadResponse::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         432,
+         "BuilderToolsEnabledTools",
+         BuilderToolsEnabledTools.class,
+         1,
+         1677721600,
+         false,
+         BuilderToolsEnabledTools::validateStructure,
+         BuilderToolsEnabledTools::deserialize,
+         BuilderToolsEnabledTools::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         433,
+         "BuilderToolColorAction",
+         BuilderToolColorAction.class,
+         56,
+         32768074,
+         false,
+         BuilderToolColorAction::validateStructure,
+         BuilderToolColorAction::deserialize,
+         BuilderToolColorAction::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,

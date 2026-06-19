@@ -2,6 +2,7 @@ package com.hypixel.hytale.codec.schema;
 
 import com.hypixel.hytale.codec.EmptyExtraInfo;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.record.RecordCodec;
 import com.hypixel.hytale.codec.schema.config.NullSchema;
 import com.hypixel.hytale.codec.schema.config.Schema;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
@@ -59,6 +60,19 @@ public class SchemaContext {
          }
 
          return c;
+      } else if (convertable instanceof RecordCodec<T> recordCodec) {
+         String name = this.resolveName(recordCodec.getType());
+         if (!this.definitions.containsKey(name)) {
+            this.definitions.put(name, NullSchema.INSTANCE);
+            this.definitions.put(name, convertable.toSchema(this));
+         }
+
+         Schema c = Schema.ref("common.json#/definitions/" + name);
+         if (def != null) {
+            c.setDefaultRaw(recordCodec.encode(def, EmptyExtraInfo.EMPTY));
+         }
+
+         return c;
       } else if (convertable instanceof NamedSchema namedSchema) {
          String name = this.resolveName(namedSchema);
          if (!this.otherDefinitions.containsKey(name)) {
@@ -104,7 +118,12 @@ public class SchemaContext {
 
    @Nonnull
    private String resolveName(@Nonnull BuilderCodec<?> codec) {
-      return this.nameMap.computeIfAbsent(codec.getInnerClass(), key -> {
+      return this.resolveName(codec.getInnerClass());
+   }
+
+   @Nonnull
+   private String resolveName(@Nonnull Class<?> clazz) {
+      return this.nameMap.computeIfAbsent(clazz, key -> {
          String n = ((Class)key).getSimpleName();
          int count = this.nameCollisionCount.getInt(n);
          this.nameCollisionCount.put(n, count + 1);

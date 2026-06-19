@@ -73,7 +73,7 @@ public enum DistanceCalculationMode {
       }
    });
 
-   protected static final DistanceCalculationMode[] VALUES = values();
+   static final DistanceCalculationMode[] VALUES = values();
    private final PointDistanceFunction function;
 
    DistanceCalculationMode(PointDistanceFunction function) {

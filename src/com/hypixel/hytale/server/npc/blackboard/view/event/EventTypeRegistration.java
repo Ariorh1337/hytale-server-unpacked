@@ -7,7 +7,7 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.function.consumer.IntObjectConsumer;
 import com.hypixel.hytale.function.predicate.BiIntPredicate;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.blackboard.BlackboardSubscription;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntIterator;
@@ -17,11 +17,9 @@ import java.util.BitSet;
 import java.util.List;
 import java.util.function.Consumer;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 public class EventTypeRegistration<EventType extends Enum<EventType>, NotificationType extends EventNotification> {
-   @Nullable
-   private static final ComponentType<EntityStore, NPCEntity> NPC_COMPONENT_TYPE = NPCEntity.getComponentType();
+   private static final ComponentType<EntityStore, BlackboardSubscription> SUBSCRIPTION_COMPONENT_TYPE = BlackboardSubscription.getComponentType();
    private final EventType type;
    private final BitSet eventSets = new BitSet();
    private final Int2ObjectMap<List<Ref<EntityStore>>> entitiesBySet = new Int2ObjectOpenHashMap<>();
@@ -61,8 +59,10 @@ public class EventTypeRegistration<EventType extends Enum<EventType>, Notificati
                for (int j = 0; j < entities.size(); j++) {
                   Ref<EntityStore> entity = entities.get(j);
                   if (entity.isValid() && !entity.equals(initiator) && !entity.equals(skipEntityReference)) {
-                     NPCEntity npc = componentAccessor.getComponent(entity, NPC_COMPONENT_TYPE);
-                     this.eventCallback.notify(npc, this.type, reusableEventNotification);
+                     BlackboardSubscription subscription = componentAccessor.getComponent(entity, SUBSCRIPTION_COMPONENT_TYPE);
+                     if (subscription != null) {
+                        this.eventCallback.notify(subscription, entity, componentAccessor, this.type, reusableEventNotification);
+                     }
                   }
                }
             }

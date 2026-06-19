@@ -54,7 +54,9 @@ public class ASTOperatorUnary extends ASTOperator {
             operandStack.push(node);
          }
       } catch (NoSuchElementException e) {
-         throw new ParseException("Not enough operands for operator '" + operand.tokenString, tokenPosition);
+         ParseException error = new ParseException("Not enough operands for operator '" + operand.tokenString, tokenPosition);
+         error.initCause(e);
+         throw error;
       }
    }
 }

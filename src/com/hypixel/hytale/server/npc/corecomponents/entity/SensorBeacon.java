@@ -23,6 +23,7 @@ public class SensorBeacon extends SensorBase {
    protected final double range;
    protected final int targetSlot;
    protected final boolean consume;
+   protected final boolean rebind;
    private final EntityPositionProvider positionProvider = new EntityPositionProvider();
 
    public SensorBeacon(@Nonnull BuilderSensorBeacon builderSensorBeacon, @Nonnull BuilderSupport builderSupport) {
@@ -31,6 +32,7 @@ public class SensorBeacon extends SensorBase {
       this.range = builderSensorBeacon.getRange(builderSupport);
       this.targetSlot = builderSensorBeacon.getTargetSlot(builderSupport);
       this.consume = builderSensorBeacon.isConsume();
+      this.rebind = builderSensorBeacon.isRebind();
    }
 
    @Override
@@ -70,7 +72,7 @@ public class SensorBeacon extends SensorBase {
          }
 
          if (this.targetSlot >= 0) {
-            executionSupport.getMarkedEntitySupport().setMarkedEntity(this.targetSlot, targetRef);
+            executionSupport.getMarkedEntitySupport().setMarkedEntity(this.targetSlot, targetRef, this.rebind, store);
          }
 
          if (executionSupport.getDebugSupport().isDebugFlagSet(RoleDebugFlags.BeaconMessages)) {

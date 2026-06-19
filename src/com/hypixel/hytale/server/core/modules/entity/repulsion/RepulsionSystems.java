@@ -154,7 +154,7 @@ public class RepulsionSystems {
 
       public PlayerSetup(ComponentType<EntityStore, Repulsion> componentType, ComponentType<EntityStore, Player> playerComponentType) {
          this.componentType = componentType;
-         this.query = Query.and(playerComponentType, Query.not(componentType));
+         this.query = Query.and(playerComponentType);
       }
 
       @Nonnull
@@ -166,18 +166,23 @@ public class RepulsionSystems {
       @Override
       public void onEntityAdd(@Nonnull Holder<EntityStore> holder, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store) {
          World world = store.getExternalData().getWorld();
-         int repulsionConfigIndex = world.getGameplayConfig().getPlayerConfig().getRepulsionConfigIndex();
-         if (repulsionConfigIndex == -1) {
-            if (holder.getComponent(this.componentType) != null) {
+         Repulsion existing = holder.getComponent(this.componentType);
+         int index = world.getGameplayConfig().getPlayerConfig().getRepulsionConfigIndex();
+         if (index == -1) {
+            if (existing != null && existing.isMigrated()) {
                holder.removeComponent(this.componentType);
             }
          } else {
-            RepulsionConfig repulsion = RepulsionConfig.getAssetMap().getAsset(repulsionConfigIndex);
-            if (holder.getComponent(this.componentType) != null) {
-               holder.removeComponent(this.componentType);
+            RepulsionConfig config = RepulsionConfig.getAssetMap().getAsset(index);
+            if (config != null) {
+               if (existing != null) {
+                  if (existing.isMigrated()) {
+                     existing.setRepulsionConfig(config);
+                  }
+               } else {
+                  holder.addComponent(this.componentType, new Repulsion(config));
+               }
             }
-
-            holder.addComponent(this.componentType, new Repulsion(repulsion));
          }
       }
 

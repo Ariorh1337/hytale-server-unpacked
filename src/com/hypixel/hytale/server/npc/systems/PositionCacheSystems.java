@@ -21,7 +21,6 @@ import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.component.system.RefChangeSystem;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.entity.component.CachedStatsComponent;
-import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.system.PlayerSpatialSystem;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -66,15 +65,23 @@ public class PositionCacheSystems {
          positionCache.requirePlayerDistanceAvoidance(flockInfluenceRange);
       }
 
-      Instruction instruction = role.getRootInstruction();
-      instruction.registerWithSupport(executionSupport);
-      Instruction interactionInstruction = role.getInteractionInstruction();
+      registerInstructionsWithCache(executionSupport, role.getRootInstruction(), role.getInteractionInstruction(), role.getDeathInstruction(), stateEvaluator);
+   }
+
+   public static void registerInstructionsWithCache(
+      @Nonnull ExecutionSupport executionSupport,
+      @Nonnull Instruction rootInstruction,
+      @Nullable Instruction interactionInstruction,
+      @Nullable Instruction deathInstruction,
+      @Nullable StateEvaluator stateEvaluator
+   ) {
+      PositionCache positionCache = executionSupport.getPositionCache();
+      rootInstruction.registerWithSupport(executionSupport);
       if (interactionInstruction != null) {
          interactionInstruction.registerWithSupport(executionSupport);
          positionCache.requirePlayerDistanceUnsorted(10.0);
       }
 
-      Instruction deathInstruction = role.getDeathInstruction();
       if (deathInstruction != null) {
          deathInstruction.registerWithSupport(executionSupport);
       }
@@ -230,10 +237,6 @@ public class PositionCacheSystems {
       @Nonnull
       private static final ThreadLocal<BucketItemPool<Ref<EntityStore>>> BUCKET_POOL_THREAD_LOCAL = ThreadLocal.withInitial(BucketItemPool::new);
       @Nonnull
-      private final ComponentType<EntityStore, NPCEntity> npcComponentType;
-      @Nonnull
-      private final ComponentType<EntityStore, ModelComponent> modelComponentType;
-      @Nonnull
       private final ComponentType<EntityStore, TransformComponent> transformComponentType;
       @Nonnull
       private final ResourceType<EntityStore, SpatialResource<Ref<EntityStore>, EntityStore>> playerSpatialResource;
@@ -249,17 +252,12 @@ public class PositionCacheSystems {
          new SystemDependency<>(Order.BEFORE, RoleSystems.PreBehaviourSupportTickSystem.class)
       );
 
-      public UpdateSystem(
-         @Nonnull ComponentType<EntityStore, NPCEntity> npcComponentType,
-         @Nonnull ResourceType<EntityStore, SpatialResource<Ref<EntityStore>, EntityStore>> npcSpatialResource
-      ) {
-         this.npcComponentType = npcComponentType;
-         this.modelComponentType = ModelComponent.getComponentType();
+      public UpdateSystem(@Nonnull ResourceType<EntityStore, SpatialResource<Ref<EntityStore>, EntityStore>> npcSpatialResource) {
          this.transformComponentType = TransformComponent.getComponentType();
          this.playerSpatialResource = EntityModule.get().getPlayerSpatialResourceType();
          this.npcSpatialResource = npcSpatialResource;
          this.itemSpatialResource = EntityModule.get().getItemSpatialResourceType();
-         this.query = Query.and(npcComponentType, this.transformComponentType, this.modelComponentType, CachedStatsComponent.getComponentType());
+         this.query = Query.and(PositionCache.getComponentType(), this.transformComponentType);
       }
 
       @Nonnull
@@ -288,15 +286,14 @@ public class PositionCacheSystems {
          @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
          Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
-         NPCEntity npcComponent = archetypeChunk.getComponent(index, this.npcComponentType);
-         assert npcComponent != null;
-         Role role = npcComponent.getRole();
          PositionCache positionCache = archetypeChunk.getComponent(index, PositionCache.getComponentType());
          assert positionCache != null;
          positionCache.setBenchmarking(NPCPlugin.get().isBenchmarkingSensorSupport());
          CachedStatsComponent cachedStats = archetypeChunk.getComponent(index, CachedStatsComponent.getComponentType());
-         assert cachedStats != null;
-         positionCache.setCouldBreathe(cachedStats.isCanBreathe());
+         if (cachedStats != null) {
+            positionCache.setCouldBreathe(cachedStats.isCanBreathe());
+         }
+
          if (positionCache.tickPositionCacheNextUpdate(dt)) {
             positionCache.resetPositionCacheNextUpdate();
             TransformComponent transformComponent = archetypeChunk.getComponent(index, this.transformComponentType);
@@ -312,7 +309,7 @@ public class PositionCacheSystems {
                   long getTime = System.nanoTime();
                   NPCPlugin.get()
                      .collectSensorSupportPlayerList(
-                        role.getRoleIndex(),
+                        positionCache.getRoleIndex(),
                         getTime - startTime,
                         players.getMaxDistanceSorted(),
                         players.getMaxDistanceUnsorted(),
@@ -334,7 +331,7 @@ public class PositionCacheSystems {
                   long getTime = System.nanoTime();
                   NPCPlugin.get()
                      .collectSensorSupportEntityList(
-                        role.getRoleIndex(),
+                        positionCache.getRoleIndex(),
                         getTime - startTime,
                         npcEntities.getMaxDistanceSorted(),
                         npcEntities.getMaxDistanceUnsorted(),

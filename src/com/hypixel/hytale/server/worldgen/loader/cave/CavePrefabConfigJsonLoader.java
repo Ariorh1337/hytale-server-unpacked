@@ -71,7 +71,7 @@ public class CavePrefabConfigJsonLoader extends JsonLoader<SeedStringResource, C
                try {
                   prefabRotations[i] = PrefabRotation.valueOf(name);
                } catch (Throwable e) {
-                  throw new Error(String.format(CavePrefabConfigJsonLoader.Constants.ERROR_ROTATIONS_UNKOWN, name));
+                  throw new Error(String.format(CavePrefabConfigJsonLoader.Constants.ERROR_ROTATIONS_UNKOWN, name), e);
                }
             }
          } else {
@@ -85,7 +85,7 @@ public class CavePrefabConfigJsonLoader extends JsonLoader<SeedStringResource, C
             try {
                prefabRotations[0] = PrefabRotation.valueOf(name);
             } catch (Throwable e) {
-               throw new Error(String.format(CavePrefabConfigJsonLoader.Constants.ERROR_ROTATIONS_UNKOWN, name));
+               throw new Error(String.format(CavePrefabConfigJsonLoader.Constants.ERROR_ROTATIONS_UNKOWN, name), e);
             }
          }
       }

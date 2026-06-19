@@ -1460,7 +1460,7 @@ public class AssetEditorPlugin extends JavaPlugin {
                this.getLogger().at(Level.INFO).log("Got '%s'", assetPath);
                BsonDocument bson = BsonDocument.parse(new String(asset, StandardCharsets.UTF_8));
                Object2ObjectOpenHashMap<com.hypixel.hytale.protocol.packets.asseteditor.AssetPath, String> assets = new Object2ObjectOpenHashMap<>();
-               assets.put(assetPath.toPacket(), BsonUtil.translateBsonToJson(bson).getAsJsonObject().toString());
+               assets.put(assetPath.toPacket(), BsonUtil.toJson(bson));
                editorClient.getPacketHandler().write(new AssetEditorFetchJsonAssetWithParentsReply(requestToken, assets));
                return;
             }

@@ -28,6 +28,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.blackboard.Blackboard;
+import com.hypixel.hytale.server.npc.blackboard.BlackboardSubscription;
 import com.hypixel.hytale.server.npc.blackboard.view.BlockRegionView;
 import com.hypixel.hytale.server.npc.blackboard.view.blocktype.BlockTypeView;
 import com.hypixel.hytale.server.npc.blackboard.view.event.block.BlockEventView;
@@ -531,17 +532,19 @@ public class NPCBlackboardCommand extends AbstractCommandCollection {
                   } else {
                      sb.append(npc.getRoleName()).append("\n    BlockSets: [ ");
                      msg.insert(Message.translation("server.commands.npc.blackboard.view.blockSets"));
-                     IntList blockSets = npc.getBlackboardBlockTypeSets();
+                     BlackboardSubscription subscription = store.getComponent((Ref<EntityStore>)ref, BlackboardSubscription.getComponentType());
+                     IntList blockSets = subscription != null ? subscription.getBlockTypeSets() : null;
+                     if (blockSets != null) {
+                        for (int i = 0; i < blockSets.size(); i++) {
+                           if (i > 0) {
+                              sb.append(", ");
+                              msg.insert(", ");
+                           }
 
-                     for (int i = 0; i < blockSets.size(); i++) {
-                        if (i > 0) {
-                           sb.append(", ");
-                           msg.insert(", ");
+                           String blockSetId = BlockSet.getAssetMap().getAsset(blockSets.getInt(i)).getId();
+                           sb.append(blockSetId);
+                           msg.insert(blockSetId);
                         }
-
-                        String blockSetId = BlockSet.getAssetMap().getAsset(blockSets.getInt(i)).getId();
-                        sb.append(blockSetId);
-                        msg.insert(blockSetId);
                      }
 
                      sb.append(" ]\n");

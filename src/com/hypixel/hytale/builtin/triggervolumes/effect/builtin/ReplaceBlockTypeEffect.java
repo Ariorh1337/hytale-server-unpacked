@@ -15,6 +15,8 @@ import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.Rotation;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
 import com.hypixel.hytale.server.core.asset.type.fluid.Fluid;
 import com.hypixel.hytale.server.core.prefab.selection.mask.BlockFilter;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -63,6 +65,8 @@ public class ReplaceBlockTypeEffect extends TriggerEffect {
          effect -> effect.offset
       )
       .add()
+      .append(new KeyedCodec<>("Rotation", new EnumCodec<>(Rotation.class), false), (effect, rotation) -> effect.rotation = rotation, effect -> effect.rotation)
+      .add()
       .build();
    @Nonnull
    private String[] fromBlockTypes = STRINGS;
@@ -75,6 +79,8 @@ public class ReplaceBlockTypeEffect extends TriggerEffect {
    private float sizeZ;
    @Nonnull
    private Vector3d offset = new Vector3d();
+   @Nonnull
+   private Rotation rotation = Rotation.None;
 
    @Override
    public void execute(@Nonnull TriggerContext context) {
@@ -126,8 +132,20 @@ public class ReplaceBlockTypeEffect extends TriggerEffect {
                                           WorldChunk worldChunkComponent = chunkComponentStore.getComponent(chunkRef, WorldChunk.getComponentType());
                                           if (worldChunkComponent != null) {
                                              boolean isFiller = currentFiller != 0;
+                                             int rotationOverride = this.rotation != Rotation.None
+                                                ? RotationTuple.index(this.rotation, Rotation.None, Rotation.None)
+                                                : -1;
                                              replaceMatchedCell(
-                                                chunkStore, chunkRef, worldChunkComponent, blockSection, isFiller, blockX, blockY, blockZ, toTarget
+                                                chunkStore,
+                                                chunkRef,
+                                                worldChunkComponent,
+                                                blockSection,
+                                                isFiller,
+                                                blockX,
+                                                blockY,
+                                                blockZ,
+                                                toTarget,
+                                                rotationOverride
                                              );
                                           }
                                        }
@@ -197,7 +215,8 @@ public class ReplaceBlockTypeEffect extends TriggerEffect {
       int blockX,
       int blockY,
       int blockZ,
-      @Nonnull ReplaceBlockTypeEffect.TargetType toTarget
+      @Nonnull ReplaceBlockTypeEffect.TargetType toTarget,
+      int rotationOverride
    ) {
       if (toTarget.fluidId() != 0) {
          if (!isFiller) {
@@ -210,8 +229,8 @@ public class ReplaceBlockTypeEffect extends TriggerEffect {
          if (!isFiller) {
             BlockType toBlockTypeAsset = BlockType.getAssetMap().getAsset(toTarget.blockId());
             if (toBlockTypeAsset != null) {
-               int rotation = blockSection.getRotationIndex(blockX, blockY, blockZ);
-               worldChunkComponent.setBlock(blockX, blockY, blockZ, toTarget.blockId(), toBlockTypeAsset, rotation, 0, 256);
+               int rotationIndex = rotationOverride >= 0 ? rotationOverride : blockSection.getRotationIndex(blockX, blockY, blockZ);
+               worldChunkComponent.setBlock(blockX, blockY, blockZ, toTarget.blockId(), toBlockTypeAsset, rotationIndex, 0, 256);
             }
          }
       }

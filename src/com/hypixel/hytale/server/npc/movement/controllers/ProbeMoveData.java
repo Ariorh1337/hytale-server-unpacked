@@ -485,8 +485,8 @@ public class ProbeMoveData {
          BLOCKED_DROP(true, false),
          END(false, true);
 
-         protected final boolean isBlocked;
-         protected final boolean canInterpolate;
+         final boolean isBlocked;
+         final boolean canInterpolate;
 
          public boolean isBlocked() {
             return this.isBlocked;

@@ -37,16 +37,10 @@ import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.asset.builder.Builder;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderInfo;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
-import com.hypixel.hytale.server.npc.asset.builder.EventSlotMapper;
-import com.hypixel.hytale.server.npc.blackboard.view.event.block.BlockEventType;
-import com.hypixel.hytale.server.npc.blackboard.view.event.entity.EntityEventType;
+import com.hypixel.hytale.server.npc.blackboard.BlackboardSubscription;
 import com.hypixel.hytale.server.npc.components.FailedSpawnComponent;
 import com.hypixel.hytale.server.npc.components.Timers;
 import com.hypixel.hytale.server.npc.components.messaging.BeaconSupport;
-import com.hypixel.hytale.server.npc.components.messaging.NPCBlockEventSupport;
-import com.hypixel.hytale.server.npc.components.messaging.NPCEntityEventSupport;
-import com.hypixel.hytale.server.npc.components.messaging.PlayerBlockEventSupport;
-import com.hypixel.hytale.server.npc.components.messaging.PlayerEntityEventSupport;
 import com.hypixel.hytale.server.npc.decisionmaker.stateevaluator.StateEvaluator;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.role.Role;
@@ -55,7 +49,6 @@ import com.hypixel.hytale.server.npc.role.support.RoleStats;
 import com.hypixel.hytale.server.npc.storage.AlarmStore;
 import com.hypixel.hytale.server.npc.util.expression.ExecutionContext;
 import com.hypixel.hytale.server.npc.valuestore.ValueStore;
-import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import java.util.Set;
 import java.util.logging.Level;
@@ -173,61 +166,7 @@ public class RoleBuilderSystem extends HolderSystem<EntityStore> {
                holder.putComponent(BeaconSupport.getComponentType(), beaconSupport);
             }
 
-            if (builderSupport.hasBlockEventSupport()) {
-               EventSlotMapper<BlockEventType> playerEventSlotMapper = builderSupport.getPlayerBlockEventSlotMapper();
-               if (playerEventSlotMapper != null) {
-                  PlayerBlockEventSupport playerBlockEventSupport = new PlayerBlockEventSupport();
-                  playerBlockEventSupport.initialise(
-                     playerEventSlotMapper.getEventSlotMappings(), playerEventSlotMapper.getEventSlotRanges(), playerEventSlotMapper.getEventSlotCount()
-                  );
-                  holder.putComponent(PlayerBlockEventSupport.getComponentType(), playerBlockEventSupport);
-               }
-
-               EventSlotMapper<BlockEventType> npcEventSlotMapper = builderSupport.getNPCBlockEventSlotMapper();
-               if (npcEventSlotMapper != null) {
-                  NPCBlockEventSupport npcBlockEventSupport = new NPCBlockEventSupport();
-                  npcBlockEventSupport.initialise(
-                     npcEventSlotMapper.getEventSlotMappings(), npcEventSlotMapper.getEventSlotRanges(), npcEventSlotMapper.getEventSlotCount()
-                  );
-                  holder.putComponent(NPCBlockEventSupport.getComponentType(), npcBlockEventSupport);
-               }
-
-               for (int i = 0; i < BlockEventType.VALUES.length; i++) {
-                  BlockEventType type = BlockEventType.VALUES[i];
-                  IntSet sets = builderSupport.getBlockChangeSets(type);
-                  if (sets != null) {
-                     npcComponent.addBlackboardBlockChangeSets(type, sets);
-                  }
-               }
-            }
-
-            if (builderSupport.hasEntityEventSupport()) {
-               EventSlotMapper<EntityEventType> playerEventSlotMapper = builderSupport.getPlayerEntityEventSlotMapper();
-               if (playerEventSlotMapper != null) {
-                  PlayerEntityEventSupport playerEntityEventSupport = new PlayerEntityEventSupport();
-                  playerEntityEventSupport.initialise(
-                     playerEventSlotMapper.getEventSlotMappings(), playerEventSlotMapper.getEventSlotRanges(), playerEventSlotMapper.getEventSlotCount()
-                  );
-                  holder.putComponent(PlayerEntityEventSupport.getComponentType(), playerEntityEventSupport);
-               }
-
-               EventSlotMapper<EntityEventType> npcEventSlotMapper = builderSupport.getNPCEntityEventSlotMapper();
-               if (npcEventSlotMapper != null) {
-                  NPCEntityEventSupport npcEntityEventSupport = new NPCEntityEventSupport();
-                  npcEntityEventSupport.initialise(
-                     npcEventSlotMapper.getEventSlotMappings(), npcEventSlotMapper.getEventSlotRanges(), npcEventSlotMapper.getEventSlotCount()
-                  );
-                  holder.putComponent(NPCEntityEventSupport.getComponentType(), npcEntityEventSupport);
-               }
-
-               for (EntityEventType type : EntityEventType.VALUES) {
-                  IntSet sets = builderSupport.getEventNPCGroups(type);
-                  if (sets != null) {
-                     npcComponent.addBlackboardEntityEventSets(type, sets);
-                  }
-               }
-            }
-
+            BlackboardSubscription.buildAndAttach(holder, builderSupport);
             Tickable[] timers = builderSupport.allocateTimers();
             if (timers != null) {
                holder.putComponent(Timers.getComponentType(), new Timers(timers));

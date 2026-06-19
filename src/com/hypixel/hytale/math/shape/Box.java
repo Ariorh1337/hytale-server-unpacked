@@ -11,7 +11,7 @@ import com.hypixel.hytale.math.vector.Vector3dUtil;
 import javax.annotation.Nonnull;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
-import org.joml.Vector3i;
+import org.joml.Vector3ic;
 
 public class Box implements Shape {
    public static final Codec<Box> CODEC = BuilderCodec.builder(Box.class, Box::new)
@@ -66,16 +66,16 @@ public class Box implements Shape {
       this.max.set(xMax, yMax, zMax);
    }
 
-   public static Box cube(@Nonnull Vector3d min, double side) {
-      return new Box(min.x, min.y, min.z, min.x + side, min.y + side, min.z + side);
+   public static Box cube(@Nonnull Vector3dc min, double side) {
+      return new Box(min.x(), min.y(), min.z(), min.x() + side, min.y() + side, min.z() + side);
    }
 
-   public static Box centeredCube(@Nonnull Vector3d center, double inradius) {
-      return new Box(center.x - inradius, center.y - inradius, center.z - inradius, center.x + inradius, center.y + inradius, center.z + inradius);
+   public static Box centeredCube(@Nonnull Vector3dc center, double inradius) {
+      return new Box(center.x() - inradius, center.y() - inradius, center.z() - inradius, center.x() + inradius, center.y() + inradius, center.z() + inradius);
    }
 
    @Nonnull
-   public Box setMinMax(@Nonnull Vector3d min, @Nonnull Vector3d max) {
+   public Box setMinMax(@Nonnull Vector3dc min, @Nonnull Vector3dc max) {
       this.min.set(min);
       this.max.set(max);
       return this;
@@ -264,30 +264,30 @@ public class Box implements Shape {
    }
 
    @Nonnull
-   public Box offset(@Nonnull Vector3d pos) {
+   public Box offset(@Nonnull Vector3dc pos) {
       this.min.add(pos);
       this.max.add(pos);
       return this;
    }
 
    @Nonnull
-   public Box sweep(@Nonnull Vector3d v) {
-      if (v.x < 0.0) {
-         this.min.x = this.min.x + v.x;
-      } else if (v.x > 0.0) {
-         this.max.x = this.max.x + v.x;
+   public Box sweep(@Nonnull Vector3dc v) {
+      if (v.x() < 0.0) {
+         this.min.x = this.min.x + v.x();
+      } else if (v.x() > 0.0) {
+         this.max.x = this.max.x + v.x();
       }
 
-      if (v.y < 0.0) {
-         this.min.y = this.min.y + v.y;
-      } else if (v.y > 0.0) {
-         this.max.y = this.max.y + v.y;
+      if (v.y() < 0.0) {
+         this.min.y = this.min.y + v.y();
+      } else if (v.y() > 0.0) {
+         this.max.y = this.max.y + v.y();
       }
 
-      if (v.z < 0.0) {
-         this.min.z = this.min.z + v.z;
-      } else if (v.z > 0.0) {
-         this.max.z = this.max.z + v.z;
+      if (v.z() < 0.0) {
+         this.min.z = this.min.z + v.z();
+      } else if (v.z() > 0.0) {
+         this.max.z = this.max.z + v.z();
       }
 
       return this;
@@ -415,7 +415,7 @@ public class Box implements Shape {
       return x >= minX && x < maxX && y >= minY && y < maxY && z >= minZ && z < maxZ;
    }
 
-   public boolean containsBlock(@Nonnull Vector3i origin, int x, int y, int z) {
+   public boolean containsBlock(@Nonnull Vector3ic origin, int x, int y, int z) {
       return this.containsBlock(x - origin.x(), y - origin.y(), z - origin.z());
    }
 
@@ -492,22 +492,22 @@ public class Box implements Shape {
       return maximumExtent;
    }
 
-   public boolean intersectsLine(@Nonnull Vector3d start, @Nonnull Vector3d end) {
-      double ox = start.x;
-      double oy = start.y;
-      double oz = start.z;
-      double dx = end.x - ox;
-      double dy = end.y - oy;
-      double dz = end.z - oz;
+   public boolean intersectsLine(@Nonnull Vector3dc start, @Nonnull Vector3dc end) {
+      double ox = start.x();
+      double oy = start.y();
+      double oz = start.z();
+      double dx = end.x() - ox;
+      double dy = end.y() - oy;
+      double dz = end.z() - oz;
       double tmin = 0.0;
       double tmax = 1.0;
       if (Math.abs(dx) < 1.0E-10) {
-         if (start.x < this.min.x || start.x > this.max.x) {
+         if (start.x() < this.min.x || start.x() > this.max.x) {
             return false;
          }
       } else {
-         double t1 = (this.min.x - start.x) / dx;
-         double t2 = (this.max.x - start.x) / dx;
+         double t1 = (this.min.x - start.x()) / dx;
+         double t2 = (this.max.x - start.x()) / dx;
          if (t1 > t2) {
             double temp = t1;
             t1 = t2;
@@ -522,12 +522,12 @@ public class Box implements Shape {
       }
 
       if (Math.abs(dy) < 1.0E-10) {
-         if (start.y < this.min.y || start.y > this.max.y) {
+         if (start.y() < this.min.y || start.y() > this.max.y) {
             return false;
          }
       } else {
-         double t1 = (this.min.y - start.y) / dy;
-         double t2 = (this.max.y - start.y) / dy;
+         double t1 = (this.min.y - start.y()) / dy;
+         double t2 = (this.max.y - start.y()) / dy;
          if (t1 > t2) {
             double temp = t1;
             t1 = t2;
@@ -542,8 +542,8 @@ public class Box implements Shape {
       }
 
       if (!(Math.abs(dz) < 1.0E-10)) {
-         double t1 = (this.min.z - start.z) / dz;
-         double t2 = (this.max.z - start.z) / dz;
+         double t1 = (this.min.z - start.z()) / dz;
+         double t2 = (this.max.z - start.z()) / dz;
          if (t1 > t2) {
             double temp = t1;
             t1 = t2;
@@ -554,7 +554,7 @@ public class Box implements Shape {
          tmax = Math.min(tmax, t2);
          return !(tmin > tmax);
       } else {
-         return !(start.z < this.min.z) && !(start.z > this.max.z);
+         return !(start.z() < this.min.z) && !(start.z() > this.max.z);
       }
    }
 

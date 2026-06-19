@@ -1,5 +1,7 @@
 package com.hypixel.hytale.server.spawning.spawnmarkers;
 
+import com.hypixel.hytale.builtin.tagset.TagSetPlugin;
+import com.hypixel.hytale.builtin.tagset.config.NPCGroup;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
@@ -37,7 +39,9 @@ import com.hypixel.hytale.server.spawning.SpawnTestResult;
 import com.hypixel.hytale.server.spawning.SpawningContext;
 import com.hypixel.hytale.server.spawning.SpawningPlugin;
 import com.hypixel.hytale.server.spawning.assets.spawnmarker.config.SpawnMarker;
+import com.hypixel.hytale.server.spawning.assets.spawnsuppression.SpawnSuppression;
 import it.unimi.dsi.fastutil.Pair;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.time.Duration;
 import java.time.Instant;
@@ -246,7 +250,9 @@ public class SpawnMarkerEntity implements Component<EntityStore> {
       this.spawnLostTimeoutCounter = 35.0;
    }
 
-   public boolean spawnNPC(@Nonnull Ref<EntityStore> ref, @Nonnull SpawnMarker marker, @Nonnull Store<EntityStore> store) {
+   public boolean spawnNPC(
+      @Nonnull Ref<EntityStore> ref, @Nonnull SpawnMarker marker, @Nullable List<Ref<EntityStore>> outSpawnedList, @Nonnull Store<EntityStore> store
+   ) {
       IWeightedMap<SpawnMarker.SpawnConfiguration> configs = marker.getWeightedConfigurations();
       if (configs == null) {
          SpawningPlugin.get().getLogger().at(Level.SEVERE).log("Marker %s has no spawn configurations to spawn", ref);
@@ -369,6 +375,10 @@ public class SpawnMarkerEntity implements Component<EntityStore> {
 
          Ref<EntityStore> npcRef = npcPair.first();
          NPCEntity npcComponent = npcPair.second();
+         if (outSpawnedList != null) {
+            outSpawnedList.add(npcRef);
+         }
+
          Ref<EntityStore> flockReference = FlockPlugin.trySpawnFlock(
             npcRef, npcComponent, store, roleIndex, this.spawnPosition, rotation, spawn.getFlockDefinition(), postSpawn
          );
@@ -382,6 +392,13 @@ public class SpawnMarkerEntity implements Component<EntityStore> {
                   InvalidatablePersistentRef referencex = new InvalidatablePersistentRef();
                   referencex.setEntity(member, store);
                   referenceArray[index] = referencex;
+                  if (outSpawnedList != null) {
+                     if (member.equals(npcRef)) {
+                        return;
+                     }
+
+                     outSpawnedList.add(member);
+                  }
                }, this.npcReferences);
             } else {
                InvalidatablePersistentRef reference = new InvalidatablePersistentRef();
@@ -451,8 +468,46 @@ public class SpawnMarkerEntity implements Component<EntityStore> {
       return this.cachedMarker.isManualTrigger();
    }
 
-   public boolean trigger(@Nonnull Ref<EntityStore> markerRef, @Nonnull Store<EntityStore> store) {
-      return this.cachedMarker.isManualTrigger() && this.spawnCount <= 0 ? this.spawnNPC(markerRef, this.cachedMarker, store) : false;
+   public boolean trigger(@Nonnull Ref<EntityStore> markerRef, @Nullable List<Ref<EntityStore>> outSpawnedList, @Nonnull Store<EntityStore> store) {
+      return this.cachedMarker.isManualTrigger() && this.spawnCount <= 0 ? this.spawnNPC(markerRef, this.cachedMarker, outSpawnedList, store) : false;
+   }
+
+   public boolean isSuppressedBy(@Nonnull SpawnSuppression suppression) {
+      int[] groupIds = suppression.getSuppressedGroupIds();
+      if (groupIds != null && groupIds.length != 0) {
+         SpawnMarker marker = this.cachedMarker != null ? this.cachedMarker : SpawnMarker.getAssetMap().getAsset(this.spawnMarkerId);
+         if (marker == null) {
+            return true;
+         }
+
+         IWeightedMap<SpawnMarker.SpawnConfiguration> configs = marker.getWeightedConfigurations();
+         if (configs == null) {
+            return false;
+         }
+
+         NPCPlugin npcModule = NPCPlugin.get();
+         TagSetPlugin.TagSetLookup groupLookup = TagSetPlugin.get(NPCGroup.class);
+         boolean[] matched = new boolean[]{false};
+         configs.forEach(config -> {
+            if (!matched[0]) {
+               String roleName = config.getNpc();
+               if (roleName != null && !roleName.isEmpty()) {
+                  int roleIndex = npcModule.getIndex(roleName);
+
+                  for (int groupId : groupIds) {
+                     IntSet roles = groupLookup.getSet(groupId);
+                     if (roles != null && roles.contains(roleIndex)) {
+                        matched[0] = true;
+                        return;
+                     }
+                  }
+               }
+            }
+         });
+         return matched[0];
+      } else {
+         return true;
+      }
    }
 
    public void suppress(@Nonnull UUID suppressor) {

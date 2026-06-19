@@ -63,8 +63,8 @@ public class DamageEffects {
             throw ProtocolException.arrayTooLong("ModelParticles", modelParticlesCount, 4096000);
          }
 
-         if (varPos0 + varIntLen + modelParticlesCount * 34L > buf.readableBytes()) {
-            throw ProtocolException.bufferTooSmall("ModelParticles", varPos0 + varIntLen + modelParticlesCount * 34, buf.readableBytes());
+         if (varPos0 + varIntLen + modelParticlesCount * 35L > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("ModelParticles", varPos0 + varIntLen + modelParticlesCount * 35, buf.readableBytes());
          }
 
          obj.modelParticles = new ModelParticle[modelParticlesCount];

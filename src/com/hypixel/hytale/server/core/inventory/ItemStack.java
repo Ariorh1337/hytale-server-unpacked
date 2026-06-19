@@ -40,6 +40,8 @@ public class ItemStack implements NetworkSerializable<ItemWithAllMetadata> {
       )
       .addValidator(Validators.greaterThanOrEqual(0.0))
       .add()
+      .append(new KeyedCodec<>("Quality", Codec.INTEGER), (itemStack, quality) -> itemStack.quality = quality, itemStack -> itemStack.getQuality())
+      .add()
       .append(
          new KeyedCodec<>("Metadata", Codec.BSON_DOCUMENT), (itemStack, bsonDocument) -> itemStack.metadata = bsonDocument, itemStack -> itemStack.metadata
       )
@@ -61,6 +63,7 @@ public class ItemStack implements NetworkSerializable<ItemWithAllMetadata> {
    protected int quantity = 1;
    protected double durability;
    protected double maxDurability;
+   protected int quality = 0;
    protected boolean overrideDroppedItemAnimation;
    @Nullable
    protected BsonDocument metadata;
@@ -82,9 +85,11 @@ public class ItemStack implements NetworkSerializable<ItemWithAllMetadata> {
 
       this.itemId = itemId;
       this.quantity = quantity;
-      double maxDurability = this.getItem().getMaxDurability();
+      Item item = this.getItem();
+      double maxDurability = item.getMaxDurability();
       this.durability = maxDurability;
       this.maxDurability = maxDurability;
+      this.quality = item.getQualityIndex();
       this.metadata = metadata;
    }
 
@@ -92,6 +97,11 @@ public class ItemStack implements NetworkSerializable<ItemWithAllMetadata> {
       this(itemId, quantity, metadata);
       this.durability = durability;
       this.maxDurability = maxDurability;
+   }
+
+   public ItemStack(@Nonnull String itemId, int quantity, double durability, double maxDurability, int quality, @Nullable BsonDocument metadata) {
+      this(itemId, quantity, durability, maxDurability, metadata);
+      this.quality = quality;
    }
 
    public ItemStack(@Nonnull String itemId) {
@@ -136,6 +146,10 @@ public class ItemStack implements NetworkSerializable<ItemWithAllMetadata> {
       return this.durability;
    }
 
+   public int getQuality() {
+      return this.quality;
+   }
+
    public boolean isEmpty() {
       return this.itemId.equals("Empty");
    }
@@ -174,12 +188,17 @@ public class ItemStack implements NetworkSerializable<ItemWithAllMetadata> {
 
    @Nonnull
    public ItemStack withDurability(double durability) {
-      return new ItemStack(this.itemId, this.quantity, MathUtil.clamp(durability, 0.0, this.maxDurability), this.maxDurability, this.metadata);
+      return new ItemStack(this.itemId, this.quantity, MathUtil.clamp(durability, 0.0, this.maxDurability), this.maxDurability, this.quality, this.metadata);
    }
 
    @Nonnull
    public ItemStack withMaxDurability(double maxDurability) {
-      return new ItemStack(this.itemId, this.quantity, Math.min(this.durability, maxDurability), maxDurability, this.metadata);
+      return new ItemStack(this.itemId, this.quantity, Math.min(this.durability, maxDurability), maxDurability, this.quality, this.metadata);
+   }
+
+   @Nonnull
+   public ItemStack withQuality(int quality) {
+      return new ItemStack(this.itemId, this.quantity, this.durability, this.maxDurability, quality, this.metadata);
    }
 
    @Nonnull
@@ -189,7 +208,7 @@ public class ItemStack implements NetworkSerializable<ItemWithAllMetadata> {
 
    @Nonnull
    public ItemStack withRestoredDurability(double maxDurability) {
-      return new ItemStack(this.itemId, this.quantity, maxDurability, maxDurability, this.metadata);
+      return new ItemStack(this.itemId, this.quantity, maxDurability, maxDurability, this.quality, this.metadata);
    }
 
    @Nonnull
@@ -198,7 +217,7 @@ public class ItemStack implements NetworkSerializable<ItemWithAllMetadata> {
       if (newItemId == null) {
          throw new IllegalArgumentException("Invalid state: " + state);
       } else {
-         return new ItemStack(newItemId, this.quantity, this.durability, this.maxDurability, this.metadata);
+         return new ItemStack(newItemId, this.quantity, this.durability, this.maxDurability, this.quality, this.metadata);
       }
    }
 
@@ -207,18 +226,18 @@ public class ItemStack implements NetworkSerializable<ItemWithAllMetadata> {
       if (quantity == 0) {
          return null;
       } else {
-         return quantity == this.quantity ? this : new ItemStack(this.itemId, quantity, this.durability, this.maxDurability, this.metadata);
+         return quantity == this.quantity ? this : new ItemStack(this.itemId, quantity, this.durability, this.maxDurability, this.quality, this.metadata);
       }
    }
 
    @Nonnull
    public ItemStack cleanCopy() {
-      return new ItemStack(this.itemId, this.quantity, this.durability, this.maxDurability, this.metadata);
+      return new ItemStack(this.itemId, this.quantity, this.durability, this.maxDurability, this.quality, this.metadata);
    }
 
    @Nonnull
    public ItemStack withMetadata(@Nullable BsonDocument metadata) {
-      return new ItemStack(this.itemId, this.quantity, this.durability, this.maxDurability, metadata);
+      return new ItemStack(this.itemId, this.quantity, this.durability, this.maxDurability, this.quality, metadata);
    }
 
    @Nonnull
@@ -245,7 +264,7 @@ public class ItemStack implements NetworkSerializable<ItemWithAllMetadata> {
          clonedMeta = null;
       }
 
-      return new ItemStack(this.itemId, this.quantity, this.durability, this.maxDurability, clonedMeta);
+      return new ItemStack(this.itemId, this.quantity, this.durability, this.maxDurability, this.quality, clonedMeta);
    }
 
    @Nonnull
@@ -257,7 +276,7 @@ public class ItemStack implements NetworkSerializable<ItemWithAllMetadata> {
          clonedMeta.remove(key);
       }
 
-      return new ItemStack(this.itemId, this.quantity, this.durability, this.maxDurability, clonedMeta);
+      return new ItemStack(this.itemId, this.quantity, this.durability, this.maxDurability, this.quality, clonedMeta);
    }
 
    public ItemWithAllMetadata toPacket() {
@@ -270,6 +289,7 @@ public class ItemStack implements NetworkSerializable<ItemWithAllMetadata> {
       packet.quantity = this.quantity;
       packet.durability = this.durability;
       packet.maxDurability = this.maxDurability;
+      packet.quality = this.getQuality();
       packet.overrideDroppedItemAnimation = this.overrideDroppedItemAnimation;
       packet.metadata = this.metadata != null ? this.metadata.toJson() : null;
       this.cachedPacket = packet;
@@ -282,6 +302,8 @@ public class ItemStack implements NetworkSerializable<ItemWithAllMetadata> {
       } else if (Double.compare(itemStack.durability, this.durability) != 0) {
          return false;
       } else if (Double.compare(itemStack.maxDurability, this.maxDurability) != 0) {
+         return false;
+      } else if (this.getQuality() != itemStack.getQuality()) {
          return false;
       } else if (!this.itemId.equals(itemStack.itemId)) {
          return false;
@@ -347,6 +369,8 @@ public class ItemStack implements NetworkSerializable<ItemWithAllMetadata> {
             return false;
          } else if (Double.compare(itemStack.maxDurability, this.maxDurability) != 0) {
             return false;
+         } else if (this.getQuality() != itemStack.getQuality()) {
+            return false;
          } else if (!this.itemId.equals(itemStack.itemId)) {
             return false;
          } else {
@@ -365,6 +389,7 @@ public class ItemStack implements NetworkSerializable<ItemWithAllMetadata> {
       result = 31 * result + (int)(temp ^ temp >>> 32);
       temp = Double.doubleToLongBits(this.maxDurability);
       result = 31 * result + (int)(temp ^ temp >>> 32);
+      result = 31 * result + this.getQuality();
       return 31 * result + (this.metadata != null ? this.metadata.hashCode() : 0);
    }
 
@@ -379,6 +404,8 @@ public class ItemStack implements NetworkSerializable<ItemWithAllMetadata> {
          + this.maxDurability
          + ", durability="
          + this.durability
+         + ", quality="
+         + this.quality
          + ", metadata="
          + this.metadata
          + "}";

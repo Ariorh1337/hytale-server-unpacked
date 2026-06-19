@@ -113,7 +113,7 @@ public class JitterPointField extends PointField {
    public void points1d(double min, double max, @Nonnull Consumer<Double> pointsOut) {
       for (double x = min - this.scaleX; x < max + this.scaleX; x += this.scaleX) {
          double point = this.noise.pointFor(this.seed, this.jitter, x);
-         if (!(point < min) || point < max) {
+         if (!(point < min) && !(point >= max)) {
             pointsOut.accept(point);
          }
       }

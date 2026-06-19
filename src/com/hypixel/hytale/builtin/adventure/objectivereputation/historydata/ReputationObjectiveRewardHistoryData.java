@@ -28,15 +28,15 @@ public final class ReputationObjectiveRewardHistoryData extends ObjectiveRewardH
       )
       .add()
       .build();
-   protected String reputationGroupId;
-   protected int amount;
+   String reputationGroupId;
+   int amount;
 
    public ReputationObjectiveRewardHistoryData(String reputationGroupId, int amount) {
       this.reputationGroupId = reputationGroupId;
       this.amount = amount;
    }
 
-   protected ReputationObjectiveRewardHistoryData() {
+   ReputationObjectiveRewardHistoryData() {
    }
 
    public String getReputationGroupId() {

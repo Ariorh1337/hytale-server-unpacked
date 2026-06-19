@@ -3,6 +3,8 @@ package com.hypixel.hytale.builtin.triggervolumes.effect;
 import com.hypixel.hytale.builtin.triggervolumes.manager.VolumeEntry;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.protocol.InteractionType;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.List;
 import javax.annotation.Nonnull;
@@ -21,6 +23,8 @@ public class TriggerContext {
    @Nonnull
    private final List<VolumeEntry> spatialVolumes;
    @Nullable
+   private final Vector3d actorPosition;
+   @Nullable
    private final String tagKey;
    @Nullable
    private final String tagValue;
@@ -28,6 +32,8 @@ public class TriggerContext {
    private final Vector3d blockPosition;
    @Nullable
    private final String blockId;
+   @Nullable
+   private final InteractionType interactionType;
 
    public TriggerContext(
       @Nonnull Ref<EntityStore> entityRef, @Nonnull Store<EntityStore> store, @Nonnull TriggerEventType eventType, @Nonnull VolumeEntry volume
@@ -42,7 +48,7 @@ public class TriggerContext {
       @Nonnull VolumeEntry volume,
       @Nonnull List<VolumeEntry> spatialVolumes
    ) {
-      this(entityRef, store, eventType, volume, spatialVolumes, null, null, null, null);
+      this(entityRef, store, eventType, volume, spatialVolumes, null);
    }
 
    public TriggerContext(
@@ -51,25 +57,52 @@ public class TriggerContext {
       @Nonnull TriggerEventType eventType,
       @Nonnull VolumeEntry volume,
       @Nonnull List<VolumeEntry> spatialVolumes,
+      @Nullable Vector3d actorPosition
+   ) {
+      this(entityRef, store, eventType, volume, spatialVolumes, actorPosition, null, null, null, null, null);
+   }
+
+   public TriggerContext(
+      @Nonnull Ref<EntityStore> entityRef,
+      @Nonnull Store<EntityStore> store,
+      @Nonnull TriggerEventType eventType,
+      @Nonnull VolumeEntry volume,
+      @Nonnull List<VolumeEntry> spatialVolumes,
+      @Nullable Vector3d actorPosition,
       @Nullable String tagKey,
       @Nullable String tagValue,
       @Nullable Vector3d blockPosition,
-      @Nullable String blockId
+      @Nullable String blockId,
+      @Nullable InteractionType interactionType
    ) {
       this.entityRef = entityRef;
       this.store = store;
       this.eventType = eventType;
       this.volume = volume;
       this.spatialVolumes = spatialVolumes.isEmpty() ? List.of(volume) : List.copyOf(spatialVolumes);
+      this.actorPosition = actorPosition != null ? new Vector3d(actorPosition) : null;
       this.tagKey = tagKey;
       this.tagValue = tagValue;
       this.blockPosition = blockPosition != null ? new Vector3d(blockPosition) : null;
       this.blockId = blockId;
+      this.interactionType = interactionType;
    }
 
    @Nonnull
    public Ref<EntityStore> getEntityRef() {
       return this.entityRef;
+   }
+
+   @Nullable
+   public Vector3d getActorPosition() {
+      if (this.entityRef != null && this.entityRef.isValid()) {
+         TransformComponent transform = this.store.getComponent(this.entityRef, TransformComponent.getComponentType());
+         if (transform != null) {
+            return new Vector3d(transform.getPosition());
+         }
+      }
+
+      return this.actorPosition != null ? new Vector3d(this.actorPosition) : null;
    }
 
    @Nonnull
@@ -110,5 +143,10 @@ public class TriggerContext {
    @Nullable
    public String getBlockId() {
       return this.blockId;
+   }
+
+   @Nullable
+   public InteractionType getInteractionType() {
+      return this.interactionType;
    }
 }

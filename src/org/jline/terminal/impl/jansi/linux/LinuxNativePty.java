@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import org.fusesource.jansi.internal.CLibrary;
+import org.fusesource.jansi.internal.CLibrary.Termios;
+import org.fusesource.jansi.internal.CLibrary.WinSize;
 import org.jline.terminal.Attributes;
 import org.jline.terminal.Size;
 import org.jline.terminal.impl.jansi.JansiNativePty;
@@ -142,7 +144,7 @@ public class LinuxNativePty extends JansiNativePty {
       int[] slave = new int[1];
       byte[] buf = new byte[64];
       CLibrary.openpty(
-         master, slave, buf, attr != null ? termios(attr) : null, size != null ? new CLibrary.WinSize((short)size.getRows(), (short)size.getColumns()) : null
+         master, slave, buf, attr != null ? termios(attr) : null, size != null ? new WinSize((short)size.getRows(), (short)size.getColumns()) : null
       );
       int len = 0;
 
@@ -175,12 +177,12 @@ public class LinuxNativePty extends JansiNativePty {
    }
 
    @Override
-   protected CLibrary.Termios toTermios(Attributes t) {
+   protected Termios toTermios(Attributes t) {
       return termios(t);
    }
 
-   static CLibrary.Termios termios(Attributes t) {
-      CLibrary.Termios tio = new CLibrary.Termios();
+   static Termios termios(Attributes t) {
+      Termios tio = new Termios();
       tio.c_iflag = setFlag(t.getInputFlag(Attributes.InputFlag.IGNBRK), 1L, tio.c_iflag);
       tio.c_iflag = setFlag(t.getInputFlag(Attributes.InputFlag.BRKINT), 2L, tio.c_iflag);
       tio.c_iflag = setFlag(t.getInputFlag(Attributes.InputFlag.IGNPAR), 4L, tio.c_iflag);
@@ -253,7 +255,7 @@ public class LinuxNativePty extends JansiNativePty {
    }
 
    @Override
-   protected Attributes toAttributes(CLibrary.Termios tio) {
+   protected Attributes toAttributes(Termios tio) {
       Attributes attr = new Attributes();
       EnumSet<Attributes.InputFlag> iflag = attr.getInputFlags();
       addFlag(tio.c_iflag, iflag, Attributes.InputFlag.IGNBRK, 1);

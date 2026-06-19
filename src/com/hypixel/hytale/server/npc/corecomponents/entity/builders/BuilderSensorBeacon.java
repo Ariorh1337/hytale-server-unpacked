@@ -20,6 +20,7 @@ public class BuilderSensorBeacon extends BuilderSensorBase {
    protected final DoubleHolder range = new DoubleHolder();
    protected String targetSlot;
    protected boolean consume;
+   protected boolean rebind;
 
    @Nonnull
    public SensorBeacon build(@Nonnull BuilderSupport builderSupport) {
@@ -71,6 +72,15 @@ public class BuilderSensorBeacon extends BuilderSensorBase {
       this.getBoolean(
          data, "ConsumeMessage", b -> this.consume = b, true, BuilderDescriptorState.Stable, "Whether the message should be consumed by this sensor", null
       );
+      this.getBoolean(
+         data,
+         "Rebind",
+         b -> this.rebind = b,
+         false,
+         BuilderDescriptorState.Stable,
+         "Whether the target slot rebinds to the entity, so it survives short reloads or role changes.",
+         null
+      );
       this.provideFeature(Feature.AnyEntity);
       return this;
    }
@@ -90,5 +100,9 @@ public class BuilderSensorBeacon extends BuilderSensorBase {
 
    public boolean isConsume() {
       return this.consume;
+   }
+
+   public boolean isRebind() {
+      return this.rebind;
    }
 }

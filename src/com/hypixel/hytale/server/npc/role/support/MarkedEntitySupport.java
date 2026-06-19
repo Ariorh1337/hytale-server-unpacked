@@ -1,10 +1,15 @@
 package com.hypixel.hytale.server.npc.role.support;
 
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.codecs.map.MapCodec;
 import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.group.EntityGroup;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.flock.FlockPlugin;
@@ -14,11 +19,26 @@ import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.UUID;
+import java.util.Map.Entry;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.joml.Vector3d;
 
 public class MarkedEntitySupport implements Component<EntityStore> {
+   @Nonnull
+   public static final BuilderCodec<MarkedEntitySupport> CODEC = BuilderCodec.builder(MarkedEntitySupport.class, MarkedEntitySupport::new)
+      .append(
+         new KeyedCodec<>("RebindTargets", new MapCodec<>(Codec.UUID_BINARY, HashMap::new, false)),
+         (support, map) -> support.rebindUuids = map,
+         support -> support.rebindUuids.isEmpty() ? null : support.rebindUuids
+      )
+      .add()
+      .build();
    public static final String DEFAULT_TARGET_SLOT = "LockedTarget";
    @Nullable
    protected static final ComponentType<EntityStore, NPCEntity> NPC_COMPONENT_TYPE = NPCEntity.getComponentType();
@@ -30,6 +50,8 @@ public class MarkedEntitySupport implements Component<EntityStore> {
    protected Ref<EntityStore>[] entityTargets;
    @Nullable
    protected Vector3d[] storedPositions;
+   @Nonnull
+   protected Map<String, UUID> rebindUuids = new HashMap<>();
    protected int defaultTargetSlot;
    protected int targetSlotToIgnoreForAvoidance = Integer.MIN_VALUE;
 
@@ -81,6 +103,7 @@ public class MarkedEntitySupport implements Component<EntityStore> {
 
    public void clearMarkedEntity(int targetSlot) {
       this.entityTargets[targetSlot] = null;
+      this.removeRebind(targetSlot);
    }
 
    public void setMarkedEntity(String targetSlot, Ref<EntityStore> target) {
@@ -93,8 +116,84 @@ public class MarkedEntitySupport implements Component<EntityStore> {
    public void setMarkedEntity(int targetSlot, @Nullable Ref<EntityStore> target) {
       if (target != null && target.isValid()) {
          this.entityTargets[targetSlot] = target;
+         this.removeRebind(targetSlot);
       } else {
          this.clearMarkedEntity(targetSlot);
+      }
+   }
+
+   public void setMarkedEntity(String targetSlot, Ref<EntityStore> target, boolean rebind, @Nonnull ComponentAccessor<EntityStore> accessor) {
+      int slot = this.targetSlotMappings.getInt(targetSlot);
+      if (slot >= 0) {
+         this.setMarkedEntity(slot, target, rebind, accessor);
+      }
+   }
+
+   public void setMarkedEntity(int targetSlot, @Nullable Ref<EntityStore> target, boolean rebind, @Nonnull ComponentAccessor<EntityStore> accessor) {
+      if (target != null && target.isValid()) {
+         this.entityTargets[targetSlot] = target;
+         if (rebind) {
+            this.captureRebind(targetSlot, target, accessor);
+         } else {
+            this.removeRebind(targetSlot);
+         }
+      } else {
+         this.clearMarkedEntity(targetSlot);
+      }
+   }
+
+   private void captureRebind(int targetSlot, @Nonnull Ref<EntityStore> target, @Nonnull ComponentAccessor<EntityStore> accessor) {
+      if (this.slotToNameMap != null) {
+         String name = this.slotToNameMap.get(targetSlot);
+         if (name != null) {
+            UUIDComponent uuidComponent = accessor.getComponent(target, UUIDComponent.getComponentType());
+            if (uuidComponent != null) {
+               this.rebindUuids.put(name, uuidComponent.getUuid());
+            }
+         }
+      }
+   }
+
+   private void removeRebind(int targetSlot) {
+      if (!this.rebindUuids.isEmpty() && this.slotToNameMap != null) {
+         String name = this.slotToNameMap.get(targetSlot);
+         if (name != null) {
+            this.rebindUuids.remove(name);
+         }
+      }
+   }
+
+   public boolean isRebindSlot(int targetSlot) {
+      if (!this.rebindUuids.isEmpty() && this.slotToNameMap != null) {
+         String name = this.slotToNameMap.get(targetSlot);
+         return name != null && this.rebindUuids.containsKey(name);
+      } else {
+         return false;
+      }
+   }
+
+   public void resolveRebinds(@Nonnull ComponentAccessor<EntityStore> accessor) {
+      if (!this.rebindUuids.isEmpty() && this.slotToNameMap != null) {
+         Iterator<Entry<String, UUID>> it = this.rebindUuids.entrySet().iterator();
+
+         while (it.hasNext()) {
+            Entry<String, UUID> entry = it.next();
+            int slot = this.targetSlotMappings.getInt(entry.getKey());
+            if (slot < 0) {
+               it.remove();
+            } else {
+               Ref<EntityStore> current = this.entityTargets[slot];
+               if (current == null || !current.isValid()) {
+                  Ref<EntityStore> resolved = accessor.getExternalData().getRefFromUUID(entry.getValue());
+                  if (resolved != null && resolved.isValid()) {
+                     this.entityTargets[slot] = resolved;
+                  } else {
+                     this.entityTargets[slot] = null;
+                     it.remove();
+                  }
+               }
+            }
+         }
       }
    }
 
@@ -159,14 +258,15 @@ public class MarkedEntitySupport implements Component<EntityStore> {
    }
 
    public void unloaded() {
-      for (int i = 0; i < this.entityTargets.length; i++) {
-         this.clearMarkedEntity(i);
-      }
+      Arrays.fill(this.entityTargets, null);
    }
 
+   @Nonnull
    @Override
    public Component<EntityStore> clone() {
-      return this;
+      MarkedEntitySupport copy = new MarkedEntitySupport();
+      copy.rebindUuids = new HashMap<>(this.rebindUuids);
+      return copy;
    }
 
    static {

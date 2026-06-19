@@ -62,7 +62,7 @@ public class KillSpawnMarkerObjectiveTask extends KillObjectiveTask {
             if (entitySpawnMarkerComponent != null) {
                String spawnMarkerId = entitySpawnMarkerComponent.getSpawnMarkerId();
                if (ArrayUtil.contains(spawnMarkerIds, spawnMarkerId)) {
-                  world.execute(() -> entitySpawnMarkerComponent.trigger(ref, store));
+                  world.execute(() -> entitySpawnMarkerComponent.trigger(ref, null, store));
                   TransformComponent transformComponent = store.getComponent(ref, TRANSFORM_COMPONENT_TYPE);
                   if (transformComponent != null) {
                      logger.at(Level.INFO).log("Triggered SpawnMarker '" + spawnMarkerId + "' at position: " + transformComponent.getPosition());

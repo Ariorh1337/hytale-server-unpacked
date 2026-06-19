@@ -58,8 +58,8 @@ public class ShowEventTitleEffect extends TriggerEffect {
       if (this.primaryTitle != null) {
          PlayerRef playerRef = context.getStore().getComponent(context.getEntityRef(), PlayerRef.getComponentType());
          if (playerRef != null) {
-            Message primary = Message.translation(this.primaryTitle);
-            Message secondary = this.secondaryTitle != null ? Message.translation(this.secondaryTitle) : Message.raw("");
+            Message primary = withTagParams(context, Message.translation(this.primaryTitle));
+            Message secondary = this.secondaryTitle != null ? withTagParams(context, Message.translation(this.secondaryTitle)) : Message.raw("");
             EventTitleUtil.showEventTitleToPlayer(
                playerRef, primary, secondary, this.isMajor, this.icon, this.duration, this.fadeInDuration, this.fadeOutDuration
             );

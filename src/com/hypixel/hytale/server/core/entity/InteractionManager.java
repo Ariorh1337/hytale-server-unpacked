@@ -120,7 +120,7 @@ public class InteractionManager implements Component<EntityStore> {
 
       assert this.commandBuffer != null;
       World world = this.commandBuffer.getExternalData().getWorld();
-      return world.getTickStepNanos() / 1000000 * 10;
+      return world.getTickStepNanos() / 1000000L * 10L;
    }
 
    private boolean waitingForClient(@Nonnull Ref<EntityStore> ref) {

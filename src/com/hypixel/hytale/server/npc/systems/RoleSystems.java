@@ -55,6 +55,7 @@ import java.util.Set;
 import java.util.Map.Entry;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.joml.Matrix4d;
 import org.joml.Vector3d;
 import org.joml.Vector3f;
@@ -212,6 +213,50 @@ public class RoleSystems {
       }
    }
 
+   public static class MarkedTargetRebindSystem extends SteppableTickingSystem {
+      @Nonnull
+      private final ComponentType<EntityStore, MarkedEntitySupport> markedEntitySupportComponentType;
+      @Nonnull
+      private final Set<Dependency<EntityStore>> dependencies = Set.of(
+         new SystemDependency<>(Order.BEFORE, RoleSystems.PreBehaviourSupportTickSystem.class),
+         new SystemDependency<>(Order.BEFORE, RoleSystems.BehaviourTickSystem.class)
+      );
+
+      public MarkedTargetRebindSystem(@Nonnull ComponentType<EntityStore, MarkedEntitySupport> markedEntitySupportComponentType) {
+         this.markedEntitySupportComponentType = markedEntitySupportComponentType;
+      }
+
+      @Nonnull
+      @Override
+      public Set<Dependency<EntityStore>> getDependencies() {
+         return this.dependencies;
+      }
+
+      @Override
+      public boolean isParallel(int archetypeChunkSize, int taskCount) {
+         return EntityTickingSystem.maybeUseParallel(archetypeChunkSize, taskCount);
+      }
+
+      @Nonnull
+      @Override
+      public Query<EntityStore> getQuery() {
+         return this.markedEntitySupportComponentType;
+      }
+
+      @Override
+      public void steppedTick(
+         float dt,
+         int index,
+         @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
+         @Nonnull Store<EntityStore> store,
+         @Nonnull CommandBuffer<EntityStore> commandBuffer
+      ) {
+         MarkedEntitySupport markedEntitySupport = archetypeChunk.getComponent(index, this.markedEntitySupportComponentType);
+         assert markedEntitySupport != null;
+         markedEntitySupport.resolveRebinds(store);
+      }
+   }
+
    public static class PositionCacheClearSystem extends SteppableTickingSystem {
       @Nonnull
       private final ComponentType<EntityStore, PositionCache> positionCacheComponentType;
@@ -364,7 +409,7 @@ public class RoleSystems {
 
          for (int i = 0; i < entityTargets.length; i++) {
             Ref<EntityStore> targetReference = entityTargets[i];
-            if (targetReference != null) {
+            if (targetReference != null && !markedEntitySupport.isRebindSlot(i)) {
                if (!targetReference.isValid()) {
                   entityTargets[i] = null;
                } else {
@@ -444,6 +489,7 @@ public class RoleSystems {
          StateSupport.get(ref, commandBuffer).activate();
          DebugSupport debugSupport = DebugSupport.get(ref, commandBuffer);
          debugSupport.notifyDebugFlagsListeners(debugSupport.getDebugFlags());
+         debugSupport.setDebugFlags(debugSupport.getDebugFlags());
          ModelComponent modelComponent = store.getComponent(ref, this.modelComponentType);
          assert modelComponent != null;
          BoundingBox boundingBoxComponent = store.getComponent(ref, this.boundingBoxComponentType);
@@ -484,6 +530,7 @@ public class RoleSystems {
       private static final float DEBUG_SHAPE_TIME = 0.1F;
       private static final float SENSOR_VIS_OPACITY = 0.4F;
       private static final double FULL_CIRCLE_EPSILON = 0.01;
+      private static final double DEFAULT_DEBUG_MID_HEIGHT = 1.0;
       private static final float LEASH_SPHERE_RADIUS = 0.3F;
       private static final float LEASH_RING_OUTER_RADIUS = 0.5F;
       private static final float LEASH_RING_INNER_RADIUS = 0.4F;
@@ -520,7 +567,7 @@ public class RoleSystems {
       @Nonnull
       @Override
       public Query<EntityStore> getQuery() {
-         return Query.and(this.npcComponentType, TransformComponent.getComponentType(), BoundingBox.getComponentType());
+         return Query.and(DebugSupport.getComponentType(), TransformComponent.getComponentType());
       }
 
       @Override
@@ -531,12 +578,11 @@ public class RoleSystems {
          @Nonnull Store<EntityStore> store,
          @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
+         DebugSupport debugSupport = archetypeChunk.getComponent(index, DebugSupport.getComponentType());
+         assert debugSupport != null;
          NPCEntity npcComponent = archetypeChunk.getComponent(index, this.npcComponentType);
-         assert npcComponent != null;
-         Role role = npcComponent.getRole();
-         if (role != null) {
-            DebugSupport debugSupport = archetypeChunk.getComponent(index, DebugSupport.getComponentType());
-            assert debugSupport != null;
+         Role role = npcComponent != null ? npcComponent.getRole() : null;
+         if (npcComponent == null || role != null) {
             RoleDebugDisplay debugDisplay = debugSupport.getDebugDisplay();
             if (debugDisplay != null) {
                debugDisplay.display(role, index, archetypeChunk, commandBuffer);
@@ -554,13 +600,12 @@ public class RoleSystems {
                TransformComponent transformComponent = archetypeChunk.getComponent(index, TransformComponent.getComponentType());
                assert transformComponent != null;
                BoundingBox boundingBoxComponent = archetypeChunk.getComponent(index, BoundingBox.getComponentType());
-               assert boundingBoxComponent != null;
                World world = commandBuffer.getExternalData().getWorld();
                if (hasSensorVis) {
                   renderSensorVisualization(debugSupport, npcRef, transformComponent, boundingBoxComponent, world, commandBuffer);
                }
 
-               if (hasLeashVis) {
+               if (hasLeashVis && npcComponent != null && boundingBoxComponent != null) {
                   renderLeashPositionVisualization(npcComponent, npcRef, transformComponent, boundingBoxComponent, world);
                }
 
@@ -599,14 +644,14 @@ public class RoleSystems {
          @Nonnull DebugSupport debugSupport,
          @Nonnull Ref<EntityStore> npcRef,
          @Nonnull TransformComponent transformComponent,
-         @Nonnull BoundingBox boundingBoxComponent,
+         @Nullable BoundingBox boundingBoxComponent,
          @Nonnull World world,
          @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
          List<DebugSupport.SensorVisData> sensorDataList = debugSupport.getSensorVisData();
          if (sensorDataList != null) {
             Vector3d npcPosition = transformComponent.getPosition();
-            double npcMidHeight = boundingBoxComponent.getBoundingBox().max.y / 2.0;
+            double npcMidHeight = boundingBoxComponent != null ? boundingBoxComponent.getBoundingBox().max.y / 2.0 : 1.0;
             HeadRotation headRotation = commandBuffer.getComponent(npcRef, HeadRotation.getComponentType());
             double heading = headRotation != null ? headRotation.getRotation().yaw() : transformComponent.getRotation().yaw();
             sensorDataList.sort((a, b) -> Double.compare(b.range(), a.range()));
@@ -767,12 +812,12 @@ public class RoleSystems {
       }
 
       private static void renderPathVisualization(
-         @Nonnull DebugSupport debugSupport, @Nonnull TransformComponent transformComponent, @Nonnull BoundingBox boundingBoxComponent, @Nonnull World world
+         @Nonnull DebugSupport debugSupport, @Nonnull TransformComponent transformComponent, @Nullable BoundingBox boundingBoxComponent, @Nonnull World world
       ) {
          List<DebugSupport.PathWaypointVisData> pathData = debugSupport.getPathVisData();
          if (pathData != null && !pathData.isEmpty()) {
             Vector3d npcPosition = transformComponent.getPosition();
-            double npcMidHeight = boundingBoxComponent.getBoundingBox().middleY();
+            double npcMidHeight = boundingBoxComponent != null ? boundingBoxComponent.getBoundingBox().middleY() : 1.0;
             double prevX = 0.0;
             double prevY = 0.0;
             double prevZ = 0.0;

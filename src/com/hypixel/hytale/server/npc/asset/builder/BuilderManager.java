@@ -77,6 +77,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
@@ -102,6 +103,8 @@ public class BuilderManager {
    private final AtomicInteger nextIndex = new AtomicInteger();
    private final ReentrantReadWriteLock indexLock = new ReentrantReadWriteLock();
    private boolean setup;
+   private final List<BuilderManager.AssetPath> assetPaths = new ObjectArrayList<>(List.of(new BuilderManager.AssetPath(NPCPlugin.ROLE_ASSETS_PATH, "NPC")));
+   private final List<Consumer<BuilderInfo>> builderReloadListeners = new ObjectArrayList<>();
    @Nullable
    public static BuilderManager SCHEMA_BUILDER_MANAGER;
 
@@ -113,10 +116,6 @@ public class BuilderManager {
    }
 
    public <T> void registerFactory(@Nonnull BuilderFactory<T> factory) {
-      if (factory == null) {
-         throw new IllegalArgumentException();
-      }
-
       Class<?> clazz = factory.getCategory();
       if (clazz == null) {
          throw new IllegalArgumentException();
@@ -131,6 +130,16 @@ public class BuilderManager {
 
    public void addCategory(String name, Class<?> clazz) {
       this.categoryNames.put(name, clazz);
+   }
+
+   public void registerAssetPath(@Nonnull String path, @Nonnull String label) {
+      if (this.assetPaths.stream().noneMatch(p -> p.path().equals(path))) {
+         this.assetPaths.add(new BuilderManager.AssetPath(path, label));
+      }
+   }
+
+   public void addBuilderReloadListener(@Nonnull Consumer<BuilderInfo> listener) {
+      this.builderReloadListeners.add(listener);
    }
 
    public String getCategoryName(@Nonnull Class<?> factoryClass) {
@@ -213,57 +222,73 @@ public class BuilderManager {
    }
 
    public void unloadBuilders(AssetPack pack) {
-      Path path = pack.getRoot().resolve(NPCPlugin.ROLE_ASSETS_PATH);
-      if (Files.isDirectory(path)) {
-         AssetMonitor assetMonitor = AssetModule.get().getAssetMonitor();
-         if (assetMonitor != null) {
-            assetMonitor.removeMonitorDirectoryFiles(path, pack);
-         }
+      AssetMonitor assetMonitor = AssetModule.get().getAssetMonitor();
 
-         try {
-            Files.walkFileTree(path, FileUtil.DEFAULT_WALK_TREE_OPTIONS_SET, Integer.MAX_VALUE, new SimpleFileVisitor<Path>() {
-               @Nonnull
-               public FileVisitResult visitFile(@Nonnull Path file, @Nonnull BasicFileAttributes attrs) {
-                  if (BuilderManager.isJsonFile(file) && !BuilderManager.isIgnoredFile(file)) {
-                     String builderName = BuilderManager.builderNameFromPath(file);
-                     BuilderManager.this.removeBuilder(builderName);
-                     NPCPlugin.get().getLogger().at(Level.INFO).log("Deleted %s builder %s", "NPC", builderName);
-                  }
-
-                  return FileVisitResult.CONTINUE;
+      try {
+         for (BuilderManager.AssetPath assetPath : this.assetPaths) {
+            Path path = pack.getRoot().resolve(assetPath.path());
+            if (Files.isDirectory(path)) {
+               if (assetMonitor != null) {
+                  assetMonitor.removeMonitorDirectoryFiles(path, pack);
                }
-            });
-         } catch (IOException e) {
-            throw SneakyThrow.sneakyThrow(e);
+
+               Files.walkFileTree(path, FileUtil.DEFAULT_WALK_TREE_OPTIONS_SET, Integer.MAX_VALUE, new SimpleFileVisitor<Path>() {
+                  @Nonnull
+                  public FileVisitResult visitFile(@Nonnull Path file, @Nonnull BasicFileAttributes attrs) {
+                     if (BuilderManager.isJsonFile(file) && !BuilderManager.isIgnoredFile(file)) {
+                        String builderName = BuilderManager.builderNameFromPath(file);
+                        BuilderManager.this.removeBuilder(builderName);
+                        NPCPlugin.get().getLogger().at(Level.INFO).log("Deleted builder %s", builderName);
+                     }
+
+                     return FileVisitResult.CONTINUE;
+                  }
+               });
+            }
          }
+      } catch (IOException e) {
+         throw SneakyThrow.sneakyThrow(e);
       }
    }
 
    public boolean loadBuilders(@Nonnull AssetPack pack, final boolean includeTests) {
-      Path path = pack.getRoot().resolve(NPCPlugin.ROLE_ASSETS_PATH);
       boolean valid = true;
-      NPCPlugin.get().getLogger().at(Level.INFO).log("Starting to load NPC builders!");
-      final Object2IntOpenHashMap<String> typeCounter = new Object2IntOpenHashMap<>();
+      NPCPlugin.get().getLogger().at(Level.INFO).log("Starting to load builders!");
+      ObjectArrayList<String> summaries = new ObjectArrayList<>();
 
       try {
          AssetMonitor assetMonitor = AssetModule.get().getAssetMonitor();
-         if (assetMonitor != null && !pack.isImmutable() && Files.isDirectory(path)) {
-            assetMonitor.removeMonitorDirectoryFiles(path, pack);
-            assetMonitor.monitorDirectoryFiles(path, new BuilderManager.BuilderAssetMonitorHandler(pack, includeTests));
-         }
-
          final ObjectArrayList<String> errors = new ObjectArrayList<>();
-         if (Files.isDirectory(path)) {
-            Files.walkFileTree(path, FileUtil.DEFAULT_WALK_TREE_OPTIONS_SET, Integer.MAX_VALUE, new SimpleFileVisitor<Path>() {
-               @Nonnull
-               public FileVisitResult visitFile(@Nonnull Path file, @Nonnull BasicFileAttributes attrs) {
-                  if (BuilderManager.isJsonFile(file) && !BuilderManager.isIgnoredFile(file)) {
-                     BuilderManager.this.loadFile(file, errors, typeCounter, includeTests, false);
-                  }
 
-                  return FileVisitResult.CONTINUE;
+         for (BuilderManager.AssetPath assetPath : this.assetPaths) {
+            Path path = pack.getRoot().resolve(assetPath.path());
+            if (Files.isDirectory(path)) {
+               if (assetMonitor != null && !pack.isImmutable()) {
+                  assetMonitor.removeMonitorDirectoryFiles(path, pack);
+                  assetMonitor.monitorDirectoryFiles(path, new BuilderManager.BuilderAssetMonitorHandler(pack, includeTests));
                }
-            });
+
+               final Object2IntOpenHashMap<String> typeCounter = new Object2IntOpenHashMap<>();
+               int sizeBefore = this.builderCache.size();
+               Files.walkFileTree(path, FileUtil.DEFAULT_WALK_TREE_OPTIONS_SET, Integer.MAX_VALUE, new SimpleFileVisitor<Path>() {
+                  @Nonnull
+                  public FileVisitResult visitFile(@Nonnull Path file, @Nonnull BasicFileAttributes attrs) {
+                     if (BuilderManager.isJsonFile(file) && !BuilderManager.isIgnoredFile(file)) {
+                        BuilderManager.this.loadFile(file, errors, typeCounter, includeTests, false);
+                     }
+
+                     return FileVisitResult.CONTINUE;
+                  }
+               });
+               StringBuilder output = new StringBuilder();
+               output.append("Loaded ").append(this.builderCache.size() - sizeBefore).append(' ').append(assetPath.label()).append(" configurations");
+
+               for (Object2IntMap.Entry<String> entry : typeCounter.object2IntEntrySet()) {
+                  output.append(", ").append(entry.getKey()).append(": ").append(entry.getIntValue());
+               }
+
+               summaries.add(output.toString());
+            }
          }
 
          Int2ObjectOpenHashMap<BuilderInfo> loadedBuilders = new Int2ObjectOpenHashMap<>();
@@ -297,14 +322,10 @@ public class BuilderManager {
          throw new SkipSentryException(new RuntimeException(e));
       }
 
-      StringBuilder output = new StringBuilder();
-      output.append("Loaded ").append(this.builderCache.size()).append(" ").append("NPC").append(" configurations");
-
-      for (Object2IntMap.Entry<String> entry : typeCounter.object2IntEntrySet()) {
-         output.append(", ").append(entry.getKey()).append(": ").append(entry.getIntValue());
+      for (String summary : summaries) {
+         NPCPlugin.get().getLogger().at(Level.INFO).log(summary);
       }
 
-      NPCPlugin.get().getLogger().at(Level.INFO).log(output.toString());
       return valid;
    }
 
@@ -333,7 +354,7 @@ public class BuilderManager {
          }
 
          String name = builderNameFromPath(fileName);
-         NPCPlugin.get().getLogger().at(Level.INFO).log("Reloaded NPC builder " + name);
+         NPCPlugin.get().getLogger().at(Level.INFO).log("Reloaded builder " + name);
          loadedBuilderNames.add(name);
 
          for (BuilderInfo builderInfo : this.builderCache.values()) {
@@ -350,20 +371,20 @@ public class BuilderManager {
          onBuilderReloaded(builder);
          loadedBuilders.put(builderIndex, builder);
       } catch (Throwable e) {
-         NPCPlugin.get().getLogger().at(Level.SEVERE).log("Failed to reload %s config %s: %s", "NPC", fileName, e.getMessage());
+         NPCPlugin.get().getLogger().at(Level.SEVERE).log("Failed to reload config %s: %s", fileName, e.getMessage());
          failedBuilderTexts.add(builderNameFromPath(fileName) + ": " + e.getMessage());
       }
 
-      sendReloadNotification(Message.translation("server.general.assetstore.reloadAssets").param("class", "NPC"), loadedBuilderNames);
-      sendReloadNotification(Message.translation("server.general.assetstore.loadFailed").param("class", "NPC"), failedBuilderTexts);
+      sendReloadNotification(Message.translation("server.general.assetstore.reloadAssets").param("class", "builder"), loadedBuilderNames);
+      sendReloadNotification(Message.translation("server.general.assetstore.loadFailed").param("class", "builder"), failedBuilderTexts);
       this.finishLoadingBuilders(loadedBuilders, errors);
    }
 
    public void assetEditorRemoveFile(@Nonnull Path filePath) {
       String builderName = builderNameFromPath(filePath);
       this.removeBuilder(builderName);
-      NPCPlugin.get().getLogger().at(Level.INFO).log("Deleted %s builder %s", "NPC", builderName);
-      sendReloadNotification(Message.translation("server.general.assetstore.removedAssets").param("class", "NPC"), Set.of(builderName));
+      NPCPlugin.get().getLogger().at(Level.INFO).log("Deleted builder %s", builderName);
+      sendReloadNotification(Message.translation("server.general.assetstore.removedAssets").param("class", "builder"), Set.of(builderName));
       ObjectArrayList<String> errors = new ObjectArrayList<>();
       this.finishLoadingBuilders(new Int2ObjectOpenHashMap<>(), errors);
    }
@@ -384,7 +405,7 @@ public class BuilderManager {
       ) {
          data = JsonParser.parseReader(reader).getAsJsonObject();
       } catch (Exception e) {
-         errors.add(fileName + ": Failed to load NPC builder: " + e.getMessage());
+         errors.add(fileName + ": Failed to load builder: " + e.getMessage());
          return Integer.MIN_VALUE;
       }
 
@@ -419,7 +440,7 @@ public class BuilderManager {
 
       Class<?> category = this.categoryNames.get(categoryName);
       if (category == null) {
-         errors.add(fileName + ": Failed to load NPC builder, unknown class " + categoryName);
+         errors.add(fileName + ": Failed to load builder, unknown class " + categoryName);
          return Integer.MIN_VALUE;
       }
 
@@ -453,7 +474,7 @@ public class BuilderManager {
       try {
          builderParameters.readJSON(data, stateHelper);
       } catch (Exception e) {
-         errors.add(fileNameString + ": Failed to load NPC builder, 'Parameters' section invalid: " + e.getMessage());
+         errors.add(fileNameString + ": Failed to load builder, 'Parameters' section invalid: " + e.getMessage());
          return Integer.MIN_VALUE;
       }
 
@@ -483,7 +504,7 @@ public class BuilderManager {
       try {
          builder.readConfig(null, content, this, builderParameters, validationHelper);
       } catch (Exception e) {
-         errors.add(fileNameString + ": Failed to load NPC: " + e.getMessage());
+         errors.add(fileNameString + ": Failed to load builder: " + e.getMessage());
          return Integer.MIN_VALUE;
       }
 
@@ -704,9 +725,14 @@ public class BuilderManager {
 
    @Nonnull
    public Schema generateSchema(@Nonnull SchemaContext context) {
+      return this.generateSchema(context, Role.class);
+   }
+
+   @Nonnull
+   public Schema generateSchema(@Nonnull SchemaContext context, @Nonnull Class<?> rootCategory) {
       try {
          SCHEMA_BUILDER_MANAGER = this;
-         BuilderFactory<?> roleFactory = this.factoryMap.get(Role.class);
+         BuilderFactory<?> roleFactory = this.factoryMap.get(rootCategory);
          Schema schema = roleFactory.toSchema(context, true);
          ObjectSchema check = new ObjectSchema();
          check.setRequired("Class", "Type");
@@ -792,7 +818,7 @@ public class BuilderManager {
    }
 
    public void validateAllLoadedBuilders(@Nonnull Int2ObjectMap<BuilderInfo> loadedBuilders, boolean validateDependents, @Nonnull List<String> errors) {
-      NPCPlugin.get().getLogger().at(Level.INFO).log("Validating loaded NPC configurations...");
+      NPCPlugin.get().getLogger().at(Level.INFO).log("Validating loaded configurations...");
       validateAllSpawnableNPCs(loadedBuilders, errors);
       if (validateDependents) {
          Int2ObjectOpenHashMap<BuilderInfo> dependents = new Int2ObjectOpenHashMap<>();
@@ -832,8 +858,8 @@ public class BuilderManager {
             dispatcher.dispatch(new AllNPCsLoadedEvent(this.getAllBuilders(), loadedBuilders));
          }
 
-         this.getAllBuilders().forEach((index, builderInfo) -> {
-            if (builderInfo.needsValidation()) {
+         this.getAllBuilders().forEach((var0, builderInfo) -> {
+            if (builderInfo.needsValidation() && builderInfo.getBuilder().category() == Role.class) {
                NPCPlugin.get().testAndValidateRole(builderInfo);
             }
          });
@@ -842,7 +868,15 @@ public class BuilderManager {
 
    public static void onBuilderReloaded(@Nonnull BuilderInfo builderInfo) {
       builderInfo.getBuilder().clearDynamicDependencies();
-      NPCPlugin.reloadNPCsWithRole(builderInfo.getIndex());
+      if (builderInfo.getBuilder().category() == Role.class) {
+         NPCPlugin.reloadNPCsWithRole(builderInfo.getIndex());
+      }
+
+      BuilderManager builderManager = NPCPlugin.get().getBuilderManager();
+
+      for (Consumer<BuilderInfo> listener : builderManager.builderReloadListeners) {
+         listener.accept(builderInfo);
+      }
    }
 
    public static int getPlayerGroupID() {
@@ -1147,6 +1181,9 @@ public class BuilderManager {
       }
    }
 
+   private record AssetPath(String path, String label) {
+   }
+
    private class BuilderAssetMonitorHandler implements AssetMonitorHandler {
       private final AssetPack pack;
       private final boolean includeTests;
@@ -1179,7 +1216,7 @@ public class BuilderManager {
                if (eventKind == EventKind.ENTRY_DELETE) {
                   String builderName = BuilderManager.builderNameFromPath(path);
                   BuilderManager.this.removeBuilder(builderName);
-                  NPCPlugin.get().getLogger().at(Level.INFO).log("Deleted %s builder %s", "NPC", builderName);
+                  NPCPlugin.get().getLogger().at(Level.INFO).log("Deleted builder %s", builderName);
                   deletedBuilderNames.add(builderName);
                }
             } else if (Files.isRegularFile(path) && !BuilderManager.isIgnoredFile(path)) {
@@ -1187,7 +1224,7 @@ public class BuilderManager {
                   int builderIndex = BuilderManager.this.loadFile(path, errors, null, this.includeTests, true);
                   if (builderIndex >= 0) {
                      String name = BuilderManager.builderNameFromPath(path);
-                     NPCPlugin.get().getLogger().at(Level.INFO).log("Reloaded NPC builder " + name);
+                     NPCPlugin.get().getLogger().at(Level.INFO).log("Reloaded builder " + name);
                      loadedBuilderNames.add(name);
 
                      for (BuilderInfo builderInfo : BuilderManager.this.builderCache.values()) {
@@ -1212,15 +1249,15 @@ public class BuilderManager {
                      loadedBuilders.put(builderIndex, builder);
                   }
                } catch (Throwable e) {
-                  NPCPlugin.get().getLogger().at(Level.SEVERE).log("Failed to reload %s config %s: %s", "NPC", path, e.getMessage());
+                  NPCPlugin.get().getLogger().at(Level.SEVERE).log("Failed to reload config %s: %s", path, e.getMessage());
                   failedBuilderTexts.add(BuilderManager.builderNameFromPath(path) + ": " + e.getMessage());
                }
             }
          }
 
-         BuilderManager.sendReloadNotification(Message.translation("server.general.assetstore.reloadAssets").param("class", "NPC"), loadedBuilderNames);
-         BuilderManager.sendReloadNotification(Message.translation("server.general.assetstore.loadFailed").param("class", "NPC"), failedBuilderTexts);
-         BuilderManager.sendReloadNotification(Message.translation("server.general.assetstore.removedAssets").param("class", "NPC"), deletedBuilderNames);
+         BuilderManager.sendReloadNotification(Message.translation("server.general.assetstore.reloadAssets").param("class", "builder"), loadedBuilderNames);
+         BuilderManager.sendReloadNotification(Message.translation("server.general.assetstore.loadFailed").param("class", "builder"), failedBuilderTexts);
+         BuilderManager.sendReloadNotification(Message.translation("server.general.assetstore.removedAssets").param("class", "builder"), deletedBuilderNames);
          BuilderManager.this.finishLoadingBuilders(loadedBuilders, errors);
       }
    }

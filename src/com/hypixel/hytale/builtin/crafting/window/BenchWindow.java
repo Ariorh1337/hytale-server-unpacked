@@ -93,7 +93,7 @@ public abstract class BenchWindow extends BlockWindow implements MaterialContain
    @Override
    public void onClose0(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       World world = componentAccessor.getExternalData().getWorld();
-      this.setBlockInteractionState(this.benchBlock.getTierStateName(), world);
+      this.setBlockInteractionState(this.getResetInteractionState(world), world);
       CraftingManager craftingManagerComponent = componentAccessor.getComponent(ref, CraftingManager.getComponentType());
       if (craftingManagerComponent != null) {
          if (craftingManagerComponent.clearBench(ref, componentAccessor) && this.bench.getFailedSoundEventIndex() != 0) {
@@ -110,6 +110,22 @@ public abstract class BenchWindow extends BlockWindow implements MaterialContain
             worldChunk.setBlockInteractionState(this.x, this.y, this.z, blockType, state, true);
          }
       }
+   }
+
+   @Nonnull
+   private String getResetInteractionState(@Nonnull World world) {
+      String tierStateName = this.benchBlock.getTierStateName();
+      if ("default".equals(tierStateName)) {
+         return tierStateName;
+      }
+
+      WorldChunk worldChunk = world.getChunk(ChunkUtil.indexChunkFromBlock(this.x, this.z));
+      if (worldChunk == null) {
+         return tierStateName;
+      }
+
+      BlockType blockType = worldChunk.getBlockType(this.x, this.y, this.z);
+      return blockType != null && blockType.getBlockForState(tierStateName) != null ? tierStateName : "default";
    }
 
    public void updateQueueSize(int size) {

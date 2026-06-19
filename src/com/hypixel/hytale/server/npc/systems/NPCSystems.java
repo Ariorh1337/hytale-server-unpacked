@@ -55,7 +55,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.flock.FlockMembership;
 import com.hypixel.hytale.server.flock.FlockPlugin;
 import com.hypixel.hytale.server.npc.NPCPlugin;
-import com.hypixel.hytale.server.npc.blackboard.view.blocktype.BlockTypeView;
 import com.hypixel.hytale.server.npc.config.balancing.BalanceAsset;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.role.Role;
@@ -242,7 +241,6 @@ public class NPCSystems {
             NPCPlugin.get().getLogger().atSevere().withCause(new IllegalStateException("NPC has no role or role index in onLoad!")).log();
             commandBuffer.removeEntity(ref, RemoveReason.REMOVE);
          } else {
-            npcComponent.initBlockChangeBlackboardView(ref, commandBuffer);
             role.loaded(ref, commandBuffer);
             commandBuffer.ensureComponent(ref, PrefabCopyableComponent.getComponentType());
             commandBuffer.ensureComponent(ref, NPCMarkerComponent.getComponentType());
@@ -262,11 +260,6 @@ public class NPCSystems {
       ) {
          NPCEntity npcComponent = store.getComponent(ref, this.npcComponentType);
          assert npcComponent != null;
-         BlockTypeView blockTypeView = npcComponent.removeBlockTypeBlackboardView();
-         if (blockTypeView != null) {
-            blockTypeView.removeSearchedBlockSets(ref, npcComponent, npcComponent.getBlackboardBlockTypeSets());
-         }
-
          switch (reason) {
             case REMOVE:
             case BUILDER_TOOLS_UNDO:

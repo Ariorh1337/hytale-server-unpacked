@@ -14,7 +14,6 @@ import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.Rotation;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
-import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.interaction.DoorBlockUtils;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
@@ -39,8 +38,8 @@ public class ControlDoorsEffect extends TriggerEffect {
    public void execute(@Nonnull TriggerContext context) {
       Store<EntityStore> store = context.getStore();
       World world = store.getExternalData().getWorld();
-      TransformComponent triggerTransform = store.getComponent(context.getEntityRef(), TransformComponent.getComponentType());
-      Vector3d triggerPos = triggerTransform != null ? triggerTransform.getPosition() : new Vector3d(context.getVolume().getPosition());
+      Vector3d actorPosition = context.getActorPosition();
+      Vector3d triggerPos = actorPosition != null ? actorPosition : new Vector3d(context.getVolume().getPosition());
       ChunkStore chunkStore = world.getChunkStore();
       Store<ChunkStore> chunkComponentStore = chunkStore.getStore();
       Vector3d min = new Vector3d();

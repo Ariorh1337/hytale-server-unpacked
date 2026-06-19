@@ -29,7 +29,7 @@ public final class ReturnToHubButtonUI {
    }
 
    public static void register() {
-      AnchorActionModule.get().register("returnToHub", (playerRef, ref, store, data) -> executeReturnToHub(playerRef, ref, store));
+      AnchorActionModule.get().register("returnToHub", ReturnToHubButtonUI::executeReturnToHub);
    }
 
    public static void send(@Nonnull PlayerRef playerRef) {

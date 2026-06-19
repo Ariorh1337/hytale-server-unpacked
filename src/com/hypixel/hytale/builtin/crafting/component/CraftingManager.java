@@ -425,7 +425,7 @@ public class CraftingManager implements Component<EntityStore> {
             return true;
          }
       } else {
-         LOGGER.at(Level.WARNING).log("%s - Attempted to craft %s but doesn't know the recipe!", recipe.getId());
+         LOGGER.at(Level.WARNING).log("Attempted to craft %s but doesn't know the recipe!", recipe.getId());
          return false;
       }
    }
@@ -721,7 +721,6 @@ public class CraftingManager implements Component<EntityStore> {
                   CombinedItemContainer combined = new CombinedItemContainer(
                      combinedBackpackStorageHotbar, this.upgradingJob.window.getExtraResourcesSection().getItemContainer()
                   );
-                  combined = new CombinedItemContainer(combined, this.upgradingJob.window.getExtraResourcesSection().getItemContainer());
                   ListTransaction<MaterialTransaction> materialTransactions = combined.removeMaterials(input);
                   if (materialTransactions.succeeded()) {
                      List<ItemStack> consumed = new ObjectArrayList<>();

@@ -12,7 +12,6 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.EnumCodec;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -33,6 +32,8 @@ public class TagCondition extends TriggerCondition {
       .append(new KeyedCodec<>("TagKey", Codec.STRING), (condition, tagKey) -> condition.tagKey = tagKey, condition -> condition.tagKey)
       .add()
       .append(new KeyedCodec<>("TagValue", Codec.STRING, false), (condition, tagValue) -> condition.tagValue = tagValue, condition -> condition.tagValue)
+      .add()
+      .append(new KeyedCodec<>("Inverted", Codec.BOOLEAN, false), (condition, inverted) -> condition.inverted = inverted, condition -> condition.inverted)
       .add()
       .append(new KeyedCodec<>("MatchKey", Codec.STRING, false), (condition, matchKey) -> condition.matchKey = matchKey, condition -> condition.matchKey)
       .add()
@@ -61,6 +62,7 @@ public class TagCondition extends TriggerCondition {
    private String tagKey = "";
    @Nullable
    private String tagValue;
+   private boolean inverted;
    @Nullable
    private String matchKey;
    @Nullable
@@ -107,12 +109,13 @@ public class TagCondition extends TriggerCondition {
          return false;
       }
 
-      return switch (this.source) {
+      boolean matched = switch (this.source) {
          case EVENT -> this.testEvent(context);
          case SELF -> VolumeTagMatcher.hasTag(context.getVolume(), this.tagKey, this.tagValue);
          case GROUP -> this.testVolumes(context.getSpatialVolumes());
          case RADIUS -> this.testVolumes(this.collectRadiusTargets(context));
       };
+      return this.inverted != matched;
    }
 
    private boolean testEvent(@Nonnull TriggerContext context) {
@@ -162,7 +165,7 @@ public class TagCondition extends TriggerCondition {
          return List.copyOf(manager.getVolumes());
       }
 
-      Vector3d origin = this.resolveCenter(context, store);
+      Vector3d origin = this.resolveCenter(context);
       double radiusSquared = this.radius * this.radius;
       ArrayList<VolumeEntry> targets = new ArrayList<>();
 
@@ -176,11 +179,11 @@ public class TagCondition extends TriggerCondition {
    }
 
    @Nonnull
-   private Vector3d resolveCenter(@Nonnull TriggerContext context, @Nonnull Store<EntityStore> store) {
-      if (this.center == TaggedVolumeEffectUtil.Center.ENTITY && context.getEntityRef() != null) {
-         TransformComponent transform = store.getComponent(context.getEntityRef(), TransformComponent.getComponentType());
-         if (transform != null) {
-            return new Vector3d(transform.getPosition());
+   private Vector3d resolveCenter(@Nonnull TriggerContext context) {
+      if (this.center == TaggedVolumeEffectUtil.Center.ENTITY) {
+         Vector3d actorPosition = context.getActorPosition();
+         if (actorPosition != null) {
+            return actorPosition;
          }
       }
 

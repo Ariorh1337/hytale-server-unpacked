@@ -53,7 +53,9 @@ public class ASTOperatorBinary extends ASTOperator {
             operandStack.push(new ASTOperatorBinary(operatorBinary, operator.token, operator.tokenPosition, lhs, rhs));
          }
       } catch (NoSuchElementException e) {
-         throw new ParseException("Not enough operands for operator '" + operator.tokenString, operator.tokenPosition);
+         ParseException error = new ParseException("Not enough operands for operator '" + operator.tokenString, operator.tokenPosition);
+         error.initCause(e);
+         throw error;
       }
    }
 }

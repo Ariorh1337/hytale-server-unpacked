@@ -10,6 +10,7 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.asset.type.weather.config.Weather;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -49,8 +50,10 @@ public class SetWeatherEffect extends TriggerEffect {
             tracker.clearOverrideWeatherIndex();
             WeatherResource weatherResource = store.getResource(WeatherResource.getResourceType());
             if (weatherResource != null) {
-               int idx = weatherResource.getWeatherIndexForEnvironment(tracker.getEnvironmentId());
-               tracker.sendWeatherIndex(playerRef, idx, 2.0F);
+               int idx = resolveResetWeatherIndex(store, context, tracker, weatherResource);
+               if (idx != Integer.MIN_VALUE && idx != 0) {
+                  tracker.sendWeatherIndex(playerRef, idx, 2.0F);
+               }
             }
 
             return;
@@ -105,5 +108,21 @@ public class SetWeatherEffect extends TriggerEffect {
             world.getWorldConfig().markChanged();
          }
       }
+   }
+
+   private static int resolveResetWeatherIndex(
+      @Nonnull Store<EntityStore> store, @Nonnull TriggerContext context, @Nonnull WeatherTracker tracker, @Nonnull WeatherResource weatherResource
+   ) {
+      int forcedWeatherIndex = weatherResource.getForcedWeatherIndex();
+      if (forcedWeatherIndex != 0) {
+         return forcedWeatherIndex;
+      }
+
+      TransformComponent transform = store.getComponent(context.getEntityRef(), TransformComponent.getComponentType());
+      if (transform != null) {
+         tracker.updateEnvironment(transform, store);
+      }
+
+      return weatherResource.getWeatherIndexForEnvironment(tracker.getEnvironmentId());
    }
 }

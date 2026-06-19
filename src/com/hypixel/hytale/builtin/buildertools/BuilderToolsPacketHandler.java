@@ -20,11 +20,13 @@ import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.AnimationSlot;
 import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.ColorLight;
+import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.ModelTransform;
 import com.hypixel.hytale.protocol.packets.buildertools.BrushOrigin;
 import com.hypixel.hytale.protocol.packets.buildertools.BrushShape;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolAction;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolArgUpdate;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolColorAction;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolEntityAction;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolExtrudeAction;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolGMaskPresetLoadResponse;
@@ -116,9 +118,15 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
    @Nonnull
    private static final String BUILDER_TOOL_ID_EXTRUDE = "Extrude";
    @Nonnull
+   private static final String BUILDER_TOOL_ID_COLOR = "Color";
+   @Nonnull
    private static final String BUILDER_TOOL_ID_SELECTION = "Selection";
    @Nonnull
    private static final String BUILDER_TOOL_ID_LINE = "Line";
+   @Nonnull
+   private static final String BUILDER_TOOL_ID_ENTITY = "Entity";
+   @Nonnull
+   private static final String BUILDER_TOOL_ID_LASER_POINTER = "LaserPointer";
    @Nonnull
    private static final Message MESSAGE_BUILDER_TOOLS_USAGE_DENIED = Message.translation("server.builderTools.usageDenied");
    @Nonnull
@@ -145,25 +153,52 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
       }
    }
 
+   private static boolean isAuthorizedForTool(
+      @Nonnull PlayerRef playerRef, @Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull String expectedToolId
+   ) {
+      BuilderTool builderTool = BuilderTool.getActiveBuilderTool(ref, store);
+      if (builderTool != null && expectedToolId.equals(builderTool.getId())) {
+         PermissionsModule permissionsModule = PermissionsModule.get();
+         UUID uuid = playerRef.getUuid();
+         boolean hasPerm = permissionsModule.hasPermission(uuid, HytalePermissions.BUILDER_TOOLS_EDITOR)
+            || permissionsModule.hasPermission(uuid, HytalePermissions.toolPermission(builderTool.getId()));
+         if (!hasPerm) {
+            playerRef.sendMessage(MESSAGE_BUILDER_TOOLS_USAGE_DENIED);
+            return false;
+         }
+
+         if (!builderTool.isSurvivalAllowed()) {
+            Player playerComponent = store.getComponent(ref, Player.getComponentType());
+            if (playerComponent == null || playerComponent.getGameMode() != GameMode.Creative) {
+               return false;
+            }
+         }
+
+         return true;
+      } else {
+         return false;
+      }
+   }
+
    @Override
    public void registerHandlers() {
       if (BuilderToolsPlugin.get().isDisabled()) {
-         this.packetHandler.registerNoOpHandlers(400, 401, 412, 409, 403, 406, 427, 428, 407, 413, 414, 417, 426);
+         this.packetHandler.registerNoOpHandlers(400, 401, 412, 409, 403, 406, 427, 428, 407, 413, 414, 433, 417, 426);
       } else {
          IWorldPacketHandler.registerHandler(this.packetHandler, 106, this::handleLoadHotbar, BuilderToolsPacketHandler::hasPermission);
          IWorldPacketHandler.registerHandler(this.packetHandler, 107, this::handleSaveHotbar, BuilderToolsPacketHandler::hasPermission);
-         IWorldPacketHandler.registerHandler(this.packetHandler, 401, this::handleBuilderToolEntityAction, BuilderToolsPacketHandler::hasPermission);
-         IWorldPacketHandler.registerHandler(this.packetHandler, 402, this::handleBuilderToolSetEntityTransform, BuilderToolsPacketHandler::hasPermission);
-         IWorldPacketHandler.registerHandler(this.packetHandler, 420, this::handleBuilderToolSetEntityScale, BuilderToolsPacketHandler::hasPermission);
+         IWorldPacketHandler.registerHandler(this.packetHandler, 401, this::handleBuilderToolEntityAction);
+         IWorldPacketHandler.registerHandler(this.packetHandler, 402, this::handleBuilderToolSetEntityTransform);
+         IWorldPacketHandler.registerHandler(this.packetHandler, 420, this::handleBuilderToolSetEntityScale);
          IWorldPacketHandler.registerHandler(
             this.packetHandler, 408, this::handleBuilderToolSetTransformationModeState, BuilderToolsPacketHandler::hasPermission
          );
          IWorldPacketHandler.registerHandler(this.packetHandler, 417, this::handlePrefabUnselectPrefab, BuilderToolsPacketHandler::hasPermission);
          IWorldPacketHandler.registerHandler(this.packetHandler, 426, this::handlePrefabSetAnchor, BuilderToolsPacketHandler::hasPermission);
-         IWorldPacketHandler.registerHandler(this.packetHandler, 421, this::handleBuilderToolSetEntityPickupEnabled, BuilderToolsPacketHandler::hasPermission);
-         IWorldPacketHandler.registerHandler(this.packetHandler, 422, this::handleBuilderToolSetEntityLight, BuilderToolsPacketHandler::hasPermission);
-         IWorldPacketHandler.registerHandler(this.packetHandler, 423, this::handleBuilderToolSetNPCDebug, BuilderToolsPacketHandler::hasPermission);
-         IWorldPacketHandler.registerHandler(this.packetHandler, 425, this::handleBuilderToolSetEntityCollision, BuilderToolsPacketHandler::hasPermission);
+         IWorldPacketHandler.registerHandler(this.packetHandler, 421, this::handleBuilderToolSetEntityPickupEnabled);
+         IWorldPacketHandler.registerHandler(this.packetHandler, 422, this::handleBuilderToolSetEntityLight);
+         IWorldPacketHandler.registerHandler(this.packetHandler, 423, this::handleBuilderToolSetNPCDebug);
+         IWorldPacketHandler.registerHandler(this.packetHandler, 425, this::handleBuilderToolSetEntityCollision);
          IWorldPacketHandler.registerHandler(
             this.packetHandler, 400, this::handleBuilderToolArgUpdate, p -> hasPermission(p, HytalePermissions.EDITOR_BRUSH_CONFIG)
          );
@@ -185,9 +220,7 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
          IWorldPacketHandler.registerHandler(
             this.packetHandler, 407, this::handleBuilderToolPasteClipboard, p -> hasPermission(p, HytalePermissions.EDITOR_SELECTION_CLIPBOARD)
          );
-         IWorldPacketHandler.registerHandler(
-            this.packetHandler, 413, this::handleBuilderToolOnUseInteraction, p -> hasPermission(p, HytalePermissions.EDITOR_BRUSH_USE)
-         );
+         IWorldPacketHandler.registerHandler(this.packetHandler, 413, this::handleBuilderToolOnUseInteraction);
          IWorldPacketHandler.registerHandler(
             this.packetHandler, 410, this::handleBuilderToolSelectionToolAskForClipboard, p -> hasPermission(p, HytalePermissions.EDITOR_SELECTION_CLIPBOARD)
          );
@@ -199,6 +232,9 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
          );
          IWorldPacketHandler.registerHandler(
             this.packetHandler, 404, this::handleBuilderToolStackArea, p -> hasPermission(p, HytalePermissions.EDITOR_SELECTION_CLIPBOARD)
+         );
+         IWorldPacketHandler.registerHandler(
+            this.packetHandler, 433, this::handleBuilderToolColorAction, p -> hasPermission(p, HytalePermissions.EDITOR_BRUSH_USE)
          );
          IWorldPacketHandler.registerHandler(this.packetHandler, 412, this::handleBuilderToolGeneralAction);
          IWorldPacketHandler.registerHandler(this.packetHandler, 431, this::handleGMaskPresetLoadResponse, BuilderToolsPacketHandler::hasPermission);
@@ -251,55 +287,57 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
       @Nonnull World world,
       @Nonnull Store<EntityStore> store
    ) {
-      int targetId = packet.entityId;
-      Ref<EntityStore> targetRef = world.getEntityStore().getRefFromNetworkId(targetId);
-      Player playerComponent = store.getComponent(ref, Player.getComponentType());
-      if (targetRef == null || !targetRef.isValid()) {
-         playerRef.sendMessage(Message.translation("server.general.entityNotFound").param("id", targetId));
-      } else if (playerComponent != null) {
-         Player targetPlayerComponent = store.getComponent(targetRef, Player.getComponentType());
-         if (targetPlayerComponent != null) {
-            playerRef.sendMessage(Message.translation("server.builderTools.entityTool.cannotTargetPlayer"));
-         } else {
-            LOGGER.at(Level.INFO).log("%s: %s", this.packetHandler.getIdentifier(), packet);
-            switch (packet.action) {
-               case Freeze:
-                  BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, builderState, componentAccessor) -> {
-                     EntityFreezeSnapshot snapshot = new EntityFreezeSnapshot(targetRef, componentAccessor);
-                     if (componentAccessor.getArchetype(targetRef).contains(Frozen.getComponentType())) {
-                        componentAccessor.tryRemoveComponent(targetRef, Frozen.getComponentType());
-                        AnimationUtils.stopAnimation(targetRef, AnimationSlot.Movement, componentAccessor);
-                     } else {
-                        componentAccessor.addComponent(targetRef, Frozen.getComponentType(), Frozen.get());
-                        componentAccessor.tryRemoveComponent(targetRef, DespawnComponent.getComponentType());
-                        resetToIdleAnimation(targetRef, componentAccessor);
-                     }
+      if (isAuthorizedForTool(playerRef, ref, store, "Entity")) {
+         int targetId = packet.entityId;
+         Ref<EntityStore> targetRef = world.getEntityStore().getRefFromNetworkId(targetId);
+         Player playerComponent = store.getComponent(ref, Player.getComponentType());
+         if (targetRef == null || !targetRef.isValid()) {
+            playerRef.sendMessage(Message.translation("server.general.entityNotFound").param("id", targetId));
+         } else if (playerComponent != null) {
+            Player targetPlayerComponent = store.getComponent(targetRef, Player.getComponentType());
+            if (targetPlayerComponent != null) {
+               playerRef.sendMessage(Message.translation("server.builderTools.entityTool.cannotTargetPlayer"));
+            } else {
+               LOGGER.at(Level.INFO).log("%s: %s", this.packetHandler.getIdentifier(), packet);
+               switch (packet.action) {
+                  case Freeze:
+                     BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, builderState, componentAccessor) -> {
+                        EntityFreezeSnapshot snapshot = new EntityFreezeSnapshot(targetRef, componentAccessor);
+                        if (componentAccessor.getArchetype(targetRef).contains(Frozen.getComponentType())) {
+                           componentAccessor.tryRemoveComponent(targetRef, Frozen.getComponentType());
+                           AnimationUtils.stopAnimation(targetRef, AnimationSlot.Movement, componentAccessor);
+                        } else {
+                           componentAccessor.addComponent(targetRef, Frozen.getComponentType(), Frozen.get());
+                           componentAccessor.tryRemoveComponent(targetRef, DespawnComponent.getComponentType());
+                           resetToIdleAnimation(targetRef, componentAccessor);
+                        }
 
-                     builderState.pushEntityFreezeHistory(snapshot);
-                  });
-                  break;
-               case Clone:
-                  BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, builderState, componentAccessor) -> {
-                     Store<EntityStore> entityStore = world.getEntityStore().getStore();
-                     Holder<EntityStore> copy = entityStore.copyEntity(targetRef);
-                     if (copy.getComponent(UUIDComponent.getComponentType()) != null) {
-                        copy.replaceComponent(UUIDComponent.getComponentType(), new UUIDComponent(UUID.randomUUID()));
-                     }
+                        builderState.pushEntityFreezeHistory(snapshot);
+                     });
+                     break;
+                  case Clone:
+                     BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, builderState, componentAccessor) -> {
+                        Store<EntityStore> entityStore = world.getEntityStore().getStore();
+                        Holder<EntityStore> copy = entityStore.copyEntity(targetRef);
+                        if (copy.getComponent(UUIDComponent.getComponentType()) != null) {
+                           copy.replaceComponent(UUIDComponent.getComponentType(), new UUIDComponent(UUID.randomUUID()));
+                        }
 
-                     copy.tryRemoveComponent(DespawnComponent.getComponentType());
-                     Ref<EntityStore> clonedRef = entityStore.addEntity(copy, AddReason.SPAWN);
-                     if (clonedRef != null) {
-                        builderState.pushEntityCloneHistory(clonedRef);
-                     }
-                  });
-                  break;
-               case Remove:
-                  BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, builderState, componentAccessor) -> {
-                     if (targetRef.isValid()) {
-                        builderState.pushEntityRemoveHistory(targetRef, componentAccessor);
-                        EntityRemoveCommand.removeEntity(ref, targetRef, componentAccessor);
-                     }
-                  });
+                        copy.tryRemoveComponent(DespawnComponent.getComponentType());
+                        Ref<EntityStore> clonedRef = entityStore.addEntity(copy, AddReason.SPAWN);
+                        if (clonedRef != null) {
+                           builderState.pushEntityCloneHistory(clonedRef);
+                        }
+                     });
+                     break;
+                  case Remove:
+                     BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, builderState, componentAccessor) -> {
+                        if (targetRef.isValid()) {
+                           builderState.pushEntityRemoveHistory(targetRef, componentAccessor);
+                           EntityRemoveCommand.removeEntity(ref, targetRef, componentAccessor);
+                        }
+                     });
+               }
             }
          }
       }
@@ -792,6 +830,182 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
       }
    }
 
+   public void handleBuilderToolColorAction(
+      @Nonnull BuilderToolColorAction packet,
+      @Nonnull PlayerRef playerRef,
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull World world,
+      @Nonnull Store<EntityStore> store
+   ) {
+      Player playerComponent = store.getComponent(ref, Player.getComponentType());
+      if (playerComponent != null) {
+         BuilderTool builderTool = BuilderTool.getActiveBuilderTool(ref, store);
+         if (builderTool != null && builderTool.getId().equals("Color")) {
+            ItemStack itemInHand = InventoryComponent.getItemInHand(store, ref);
+            BuilderTool.ArgData args = builderTool.getItemArgData(itemInHand);
+            if (args != null && args.tool() != null) {
+               int width = args.tool().get("ColorWidth") instanceof Integer w ? w : 5;
+               int height;
+               int var50 = height = args.tool().get("ColorHeight") instanceof Integer h ? h : 5;
+               BrushShape brushShape = parseBrushShape((String)args.tool().getOrDefault("BrushShape", "Sphere"));
+               LOGGER.at(Level.INFO).log("%s: %s", this.packetHandler.getIdentifier(), packet);
+               switch (packet.mode) {
+                  case Coloring:
+                     BlockPattern pattern = (BlockPattern)args.tool().get("ColorMaterial");
+                     BlockPattern effectivePattern = pattern != null ? pattern : BlockPattern.parse("Rock_Stone");
+                     String coloringSubMode = (String)args.tool().getOrDefault("ColoringSubMode", "SmartMatch");
+                     boolean smartMatch = "SmartMatch".equals(coloringSubMode);
+                     BuilderToolsPlugin.addToQueue(
+                        playerComponent,
+                        playerRef,
+                        (r, s, componentAccessor) -> s.applyRecoloring(
+                           packet.x,
+                           packet.y,
+                           packet.z,
+                           width,
+                           height,
+                           effectivePattern,
+                           smartMatch,
+                           brushShape,
+                           packet.undoGroupSize,
+                           packet.isHoldDownInteraction,
+                           BuilderToolsPlugin.get().getBlockColorIndex(),
+                           componentAccessor
+                        )
+                     );
+                     break;
+                  case Gradient:
+                     List<BuilderToolsPlugin.ColorGradientMaterial> materials = BuilderToolsPlugin.parseGradientMaterials(packet.gradientMaterials);
+                     String gradientShape = packet.gradientShape != null ? packet.gradientShape : "Linear";
+                     int blendPercent = args.tool().get("GradientBlend") instanceof Integer b ? b : 12;
+                     float blendBand = blendPercent / 100.0F;
+                     boolean invert;
+                     boolean var56 = invert = args.tool().get("GradientInvert") instanceof Boolean inv && inv;
+                     BuilderToolsPlugin.addToQueue(
+                        playerComponent,
+                        playerRef,
+                        (r, s, componentAccessor) -> s.applyGradient(
+                           packet.x,
+                           packet.y,
+                           packet.z,
+                           width,
+                           height,
+                           packet.gradientStartX,
+                           packet.gradientStartY,
+                           packet.gradientStartZ,
+                           packet.gradientEndX,
+                           packet.gradientEndY,
+                           packet.gradientEndZ,
+                           materials,
+                           gradientShape,
+                           blendBand,
+                           brushShape,
+                           invert,
+                           packet.undoGroupSize,
+                           packet.isHoldDownInteraction,
+                           componentAccessor
+                        )
+                     );
+                     break;
+                  case Shading:
+                     int exposurePercent = args.tool().get("ShadingIntensity") instanceof Integer e ? e : 100;
+                     float intensity = exposurePercent / 100.0F;
+                     int edgeBlendPercent = args.tool().get("ShadingEdgeBlend") instanceof Integer eb ? eb : 0;
+                     float edgeBlend = edgeBlendPercent / 100.0F;
+                     String shadingSubMode = (String)args.tool().getOrDefault("ShadingSubMode", "Auto");
+                     boolean autoMode = "Auto".equals(shadingSubMode);
+                     String lightSourceValue = (String)args.tool().getOrDefault("ShadingLightSource", "None");
+                     boolean falloffFromTarget = "BrushCenter".equals(lightSourceValue);
+                     boolean invert;
+                     boolean var53 = invert = args.tool().get("CustomShadeInvert") instanceof Boolean inv && inv;
+
+                     BuilderToolsPlugin.ShadingLight var54 = switch (lightSourceValue) {
+                        case "Sun" -> BuilderToolsPlugin.ShadingLight.SUN;
+                        case "None" -> BuilderToolsPlugin.ShadingLight.ANGLE;
+                        default -> BuilderToolsPlugin.ShadingLight.PLAYER;
+                     };
+                     BuilderToolsPlugin.ShadingLight lightSource = var54;
+                     String customMaterials = (String)args.tool().get("ShadingCustomMaterials");
+                     int[] customRamp = "Custom".equals(shadingSubMode) && customMaterials != null && !customMaterials.isEmpty()
+                        ? resolveShadingRamp(BlockPattern.parse(customMaterials))
+                        : null;
+                     BuilderToolsPlugin.addToQueue(
+                        playerComponent,
+                        playerRef,
+                        (r, s, componentAccessor) -> s.applyShading(
+                           packet.x,
+                           packet.y,
+                           packet.z,
+                           packet.playerX,
+                           packet.playerY,
+                           packet.playerZ,
+                           width,
+                           height,
+                           packet.shadingLighten,
+                           autoMode,
+                           falloffFromTarget,
+                           lightSource,
+                           customRamp,
+                           intensity,
+                           brushShape,
+                           invert,
+                           edgeBlend,
+                           packet.undoGroupSize,
+                           packet.isHoldDownInteraction,
+                           BuilderToolsPlugin.get().getBlockColorIndex(),
+                           componentAccessor
+                        )
+                     );
+               }
+            }
+         }
+      }
+   }
+
+   @Nonnull
+   private static BrushShape parseBrushShape(@Nullable String value) {
+      if (value == null) {
+         return BrushShape.Cube;
+      }
+
+      try {
+         return BrushShape.valueOf(value);
+      } catch (IllegalArgumentException e) {
+         return BrushShape.Cube;
+      }
+   }
+
+   @Nullable
+   private static int[] resolveShadingRamp(@Nullable BlockPattern pattern) {
+      if (pattern != null && !pattern.isEmpty()) {
+         Integer[] keys = pattern.getResolvedKeys();
+         int count = 0;
+
+         for (Integer key : keys) {
+            if (key != null && key > 0) {
+               count++;
+            }
+         }
+
+         if (count == 0) {
+            return null;
+         }
+
+         int[] ramp = new int[count];
+         int i = 0;
+
+         for (Integer key : keys) {
+            if (key != null && key > 0) {
+               ramp[i++] = key;
+            }
+         }
+
+         return ramp;
+      } else {
+         return null;
+      }
+   }
+
    public void handleBuilderToolStackArea(
       @Nonnull BuilderToolStackArea packet,
       @Nonnull PlayerRef playerRef,
@@ -988,6 +1202,21 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
    ) {
       Player playerComponent = store.getComponent(ref, Player.getComponentType());
       if (playerComponent != null) {
+         BuilderTool activeTool = BuilderTool.getActiveBuilderTool(ref, store);
+         if (activeTool != null && "LaserPointer".equals(activeTool.getId())) {
+            if (!isAuthorizedForTool(playerRef, ref, store, "LaserPointer")) {
+               return;
+            }
+         } else {
+            if (!hasPermission(playerRef, HytalePermissions.EDITOR_BRUSH_USE)) {
+               return;
+            }
+
+            if (activeTool != null && !activeTool.isSurvivalAllowed() && playerComponent.getGameMode() != GameMode.Creative) {
+               return;
+            }
+         }
+
          LOGGER.at(Level.INFO).log("%s: %s", this.packetHandler.getIdentifier(), packet);
          BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> s.edit(ref, packet, componentAccessor));
       }
@@ -1000,70 +1229,72 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
       @Nonnull World world,
       @Nonnull Store<EntityStore> store
    ) {
-      Player playerComponent = store.getComponent(ref, Player.getComponentType());
-      if (playerComponent != null) {
-         Ref<EntityStore> targetRef = world.getEntityStore().getRefFromNetworkId(packet.entityId);
-         if (targetRef != null && targetRef.isValid()) {
-            if (store.getComponent(targetRef, Player.getComponentType()) == null) {
-               BuilderToolsPlugin.addToQueue(
-                  playerComponent,
-                  playerRef,
-                  (r, builderState, componentAccessor) -> {
-                     if (targetRef.isValid()) {
-                        TransformComponent transformComponent = componentAccessor.getComponent(targetRef, TransformComponent.getComponentType());
-                        if (transformComponent != null) {
-                           ModelTransform modelTransform = packet.modelTransform;
-                           builderState.handleEntityTransform(targetRef, modelTransform != null, packet.isSessionEnd, componentAccessor);
-                           if (modelTransform != null) {
-                              componentAccessor.tryRemoveComponent(targetRef, DespawnComponent.getComponentType());
-                           }
-
-                           HeadRotation headRotation = componentAccessor.getComponent(targetRef, HeadRotation.getComponentType());
-                           if (modelTransform != null) {
-                              boolean hasPosition = modelTransform.position != null;
-                              boolean hasLookOrientation = modelTransform.lookOrientation != null;
-                              boolean hasBodyOrientation = modelTransform.bodyOrientation != null;
-                              if (hasPosition) {
-                                 transformComponent.getPosition().set(modelTransform.position.x, modelTransform.position.y, modelTransform.position.z);
+      if (isAuthorizedForTool(playerRef, ref, store, "Entity")) {
+         Player playerComponent = store.getComponent(ref, Player.getComponentType());
+         if (playerComponent != null) {
+            Ref<EntityStore> targetRef = world.getEntityStore().getRefFromNetworkId(packet.entityId);
+            if (targetRef != null && targetRef.isValid()) {
+               if (store.getComponent(targetRef, Player.getComponentType()) == null) {
+                  BuilderToolsPlugin.addToQueue(
+                     playerComponent,
+                     playerRef,
+                     (r, builderState, componentAccessor) -> {
+                        if (targetRef.isValid()) {
+                           TransformComponent transformComponent = componentAccessor.getComponent(targetRef, TransformComponent.getComponentType());
+                           if (transformComponent != null) {
+                              ModelTransform modelTransform = packet.modelTransform;
+                              builderState.handleEntityTransform(targetRef, modelTransform != null, packet.isSessionEnd, componentAccessor);
+                              if (modelTransform != null) {
+                                 componentAccessor.tryRemoveComponent(targetRef, DespawnComponent.getComponentType());
                               }
 
-                              if (hasLookOrientation && headRotation != null) {
-                                 headRotation.getRotation()
-                                    .set(modelTransform.lookOrientation.pitch, modelTransform.lookOrientation.yaw, modelTransform.lookOrientation.roll);
+                              HeadRotation headRotation = componentAccessor.getComponent(targetRef, HeadRotation.getComponentType());
+                              if (modelTransform != null) {
+                                 boolean hasPosition = modelTransform.position != null;
+                                 boolean hasLookOrientation = modelTransform.lookOrientation != null;
+                                 boolean hasBodyOrientation = modelTransform.bodyOrientation != null;
+                                 if (hasPosition) {
+                                    transformComponent.getPosition().set(modelTransform.position.x, modelTransform.position.y, modelTransform.position.z);
+                                 }
+
+                                 if (hasLookOrientation && headRotation != null) {
+                                    headRotation.getRotation()
+                                       .set(modelTransform.lookOrientation.pitch, modelTransform.lookOrientation.yaw, modelTransform.lookOrientation.roll);
+                                 }
+
+                                 if (hasBodyOrientation) {
+                                    transformComponent.getRotation()
+                                       .set(modelTransform.bodyOrientation.pitch, modelTransform.bodyOrientation.yaw, modelTransform.bodyOrientation.roll);
+                                 }
+
+                                 if (hasPosition || hasLookOrientation || hasBodyOrientation) {
+                                    transformComponent.markChunkDirty(componentAccessor);
+                                 }
                               }
 
-                              if (hasBodyOrientation) {
-                                 transformComponent.getRotation()
-                                    .set(modelTransform.bodyOrientation.pitch, modelTransform.bodyOrientation.yaw, modelTransform.bodyOrientation.roll);
-                              }
+                              if (packet.isSessionEnd) {
+                                 boolean isItemOrBlock = componentAccessor.getArchetype(targetRef).contains(ItemComponent.getComponentType())
+                                    || componentAccessor.getArchetype(targetRef).contains(BlockEntity.getComponentType());
+                                 if (isItemOrBlock) {
+                                    BoundingBox boundingBox = componentAccessor.getComponent(targetRef, BoundingBox.getComponentType());
+                                    if (boundingBox != null) {
+                                       boolean isBlock = componentAccessor.getArchetype(targetRef).contains(BlockEntity.getComponentType());
+                                       Rotation3f rotation;
+                                       if (isBlock && headRotation != null) {
+                                          rotation = headRotation.getRotation();
+                                       } else {
+                                          rotation = transformComponent.getRotation();
+                                       }
 
-                              if (hasPosition || hasLookOrientation || hasBodyOrientation) {
-                                 transformComponent.markChunkDirty(componentAccessor);
-                              }
-                           }
-
-                           if (packet.isSessionEnd) {
-                              boolean isItemOrBlock = componentAccessor.getArchetype(targetRef).contains(ItemComponent.getComponentType())
-                                 || componentAccessor.getArchetype(targetRef).contains(BlockEntity.getComponentType());
-                              if (isItemOrBlock) {
-                                 BoundingBox boundingBox = componentAccessor.getComponent(targetRef, BoundingBox.getComponentType());
-                                 if (boundingBox != null) {
-                                    boolean isBlock = componentAccessor.getArchetype(targetRef).contains(BlockEntity.getComponentType());
-                                    Rotation3f rotation;
-                                    if (isBlock && headRotation != null) {
-                                       rotation = headRotation.getRotation();
-                                    } else {
-                                       rotation = transformComponent.getRotation();
+                                       boundingBox.applyRotation(rotation.pitch(), rotation.yaw(), rotation.roll());
                                     }
-
-                                    boundingBox.applyRotation(rotation.pitch(), rotation.yaw(), rotation.roll());
                                  }
                               }
                            }
                         }
                      }
-                  }
-               );
+                  );
+               }
             }
          }
       }
@@ -1126,23 +1357,25 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
       @Nonnull World world,
       @Nonnull Store<EntityStore> store
    ) {
-      Player playerComponent = store.getComponent(ref, Player.getComponentType());
-      if (playerComponent != null) {
-         Ref<EntityStore> targetRef = world.getEntityStore().getRefFromNetworkId(packet.entityId);
-         if (targetRef != null && targetRef.isValid()) {
-            if (store.getComponent(targetRef, Player.getComponentType()) == null) {
-               BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, builderState, componentAccessor) -> {
-                  if (targetRef.isValid()) {
-                     builderState.handleEntityScale(targetRef, componentAccessor);
-                     EntityScaleComponent scaleComponent = componentAccessor.getComponent(targetRef, EntityScaleComponent.getComponentType());
-                     if (scaleComponent == null) {
-                        scaleComponent = new EntityScaleComponent(packet.scale);
-                        componentAccessor.addComponent(targetRef, EntityScaleComponent.getComponentType(), scaleComponent);
-                     } else {
-                        scaleComponent.setScale(packet.scale);
+      if (isAuthorizedForTool(playerRef, ref, store, "Entity")) {
+         Player playerComponent = store.getComponent(ref, Player.getComponentType());
+         if (playerComponent != null) {
+            Ref<EntityStore> targetRef = world.getEntityStore().getRefFromNetworkId(packet.entityId);
+            if (targetRef != null && targetRef.isValid()) {
+               if (store.getComponent(targetRef, Player.getComponentType()) == null) {
+                  BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, builderState, componentAccessor) -> {
+                     if (targetRef.isValid()) {
+                        builderState.handleEntityScale(targetRef, componentAccessor);
+                        EntityScaleComponent scaleComponent = componentAccessor.getComponent(targetRef, EntityScaleComponent.getComponentType());
+                        if (scaleComponent == null) {
+                           scaleComponent = new EntityScaleComponent(packet.scale);
+                           componentAccessor.addComponent(targetRef, EntityScaleComponent.getComponentType(), scaleComponent);
+                        } else {
+                           scaleComponent.setScale(packet.scale);
+                        }
                      }
-                  }
-               });
+                  });
+               }
             }
          }
       }
@@ -1155,19 +1388,21 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
       @Nonnull World world,
       @Nonnull Store<EntityStore> store
    ) {
-      Player playerComponent = store.getComponent(ref, Player.getComponentType());
-      if (playerComponent != null) {
-         Ref<EntityStore> targetRef = world.getEntityStore().getRefFromNetworkId(packet.entityId);
-         if (targetRef != null && targetRef.isValid()) {
-            PropComponent propComponent = store.getComponent(targetRef, PropComponent.getComponentType());
-            if (propComponent != null) {
-               BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, builderState, componentAccessor) -> {
-                  if (targetRef.isValid()) {
-                     EntitySettingsSnapshot snapshot = new EntitySettingsSnapshot(targetRef, componentAccessor);
-                     EntitySettingsSnapshot.applyPickupState(targetRef, packet.enabled, componentAccessor);
-                     builderState.pushEntitySettingsHistory(snapshot);
-                  }
-               });
+      if (isAuthorizedForTool(playerRef, ref, store, "Entity")) {
+         Player playerComponent = store.getComponent(ref, Player.getComponentType());
+         if (playerComponent != null) {
+            Ref<EntityStore> targetRef = world.getEntityStore().getRefFromNetworkId(packet.entityId);
+            if (targetRef != null && targetRef.isValid()) {
+               PropComponent propComponent = store.getComponent(targetRef, PropComponent.getComponentType());
+               if (propComponent != null) {
+                  BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, builderState, componentAccessor) -> {
+                     if (targetRef.isValid()) {
+                        EntitySettingsSnapshot snapshot = new EntitySettingsSnapshot(targetRef, componentAccessor);
+                        EntitySettingsSnapshot.applyPickupState(targetRef, packet.enabled, componentAccessor);
+                        builderState.pushEntitySettingsHistory(snapshot);
+                     }
+                  });
+               }
             }
          }
       }
@@ -1180,36 +1415,38 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
       @Nonnull World world,
       @Nonnull Store<EntityStore> store
    ) {
-      Player playerComponent = store.getComponent(ref, Player.getComponentType());
-      if (playerComponent != null) {
-         Ref<EntityStore> targetRef = world.getEntityStore().getRefFromNetworkId(packet.entityId);
-         if (targetRef != null && targetRef.isValid()) {
-            BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, builderState, componentAccessor) -> {
-               if (targetRef.isValid()) {
-                  EntitySettingsSnapshot snapshot = new EntitySettingsSnapshot(targetRef, componentAccessor);
-                  if (packet.light == null) {
-                     componentAccessor.tryRemoveComponent(targetRef, DynamicLight.getComponentType());
-                     componentAccessor.tryRemoveComponent(targetRef, PersistentDynamicLight.getComponentType());
-                  } else {
-                     ColorLight colorLight = new ColorLight(packet.light.radius, packet.light.red, packet.light.green, packet.light.blue);
-                     DynamicLight existingDynamic = componentAccessor.getComponent(targetRef, DynamicLight.getComponentType());
-                     if (existingDynamic != null) {
-                        existingDynamic.setColorLight(colorLight);
+      if (isAuthorizedForTool(playerRef, ref, store, "Entity")) {
+         Player playerComponent = store.getComponent(ref, Player.getComponentType());
+         if (playerComponent != null) {
+            Ref<EntityStore> targetRef = world.getEntityStore().getRefFromNetworkId(packet.entityId);
+            if (targetRef != null && targetRef.isValid()) {
+               BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, builderState, componentAccessor) -> {
+                  if (targetRef.isValid()) {
+                     EntitySettingsSnapshot snapshot = new EntitySettingsSnapshot(targetRef, componentAccessor);
+                     if (packet.light == null) {
+                        componentAccessor.tryRemoveComponent(targetRef, DynamicLight.getComponentType());
+                        componentAccessor.tryRemoveComponent(targetRef, PersistentDynamicLight.getComponentType());
                      } else {
-                        componentAccessor.addComponent(targetRef, DynamicLight.getComponentType(), new DynamicLight(colorLight));
+                        ColorLight colorLight = new ColorLight(packet.light.radius, packet.light.red, packet.light.green, packet.light.blue);
+                        DynamicLight existingDynamic = componentAccessor.getComponent(targetRef, DynamicLight.getComponentType());
+                        if (existingDynamic != null) {
+                           existingDynamic.setColorLight(colorLight);
+                        } else {
+                           componentAccessor.addComponent(targetRef, DynamicLight.getComponentType(), new DynamicLight(colorLight));
+                        }
+
+                        PersistentDynamicLight existingPersistent = componentAccessor.getComponent(targetRef, PersistentDynamicLight.getComponentType());
+                        if (existingPersistent != null) {
+                           existingPersistent.setColorLight(colorLight);
+                        } else {
+                           componentAccessor.addComponent(targetRef, PersistentDynamicLight.getComponentType(), new PersistentDynamicLight(colorLight));
+                        }
                      }
 
-                     PersistentDynamicLight existingPersistent = componentAccessor.getComponent(targetRef, PersistentDynamicLight.getComponentType());
-                     if (existingPersistent != null) {
-                        existingPersistent.setColorLight(colorLight);
-                     } else {
-                        componentAccessor.addComponent(targetRef, PersistentDynamicLight.getComponentType(), new PersistentDynamicLight(colorLight));
-                     }
+                     builderState.pushEntitySettingsHistory(snapshot);
                   }
-
-                  builderState.pushEntitySettingsHistory(snapshot);
-               }
-            });
+               });
+            }
          }
       }
    }
@@ -1221,15 +1458,17 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
       @Nonnull World world,
       @Nonnull Store<EntityStore> store
    ) {
-      Ref<EntityStore> targetRef = world.getEntityStore().getRefFromNetworkId(packet.entityId);
-      if (targetRef != null && targetRef.isValid()) {
-         NPCMarkerComponent npcMarkerComponent = store.getComponent(targetRef, NPCMarkerComponent.getComponentType());
-         if (npcMarkerComponent != null) {
-            UUIDComponent uuidComponent = store.getComponent(targetRef, UUIDComponent.getComponentType());
-            if (uuidComponent != null) {
-               UUID uuid = uuidComponent.getUuid();
-               String command = packet.enabled ? "npc debug set display --entity " + uuid : "npc debug clear --entity " + uuid;
-               CommandManager.get().handleCommand(playerRef, command);
+      if (isAuthorizedForTool(playerRef, ref, store, "Entity")) {
+         Ref<EntityStore> targetRef = world.getEntityStore().getRefFromNetworkId(packet.entityId);
+         if (targetRef != null && targetRef.isValid()) {
+            NPCMarkerComponent npcMarkerComponent = store.getComponent(targetRef, NPCMarkerComponent.getComponentType());
+            if (npcMarkerComponent != null) {
+               UUIDComponent uuidComponent = store.getComponent(targetRef, UUIDComponent.getComponentType());
+               if (uuidComponent != null) {
+                  UUID uuid = uuidComponent.getUuid();
+                  String command = packet.enabled ? "npc debug set display --entity " + uuid : "npc debug clear --entity " + uuid;
+                  CommandManager.get().handleCommand(playerRef, command);
+               }
             }
          }
       }
@@ -1242,33 +1481,35 @@ public class BuilderToolsPacketHandler implements SubPacketHandler {
       @Nonnull World world,
       @Nonnull Store<EntityStore> store
    ) {
-      Player playerComponent = store.getComponent(ref, Player.getComponentType());
-      if (playerComponent != null) {
-         Ref<EntityStore> targetRef = world.getEntityStore().getRefFromNetworkId(packet.entityId);
-         if (targetRef != null && targetRef.isValid()) {
-            PropComponent propComponent = store.getComponent(targetRef, PropComponent.getComponentType());
-            NPCMarkerComponent npcMarkerComponent = store.getComponent(targetRef, NPCMarkerComponent.getComponentType());
-            if (propComponent != null || npcMarkerComponent != null) {
-               BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, builderState, componentAccessor) -> {
-                  if (targetRef.isValid()) {
-                     EntitySettingsSnapshot snapshot = new EntitySettingsSnapshot(targetRef, componentAccessor);
-                     if (packet.collisionType != null && !packet.collisionType.isEmpty()) {
-                        HitboxCollisionConfig hitboxCollisionConfig = HitboxCollisionConfig.getAssetMap().getAsset(packet.collisionType);
-                        if (hitboxCollisionConfig != null) {
-                           HitboxCollision existing = componentAccessor.getComponent(targetRef, HitboxCollision.getComponentType());
-                           if (existing != null) {
-                              existing.setHitboxCollisionConfigIndex(HitboxCollisionConfig.getAssetMap().getIndexOrDefault(packet.collisionType, -1));
-                           } else {
-                              componentAccessor.addComponent(targetRef, HitboxCollision.getComponentType(), new HitboxCollision(hitboxCollisionConfig));
+      if (isAuthorizedForTool(playerRef, ref, store, "Entity")) {
+         Player playerComponent = store.getComponent(ref, Player.getComponentType());
+         if (playerComponent != null) {
+            Ref<EntityStore> targetRef = world.getEntityStore().getRefFromNetworkId(packet.entityId);
+            if (targetRef != null && targetRef.isValid()) {
+               PropComponent propComponent = store.getComponent(targetRef, PropComponent.getComponentType());
+               NPCMarkerComponent npcMarkerComponent = store.getComponent(targetRef, NPCMarkerComponent.getComponentType());
+               if (propComponent != null || npcMarkerComponent != null) {
+                  BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, builderState, componentAccessor) -> {
+                     if (targetRef.isValid()) {
+                        EntitySettingsSnapshot snapshot = new EntitySettingsSnapshot(targetRef, componentAccessor);
+                        if (packet.collisionType != null && !packet.collisionType.isEmpty()) {
+                           HitboxCollisionConfig hitboxCollisionConfig = HitboxCollisionConfig.getAssetMap().getAsset(packet.collisionType);
+                           if (hitboxCollisionConfig != null) {
+                              HitboxCollision existing = componentAccessor.getComponent(targetRef, HitboxCollision.getComponentType());
+                              if (existing != null) {
+                                 existing.setHitboxCollisionConfig(hitboxCollisionConfig);
+                              } else {
+                                 componentAccessor.addComponent(targetRef, HitboxCollision.getComponentType(), new HitboxCollision(hitboxCollisionConfig));
+                              }
                            }
+                        } else {
+                           componentAccessor.tryRemoveComponent(targetRef, HitboxCollision.getComponentType());
                         }
-                     } else {
-                        componentAccessor.tryRemoveComponent(targetRef, HitboxCollision.getComponentType());
-                     }
 
-                     builderState.pushEntitySettingsHistory(snapshot);
-                  }
-               });
+                        builderState.pushEntitySettingsHistory(snapshot);
+                     }
+                  });
+               }
             }
          }
       }

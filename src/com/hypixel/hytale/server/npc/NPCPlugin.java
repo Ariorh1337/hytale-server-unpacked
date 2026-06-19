@@ -81,6 +81,7 @@ import com.hypixel.hytale.server.npc.asset.builder.BuilderInfo;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderManager;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.blackboard.Blackboard;
+import com.hypixel.hytale.server.npc.blackboard.BlackboardSubscription;
 import com.hypixel.hytale.server.npc.blackboard.view.attitude.AttitudeMap;
 import com.hypixel.hytale.server.npc.blackboard.view.attitude.ItemAttitudeMap;
 import com.hypixel.hytale.server.npc.blackboard.view.combat.CombatViewSystems;
@@ -90,6 +91,7 @@ import com.hypixel.hytale.server.npc.components.FailedSpawnComponent;
 import com.hypixel.hytale.server.npc.components.SortBufferProviderResource;
 import com.hypixel.hytale.server.npc.components.StepComponent;
 import com.hypixel.hytale.server.npc.components.Timers;
+import com.hypixel.hytale.server.npc.components.messaging.BeaconReceiverProvider;
 import com.hypixel.hytale.server.npc.components.messaging.BeaconSupport;
 import com.hypixel.hytale.server.npc.components.messaging.NPCBlockEventSupport;
 import com.hypixel.hytale.server.npc.components.messaging.NPCEntityEventSupport;
@@ -144,6 +146,7 @@ import com.hypixel.hytale.server.npc.corecomponents.entity.filters.builders.Buil
 import com.hypixel.hytale.server.npc.corecomponents.entity.filters.builders.BuilderEntityFilterAnd;
 import com.hypixel.hytale.server.npc.corecomponents.entity.filters.builders.BuilderEntityFilterAttitude;
 import com.hypixel.hytale.server.npc.corecomponents.entity.filters.builders.BuilderEntityFilterCombat;
+import com.hypixel.hytale.server.npc.corecomponents.entity.filters.builders.BuilderEntityFilterDeath;
 import com.hypixel.hytale.server.npc.corecomponents.entity.filters.builders.BuilderEntityFilterEntityEffect;
 import com.hypixel.hytale.server.npc.corecomponents.entity.filters.builders.BuilderEntityFilterHeightDifference;
 import com.hypixel.hytale.server.npc.corecomponents.entity.filters.builders.BuilderEntityFilterInsideBlock;
@@ -327,6 +330,7 @@ import com.hypixel.hytale.server.npc.util.SensorSupportBenchmark;
 import com.hypixel.hytale.server.npc.util.expression.StdScope;
 import com.hypixel.hytale.server.npc.valuestore.ValueStore;
 import com.hypixel.hytale.server.spawning.ISpawnableWithModel;
+import com.hypixel.hytale.server.spawning.SpawnLineage;
 import com.hypixel.hytale.server.spawning.SpawnTestResult;
 import com.hypixel.hytale.server.spawning.SpawningContext;
 import it.unimi.dsi.fastutil.Pair;
@@ -412,9 +416,11 @@ public class NPCPlugin extends JavaPlugin {
    private ResourceType<EntityStore, AStarNodePoolProviderSimple> aStarNodePoolProviderSimpleResourceType;
    private ResourceType<EntityStore, SpatialResource<Ref<EntityStore>, EntityStore>> npcSpatialResource;
    private ResourceType<EntityStore, SpawnNPCInteractionFailureTracker> spawnNPCInteractionFailureTrackerResourceType;
+   private final List<BeaconReceiverProvider> beaconReceiverProviders = new ObjectArrayList<>();
    private ComponentType<EntityStore, CombatViewSystems.CombatData> combatDataComponentType;
    private ComponentType<EntityStore, NPCRunTestsCommand.NPCTestData> npcTestDataComponentType;
    private ComponentType<EntityStore, BeaconSupport> beaconSupportComponentType;
+   private ComponentType<EntityStore, BlackboardSubscription> blackboardSubscriptionComponentType;
    private ComponentType<EntityStore, NPCBlockEventSupport> npcBlockEventSupportComponentType;
    private ComponentType<EntityStore, PlayerBlockEventSupport> playerBlockEventSupportComponentType;
    private ComponentType<EntityStore, NPCEntityEventSupport> npcEntityEventSupportComponentType;
@@ -436,6 +442,7 @@ public class NPCPlugin extends JavaPlugin {
    private ComponentType<EntityStore, DebugSupport> debugSupportComponentType;
    private ComponentType<EntityStore, FlagsComponent> flagsComponentType;
    private ComponentType<EntityStore, AlarmStore> alarmStoreComponentType;
+   private ComponentType<EntityStore, SpawnLineage> spawnLineageComponentType;
 
    public static NPCPlugin get() {
       return instance;
@@ -569,6 +576,7 @@ public class NPCPlugin extends JavaPlugin {
       this.playerBlockEventSupportComponentType = entityStoreRegistry.registerComponent(PlayerBlockEventSupport.class, PlayerBlockEventSupport::new);
       this.npcEntityEventSupportComponentType = entityStoreRegistry.registerComponent(NPCEntityEventSupport.class, NPCEntityEventSupport::new);
       this.playerEntityEventSupportComponentType = entityStoreRegistry.registerComponent(PlayerEntityEventSupport.class, PlayerEntityEventSupport::new);
+      this.blackboardSubscriptionComponentType = entityStoreRegistry.registerComponent(BlackboardSubscription.class, BlackboardSubscription::new);
       this.stepComponentType = entityStoreRegistry.registerComponent(StepComponent.class, () -> {
          throw new UnsupportedOperationException("Not implemented");
       });
@@ -588,9 +596,7 @@ public class NPCPlugin extends JavaPlugin {
       this.stateSupportComponentType = entityStoreRegistry.registerComponent(StateSupport.class, () -> {
          throw new UnsupportedOperationException("Not implemented");
       });
-      this.markedEntitySupportComponentType = entityStoreRegistry.registerComponent(MarkedEntitySupport.class, () -> {
-         throw new UnsupportedOperationException("Not implemented");
-      });
+      this.markedEntitySupportComponentType = entityStoreRegistry.registerComponent(MarkedEntitySupport.class, "MarkedEntitySupport", MarkedEntitySupport.CODEC);
       this.worldSupportComponentType = entityStoreRegistry.registerComponent(WorldSupport.class, () -> {
          throw new UnsupportedOperationException("Not implemented");
       });
@@ -608,6 +614,7 @@ public class NPCPlugin extends JavaPlugin {
       });
       this.flagsComponentType = entityStoreRegistry.registerComponent(FlagsComponent.class, FlagsComponent::new);
       this.alarmStoreComponentType = entityStoreRegistry.registerComponent(AlarmStore.class, "AlarmStore", AlarmStore.CODEC);
+      this.spawnLineageComponentType = entityStoreRegistry.registerComponent(SpawnLineage.class, "SpawnLineage", SpawnLineage.CODEC);
       ComponentType<EntityStore, NPCEntity> npcComponentType = NPCEntity.getComponentType();
       entityStoreRegistry.registerSystem(new BlackboardSystems.InitSystem(this.blackboardResourceType));
       entityStoreRegistry.registerSystem(new BlackboardSystems.TickingSystem(this.blackboardResourceType));
@@ -623,6 +630,7 @@ public class NPCPlugin extends JavaPlugin {
       entityStoreRegistry.registerSystem(new BalancingInitialisationSystem());
       entityStoreRegistry.registerSystem(new RoleSystems.RoleActivateSystem(npcComponentType));
       entityStoreRegistry.registerSystem(new PositionCacheSystems.RoleActivateSystem(npcComponentType, this.stateEvaluatorComponentType));
+      entityStoreRegistry.registerSystem(new BlackboardSystems.SubscriptionLifecycleSystem(this.blackboardSubscriptionComponentType));
       entityStoreRegistry.registerSystem(new NPCInteractionSystems.AddSimulationManagerSystem(npcComponentType));
       entityStoreRegistry.registerSystem(new NPCInteractionSystems.TickHeldInteractionsSystem(npcComponentType));
       entityStoreRegistry.registerSystem(new FailedSpawnSystem());
@@ -632,8 +640,9 @@ public class NPCPlugin extends JavaPlugin {
       entityStoreRegistry.registerSystem(new NPCSystems.AddSpawnEntityEffectSystem(npcComponentType));
       entityStoreRegistry.registerSystem(new RoleSystems.BehaviourTickSystem(npcComponentType, this.stepComponentType));
       entityStoreRegistry.registerSystem(new RoleSystems.PreBehaviourSupportTickSystem(npcComponentType));
+      entityStoreRegistry.registerSystem(new RoleSystems.MarkedTargetRebindSystem(this.markedEntitySupportComponentType));
       entityStoreRegistry.registerSystem(new StateEvaluatorSystem(this.stateEvaluatorComponentType, npcComponentType));
-      entityStoreRegistry.registerSystem(new PositionCacheSystems.UpdateSystem(npcComponentType, this.npcSpatialResource));
+      entityStoreRegistry.registerSystem(new PositionCacheSystems.UpdateSystem(this.npcSpatialResource));
       entityStoreRegistry.registerSystem(new NPCPreTickSystem(npcComponentType));
       Set<Dependency<EntityStore>> postBehaviourDependency = Set.of(new SystemDependency<>(Order.AFTER, RoleSystems.PostBehaviourSupportTickSystem.class));
       entityStoreRegistry.registerSystem(new AvoidanceSystem(npcComponentType));
@@ -704,6 +713,11 @@ public class NPCPlugin extends JavaPlugin {
       return this.blackboardResourceType;
    }
 
+   @Nonnull
+   public ComponentType<EntityStore, BlackboardSubscription> getBlackboardSubscriptionComponentType() {
+      return this.blackboardSubscriptionComponentType;
+   }
+
    public ResourceType<EntityStore, CombatViewSystems.CombatDataPool> getCombatDataPoolResourceType() {
       return this.combatDataPoolResourceType;
    }
@@ -726,6 +740,15 @@ public class NPCPlugin extends JavaPlugin {
 
    public ResourceType<EntityStore, SpatialResource<Ref<EntityStore>, EntityStore>> getNpcSpatialResource() {
       return this.npcSpatialResource;
+   }
+
+   public void registerBeaconReceiverProvider(@Nonnull BeaconReceiverProvider provider) {
+      this.beaconReceiverProviders.add(provider);
+   }
+
+   @Nonnull
+   public List<BeaconReceiverProvider> getBeaconReceiverProviders() {
+      return this.beaconReceiverProviders;
    }
 
    public ResourceType<EntityStore, SpawnNPCInteractionFailureTracker> getSpawnNPCInteractionFailureTrackerResourceType() {
@@ -802,6 +825,10 @@ public class NPCPlugin extends JavaPlugin {
 
    public ComponentType<EntityStore, AlarmStore> getAlarmStoreComponentType() {
       return this.alarmStoreComponentType;
+   }
+
+   public ComponentType<EntityStore, SpawnLineage> getSpawnLineageComponentType() {
+      return this.spawnLineageComponentType;
    }
 
    public ComponentType<EntityStore, FlagsComponent> getFlagsComponentType() {
@@ -986,7 +1013,8 @@ public class NPCPlugin extends JavaPlugin {
          .registerCoreComponentType("Or", BuilderEntityFilterOr::new)
          .registerCoreComponentType("Altitude", BuilderEntityFilterAltitude::new)
          .registerCoreComponentType("InsideBlock", BuilderEntityFilterInsideBlock::new)
-         .registerCoreComponentType("EntityEffect", BuilderEntityFilterEntityEffect::new);
+         .registerCoreComponentType("EntityEffect", BuilderEntityFilterEntityEffect::new)
+         .registerCoreComponentType("IsDead", BuilderEntityFilterDeath::new);
       this.registerCoreComponentType("Attitude", BuilderSensorEntityPrioritiserAttitude::new);
       NPCPlugin.NPCConfig config = this.config.get();
       this.autoReload = config.isAutoReload();

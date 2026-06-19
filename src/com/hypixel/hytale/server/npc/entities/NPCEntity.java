@@ -6,7 +6,6 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.random.RandomExtra;
 import com.hypixel.hytale.math.vector.Rotation3fc;
 import com.hypixel.hytale.math.vector.Vector3dUtil;
@@ -20,7 +19,6 @@ import com.hypixel.hytale.server.core.entity.AnimationUtils;
 import com.hypixel.hytale.server.core.entity.Entity;
 import com.hypixel.hytale.server.core.entity.LivingEntity;
 import com.hypixel.hytale.server.core.entity.effect.EffectControllerComponent;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.entity.component.ActiveAnimationComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
@@ -28,20 +26,6 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.npc.INonPlayerCharacter;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
-import com.hypixel.hytale.server.npc.blackboard.Blackboard;
-import com.hypixel.hytale.server.npc.blackboard.view.blocktype.BlockTypeView;
-import com.hypixel.hytale.server.npc.blackboard.view.event.EntityEventNotification;
-import com.hypixel.hytale.server.npc.blackboard.view.event.EventNotification;
-import com.hypixel.hytale.server.npc.blackboard.view.event.block.BlockEventType;
-import com.hypixel.hytale.server.npc.blackboard.view.event.block.BlockEventView;
-import com.hypixel.hytale.server.npc.blackboard.view.event.entity.EntityEventType;
-import com.hypixel.hytale.server.npc.blackboard.view.event.entity.EntityEventView;
-import com.hypixel.hytale.server.npc.components.messaging.EntityEventSupport;
-import com.hypixel.hytale.server.npc.components.messaging.EventSupport;
-import com.hypixel.hytale.server.npc.components.messaging.NPCBlockEventSupport;
-import com.hypixel.hytale.server.npc.components.messaging.NPCEntityEventSupport;
-import com.hypixel.hytale.server.npc.components.messaging.PlayerBlockEventSupport;
-import com.hypixel.hytale.server.npc.components.messaging.PlayerEntityEventSupport;
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.role.RoleDebugFlags;
 import com.hypixel.hytale.server.npc.role.support.CombatSupport;
@@ -50,13 +34,9 @@ import com.hypixel.hytale.server.npc.role.support.StateSupport;
 import com.hypixel.hytale.server.npc.storage.AlarmStore;
 import com.hypixel.hytale.server.npc.util.DamageData;
 import com.hypixel.hytale.server.spawning.assets.spawns.config.WorldNPCSpawn;
-import it.unimi.dsi.fastutil.ints.IntList;
-import it.unimi.dsi.fastutil.ints.IntSet;
 import java.time.Instant;
-import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -147,13 +127,6 @@ public class NPCEntity extends LivingEntity implements INonPlayerCharacter {
    @Nonnull
    private PathManager pathManager = new PathManager();
    private final DamageData damageData = new DamageData();
-   @Nullable
-   private BlockTypeView blackboardBlockTypeView;
-   private IntList blackboardBlockTypeSets;
-   private BlockEventView blackboardBlockChangeView;
-   private Map<BlockEventType, IntSet> blackboardBlockChangeSets;
-   private EntityEventView blackboardEntityEventView;
-   private Map<EntityEventType, IntSet> blackboardEntityEventSets;
    @Deprecated(forRemoval = true)
    @Nullable
    private AlarmStore alarmStore;
@@ -244,6 +217,16 @@ public class NPCEntity extends LivingEntity implements INonPlayerCharacter {
       @Nullable String animationId,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
+      this.playAnimation(ref, animationSlot, animationId, false, componentAccessor);
+   }
+
+   public void playAnimation(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull AnimationSlot animationSlot,
+      @Nullable String animationId,
+      boolean force,
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
       Model model = null;
       ModelComponent modelComponent = componentAccessor.getComponent(ref, ModelComponent.getComponentType());
       if (modelComponent != null) {
@@ -258,7 +241,7 @@ public class NPCEntity extends LivingEntity implements INonPlayerCharacter {
             Entity.LOGGER.at(Level.WARNING).atMostEvery(1, TimeUnit.MINUTES).log("Missing active animation component for entity: %s", this.roleName);
          } else {
             String[] activeAnimations = activeAnimationComponent.getActiveAnimations();
-            if (animationSlot == AnimationSlot.Action || !Objects.equals(activeAnimations[animationSlot.ordinal()], animationId)) {
+            if (force || animationSlot == AnimationSlot.Action || !Objects.equals(activeAnimations[animationSlot.ordinal()], animationId)) {
                activeAnimations[animationSlot.ordinal()] = animationId;
                activeAnimationComponent.setPlayingAnimation(animationSlot, animationId);
                AnimationUtils.playAnimation(ref, animationSlot, animationId, componentAccessor);
@@ -411,117 +394,6 @@ public class NPCEntity extends LivingEntity implements INonPlayerCharacter {
 
    public void setActiveMotionControllerName(@Nullable String activeMotionControllerName) {
       this.activeMotionControllerName = activeMotionControllerName;
-   }
-
-   @Nonnull
-   public BlockTypeView getBlockTypeBlackboardView(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
-      if (this.blackboardBlockTypeView == null) {
-         this.initBlockTypeBlackboardView(ref, store);
-      }
-
-      if (this.blackboardBlockTypeView.isOutdated(ref, store)) {
-         this.blackboardBlockTypeView = this.blackboardBlockTypeView.getUpdatedView(ref, store);
-      }
-
-      return this.blackboardBlockTypeView;
-   }
-
-   @Nullable
-   public BlockTypeView removeBlockTypeBlackboardView() {
-      BlockTypeView view = this.blackboardBlockTypeView;
-      this.blackboardBlockTypeView = null;
-      return view;
-   }
-
-   public void initBlockTypeBlackboardView(@Nonnull Ref<EntityStore> ref, ComponentAccessor<EntityStore> componentAccessor) {
-      if (this.blackboardBlockTypeSets != null) {
-         this.blackboardBlockTypeView = componentAccessor.getResource(Blackboard.getResourceType()).getView(BlockTypeView.class, ref, componentAccessor);
-         this.blackboardBlockTypeView.initialiseEntity(ref, this);
-      }
-   }
-
-   public void initBlockChangeBlackboardView(@Nonnull Ref<EntityStore> ref, ComponentAccessor<EntityStore> componentAccessor) {
-      if (this.blackboardBlockChangeSets != null) {
-         this.blackboardBlockChangeView = componentAccessor.getResource(Blackboard.getResourceType()).getView(BlockEventView.class, ref, componentAccessor);
-         this.blackboardBlockChangeView.initialiseEntity(ref, this);
-      }
-
-      if (this.blackboardEntityEventSets != null) {
-         this.blackboardEntityEventView = componentAccessor.getResource(Blackboard.getResourceType()).getView(EntityEventView.class, ref, componentAccessor);
-         this.blackboardEntityEventView.initialiseEntity(ref, this);
-      }
-   }
-
-   public void addBlackboardBlockTypeSets(IntList blackboardBlockSets) {
-      this.blackboardBlockTypeSets = blackboardBlockSets;
-   }
-
-   public IntList getBlackboardBlockTypeSets() {
-      return this.blackboardBlockTypeSets;
-   }
-
-   public void addBlackboardBlockChangeSets(@Nonnull BlockEventType type, @Nonnull IntSet sets) {
-      if (this.blackboardBlockChangeSets == null) {
-         this.blackboardBlockChangeSets = new EnumMap<>(BlockEventType.class);
-      }
-
-      this.blackboardBlockChangeSets.put(type, sets);
-   }
-
-   public IntSet getBlackboardBlockChangeSet(BlockEventType type) {
-      return this.blackboardBlockChangeSets.getOrDefault(type, null);
-   }
-
-   public Map<BlockEventType, IntSet> getBlackboardBlockChangeSets() {
-      return this.blackboardBlockChangeSets;
-   }
-
-   public void notifyBlockChange(@Nonnull BlockEventType type, @Nonnull EventNotification notification) {
-      Store<EntityStore> store = this.world.getEntityStore().getStore();
-      Ref<EntityStore> initiator = notification.getInitiator();
-      boolean isPlayer = store.getArchetype(initiator).contains(Player.getComponentType());
-      EventSupport<BlockEventType, EventNotification> support;
-      if (isPlayer) {
-         support = store.getComponent(this.reference, PlayerBlockEventSupport.getComponentType());
-      } else {
-         support = store.getComponent(this.reference, NPCBlockEventSupport.getComponentType());
-      }
-
-      if (support != null) {
-         support.postMessage(type, notification, this.getReference(), store);
-      }
-   }
-
-   public void addBlackboardEntityEventSets(@Nonnull EntityEventType type, @Nonnull IntSet sets) {
-      if (this.blackboardEntityEventSets == null) {
-         this.blackboardEntityEventSets = new EnumMap<>(EntityEventType.class);
-      }
-
-      this.blackboardEntityEventSets.put(type, sets);
-   }
-
-   public IntSet getBlackboardEntityEventSet(@Nonnull EntityEventType type) {
-      return this.blackboardEntityEventSets.getOrDefault(type, null);
-   }
-
-   public Map<EntityEventType, IntSet> getBlackboardEntityEventSets() {
-      return this.blackboardEntityEventSets;
-   }
-
-   public void notifyEntityEvent(@Nonnull EntityEventType type, @Nonnull EntityEventNotification notification) {
-      Store<EntityStore> store = this.world.getEntityStore().getStore();
-      Ref<EntityStore> initiator = notification.getInitiator();
-      boolean isPlayer = store.getArchetype(initiator).contains(Player.getComponentType());
-      EntityEventSupport support;
-      if (isPlayer) {
-         support = store.getComponent(this.reference, PlayerEntityEventSupport.getComponentType());
-      } else {
-         support = store.getComponent(this.reference, NPCEntityEventSupport.getComponentType());
-      }
-
-      if (support != null) {
-         support.postMessage(type, notification, this.reference, store);
-      }
    }
 
    public void setEnvironment(int env) {

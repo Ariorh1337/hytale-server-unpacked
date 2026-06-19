@@ -56,8 +56,8 @@ public class ServerPlayerListModule extends JavaPlugin {
    private void onPlayerConnect(@Nonnull PlayerConnectEvent event) {
       PlayerRef joiningPlayerRef = event.getPlayerRef();
       UUID joiningPlayerUuid = joiningPlayerRef.getUuid();
-      Collection<PlayerRef> allPlayers = Universe.get().getPlayers();
-      ServerPlayerListPlayer[] serverListPlayers = new ServerPlayerListPlayer[allPlayers.size()];
+      PlayerRef[] allPlayers = Universe.get().getPlayers().toArray(new PlayerRef[0]);
+      ServerPlayerListPlayer[] serverListPlayers = new ServerPlayerListPlayer[allPlayers.length];
       int index = 0;
 
       for (PlayerRef playerRef : allPlayers) {

@@ -588,7 +588,7 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
                   ItemStack itemInHand = InventoryComponent.getItemInHand(store, ref);
                   if (itemInHand == null && !packet.quickReplace) {
                      section.invalidateBlock(targetBlock.x, targetBlock.y, targetBlock.z);
-                  } else if (!InteractionValidation.canPlayerInteractWithBlock(ref, store, itemInHand, targetBlock)) {
+                  } else if (!InteractionValidation.canPlayerInteractWithBlock(ref, store, itemInHand, targetBlock, packet.extendedRange)) {
                      LOGGER.at(Level.WARNING)
                         .log(
                            "%s failed place block packet distance check at [%d, %d, %d]",
@@ -599,7 +599,7 @@ public class GamePacketHandler extends GenericPacketHandler implements IPacketHa
                         );
                      section.invalidateBlock(targetBlock.x, targetBlock.y, targetBlock.z);
                   } else {
-                     String heldBlockKey = itemInHand.getBlockKey();
+                     String heldBlockKey = itemInHand != null ? itemInHand.getBlockKey() : null;
                      if (heldBlockKey == null && !packet.quickReplace) {
                         section.invalidateBlock(targetBlock.x, targetBlock.y, targetBlock.z);
                      } else {

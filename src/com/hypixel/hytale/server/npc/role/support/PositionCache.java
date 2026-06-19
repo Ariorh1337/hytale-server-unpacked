@@ -130,6 +130,10 @@ public class PositionCache implements Component<EntityStore> {
       this.roleIndex = roleIndex;
    }
 
+   public int getRoleIndex() {
+      return this.roleIndex;
+   }
+
    @Nullable
    public RoleStats getRoleStats() {
       return this.roleStats;

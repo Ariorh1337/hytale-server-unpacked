@@ -478,7 +478,7 @@ public class SpawnMarkerSystems {
                }
 
                Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
-               commandBuffer.run(_store -> spawnMarkerEntityComponent.spawnNPC(ref, cachedMarker, _store));
+               commandBuffer.run(_store -> spawnMarkerEntityComponent.spawnNPC(ref, cachedMarker, null, _store));
             }
          } else if (world.getWorldConfig().isSpawningNPC()
             && world.getWorldConfig().isSpawnMarkersEnabled()
@@ -488,11 +488,11 @@ public class SpawnMarkerSystems {
             WorldTimeResource worldTimeResource = commandBuffer.getResource(WorldTimeResource.getResourceType());
             if (cachedMarker.isRealtimeRespawn()) {
                if (spawnMarkerEntityComponent.tickRespawnTimer(dt)) {
-                  commandBuffer.run(_store -> spawnMarkerEntityComponent.spawnNPC(ref, cachedMarker, _store));
+                  commandBuffer.run(_store -> spawnMarkerEntityComponent.spawnNPC(ref, cachedMarker, null, _store));
                }
             } else if (spawnMarkerEntityComponent.getSpawnAfter() == null
                || worldTimeResource.getGameTime().isAfter(spawnMarkerEntityComponent.getSpawnAfter())) {
-               commandBuffer.run(_store -> spawnMarkerEntityComponent.spawnNPC(ref, cachedMarker, _store));
+               commandBuffer.run(_store -> spawnMarkerEntityComponent.spawnNPC(ref, cachedMarker, null, _store));
             }
          }
       }

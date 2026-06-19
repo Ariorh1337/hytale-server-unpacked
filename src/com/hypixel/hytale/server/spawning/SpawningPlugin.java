@@ -330,6 +330,8 @@ public class SpawningPlugin extends JavaPlugin {
       this.getEntityStoreRegistry()
          .registerSystem(new SpawnReferenceSystems.MarkerAddRemoveSystem(SpawnMarkerReference.getComponentType(), this.spawnMarkerComponentType));
       this.getEntityStoreRegistry()
+         .registerSystem(new SpawnReferenceSystems.MarkerDeathSystem(SpawnMarkerReference.getComponentType(), this.spawnMarkerComponentType));
+      this.getEntityStoreRegistry()
          .registerSystem(new SpawnReferenceSystems.BeaconAddRemoveSystem(SpawnBeaconReference.getComponentType(), legacySpawnBeaconComponentType));
       this.getEntityStoreRegistry()
          .registerSystem(new WorldSpawnTrackingSystem(this.worldSpawnDataResourceType, this.chunkSpawnDataComponentType, this.chunkSpawnedNPCDataComponentType));

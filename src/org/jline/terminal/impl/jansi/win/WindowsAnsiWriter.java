@@ -3,6 +3,10 @@ package org.jline.terminal.impl.jansi.win;
 import java.io.IOException;
 import java.io.Writer;
 import org.fusesource.jansi.internal.Kernel32;
+import org.fusesource.jansi.internal.Kernel32.CHAR_INFO;
+import org.fusesource.jansi.internal.Kernel32.CONSOLE_SCREEN_BUFFER_INFO;
+import org.fusesource.jansi.internal.Kernel32.COORD;
+import org.fusesource.jansi.internal.Kernel32.SMALL_RECT;
 import org.jline.utils.AnsiWriter;
 import org.jline.utils.Colors;
 
@@ -24,7 +28,7 @@ public final class WindowsAnsiWriter extends AnsiWriter {
    private static final short[] ANSI_BACKGROUND_COLOR_MAP = new short[]{
       0, Kernel32.BACKGROUND_RED, Kernel32.BACKGROUND_GREEN, BACKGROUND_YELLOW, Kernel32.BACKGROUND_BLUE, BACKGROUND_MAGENTA, BACKGROUND_CYAN, BACKGROUND_WHITE
    };
-   private final Kernel32.CONSOLE_SCREEN_BUFFER_INFO info = new Kernel32.CONSOLE_SCREEN_BUFFER_INFO();
+   private final CONSOLE_SCREEN_BUFFER_INFO info = new CONSOLE_SCREEN_BUFFER_INFO();
    private final short originalColors;
    private boolean negative;
    private boolean bold;
@@ -96,7 +100,7 @@ public final class WindowsAnsiWriter extends AnsiWriter {
             Kernel32.FillConsoleOutputCharacterW(console, ' ', lengthToEnd, this.info.cursorPosition.copy(), written);
             break;
          case 1:
-            Kernel32.COORD topLeft2 = new Kernel32.COORD();
+            COORD topLeft2 = new COORD();
             topLeft2.x = 0;
             topLeft2.y = this.info.window.top;
             int lengthToCursor = (this.info.cursorPosition.y - this.info.window.top) * this.info.size.x + this.info.cursorPosition.x;
@@ -104,7 +108,7 @@ public final class WindowsAnsiWriter extends AnsiWriter {
             Kernel32.FillConsoleOutputCharacterW(console, ' ', lengthToCursor, topLeft2, written);
             break;
          case 2:
-            Kernel32.COORD topLeft = new Kernel32.COORD();
+            COORD topLeft = new COORD();
             topLeft.x = 0;
             topLeft.y = this.info.window.top;
             int screenLength = this.info.window.height() * this.info.size.x;
@@ -124,13 +128,13 @@ public final class WindowsAnsiWriter extends AnsiWriter {
             Kernel32.FillConsoleOutputCharacterW(console, ' ', lengthToLastCol, this.info.cursorPosition.copy(), written);
             break;
          case 1:
-            Kernel32.COORD leftColCurrRow2 = this.info.cursorPosition.copy();
+            COORD leftColCurrRow2 = this.info.cursorPosition.copy();
             leftColCurrRow2.x = 0;
             Kernel32.FillConsoleOutputAttribute(console, this.originalColors, this.info.cursorPosition.x, leftColCurrRow2, written);
             Kernel32.FillConsoleOutputCharacterW(console, ' ', this.info.cursorPosition.x, leftColCurrRow2, written);
             break;
          case 2:
-            Kernel32.COORD leftColCurrRow = this.info.cursorPosition.copy();
+            COORD leftColCurrRow = this.info.cursorPosition.copy();
             leftColCurrRow.x = 0;
             Kernel32.FillConsoleOutputAttribute(console, this.originalColors, this.info.size.x, leftColCurrRow, written);
             Kernel32.FillConsoleOutputCharacterW(console, ' ', this.info.size.x, leftColCurrRow, written);
@@ -177,12 +181,12 @@ public final class WindowsAnsiWriter extends AnsiWriter {
       }
 
       if (nb > 0) {
-         Kernel32.SMALL_RECT scroll = this.info.window.copy();
+         SMALL_RECT scroll = this.info.window.copy();
          scroll.top = 0;
-         Kernel32.COORD org = new Kernel32.COORD();
+         COORD org = new COORD();
          org.x = 0;
          org.y = (short)(-nb);
-         Kernel32.CHAR_INFO info = new Kernel32.CHAR_INFO();
+         CHAR_INFO info = new CHAR_INFO();
          info.unicodeChar = ' ';
          info.attributes = this.originalColors;
          Kernel32.ScrollConsoleScreenBuffer(console, scroll, scroll, org, info);
@@ -299,12 +303,12 @@ public final class WindowsAnsiWriter extends AnsiWriter {
    @Override
    protected void processInsertLine(int optionInt) throws IOException {
       this.getConsoleInfo();
-      Kernel32.SMALL_RECT scroll = this.info.window.copy();
+      SMALL_RECT scroll = this.info.window.copy();
       scroll.top = this.info.cursorPosition.y;
-      Kernel32.COORD org = new Kernel32.COORD();
+      COORD org = new COORD();
       org.x = 0;
       org.y = (short)(this.info.cursorPosition.y + optionInt);
-      Kernel32.CHAR_INFO info = new Kernel32.CHAR_INFO();
+      CHAR_INFO info = new CHAR_INFO();
       info.attributes = this.originalColors;
       info.unicodeChar = ' ';
       if (Kernel32.ScrollConsoleScreenBuffer(console, scroll, scroll, org, info) == 0) {
@@ -315,12 +319,12 @@ public final class WindowsAnsiWriter extends AnsiWriter {
    @Override
    protected void processDeleteLine(int optionInt) throws IOException {
       this.getConsoleInfo();
-      Kernel32.SMALL_RECT scroll = this.info.window.copy();
+      SMALL_RECT scroll = this.info.window.copy();
       scroll.top = this.info.cursorPosition.y;
-      Kernel32.COORD org = new Kernel32.COORD();
+      COORD org = new COORD();
       org.x = 0;
       org.y = (short)(this.info.cursorPosition.y - optionInt);
-      Kernel32.CHAR_INFO info = new Kernel32.CHAR_INFO();
+      CHAR_INFO info = new CHAR_INFO();
       info.attributes = this.originalColors;
       info.unicodeChar = ' ';
       if (Kernel32.ScrollConsoleScreenBuffer(console, scroll, scroll, org, info) == 0) {

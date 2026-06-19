@@ -62,7 +62,7 @@ public class WeightedMap<T> {
       this.weights.add(weight);
       this.elementSet.add(element);
       this.totalWeight += weight;
-      this.indices.put(element, this.indices.size());
+      this.indices.put(element, this.elements.size() - 1);
       return this;
    }
 

@@ -58,15 +58,13 @@ public class RoleDebugDisplay {
    private RoleDebugDisplay() {
    }
 
-   public void display(@Nonnull Role role, int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-      NPCEntity npcComponent = archetypeChunk.getComponent(index, NPCEntity.getComponentType());
-      assert npcComponent != null;
+   public void display(@Nullable Role role, int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
       Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
       if (this.debugDisplayInternalId) {
          this.debugDisplay.append("ID-").append(ref.getIndex()).append(" ");
       }
 
-      if (this.debugDisplayName) {
+      if (this.debugDisplayName && role != null) {
          this.debugDisplay.append(" Role(").append(role.getRoleName()).append(")");
       }
 
@@ -93,7 +91,7 @@ public class RoleDebugDisplay {
          this.debugDisplay.append(' ').append((int)(100.0 * dayProgress) / 100.0);
       }
 
-      if (this.debugDisplayAnim) {
+      if (this.debugDisplayAnim && role != null) {
          ActiveAnimationComponent activeAnimationComponent = archetypeChunk.getComponent(index, ActiveAnimationComponent.getComponentType());
          assert activeAnimationComponent != null;
          String[] activeAnimations = activeAnimationComponent.getActiveAnimations();
@@ -202,7 +200,7 @@ public class RoleDebugDisplay {
          this.debugDisplay.append(" FS:").append(hotbarFreeSlots).append('/').append(inventoryFreeSlots);
       }
 
-      if (this.debugDisplayHP) {
+      if (this.debugDisplayHP && role != null) {
          EntityStatMap entityStatsComponent = archetypeChunk.getComponent(index, EntityStatMap.getComponentType());
          assert entityStatsComponent != null;
          EntityStatValue healthValue = entityStatsComponent.get(DefaultEntityStatTypes.getHealth());
@@ -213,7 +211,7 @@ public class RoleDebugDisplay {
          }
       }
 
-      if (this.debugDisplayStamina) {
+      if (this.debugDisplayStamina && role != null) {
          EntityStatMap entityStatsComponent = archetypeChunk.getComponent(index, EntityStatMap.getComponentType());
          assert entityStatsComponent != null;
          EntityStatValue staminaValue = entityStatsComponent.get(DefaultEntityStatTypes.getStamina());
@@ -224,7 +222,7 @@ public class RoleDebugDisplay {
          }
       }
 
-      if (this.debugDisplaySpeed) {
+      if (this.debugDisplaySpeed && role != null) {
          Velocity velocityComponent = archetypeChunk.getComponent(index, Velocity.getComponentType());
          assert velocityComponent != null;
          this.debugDisplay.append(" SPD:").append(MathUtil.round(velocityComponent.getSpeed(), 1));

@@ -95,8 +95,8 @@ public class GridCellDistanceFunction implements CellDistanceFunction {
       DoubleArray.Double3 vec = CellularNoise.CELL_3D[cellHash & 0xFF];
       CellJitter jitter = pointEvaluator.getJitter();
       double px = jitter.getPointX(cellX, vec);
-      double py = jitter.getPointY(cellX, vec);
-      double pz = jitter.getPointZ(cellX, vec);
+      double py = jitter.getPointY(cellY, vec);
+      double pz = jitter.getPointZ(cellZ, vec);
       pointEvaluator.evalPoint(seed, x, y, z, cellHash, cellX, cellY, cellZ, px, py, pz, buffer);
    }
 
@@ -118,8 +118,8 @@ public class GridCellDistanceFunction implements CellDistanceFunction {
       DoubleArray.Double3 vec = CellularNoise.CELL_3D[cellHash & 0xFF];
       CellJitter jitter = pointEvaluator.getJitter();
       double px = jitter.getPointX(cellX, vec);
-      double py = jitter.getPointY(cellX, vec);
-      double pz = jitter.getPointZ(cellX, vec);
+      double py = jitter.getPointY(cellY, vec);
+      double pz = jitter.getPointZ(cellZ, vec);
       pointEvaluator.evalPoint2(seed, x, y, z, cellHash, cellX, cellY, cellZ, px, py, pz, buffer);
    }
 

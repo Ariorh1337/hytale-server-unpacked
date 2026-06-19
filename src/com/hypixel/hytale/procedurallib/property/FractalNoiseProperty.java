@@ -193,13 +193,13 @@ public class FractalNoiseProperty implements NoiseProperty {
                int seed, int offsetSeed, double x, double y, double z, int octaves, double lacunarity, double persistence, @Nonnull NoiseFunction3d noise
             ) {
                double sum = 1.0 - Math.abs(noise.get(seed, offsetSeed, x, y, z));
-               float amp = 1.0F;
+               double amp = 1.0;
 
                for (int i = 1; i < octaves; i++) {
                   x *= lacunarity;
                   y *= lacunarity;
                   z *= lacunarity;
-                  amp = (float)(amp * persistence);
+                  amp *= persistence;
                   offsetSeed++;
                   sum -= (1.0 - Math.abs(noise.get(seed, offsetSeed, x, y, z))) * amp;
                }
